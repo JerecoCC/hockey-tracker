@@ -488,6 +488,10 @@ const TimePicker = ({
             className={styles.clockIcon}
           />
         </button>
+        <Divider
+          variant="vertical"
+          className={styles.triggerDivider}
+        />
         <input
           ref={inputRef}
           type="text"
@@ -511,7 +515,10 @@ const TimePicker = ({
             role={value ? 'button' : undefined}
             aria-label={value ? 'Clear' : undefined}
           >
-            ×
+            <Icon
+              name="close"
+              size="0.75rem"
+            />
           </span>
         )}
       </div>

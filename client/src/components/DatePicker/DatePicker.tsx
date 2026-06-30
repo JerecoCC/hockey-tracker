@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import Divider from '../Divider/Divider';
 import Icon from '../Icon/Icon';
 import styles from './DatePicker.module.scss';
 
@@ -503,11 +504,19 @@ const DatePicker = (props: Props) => {
             disabled={disabled}
           >
             {!hideTriggerIcon && (
-              <Icon
-                name="calendar_today"
-                size="0.875rem"
-                className={styles.calIcon}
-              />
+              <>
+                <span className={styles.triggerButtonIconRegion}>
+                  <Icon
+                    name="calendar_today"
+                    size="0.875rem"
+                    className={styles.calIcon}
+                  />
+                </span>
+                <Divider
+                  variant="vertical"
+                  className={styles.triggerDivider}
+                />
+              </>
             )}
             <span className={styles.triggerButtonLabel}>{triggerLabel}</span>
           </button>
@@ -527,6 +536,10 @@ const DatePicker = (props: Props) => {
                 className={styles.calIcon}
               />
             </button>
+            <Divider
+              variant="vertical"
+              className={styles.triggerDivider}
+            />
             <input
               ref={inputRef}
               type="text"

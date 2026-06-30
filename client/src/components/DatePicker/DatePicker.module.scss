@@ -16,13 +16,14 @@
 .trigger {
   display: flex;
   align-items: center;
-  gap: $space-sm;
+  gap: $space-xs;
   width: 100%;
+  box-sizing: border-box;
   background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
   border: 1px solid var(--app-field-border, #{$border});
   border-radius: $radius-md;
   height: 42px;
-  padding: 0 $space-lg;
+  padding: $space-xs $space-xs $space-xs $space-xs;
   transition: border-color $transition-base;
 
   &:focus-within {
@@ -48,13 +49,14 @@
   &Button {
     display: inline-flex;
     align-items: center;
-    gap: $space-sm;
+    gap: $space-xs;
     min-height: 42px;
     width: auto;
+    box-sizing: border-box;
     background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
     border: 1px solid var(--app-field-border, #{$border});
     border-radius: $radius-md;
-    padding: 0 $space-xl 0 $space-lg;
+    padding: $space-xs $space-lg $space-xs $space-xs;
     color: var(--app-text, #{$text-body});
     font: inherit;
     cursor: pointer;
@@ -79,8 +81,19 @@
     }
   }
 
+  &ButtonIconRegion {
+    display: inline-flex;
+    align-self: stretch;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 2rem;
+    color: var(--app-text-muted, #{$text-dim});
+    pointer-events: none;
+  }
+
   &ButtonLabel {
     white-space: nowrap;
+    padding-left: $space-sm;
   }
 
   &Disabled {
@@ -94,12 +107,14 @@
 .calIcon {
   &Btn {
     display: flex;
+    align-self: stretch;
     align-items: center;
+    justify-content: center;
+    flex: 0 0 2rem;
     background: none;
     border: none;
     padding: 0;
     cursor: pointer;
-    flex-shrink: 0;
 
     &:focus {
       outline: none;
@@ -109,10 +124,15 @@
   color: var(--app-text-muted, #{$text-dim});
 }
 
+.triggerDivider {
+  --divider-color: var(--app-field-border, #{$border});
+}
+
 // Inline text input for typing the date
 .textInput {
   flex: 1;
   min-width: 0;
+  padding: 0 0 0 $space-sm;
   background: none;
   border: none;
   outline: none;
@@ -128,12 +148,14 @@
 }
 
 .clear {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
   color: var(--app-text-muted, #{$text-dim});
   cursor: pointer;
-  padding: 0 2px;
-  border-radius: $radius-sm;
+  margin-right: calc((2rem - 0.75rem) / 2);
+  padding: 0;
   transition: color $transition-fast;
 
   &:hover {

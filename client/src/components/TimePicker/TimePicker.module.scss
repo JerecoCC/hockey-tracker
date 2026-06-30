@@ -11,13 +11,14 @@
 .trigger {
   display: flex;
   align-items: center;
-  gap: $space-sm;
+  gap: $space-xs;
   width: 100%;
+  box-sizing: border-box;
   background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
   border: 1px solid var(--app-field-border, #{$border});
   border-radius: $radius-md;
   height: 42px;
-  padding: 0 $space-lg;
+  padding: $space-xs $space-xs $space-xs $space-xs;
   transition: border-color $transition-base;
 
   &:focus-within {
@@ -42,12 +43,14 @@
 .clockIcon {
   &Btn {
     display: flex;
+    align-self: stretch;
     align-items: center;
+    justify-content: center;
+    flex: 0 0 2rem;
     background: none;
     border: none;
     padding: 0;
     cursor: pointer;
-    flex-shrink: 0;
 
     &:focus {
       outline: none;
@@ -57,9 +60,14 @@
   color: var(--app-text-muted, #{$text-dim});
 }
 
+.triggerDivider {
+  --divider-color: var(--app-field-border, #{$border});
+}
+
 .textInput {
   flex: 1;
   min-width: 0;
+  padding: 0 0 0 $space-sm;
   background: none;
   border: none;
   outline: none;
@@ -75,14 +83,16 @@
 }
 
 .clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
   color: var(--app-text-muted, #{$text-dim});
-  font-size: 1.1rem;
   line-height: 1;
   cursor: pointer;
-  padding: 0 2px;
-  border-radius: $radius-sm;
+  margin-right: calc((2rem - 0.75rem) / 2);
+  padding: 0;
   transition: color $transition-fast;
-  flex-shrink: 0;
 
   &:hover {
     color: var(--app-text, #{$text-body});
