@@ -43,21 +43,31 @@ const GoalieTimeOnIceModal = ({
   const rows = useMemo(
     () =>
       goalieStats.flatMap((stat) =>
-        stat.stints.map((st, i) => ({
-          id: st.id,
-          original: st.time_on_ice,
-          prefill: secondsToMMSS(st.time_on_ice != null ? st.time_on_ice : defaultStintToi(st, game)),
-          name: fmt(stat.goalie_first_name, stat.goalie_last_name),
-          stintLabel: stat.stints.length > 1 ? `Stint ${i + 1}` : null,
-          photo: stat.goalie_photo,
-          initials:
-            `${stat.goalie_first_name?.charAt(0) ?? ''}${stat.goalie_last_name?.charAt(0) ?? ''}`.trim() ||
-            '?',
-          teamLogo: stat.team_logo,
-          teamCode: stat.team_code,
-          primaryColor: stat.team_primary_color,
-          textColor: stat.team_text_color,
-        })),
+        stat.stints.map((st, i) => {
+          const team =
+            stat.team_id === game.away_team.id
+              ? game.away_team
+              : stat.team_id === game.home_team.id
+                ? game.home_team
+                : null;
+          return {
+            id: st.id,
+            original: st.time_on_ice,
+            prefill: secondsToMMSS(st.time_on_ice != null ? st.time_on_ice : defaultStintToi(st, game)),
+            name: fmt(stat.goalie_first_name, stat.goalie_last_name),
+            stintLabel: stat.stints.length > 1 ? `Stint ${i + 1}` : null,
+            photo: stat.goalie_photo,
+            initials:
+              `${stat.goalie_first_name?.charAt(0) ?? ''}${stat.goalie_last_name?.charAt(0) ?? ''}`.trim() ||
+              '?',
+            teamLogo: stat.team_logo,
+            teamLogoDark: team?.logo_dark,
+            teamLogoLight: team?.logo_light,
+            teamCode: stat.team_code,
+            primaryColor: stat.team_primary_color,
+            textColor: stat.team_text_color,
+          };
+        }),
       ),
     [goalieStats, game],
   );
@@ -131,6 +141,8 @@ const GoalieTimeOnIceModal = ({
                     <span className={styles.toiPlayerCell}>
                       <TeamLogo
                         logo={row.teamLogo}
+                        logoDark={row.teamLogoDark}
+                        logoLight={row.teamLogoLight}
                         code={row.teamCode}
                         primaryColor={row.primaryColor}
                         textColor={row.textColor}

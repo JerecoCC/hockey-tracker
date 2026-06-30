@@ -88,6 +88,8 @@ const statColumns: Column<PlayerCareerStatRecord>[] = [
     type: 'logo',
     header: 'Team',
     getLogo: (r) => r.team_logo,
+    getLogoDark: (r) => r.team_logo_dark,
+    getLogoLight: (r) => r.team_logo_light,
     getName: (r) => r.team_name ?? '—',
     getCode: (r) => r.team_name?.slice(0, 3).toUpperCase() ?? '?',
   },
@@ -958,6 +960,8 @@ const PlayerDetailsPage = () => {
             <ListItem
               key={award.id}
               image={award.team_logo}
+              imageDark={award.team_logo_dark}
+              imageLight={award.team_logo_light}
               image_shape="square"
               name={award.award_name}
               placeholder={teamCode(award.team_code, award.team_name)}
@@ -1018,6 +1022,8 @@ const PlayerDetailsPage = () => {
                 <span className={styles.heroTeamMeta}>
                   <TeamLogo
                     logo={latestStint.team.logo}
+                    logoDark={latestStint.team.logo_dark}
+                    logoLight={latestStint.team.logo_light}
                     code={latestStint.team.code ?? '?'}
                     primaryColor={latestStint.team.primary_color}
                     textColor={latestStint.team.text_color}
@@ -1126,6 +1132,8 @@ const PlayerDetailsPage = () => {
                           key={s.id}
                           className={styles.stintItem}
                           image={s.team.logo}
+                          imageDark={s.team.logo_dark}
+                          imageLight={s.team.logo_light}
                           image_shape="square"
                           name={s.team.name ?? 'Unknown team'}
                           placeholder={teamCodePlaceholder(s)}

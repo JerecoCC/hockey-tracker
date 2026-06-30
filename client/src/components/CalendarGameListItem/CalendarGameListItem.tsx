@@ -16,6 +16,8 @@ const GAME_TYPE_CLASS: Record<GameType, string> = {
 export interface CalendarGameListItemTeam {
   code: string;
   logo: string | null;
+  logoDark?: string | null;
+  logoLight?: string | null;
   primaryColor: string;
   textColor: string;
   score?: number | string | null;
@@ -104,6 +106,8 @@ const CalendarGameListItem = ({
         <span className={logoClassName(awayTeam.dimmed, 'away')}>
           <TeamLogo
             logo={awayTeam.logo}
+            logoDark={awayTeam.logoDark}
+            logoLight={awayTeam.logoLight}
             code={awayTeam.code}
             primaryColor={awayTeam.primaryColor}
             textColor={awayTeam.textColor}
@@ -124,6 +128,8 @@ const CalendarGameListItem = ({
         <span className={logoClassName(homeTeam.dimmed, 'home')}>
           <TeamLogo
             logo={homeTeam.logo}
+            logoDark={homeTeam.logoDark}
+            logoLight={homeTeam.logoLight}
             code={homeTeam.code}
             primaryColor={homeTeam.primaryColor}
             textColor={homeTeam.textColor}

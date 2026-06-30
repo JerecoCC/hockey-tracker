@@ -62,6 +62,8 @@ const LinescoreCard = ({
       teamId: game.away_team.id,
       teamCode: game.away_team.code,
       teamLogo: game.away_team.logo,
+      teamLogoDark: game.away_team.logo_dark,
+      teamLogoLight: game.away_team.logo_light,
       primaryColor: game.away_team.primary_color,
       textColor: game.away_team.text_color,
       total: liveAwayScore,
@@ -71,6 +73,8 @@ const LinescoreCard = ({
       teamId: game.home_team.id,
       teamCode: game.home_team.code,
       teamLogo: game.home_team.logo,
+      teamLogoDark: game.home_team.logo_dark,
+      teamLogoLight: game.home_team.logo_light,
       primaryColor: game.home_team.primary_color,
       textColor: game.home_team.text_color,
       total: liveHomeScore,
@@ -180,6 +184,8 @@ const LinescoreCard = ({
                 <span className={styles.linescoreTeam}>
                   <TeamLogo
                     logo={row.teamLogo}
+                    logoDark={row.teamLogoDark}
+                    logoLight={row.teamLogoLight}
                     code={row.teamCode ?? '?'}
                     primaryColor={row.primaryColor}
                     textColor={row.textColor}

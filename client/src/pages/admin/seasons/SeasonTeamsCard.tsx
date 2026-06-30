@@ -70,6 +70,8 @@ const GroupNode = ({ group, allGroups, leagueCode, seasonId, seasonName }: Group
               <ListItem
                 key={team.id}
                 image={team.logo}
+                imageDark={team.logo_dark}
+                imageLight={team.logo_light}
                 eyebrow={team.place_name || ''}
                 name={team.team_name || team.name}
                 variant="plain"
@@ -122,7 +124,16 @@ interface TeamListProps {
 
 type TeamDisplayRecord = Pick<
   SeasonTeam | GroupTeamRecord,
-  'id' | 'name' | 'place_name' | 'team_name' | 'code' | 'logo' | 'primary_color' | 'text_color'
+  | 'id'
+  | 'name'
+  | 'place_name'
+  | 'team_name'
+  | 'code'
+  | 'logo'
+  | 'logo_dark'
+  | 'logo_light'
+  | 'primary_color'
+  | 'text_color'
 >;
 
 const alignmentGroupsToSeasonGroups = (
@@ -154,6 +165,8 @@ const TeamList = ({ teams, leagueCode, leagueId, seasonId, seasonName }: TeamLis
           <ListItem
             key={team.id}
             image={team.logo}
+            imageDark={team.logo_dark}
+            imageLight={team.logo_light}
             eyebrow={team.place_name || ''}
             name={team.team_name || team.name}
             rightContent={{ type: 'code', value: team.code }}

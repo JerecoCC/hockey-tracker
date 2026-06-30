@@ -11,6 +11,7 @@ import { createPortal } from 'react-dom';
 import cn from 'classnames';
 import Divider from '../Divider/Divider';
 import Icon from '../Icon/Icon';
+import TeamLogo from '../TeamLogo/TeamLogo';
 import Tooltip from '../Tooltip/Tooltip';
 import styles from './MultiSelect.module.scss';
 
@@ -21,6 +22,8 @@ export type MultiSelectOption = {
   value: string;
   label: string;
   logo?: string | null;
+  logoDark?: string | null;
+  logoLight?: string | null;
   code?: string;
 };
 
@@ -186,10 +189,15 @@ const MultiSelect = ({
               className={styles.pillTooltip}
             >
               <span className={styles.pill}>
-                {opt.logo ? (
-                  <img
-                    src={opt.logo}
+                {opt.logo || opt.logoDark || opt.logoLight ? (
+                  <TeamLogo
+                    logo={opt.logo}
+                    logoDark={opt.logoDark}
+                    logoLight={opt.logoLight}
+                    code={opt.code ?? ''}
                     alt=""
+                    size={20}
+                    shape="square"
                     className={styles.pillLogo}
                   />
                 ) : opt.code ? (
@@ -295,10 +303,15 @@ const MultiSelect = ({
                         />
                       )}
                     </span>
-                    {opt.logo ? (
-                      <img
-                        src={opt.logo}
+                    {opt.logo || opt.logoDark || opt.logoLight ? (
+                      <TeamLogo
+                        logo={opt.logo}
+                        logoDark={opt.logoDark}
+                        logoLight={opt.logoLight}
+                        code={opt.code ?? ''}
                         alt=""
+                        size={20}
+                        shape="square"
                         className={styles.optionLogo}
                       />
                     ) : opt.code ? (

@@ -57,6 +57,8 @@ const LeagueTeamsTab = (props: Props) => {
                   <ListItem
                     key={t.id}
                     image={t.logo}
+                    imageDark={t.logo_dark}
+                    imageLight={t.logo_light}
                     eyebrow={t.place_name || ''}
                     name={t.team_name || ''}
                     rightContent={{ type: 'code', value: t.code }}

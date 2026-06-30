@@ -2,6 +2,7 @@ import {
   type ChangeEvent,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
+  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -20,6 +21,7 @@ import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal'
 import Modal from '@/components/Modal/Modal';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import Select, { type SelectOption } from '@/components/Select/Select';
+import { ThemeContext } from '@/context/ThemeContext';
 import type { GameRecord } from '@/hooks/useGames';
 import useLeagues, { type LeagueRecord } from '@/hooks/useLeagues';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
@@ -185,6 +187,8 @@ interface DrawTeam {
   team_name?: string | null;
   code: string;
   logo: string | null;
+  logo_dark?: string | null;
+  logo_light?: string | null;
   primary_color: string;
   secondary_color: string;
   text_color: string;
@@ -276,14 +280,20 @@ const ScoreCardNumberField = ({ control, name, label, min, max }: ScoreCardNumbe
 };
 
 const ScoreCardTeamLogo = ({ team }: { team: DrawTeam | null }) => {
+  const themeContext = useContext(ThemeContext);
   if (!team) {
     return <div className={styles.scoreCardLogoPlaceholder}>TBD</div>;
   }
 
-  if (team.logo) {
+  const logo =
+    themeContext?.theme === 'light'
+      ? (team.logo_light ?? team.logo ?? team.logo_dark)
+      : (team.logo ?? team.logo_dark ?? team.logo_light);
+
+  if (logo) {
     return (
       <img
-        src={team.logo}
+        src={logo}
         alt=""
         className={styles.scoreCardLogoImg}
         crossOrigin="anonymous"

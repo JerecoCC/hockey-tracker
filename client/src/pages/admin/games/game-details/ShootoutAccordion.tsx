@@ -124,12 +124,16 @@ const ShootoutAccordion = ({
   const firstTeamInfo = {
     code: firstSide === 'away' ? game.away_team.code : game.home_team.code,
     logo: firstSide === 'away' ? game.away_team.logo : game.home_team.logo,
+    logoDark: firstSide === 'away' ? game.away_team.logo_dark : game.home_team.logo_dark,
+    logoLight: firstSide === 'away' ? game.away_team.logo_light : game.home_team.logo_light,
     primary: firstSide === 'away' ? game.away_team.primary_color : game.home_team.primary_color,
     text: firstSide === 'away' ? game.away_team.text_color : game.home_team.text_color,
   };
   const secondTeamInfo = {
     code: secondSide === 'away' ? game.away_team.code : game.home_team.code,
     logo: secondSide === 'away' ? game.away_team.logo : game.home_team.logo,
+    logoDark: secondSide === 'away' ? game.away_team.logo_dark : game.home_team.logo_dark,
+    logoLight: secondSide === 'away' ? game.away_team.logo_light : game.home_team.logo_light,
     primary: secondSide === 'away' ? game.away_team.primary_color : game.home_team.primary_color,
     text: secondSide === 'away' ? game.away_team.text_color : game.home_team.text_color,
   };
@@ -367,6 +371,8 @@ const ShootoutAccordion = ({
           <span className={scoringStyles.goalTime}>SO</span>
           <TeamLogo
             logo={team.logo}
+            logoDark={team.logo_dark}
+            logoLight={team.logo_light}
             code={team.code ?? '?'}
             primaryColor={team.primary_color}
             textColor={team.text_color}
@@ -462,6 +468,8 @@ const ShootoutAccordion = ({
               <span className={styles.soAttemptColTeam}>
                 <TeamLogo
                   logo={leftInfo.logo}
+                  logoDark={leftInfo.logoDark}
+                  logoLight={leftInfo.logoLight}
                   code={leftInfo.code}
                   primaryColor={leftInfo.primary}
                   textColor={leftInfo.text}
@@ -476,6 +484,8 @@ const ShootoutAccordion = ({
               <span className={styles.soAttemptColTeam}>
                 <TeamLogo
                   logo={rightInfo.logo}
+                  logoDark={rightInfo.logoDark}
+                  logoLight={rightInfo.logoLight}
                   code={rightInfo.code}
                   primaryColor={rightInfo.primary}
                   textColor={rightInfo.text}

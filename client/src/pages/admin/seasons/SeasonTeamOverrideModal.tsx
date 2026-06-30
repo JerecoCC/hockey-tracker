@@ -105,6 +105,8 @@ const SeasonTeamOverrideModal = (props: Props) => {
 
                   <TeamLogo
                     logo={t.logo}
+                    logoDark={t.logo_dark}
+                    logoLight={t.logo_light}
                     code={t.code}
                     primaryColor={t.primary_color}
                     textColor={t.text_color}

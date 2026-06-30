@@ -18,6 +18,8 @@ interface Props {
   textColor: string;
   teamCode: string;
   teamLogo?: string | null;
+  teamLogoDark?: string | null;
+  teamLogoLight?: string | null;
   teamName?: string;
   stats: { goals: number; assists: number };
   goalieStatRecord?: { shots_against: number; saves: number } | null;
@@ -34,6 +36,8 @@ const StarCard = ({
   textColor,
   teamCode,
   teamLogo,
+  teamLogoDark,
+  teamLogoLight,
   teamName,
   stats,
   goalieStatRecord,
@@ -87,6 +91,8 @@ const StarCard = ({
         <Tooltip text={teamName ?? teamCode}>
           <TeamLogo
             logo={teamLogo}
+            logoDark={teamLogoDark}
+            logoLight={teamLogoLight}
             code={teamCode}
             primaryColor={primaryColor}
             textColor={textColor}

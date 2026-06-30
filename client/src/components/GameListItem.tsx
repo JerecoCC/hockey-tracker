@@ -20,6 +20,8 @@ export interface GameListItemAction {
 
 interface TeamInfo {
   logo: string | null;
+  logoDark?: string | null;
+  logoLight?: string | null;
   code: string;
   primaryColor: string;
   textColor: string;

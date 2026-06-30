@@ -106,6 +106,8 @@ const teamInfoFromSeries = (series: PlayoffSeriesRecord, side: 'home' | 'away'):
   const name = isHome ? series.home_team_name : series.away_team_name;
   const code = isHome ? series.home_team_code : series.away_team_code;
   const logo = isHome ? series.home_team_logo : series.away_team_logo;
+  const logoDark = isHome ? series.home_team_logo_dark : series.away_team_logo_dark;
+  const logoLight = isHome ? series.home_team_logo_light : series.away_team_logo_light;
   const primary = isHome ? series.home_team_primary_color : series.away_team_primary_color;
   const secondary = isHome ? series.home_team_secondary_color : series.away_team_secondary_color;
   const text = isHome ? series.home_team_text_color : series.away_team_text_color;
@@ -115,6 +117,8 @@ const teamInfoFromSeries = (series: PlayoffSeriesRecord, side: 'home' | 'away'):
     name: name ?? code ?? 'TBD',
     code: code ?? 'TBD',
     logo: logo ?? null,
+    logo_dark: logoDark ?? null,
+    logo_light: logoLight ?? null,
     primary_color: primary ?? fallbackTeamColor.primary,
     secondary_color: secondary ?? fallbackTeamColor.secondary,
     text_color: text ?? fallbackTeamColor.text,
@@ -320,12 +324,16 @@ const PlayoffSeriesDetailsPage = () => {
                   href={gameHref(game)}
                   awayTeam={{
                     logo: gameAway.logo,
+                    logoDark: gameAway.logo_dark,
+                    logoLight: gameAway.logo_light,
                     code: gameAway.code,
                     primaryColor: gameAway.primary_color,
                     textColor: gameAway.text_color,
                   }}
                   homeTeam={{
                     logo: gameHome.logo,
+                    logoDark: gameHome.logo_dark,
+                    logoLight: gameHome.logo_light,
                     code: gameHome.code,
                     primaryColor: gameHome.primary_color,
                     textColor: gameHome.text_color,

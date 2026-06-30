@@ -18,6 +18,8 @@ const TeamResult = (props: Props) => {
         <span className={styles.nhlGoalieCheckerTeamInfo}>
           <TeamLogo
             logo={team.logo}
+            logoDark={team.logo_dark}
+            logoLight={team.logo_light}
             code={report.abbrev}
             primaryColor={team.primary_color}
             textColor={team.text_color}

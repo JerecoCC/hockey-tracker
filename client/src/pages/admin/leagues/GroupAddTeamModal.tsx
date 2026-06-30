@@ -65,6 +65,8 @@ const GroupAddTeamModal = (props: Props) => {
               checked={selectedIds.has(t.id)}
               onToggle={() => toggle(t.id)}
               image={t.logo}
+              imageDark={t.logo_dark}
+              imageLight={t.logo_light}
               imagePlaceholder={t.code.slice(0, 3)}
               name={t.name}
               rightContent={<span className={styles.seasonListDates}>{t.code}</span>}

@@ -219,6 +219,8 @@ const TeamHistoryTab = ({
                 <ListItem
                   key={iter.id}
                   image={iter.logo}
+                  imageDark={iter.logo_dark}
+                  imageLight={iter.logo_light}
                   name={iter.name}
                   rightContent={{ type: 'code', value: iter.code }}
                   primaryColor={primaryColor}

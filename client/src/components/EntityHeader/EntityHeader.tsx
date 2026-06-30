@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import type { ReactNode } from 'react';
 import Button from '../Button/Button';
 import ColorSwatch from '../ColorSwatch/ColorSwatch';
 import Divider from '../Divider/Divider';
 import ImagePreviewModal from '../ImagePreviewModal/ImagePreviewModal';
 import TeamLogo from '../TeamLogo/TeamLogo';
+import { ThemeContext } from '../../context/ThemeContext';
 import styles from './EntityHeader.module.scss';
 
 interface Swatch {
@@ -14,6 +15,8 @@ interface Swatch {
 
 interface Props {
   logo: string | null;
+  logoDark?: string | null;
+  logoLight?: string | null;
   name: string;
   code: string;
   subtitle?: ReactNode;
@@ -27,6 +30,8 @@ interface Props {
 
 const EntityHeader = ({
   logo,
+  logoDark,
+  logoLight,
   name,
   code,
   subtitle,
@@ -38,10 +43,17 @@ const EntityHeader = ({
   onEdit,
 }: Props) => {
   const [previewOpen, setPreviewOpen] = useState(false);
+  const themeContext = useContext(ThemeContext);
+  const previewLogo =
+    themeContext?.theme === 'light'
+      ? (logoLight ?? logo ?? logoDark)
+      : (logo ?? logoDark ?? logoLight);
 
   const logoEl = (
     <TeamLogo
       logo={logo}
+      logoDark={logoDark}
+      logoLight={logoLight}
       code={code}
       primaryColor={primaryColor}
       textColor={textColor}
@@ -53,7 +65,7 @@ const EntityHeader = ({
   return (
     <>
       <div className={styles.header}>
-        {logo ? (
+        {previewLogo ? (
           <button
             type="button"
             className={styles.logoButton}
@@ -110,7 +122,7 @@ const EntityHeader = ({
 
       <ImagePreviewModal
         open={previewOpen}
-        src={logo}
+        src={previewLogo}
         alt={name}
         onClose={() => setPreviewOpen(false)}
       />

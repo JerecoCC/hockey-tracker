@@ -227,6 +227,8 @@ const GroupNode = (props: GroupNodeProps) => {
                 <ListItem
                   key={t.id}
                   image={t.logo}
+                  imageDark={t.logo_dark}
+                  imageLight={t.logo_light}
                   eyebrow={t.place_name || ''}
                   name={t.team_name || t.name}
                   variant="plain"
@@ -464,6 +466,8 @@ const LeagueGroupsCard = (props: Props) => {
               <ListItem
                 key={t.id}
                 image={t.logo}
+                imageDark={t.logo_dark}
+                imageLight={t.logo_light}
                 eyebrow={t.place_name || ''}
                 name={t.team_name || t.name}
                 variant="plain"

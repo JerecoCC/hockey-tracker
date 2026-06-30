@@ -3,6 +3,7 @@ import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Button, { type ButtonIntent } from '../Button/Button';
 import Checkbox from '../Checkbox/Checkbox';
 import Chip, { type ChipSize } from '../Chip/Chip';
+import TeamLogo from '../TeamLogo/TeamLogo';
 import styles from './SelectableListItem.module.scss';
 
 export interface SelectableListItemAction {
@@ -25,12 +26,16 @@ export interface SelectableListItemProps {
   onToggle: () => void;
   /** Optional small square image shown to the left of the main image. */
   leadingImage?: string | null;
+  leadingImageDark?: string | null;
+  leadingImageLight?: string | null;
   /** Text shown in the leading placeholder when no leadingImage is available. */
   leadingImagePlaceholder?: string;
   leadingImagePrimaryColor?: string | null;
   leadingImageTextColor?: string | null;
   /** URL for the image. Falls back to imagePlaceholder when absent. */
   image?: string | null;
+  imageDark?: string | null;
+  imageLight?: string | null;
   /** Text shown in the avatar when no image is available (e.g. initials or code). */
   imagePlaceholder?: string;
   /** Shape of the image/placeholder. Defaults to 'square'. */
@@ -60,10 +65,14 @@ const SelectableListItem = ({
   checked,
   onToggle,
   leadingImage,
+  leadingImageDark,
+  leadingImageLight,
   leadingImagePlaceholder,
   leadingImagePrimaryColor,
   leadingImageTextColor,
   image,
+  imageDark,
+  imageLight,
   imagePlaceholder,
   imageShape = 'square',
   imageBackground = true,
@@ -96,9 +105,16 @@ const SelectableListItem = ({
 
       {(leadingImage || leadingImagePlaceholder) &&
         (leadingImage ? (
-          <img
-            src={leadingImage}
+          <TeamLogo
+            logo={leadingImage}
+            logoDark={leadingImageDark}
+            logoLight={leadingImageLight}
+            code={leadingImagePlaceholder ?? ''}
             alt=""
+            size={34}
+            shape="square"
+            primaryColor={leadingImagePrimaryColor}
+            textColor={leadingImageTextColor}
             className={styles.leadingLogo}
           />
         ) : (
@@ -117,7 +133,28 @@ const SelectableListItem = ({
           </span>
         ))}
 
-      {!hideImage && (
+      {!hideImage && imageShape !== 'circle' && (
+        <TeamLogo
+          logo={image}
+          logoDark={imageDark}
+          logoLight={imageLight}
+          code={imagePlaceholder ?? ''}
+          alt=""
+          size={32}
+          shape="square"
+          primaryColor={imagePrimaryColor}
+          textColor={imageTextColor}
+          className={[
+            styles.image,
+            styles.square,
+            image && !imageBackground ? styles.imageTransparent : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        />
+      )}
+
+      {!hideImage && imageShape === 'circle' && (
         <div
           className={[
             styles.image,

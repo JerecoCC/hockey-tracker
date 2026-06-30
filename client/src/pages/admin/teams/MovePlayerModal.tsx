@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import useTeams from '@/hooks/useTeams';
 import {
   usePlayerTradeHistory,
@@ -203,13 +204,18 @@ const MovePlayerModal = ({
                   key={s.id}
                   className={styles.stintItem}
                 >
-                  {s.team.logo && (
-                    <img
-                      src={s.team.logo}
-                      alt={s.team.name ?? ''}
-                      className={styles.stintLogo}
-                    />
-                  )}
+                  <TeamLogo
+                    logo={s.team.logo}
+                    logoDark={s.team.logo_dark}
+                    logoLight={s.team.logo_light}
+                    code={s.team.code ?? '?'}
+                    alt={s.team.name ?? ''}
+                    primaryColor={s.team.primary_color}
+                    textColor={s.team.text_color}
+                    size={32}
+                    shape="square"
+                    className={styles.stintLogo}
+                  />
                   <div className={styles.stintInfo}>
                     <span className={styles.stintTeam}>{s.team.name ?? 'Unknown Team'}</span>
                     {s.jersey_number != null && (

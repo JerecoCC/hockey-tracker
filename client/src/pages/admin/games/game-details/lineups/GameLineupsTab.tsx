@@ -212,6 +212,8 @@ const GameLineupsTab = ({
     teamName: string,
     teamCode: string,
     teamLogo: string | null | undefined,
+    teamLogoDark: string | null | undefined,
+    teamLogoLight: string | null | undefined,
     primaryColor: string,
     textColor: string,
     rosterEntries: GameRosterEntry[],
@@ -225,6 +227,8 @@ const GameLineupsTab = ({
         <span className={styles.accordionTeamLabel}>
           <TeamLogo
             logo={teamLogo ?? null}
+            logoDark={teamLogoDark}
+            logoLight={teamLogoLight}
             code={teamCode}
             primaryColor={primaryColor}
             textColor={textColor}
@@ -425,6 +429,8 @@ const GameLineupsTab = ({
                 game.away_team.name,
                 game.away_team.code,
                 game.away_team.logo,
+                game.away_team.logo_dark,
+                game.away_team.logo_light,
                 game.away_team.primary_color,
                 game.away_team.text_color,
                 awayRoster,
@@ -446,6 +452,8 @@ const GameLineupsTab = ({
                 game.home_team.name,
                 game.home_team.code,
                 game.home_team.logo,
+                game.home_team.logo_dark,
+                game.home_team.logo_light,
                 game.home_team.primary_color,
                 game.home_team.text_color,
                 homeRoster,

@@ -57,6 +57,8 @@ export default function LastFiveCard({ game, gameHrefBuilder }: Props) {
           <LastTeamGamesAccordion
             label={game.away_team.name}
             logo={game.away_team.logo}
+            logoDark={game.away_team.logo_dark}
+            logoLight={game.away_team.logo_light}
             code={game.away_team.code}
             primary={game.away_team.primary_color}
             text={game.away_team.text_color}
@@ -69,6 +71,8 @@ export default function LastFiveCard({ game, gameHrefBuilder }: Props) {
           <LastTeamGamesAccordion
             label={game.home_team.name}
             logo={game.home_team.logo}
+            logoDark={game.home_team.logo_dark}
+            logoLight={game.home_team.logo_light}
             code={game.home_team.code}
             primary={game.home_team.primary_color}
             text={game.home_team.text_color}

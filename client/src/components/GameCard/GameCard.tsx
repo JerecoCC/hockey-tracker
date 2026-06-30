@@ -225,6 +225,8 @@ const TeamLine = ({
   <div className={[styles.teamLine, dim ? styles.teamLineDim : ''].filter(Boolean).join(' ')}>
     <TeamLogo
       logo={team.logo}
+      logoDark={team.logo_dark}
+      logoLight={team.logo_light}
       code={team.code}
       primaryColor={team.primary_color}
       textColor={team.text_color}

@@ -409,6 +409,8 @@ const SeasonGamesTab = ({
     value: t.id,
     label: t.name,
     logo: t.logo,
+    logoDark: t.logo_dark,
+    logoLight: t.logo_light,
     code: t.code,
   }));
 
@@ -416,6 +418,8 @@ const SeasonGamesTab = ({
     value: t.id,
     label: t.name,
     logo: t.logo,
+    logoDark: t.logo_dark,
+    logoLight: t.logo_light,
     code: t.code,
   }));
 
@@ -865,6 +869,8 @@ const SeasonGamesTab = ({
         live={game.status === 'in_progress'}
         awayTeam={{
           logo: game.away_team.logo,
+          logoDark: game.away_team.logo_dark,
+          logoLight: game.away_team.logo_light,
           code: game.away_team.code,
           primaryColor: game.away_team.primary_color,
           textColor: game.away_team.text_color,
@@ -874,6 +880,8 @@ const SeasonGamesTab = ({
         }}
         homeTeam={{
           logo: game.home_team.logo,
+          logoDark: game.home_team.logo_dark,
+          logoLight: game.home_team.logo_light,
           code: game.home_team.code,
           primaryColor: game.home_team.primary_color,
           textColor: game.home_team.text_color,

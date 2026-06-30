@@ -14,6 +14,8 @@ export interface StatsLeaderItem {
   team_primary_color: string | null;
   team_text_color: string | null;
   team_logo: string | null;
+  team_logo_dark?: string | null;
+  team_logo_light?: string | null;
   team_code: string | null;
   jersey_number: number | null;
   position?: string | null;
@@ -93,6 +95,8 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
           photo={featured.photo}
           initials={featuredInitials}
           teamLogo={featured.team_logo}
+          teamLogoDark={featured.team_logo_dark}
+          teamLogoLight={featured.team_logo_light}
           teamCode={featured.team_code}
           teamPrimaryColor={featured.team_primary_color}
           teamTextColor={featured.team_text_color}

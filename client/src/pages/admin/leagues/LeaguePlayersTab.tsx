@@ -272,6 +272,8 @@ const LeaguePlayersTab = ({ className }: Props) => {
                         <ListItem
                           key={p.id}
                           leadingImage={p.team_logo}
+                          leadingImageDark={p.team_logo_dark}
+                          leadingImageLight={p.team_logo_light}
                           leadingImagePlaceholder={
                             (p.team_code ?? (p.team_name ?? '').slice(0, 3)) || undefined
                           }

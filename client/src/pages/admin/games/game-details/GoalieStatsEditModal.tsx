@@ -539,6 +539,8 @@ const GoalieStatsEditModal = ({
           const { stat, rosterEntry: goalie } = row;
           const isAway = goalie.team_id === game.away_team.id;
           const logo = isAway ? game.away_team.logo : game.home_team.logo;
+          const logoDark = isAway ? game.away_team.logo_dark : game.home_team.logo_dark;
+          const logoLight = isAway ? game.away_team.logo_light : game.home_team.logo_light;
           const code = isAway ? game.away_team.code : game.home_team.code;
           const primary = isAway ? game.away_team.primary_color : game.home_team.primary_color;
           const text = isAway ? game.away_team.text_color : game.home_team.text_color;
@@ -567,6 +569,8 @@ const GoalieStatsEditModal = ({
                 <span className={styles.goalieNameCell}>
                   <TeamLogo
                     logo={logo}
+                    logoDark={logoDark}
+                    logoLight={logoLight}
                     code={code}
                     primaryColor={primary}
                     textColor={text}

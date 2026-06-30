@@ -155,6 +155,8 @@ const GoalieStatsCard = ({
     primaryColor: string;
     textColor: string;
     teamLogo: string | null;
+    teamLogoDark?: string | null;
+    teamLogoLight?: string | null;
     teamCode: string | null;
     sa: number;
     sv: number;
@@ -184,6 +186,8 @@ const GoalieStatsCard = ({
         primaryColor: team.primary_color,
         textColor: team.text_color,
         teamLogo: team.logo,
+        teamLogoDark: team.logo_dark,
+        teamLogoLight: team.logo_light,
         teamCode: team.code,
         sa: stat.shots_against,
         sv: stat.saves,
@@ -219,6 +223,8 @@ const GoalieStatsCard = ({
         <span className={styles.goalieNameCell}>
           <TeamLogo
             logo={row.teamLogo}
+            logoDark={row.teamLogoDark}
+            logoLight={row.teamLogoLight}
             code={row.teamCode ?? '?'}
             primaryColor={row.primaryColor}
             textColor={row.textColor}

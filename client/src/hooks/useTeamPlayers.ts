@@ -26,6 +26,8 @@ export interface PlayerStintRecord {
     name: string | null;
     code: string | null;
     logo: string | null;
+    logo_dark?: string | null;
+    logo_light?: string | null;
     primary_color: string | null;
     text_color: string | null;
   };

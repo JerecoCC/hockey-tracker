@@ -157,6 +157,8 @@ const AddPlayersModal = ({
                 checked={isChecked}
                 onToggle={() => toggle(p)}
                 leadingImage={p.team_logo}
+                leadingImageDark={p.team_logo_dark}
+                leadingImageLight={p.team_logo_light}
                 leadingImagePlaceholder={p.team_code ?? undefined}
                 leadingImagePrimaryColor={p.primary_color}
                 leadingImageTextColor={p.text_color}

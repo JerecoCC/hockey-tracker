@@ -48,6 +48,8 @@ interface SimulatedSlotTeam {
   name: string;
   code: string;
   logo: string | null;
+  logoDark?: string | null;
+  logoLight?: string | null;
   primaryColor: string | null;
   textColor: string | null;
 }
@@ -57,6 +59,8 @@ const simulatedTeamFromStanding = (team: TeamStandingRecord): SimulatedSlotTeam 
   name: standingTeamLabel(team),
   code: team.team_code ?? standingTeamLabel(team).slice(0, 3).toUpperCase(),
   logo: team.team_logo,
+  logoDark: team.team_logo_dark,
+  logoLight: team.team_logo_light,
   primaryColor: team.team_primary_color,
   textColor: team.team_text_color,
 });
@@ -306,6 +310,8 @@ const BracketSlot = ({
           {simulatedTeam1Details && (
             <TeamLogo
               logo={simulatedTeam1Details.logo}
+              logoDark={simulatedTeam1Details.logoDark}
+              logoLight={simulatedTeam1Details.logoLight}
               code={simulatedTeam1Details.code}
               alt={simulatedTeam1Details.name}
               primaryColor={simulatedTeam1Details.primaryColor}
@@ -325,6 +331,8 @@ const BracketSlot = ({
           {simulatedTeam2Details && (
             <TeamLogo
               logo={simulatedTeam2Details.logo}
+              logoDark={simulatedTeam2Details.logoDark}
+              logoLight={simulatedTeam2Details.logoLight}
               code={simulatedTeam2Details.code}
               alt={simulatedTeam2Details.name}
               primaryColor={simulatedTeam2Details.primaryColor}
@@ -427,6 +435,8 @@ const BracketSlot = ({
         {series.home_team_id && (
           <TeamLogo
             logo={series.home_team_logo}
+            logoDark={series.home_team_logo_dark}
+            logoLight={series.home_team_logo_light}
             code={series.home_team_code}
             size={20}
             shape="square"
@@ -453,6 +463,8 @@ const BracketSlot = ({
         {series.away_team_id && (
           <TeamLogo
             logo={series.away_team_logo}
+            logoDark={series.away_team_logo_dark}
+            logoLight={series.away_team_logo_light}
             code={series.away_team_code}
             size={20}
             shape="square"
@@ -981,6 +993,10 @@ const SeasonPlayoffsTab = ({
       name: (winnerIsHome ? finalSeries.home_team_name : finalSeries.away_team_name) ?? 'TBD',
       code: (winnerIsHome ? finalSeries.home_team_code : finalSeries.away_team_code) ?? '',
       logo: winnerIsHome ? finalSeries.home_team_logo : finalSeries.away_team_logo,
+      logoDark: winnerIsHome ? finalSeries.home_team_logo_dark : finalSeries.away_team_logo_dark,
+      logoLight: winnerIsHome
+        ? finalSeries.home_team_logo_light
+        : finalSeries.away_team_logo_light,
       wins: winnerIsHome ? finalSeries.home_wins : finalSeries.away_wins,
       opponentWins: winnerIsHome ? finalSeries.away_wins : finalSeries.home_wins,
     };
@@ -1425,6 +1441,8 @@ const SeasonPlayoffsTab = ({
               <div className={styles.playoffWinnerShowcase}>
                 <TeamLogo
                   logo={playoffWinner.logo}
+                  logoDark={playoffWinner.logoDark}
+                  logoLight={playoffWinner.logoLight}
                   code={playoffWinner.code}
                   size={96}
                   shape="square"

@@ -135,6 +135,8 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
               >
                 <TeamLogo
                   logo={pm.away_team.logo}
+                  logoDark={pm.away_team.logo_dark}
+                  logoLight={pm.away_team.logo_light}
                   code={pm.away_team.code}
                   primaryColor={pm.away_team.primary_color}
                   textColor={pm.away_team.text_color}
@@ -151,6 +153,8 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
               >
                 <TeamLogo
                   logo={pm.home_team.logo}
+                  logoDark={pm.home_team.logo_dark}
+                  logoLight={pm.home_team.logo_light}
                   code={pm.home_team.code}
                   primaryColor={pm.home_team.primary_color}
                   textColor={pm.home_team.text_color}

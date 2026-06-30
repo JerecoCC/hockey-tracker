@@ -13,6 +13,8 @@ interface Props {
   photo?: string | null;
   initials?: string;
   teamLogo?: string | null;
+  teamLogoDark?: string | null;
+  teamLogoLight?: string | null;
   teamCode?: string | null;
   teamPrimaryColor?: string | null;
   teamTextColor?: string | null;
@@ -40,6 +42,8 @@ const PlayerCard = ({
   photo,
   initials,
   teamLogo,
+  teamLogoDark,
+  teamLogoLight,
   teamCode,
   teamPrimaryColor,
   teamTextColor,
@@ -63,6 +67,8 @@ const PlayerCard = ({
       <span className={styles.metaTeam}>
         <TeamLogo
           logo={teamLogo}
+          logoDark={teamLogoDark}
+          logoLight={teamLogoLight}
           code={teamCode}
           primaryColor={teamPrimaryColor}
           textColor={teamTextColor}
@@ -121,6 +127,8 @@ const PlayerCard = ({
         {isTeam ? (
           <TeamLogo
             logo={teamLogo}
+            logoDark={teamLogoDark}
+            logoLight={teamLogoLight}
             code={teamCode ?? 'T'}
             primaryColor={teamPrimaryColor}
             textColor={teamTextColor}

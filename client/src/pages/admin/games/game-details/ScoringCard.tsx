@@ -166,6 +166,12 @@ const ScoringCard = ({
               : (GOAL_TYPE_BADGE[goal.goal_type] ?? null);
           const showEN = goal.empty_net || goal.goal_type === 'empty-net';
           const showPS = goal.penalty_shot || goal.goal_type === 'penalty-shot';
+          const scoringTeam =
+            goal.team_id === game.away_team.id
+              ? game.away_team
+              : goal.team_id === game.home_team.id
+                ? game.home_team
+                : null;
           return (
             <li
               key={goal.id}
@@ -174,6 +180,8 @@ const ScoringCard = ({
               <span className={styles.goalTime}>{goal.period_time ?? '—'}</span>
               <TeamLogo
                 logo={goal.team_logo}
+                logoDark={scoringTeam?.logo_dark}
+                logoLight={scoringTeam?.logo_light}
                 code={goal.team_code ?? '?'}
                 primaryColor={goal.team_primary_color}
                 textColor={goal.team_text_color}

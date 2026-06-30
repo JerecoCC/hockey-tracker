@@ -53,6 +53,8 @@ interface Props {
    * displayed alongside a circular player photo).
    */
   leadingImage?: string | null;
+  leadingImageDark?: string | null;
+  leadingImageLight?: string | null;
   /** Text shown in the leading placeholder when no leadingImage is provided (e.g. team code). */
   leadingImagePlaceholder?: string;
   /** Background color for the leading placeholder. */
@@ -60,6 +62,8 @@ interface Props {
   /** Text color for the leading placeholder. */
   leadingImageTextColor?: string | null;
   image?: string | null;
+  imageDark?: string | null;
+  imageLight?: string | null;
   /** Optional custom node that replaces the built-in image / placeholder block. */
   imageNode?: ReactNode;
   /** Controls the shape of the image and placeholder. Defaults to 'square'. */
@@ -109,10 +113,14 @@ interface Props {
 
 const ListItem = ({
   leadingImage,
+  leadingImageDark,
+  leadingImageLight,
   leadingImagePlaceholder,
   leadingImagePrimaryColor,
   leadingImageTextColor,
   image,
+  imageDark,
+  imageLight,
   imageNode,
   image_shape = 'square',
   hideImage = false,
@@ -167,6 +175,8 @@ const ListItem = ({
   ) : (
     <TeamLogo
       logo={image}
+      logoDark={imageDark}
+      logoLight={imageLight}
       code={imageLabel}
       alt=""
       primaryColor={primaryColor}
@@ -216,9 +226,16 @@ const ListItem = ({
       {!isCompact &&
         (leadingImage || leadingImagePlaceholder) &&
         (leadingImage ? (
-          <img
-            src={leadingImage}
+          <TeamLogo
+            logo={leadingImage}
+            logoDark={leadingImageDark}
+            logoLight={leadingImageLight}
+            code={leadingImagePlaceholder ?? ''}
             alt=""
+            size={34}
+            shape="square"
+            primaryColor={leadingImagePrimaryColor}
+            textColor={leadingImageTextColor}
             className={styles.leadingLogo}
           />
         ) : (

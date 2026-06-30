@@ -339,6 +339,8 @@ const RecordShotsBody = ({
     {
       key: 'away',
       logo: game.away_team.logo,
+      logoDark: game.away_team.logo_dark,
+      logoLight: game.away_team.logo_light,
       code: game.away_team.code,
       name: game.away_team.name,
       primaryColor: game.away_team.primary_color,
@@ -348,6 +350,8 @@ const RecordShotsBody = ({
     {
       key: 'home',
       logo: game.home_team.logo,
+      logoDark: game.home_team.logo_dark,
+      logoLight: game.home_team.logo_light,
       code: game.home_team.code,
       name: game.home_team.name,
       primaryColor: game.home_team.primary_color,
@@ -373,6 +377,8 @@ const RecordShotsBody = ({
               <span className={styles.shotsTeamInfo}>
                 <TeamLogo
                   logo={row.logo}
+                  logoDark={row.logoDark}
+                  logoLight={row.logoLight}
                   code={row.code}
                   primaryColor={row.primaryColor}
                   textColor={row.textColor}
@@ -428,6 +434,20 @@ const RecordShotsBody = ({
                   <span className={styles.shotsTeamInfo}>
                     <TeamLogo
                       logo={stat.team_logo}
+                      logoDark={
+                        stat.team_id === game.away_team.id
+                          ? game.away_team.logo_dark
+                          : stat.team_id === game.home_team.id
+                            ? game.home_team.logo_dark
+                            : undefined
+                      }
+                      logoLight={
+                        stat.team_id === game.away_team.id
+                          ? game.away_team.logo_light
+                          : stat.team_id === game.home_team.id
+                            ? game.home_team.logo_light
+                            : undefined
+                      }
                       code={stat.team_code}
                       primaryColor={stat.team_primary_color}
                       textColor={stat.team_text_color}
@@ -468,6 +488,9 @@ const RecordShotsBody = ({
             variant="field"
             options={(['away', 'home'] as const).map((side) => {
               const logo = side === 'away' ? game.away_team.logo : game.home_team.logo;
+              const logoDark = side === 'away' ? game.away_team.logo_dark : game.home_team.logo_dark;
+              const logoLight =
+                side === 'away' ? game.away_team.logo_light : game.home_team.logo_light;
               const code = side === 'away' ? game.away_team.code : game.home_team.code;
               const primary =
                 side === 'away' ? game.away_team.primary_color : game.home_team.primary_color;
@@ -478,6 +501,8 @@ const RecordShotsBody = ({
                   <>
                     <TeamLogo
                       logo={logo}
+                      logoDark={logoDark}
+                      logoLight={logoLight}
                       code={code}
                       primaryColor={primary}
                       textColor={text}

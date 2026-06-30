@@ -36,6 +36,8 @@ const TeamCard = ({ team, favorited, showFavoriteIndicator = false, onToggle }: 
   <ListItem
     className={favorited && showFavoriteIndicator ? styles.teamItemFavorited : undefined}
     image={team.logo}
+    imageDark={team.logo_dark}
+    imageLight={team.logo_light}
     eyebrow={team.place_name || undefined}
     name={team.team_name || team.name}
     rightContent={{ type: 'code', value: team.code }}

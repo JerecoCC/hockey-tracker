@@ -307,6 +307,8 @@ const TeamSelectionModal = ({
               disabled={disabled}
               onToggle={() => toggleTeam(team.id)}
               image={team.logo}
+              imageDark={team.logo_dark}
+              imageLight={team.logo_light}
               imageBackground={false}
               imagePlaceholder={team.code.slice(0, 3)}
               imagePrimaryColor={team.primary_color}
@@ -574,6 +576,8 @@ const AlignmentGroupNode = ({
             <ListItem
               key={team.id}
               image={team.logo}
+              imageDark={team.logo_dark}
+              imageLight={team.logo_light}
               eyebrow={team.place_name || ''}
               name={team.team_name || team.name}
               variant="plain"
@@ -1026,6 +1030,8 @@ const AlignmentPanel = ({
               <ListItem
                 key={team.id}
                 image={team.logo}
+                imageDark={team.logo_dark}
+                imageLight={team.logo_light}
                 eyebrow={team.place_name || ''}
                 name={team.team_name || team.name}
                 rightContent={{ type: 'code', value: team.code }}
@@ -1405,6 +1411,8 @@ const CreateAlignmentModal = ({
                   <ListItem
                     key={team.id}
                     image={team.logo}
+                    imageDark={team.logo_dark}
+                    imageLight={team.logo_light}
                     eyebrow={team.place_name || ''}
                     name={team.team_name || team.name}
                     rightContent={{ type: 'code', value: team.code }}

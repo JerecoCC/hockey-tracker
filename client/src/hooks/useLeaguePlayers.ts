@@ -38,6 +38,8 @@ export interface PlayerRecord {
   team_name?: string | null;
   team_code?: string | null;
   team_logo?: string | null;
+  team_logo_dark?: string | null;
+  team_logo_light?: string | null;
   primary_color?: string | null;
   text_color?: string | null;
   is_prospect?: boolean;

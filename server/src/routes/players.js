@@ -86,6 +86,8 @@ router.get('/', async (req, res) => {
           latest_ti.name AS team_name,
           latest_ti.code AS team_code,
           latest_ti.logo AS team_logo,
+          latest_ti.logo_dark AS team_logo_dark,
+          latest_ti.logo_light AS team_logo_light,
           latest_t.primary_color,
           latest_t.text_color
         FROM players p
@@ -104,7 +106,12 @@ router.get('/', async (req, res) => {
         ) latest_pt ON TRUE
         LEFT JOIN teams latest_t ON latest_t.id = latest_pt.team_id
         LEFT JOIN LATERAL (
-          SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo
+          SELECT
+            name,
+            code,
+            team_logo_default(logo_dark, logo_light) AS logo,
+            team_logo_dark(logo_dark, logo_light) AS logo_dark,
+            team_logo_light(logo_dark, logo_light) AS logo_light
           FROM team_iterations
           WHERE team_id = latest_pt.team_id
           ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
@@ -157,7 +164,7 @@ router.get('/', async (req, res) => {
                 height_cm, weight_lbs, position, shoots,
                 rookie_season_id, rookie_season_name,
                 is_active, created_at,
-                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
+                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, team_logo_dark, team_logo_light, primary_color, text_color, is_prospect,
                 acquisition_type, start_date::text AS start_date, has_games, season_points
               FROM (
                 SELECT DISTINCT ON (p.id)
@@ -176,6 +183,8 @@ router.get('/', async (req, res) => {
                   ti.name        AS team_name,
                   ti.code        AS team_code,
                   ti.logo        AS team_logo,
+                  ti.logo_dark   AS team_logo_dark,
+                  ti.logo_light  AS team_logo_light,
                   t.primary_color,
                   t.text_color,
                   COALESCE(pt.acquisition_type, cs.acquisition_type) AS acquisition_type,
@@ -266,7 +275,7 @@ router.get('/', async (req, res) => {
                 height_cm, weight_lbs, position, shoots,
                 rookie_season_id, rookie_season_name,
                 is_active, created_at,
-                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
+                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, team_logo_dark, team_logo_light, primary_color, text_color, is_prospect,
                 acquisition_type, start_date::text AS start_date, has_games
               FROM (
                 SELECT DISTINCT ON (p.id)
@@ -285,6 +294,8 @@ router.get('/', async (req, res) => {
                   ti.name        AS team_name,
                   ti.code        AS team_code,
                   ti.logo        AS team_logo,
+                  ti.logo_dark   AS team_logo_dark,
+                  ti.logo_light  AS team_logo_light,
                   t.primary_color,
                   t.text_color,
                   COALESCE(pt.acquisition_type, cs.acquisition_type) AS acquisition_type,
@@ -450,7 +461,7 @@ router.get('/', async (req, res) => {
             height_cm, weight_lbs, position, shoots,
             rookie_season_id, rookie_season_name,
             is_active, created_at,
-            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
+            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, team_logo_dark, team_logo_light, primary_color, text_color, is_prospect,
             acquisition_type, start_date::text AS start_date, has_games, season_points
           FROM (
             SELECT DISTINCT ON (p.id)
@@ -469,6 +480,8 @@ router.get('/', async (req, res) => {
               ti.name       AS team_name,
               ti.code       AS team_code,
               ti.logo       AS team_logo,
+              ti.logo_dark  AS team_logo_dark,
+              ti.logo_light AS team_logo_light,
               t.primary_color,
               t.text_color,
               pt.acquisition_type,
@@ -537,7 +550,7 @@ router.get('/', async (req, res) => {
             height_cm, weight_lbs, position, shoots,
             rookie_season_id, rookie_season_name,
             is_active, created_at,
-            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
+            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, team_logo_dark, team_logo_light, primary_color, text_color, is_prospect,
             acquisition_type, start_date::text AS start_date, has_games
           FROM (
             SELECT DISTINCT ON (p.id)
@@ -556,6 +569,8 @@ router.get('/', async (req, res) => {
               ti.name       AS team_name,
               ti.code       AS team_code,
               ti.logo       AS team_logo,
+              ti.logo_dark  AS team_logo_dark,
+              ti.logo_light AS team_logo_light,
               t.primary_color,
               t.text_color,
               pt.acquisition_type,
@@ -755,6 +770,8 @@ router.get('/:id/stats', async (req, res) => {
         sr.team_id,
         ti.name  AS team_name,
         ti.logo  AS team_logo,
+        ti.logo_dark AS team_logo_dark,
+        ti.logo_light AS team_logo_light,
         t.primary_color,
         t.text_color
       FROM stat_rows sr
@@ -777,7 +794,12 @@ router.get('/:id/stats', async (req, res) => {
       ) ptr ON TRUE
       LEFT JOIN teams t ON t.id = sr.team_id
       LEFT JOIN LATERAL (
-        SELECT name, team_logo_default(logo_dark, logo_light) AS logo FROM team_iterations
+        SELECT
+          name,
+          team_logo_default(logo_dark, logo_light) AS logo,
+          team_logo_dark(logo_dark, logo_light) AS logo_dark,
+          team_logo_light(logo_dark, logo_light) AS logo_light
+        FROM team_iterations
         WHERE team_id = sr.team_id
         ORDER BY
           CASE
@@ -820,6 +842,8 @@ router.get('/:id/awards', async (req, res) => {
           ti.name AS team_name,
           ti.code AS team_code,
           ti.logo AS team_logo,
+          ti.logo_dark AS team_logo_dark,
+          ti.logo_light AS team_logo_light,
           t.primary_color AS team_primary_color,
           t.text_color AS team_text_color,
           s.start_date AS season_start_date,
@@ -855,7 +879,9 @@ router.get('/:id/awards', async (req, res) => {
           SELECT
             name,
             code,
-            team_logo_default(logo_dark, logo_light) AS logo
+            team_logo_default(logo_dark, logo_light) AS logo,
+            team_logo_dark(logo_dark, logo_light) AS logo_dark,
+            team_logo_light(logo_dark, logo_light) AS logo_light
           FROM team_iterations
           WHERE team_id = t.id
           ORDER BY
@@ -888,6 +914,8 @@ router.get('/:id/awards', async (req, res) => {
           ti.name AS team_name,
           ti.code AS team_code,
           ti.logo AS team_logo,
+          ti.logo_dark AS team_logo_dark,
+          ti.logo_light AS team_logo_light,
           t.primary_color AS team_primary_color,
           t.text_color AS team_text_color,
           s.start_date AS season_start_date,
@@ -916,7 +944,9 @@ router.get('/:id/awards', async (req, res) => {
           SELECT
             name,
             code,
-            team_logo_default(logo_dark, logo_light) AS logo
+            team_logo_default(logo_dark, logo_light) AS logo,
+            team_logo_dark(logo_dark, logo_light) AS logo_dark,
+            team_logo_light(logo_dark, logo_light) AS logo_light
           FROM team_iterations
           WHERE team_id = t.id
           ORDER BY

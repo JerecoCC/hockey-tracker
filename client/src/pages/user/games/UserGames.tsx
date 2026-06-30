@@ -576,6 +576,8 @@ const CalendarGameCard = ({
       bottomLabel={playoffMetaLabel}
       awayTeam={{
         logo: game.away_team.logo,
+        logoDark: game.away_team.logo_dark,
+        logoLight: game.away_team.logo_light,
         code: game.away_team.code,
         primaryColor: game.away_team.primary_color,
         textColor: game.away_team.text_color,
@@ -590,6 +592,8 @@ const CalendarGameCard = ({
       }}
       homeTeam={{
         logo: game.home_team.logo,
+        logoDark: game.home_team.logo_dark,
+        logoLight: game.home_team.logo_light,
         code: game.home_team.code,
         primaryColor: game.home_team.primary_color,
         textColor: game.home_team.text_color,
@@ -738,6 +742,8 @@ const UserGames = () => {
         value: team.id,
         label,
         logo: team.logo ?? undefined,
+        logoDark: team.logo_dark ?? undefined,
+        logoLight: team.logo_light ?? undefined,
         code: team.code ?? undefined,
       });
     }

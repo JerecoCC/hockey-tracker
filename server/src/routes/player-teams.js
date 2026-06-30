@@ -91,6 +91,8 @@ const mapHistoryRow = (row) => ({
     name: row.team_name,
     code: row.team_code,
     logo: row.team_logo,
+    logo_dark: row.team_logo_dark,
+    logo_light: row.team_logo_light,
     primary_color: row.primary_color,
     text_color: row.text_color,
   },
@@ -345,6 +347,8 @@ router.get('/history/:playerId', async (req, res) => {
         ti.name AS team_name,
         ti.code AS team_code,
         ti.logo AS team_logo,
+        ti.logo_dark AS team_logo_dark,
+        ti.logo_light AS team_logo_light,
         t.primary_color,
         t.text_color
       FROM player_team_stints pts
@@ -363,7 +367,12 @@ router.get('/history/:playerId', async (req, res) => {
         LIMIT 1
       ) roster ON TRUE
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo
+        SELECT
+          name,
+          code,
+          team_logo_default(logo_dark, logo_light) AS logo,
+          team_logo_dark(logo_dark, logo_light) AS logo_dark,
+          team_logo_light(logo_dark, logo_light) AS logo_light
         FROM team_iterations
         WHERE team_id = pts.team_id
         ORDER BY

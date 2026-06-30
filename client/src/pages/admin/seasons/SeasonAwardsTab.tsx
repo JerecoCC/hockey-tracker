@@ -119,10 +119,14 @@ interface WinnerChecklistOption {
   name: string;
   recipient_type: AwardRecipientType;
   leadingImage?: string | null;
+  leadingImageDark?: string | null;
+  leadingImageLight?: string | null;
   leadingImagePlaceholder?: string;
   leadingImagePrimaryColor?: string | null;
   leadingImageTextColor?: string | null;
   image?: string | null;
+  imageDark?: string | null;
+  imageLight?: string | null;
   imagePlaceholder?: string;
   imageShape?: 'square' | 'circle';
   imagePrimaryColor?: string | null;
@@ -351,6 +355,8 @@ const SeasonAwardsTab = ({
     value: player.player_id,
     label: playerName(player),
     logo: player.team_logo,
+    logoDark: player.team_logo_dark,
+    logoLight: player.team_logo_light,
     code: player.team_code ?? undefined,
   }));
 
@@ -360,6 +366,8 @@ const SeasonAwardsTab = ({
       value: player.player_id,
       label: playerName(player),
       logo: player.team_logo,
+      logoDark: player.team_logo_dark,
+      logoLight: player.team_logo_light,
       code: player.team_code ?? undefined,
     }));
 
@@ -369,6 +377,8 @@ const SeasonAwardsTab = ({
       value: player.player_id,
       label: playerName(player),
       logo: player.team_logo,
+      logoDark: player.team_logo_dark,
+      logoLight: player.team_logo_light,
       code: player.team_code ?? undefined,
     }));
 
@@ -376,6 +386,8 @@ const SeasonAwardsTab = ({
     value: player.player_id,
     label: playerName(player),
     logo: player.team_logo,
+    logoDark: player.team_logo_dark,
+    logoLight: player.team_logo_light,
     code: player.team_code ?? undefined,
   }));
 
@@ -393,6 +405,8 @@ const SeasonAwardsTab = ({
     value: team.id,
     label: team.name,
     logo: team.logo,
+    logoDark: team.logo_dark,
+    logoLight: team.logo_light,
     code: team.code,
   }));
 
@@ -441,6 +455,8 @@ const SeasonAwardsTab = ({
           value: recipientValueId(recipient) ?? '',
           label: recipientName(recipient),
           logo: recipient.team_logo,
+          logoDark: recipient.team_logo_dark,
+          logoLight: recipient.team_logo_light,
           code: recipient.team_code ?? undefined,
         }))
         .filter((option) => option.value);
@@ -461,6 +477,8 @@ const SeasonAwardsTab = ({
       name,
       recipient_type: 'player',
       leadingImage: player.team_logo,
+      leadingImageDark: player.team_logo_dark,
+      leadingImageLight: player.team_logo_light,
       leadingImagePlaceholder: player.team_code ?? undefined,
       leadingImagePrimaryColor: player.team_primary_color,
       leadingImageTextColor: player.team_text_color,
@@ -479,6 +497,8 @@ const SeasonAwardsTab = ({
     name: team.name,
     recipient_type: 'team',
     image: team.logo,
+    imageDark: team.logo_dark,
+    imageLight: team.logo_light,
     imagePlaceholder: team.code,
     imagePrimaryColor: team.primary_color,
     imageTextColor: team.text_color,
@@ -499,11 +519,17 @@ const SeasonAwardsTab = ({
       name,
       recipient_type: recipient.recipient_type,
       leadingImage: recipient.recipient_type === 'player' ? recipient.team_logo : undefined,
+      leadingImageDark:
+        recipient.recipient_type === 'player' ? recipient.team_logo_dark : undefined,
+      leadingImageLight:
+        recipient.recipient_type === 'player' ? recipient.team_logo_light : undefined,
       leadingImagePlaceholder:
         recipient.recipient_type === 'player' ? (recipient.team_code ?? undefined) : undefined,
       leadingImagePrimaryColor: recipient.team_primary_color,
       leadingImageTextColor: recipient.team_text_color,
       image: recipient.recipient_type === 'player' ? recipient.player_photo : recipient.team_logo,
+      imageDark: recipient.recipient_type === 'team' ? recipient.team_logo_dark : undefined,
+      imageLight: recipient.recipient_type === 'team' ? recipient.team_logo_light : undefined,
       imageShape: recipient.recipient_type === 'player' ? 'circle' : 'square',
       imagePlaceholder:
         recipient.recipient_type === 'player'
@@ -1310,10 +1336,14 @@ const SeasonAwardsTab = ({
                       checked={recipientWinnerDraftIds.includes(option.id)}
                       onToggle={() => toggleRecipientWinner(option.id)}
                       leadingImage={option.leadingImage}
+                      leadingImageDark={option.leadingImageDark}
+                      leadingImageLight={option.leadingImageLight}
                       leadingImagePlaceholder={option.leadingImagePlaceholder}
                       leadingImagePrimaryColor={option.leadingImagePrimaryColor}
                       leadingImageTextColor={option.leadingImageTextColor}
                       image={option.image}
+                      imageDark={option.imageDark}
+                      imageLight={option.imageLight}
                       imageShape={option.imageShape}
                       imagePlaceholder={option.imagePlaceholder}
                       imagePrimaryColor={option.imagePrimaryColor}
@@ -1500,6 +1530,8 @@ const recipientPlayerCardProps = (recipient: SeasonAwardRecipient) => ({
   photo: recipient.player_photo,
   initials: recipientInitials(recipient),
   teamLogo: recipient.team_logo,
+  teamLogoDark: recipient.team_logo_dark,
+  teamLogoLight: recipient.team_logo_light,
   teamCode: recipient.team_code,
   teamPrimaryColor: recipient.team_primary_color,
   teamTextColor: recipient.team_text_color,

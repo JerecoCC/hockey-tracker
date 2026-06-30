@@ -12,6 +12,8 @@ import styles from './LastFiveCard.module.scss';
 interface Props {
   label: string;
   logo: string | null;
+  logoDark?: string | null;
+  logoLight?: string | null;
   code: string;
   primary: string;
   text: string;
@@ -25,6 +27,8 @@ interface Props {
 export default function LastTeamGamesAccordion({
   label,
   logo,
+  logoDark,
+  logoLight,
   code,
   primary,
   text,
@@ -41,6 +45,8 @@ export default function LastTeamGamesAccordion({
         <span className={styles.lastFiveTeamHeader}>
           <TeamLogo
             logo={logo}
+            logoDark={logoDark}
+            logoLight={logoLight}
             code={code}
             primaryColor={primary}
             textColor={text}

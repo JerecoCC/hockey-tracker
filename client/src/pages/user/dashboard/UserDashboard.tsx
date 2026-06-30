@@ -157,6 +157,8 @@ const TeamChip = ({ team }: { team: TeamRecord }) => (
   <ListItem
     className={styles.favoriteTeam}
     image={team.logo}
+    imageDark={team.logo_dark}
+    imageLight={team.logo_light}
     eyebrow={team.place_name || undefined}
     name={team.team_name || team.name}
     rightContent={{ type: 'code', value: team.code }}

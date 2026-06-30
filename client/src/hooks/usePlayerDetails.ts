@@ -21,6 +21,8 @@ export interface PlayerCareerStatRecord {
   team_id: string | null;
   team_name: string | null;
   team_logo: string | null;
+  team_logo_dark?: string | null;
+  team_logo_light?: string | null;
   primary_color: string | null;
   text_color: string | null;
 }
@@ -37,6 +39,8 @@ export interface PlayerAwardRecord {
   team_name: string | null;
   team_code: string | null;
   team_logo: string | null;
+  team_logo_dark?: string | null;
+  team_logo_light?: string | null;
   team_primary_color: string | null;
   team_text_color: string | null;
 }

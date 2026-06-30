@@ -3,6 +3,7 @@ import { Controller, useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import {
   type PlayerStintRecord,
   type UpdateStintData,
@@ -311,13 +312,18 @@ const StintEditModal = ({
                   key={s.id}
                   className={styles.stintItem}
                 >
-                  {s.team.logo && (
-                    <img
-                      src={s.team.logo}
-                      alt={s.team.name ?? ''}
-                      className={styles.stintLogo}
-                    />
-                  )}
+                  <TeamLogo
+                    logo={s.team.logo}
+                    logoDark={s.team.logo_dark}
+                    logoLight={s.team.logo_light}
+                    code={s.team.code ?? '?'}
+                    alt={s.team.name ?? ''}
+                    primaryColor={s.team.primary_color}
+                    textColor={s.team.text_color}
+                    size={32}
+                    shape="square"
+                    className={styles.stintLogo}
+                  />
                   <div className={styles.stintInfo}>
                     <span className={styles.stintTeam}>{s.team.name ?? 'Unknown Team'}</span>
                     {s.jersey_number != null && (

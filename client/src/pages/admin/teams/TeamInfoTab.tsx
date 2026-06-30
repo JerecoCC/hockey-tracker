@@ -33,6 +33,8 @@ const TeamInfoTab = ({ team, groups, uploadLogo, updateTeam }: Props) => {
       <Card>
         <EntityHeader
           logo={team.logo}
+          logoDark={team.logo_dark}
+          logoLight={team.logo_light}
           name={team.name}
           code={team.code}
           primaryColor={team.primary_color}

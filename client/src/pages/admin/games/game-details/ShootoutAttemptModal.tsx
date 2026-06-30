@@ -87,6 +87,8 @@ const ShootoutAttemptModal = ({
 
   const teamOptions = (['away', 'home'] as const).map((side) => {
     const logo = side === 'away' ? game.away_team.logo : game.home_team.logo;
+    const logoDark = side === 'away' ? game.away_team.logo_dark : game.home_team.logo_dark;
+    const logoLight = side === 'away' ? game.away_team.logo_light : game.home_team.logo_light;
     const code = side === 'away' ? game.away_team.code : game.home_team.code;
     const primary = side === 'away' ? game.away_team.primary_color : game.home_team.primary_color;
     const text = side === 'away' ? game.away_team.text_color : game.home_team.text_color;
@@ -96,6 +98,8 @@ const ShootoutAttemptModal = ({
         <>
           <TeamLogo
             logo={logo}
+            logoDark={logoDark}
+            logoLight={logoLight}
             code={code}
             primaryColor={primary}
             textColor={text}

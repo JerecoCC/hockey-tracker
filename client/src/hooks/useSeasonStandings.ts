@@ -10,6 +10,8 @@ export interface TeamStandingRecord {
   team_name: string | null;
   team_code: string | null;
   team_logo: string | null;
+  team_logo_dark?: string | null;
+  team_logo_light?: string | null;
   team_primary_color: string | null;
   team_text_color: string | null;
   gp: number;

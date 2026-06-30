@@ -12,20 +12,37 @@ import { createPortal } from 'react-dom';
 import cn from 'classnames';
 import Divider from '../Divider/Divider';
 import Icon from '../Icon/Icon';
+import TeamLogo from '../TeamLogo/TeamLogo';
 import styles from './Select.module.scss';
 
 // Keep in sync with `.menu { max-height }` in Select.module.scss.
 const MENU_MAX_HEIGHT = 220;
 
 export type SelectOption =
-  | { value: string; label: string; logo?: string | null; code?: string; indicator?: ReactNode }
+  | {
+      value: string;
+      label: string;
+      logo?: string | null;
+      logoDark?: string | null;
+      logoLight?: string | null;
+      code?: string;
+      indicator?: ReactNode;
+    }
   | { divider: true };
 export type SelectWidth = 'full' | 'content';
 
 /** Type guard — true for selectable options, false for dividers. */
 const isOption = (
   o: SelectOption,
-): o is { value: string; label: string; logo?: string | null; code?: string; indicator?: ReactNode } =>
+): o is {
+  value: string;
+  label: string;
+  logo?: string | null;
+  logoDark?: string | null;
+  logoLight?: string | null;
+  code?: string;
+  indicator?: ReactNode;
+} =>
   !('divider' in o);
 
 interface Props {
@@ -279,10 +296,15 @@ const Select = (props: Props) => {
         >
           {selected ? (
             <span className={styles.optionInner}>
-              {selected.logo ? (
-                <img
-                  src={selected.logo}
+              {selected.logo || selected.logoDark || selected.logoLight ? (
+                <TeamLogo
+                  logo={selected.logo}
+                  logoDark={selected.logoDark}
+                  logoLight={selected.logoLight}
+                  code={selected.code ?? ''}
                   alt=""
+                  size={20}
+                  shape="square"
                   className={styles.optionLogo}
                 />
               ) : selected.code ? (
@@ -352,10 +374,15 @@ const Select = (props: Props) => {
                       closeMenu();
                     }}
                   >
-                    {opt.logo ? (
-                      <img
-                        src={opt.logo}
+                    {opt.logo || opt.logoDark || opt.logoLight ? (
+                      <TeamLogo
+                        logo={opt.logo}
+                        logoDark={opt.logoDark}
+                        logoLight={opt.logoLight}
+                        code={opt.code ?? ''}
                         alt=""
+                        size={20}
+                        shape="square"
                         className={styles.optionLogo}
                       />
                     ) : opt.code ? (

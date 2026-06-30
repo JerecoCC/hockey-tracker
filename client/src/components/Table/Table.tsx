@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import Icon from '../Icon/Icon';
+import TeamLogo from '../TeamLogo/TeamLogo';
 import Tooltip from '../Tooltip/Tooltip';
 import styles from './Table.module.scss';
 
@@ -22,6 +23,8 @@ export type Column<T> =
       type: 'logo';
       header: ReactNode;
       getLogo: (row: T) => string | null | undefined;
+      getLogoDark?: (row: T) => string | null | undefined;
+      getLogoLight?: (row: T) => string | null | undefined;
       getName: (row: T) => string;
       getCode: (row: T) => string;
       sortable?: true;
@@ -42,19 +45,22 @@ const renderCell = <T,>(col: Column<T>, row: T): ReactNode => {
   if (col.type === 'date') return String(row[col.key]).slice(0, 10).replace(/-/g, '/');
   if (col.type === 'logo') {
     const src = col.getLogo(row);
+    const logoDark = col.getLogoDark?.(row);
+    const logoLight = col.getLogoLight?.(row);
     const name = col.getName(row);
     const code = col.getCode(row);
     return (
       <Tooltip text={name}>
-        {src ? (
-          <img
-            src={src}
-            alt={name}
-            className={styles.logoThumb}
-          />
-        ) : (
-          <span className={styles.logoPlaceholder}>{code.slice(0, 3)}</span>
-        )}
+        <TeamLogo
+          logo={src}
+          logoDark={logoDark}
+          logoLight={logoLight}
+          code={code}
+          alt={name}
+          size={32}
+          shape="square"
+          className={src || logoDark || logoLight ? styles.logoThumb : styles.logoPlaceholder}
+        />
       </Tooltip>
     );
   }

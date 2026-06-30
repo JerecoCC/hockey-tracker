@@ -645,6 +645,8 @@ const SeasonDetailsPage = () => {
     <div className={styles.statsPlayerCell}>
       <TeamLogo
         logo={row.team_logo}
+        logoDark={row.team_logo_dark}
+        logoLight={row.team_logo_light}
         code={row.team_code ?? '?'}
         size={24}
         shape="square"
@@ -709,30 +711,17 @@ const SeasonDetailsPage = () => {
       header: 'Team',
       render: (row) => (
         <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {row.team_logo ? (
-            <img
-              src={row.team_logo}
-              alt={row.team_name ?? ''}
-              style={{ width: 24, height: 24, objectFit: 'contain' }}
-            />
-          ) : (
-            <span
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: '50%',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.65rem',
-                fontWeight: 700,
-                background: row.team_primary_color ?? '#888',
-                color: row.team_text_color ?? '#fff',
-              }}
-            >
-              {row.team_code?.slice(0, 2) ?? '??'}
-            </span>
-          )}
+          <TeamLogo
+            logo={row.team_logo}
+            logoDark={row.team_logo_dark}
+            logoLight={row.team_logo_light}
+            code={row.team_code ?? '??'}
+            alt={row.team_name ?? row.team_code ?? ''}
+            primaryColor={row.team_primary_color}
+            textColor={row.team_text_color}
+            size={24}
+            shape="circle"
+          />
           {row.team_name ?? row.team_code ?? '—'}
           {clinchedIds.has(row.team_id) && (
             <Tag

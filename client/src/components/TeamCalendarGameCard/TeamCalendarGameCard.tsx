@@ -47,9 +47,7 @@ const TeamCalendarGameCard = ({
   onOpen,
 }: TeamCalendarGameCardProps) => {
   const isHome = variant === 'home';
-  const logo = isHome
-    ? (opponent.logo ?? opponent.logoDark ?? opponent.logoLight ?? null)
-    : (opponent.logoLight ?? opponent.logo ?? opponent.logoDark ?? null);
+  const hasLogo = Boolean(opponent.logo ?? opponent.logoDark ?? opponent.logoLight);
   const cardStyle = {
     '--calendar-primary': homePrimaryColor ?? '#334155',
     '--calendar-logo-accent':
@@ -97,13 +95,16 @@ const TeamCalendarGameCard = ({
         <div className={styles.body}>
           <div className={styles.logoWrap}>
             <TeamLogo
-              logo={logo}
-              code={logo ? opponent.code : ''}
+              logo={opponent.logo}
+              logoDark={opponent.logoDark}
+              logoLight={opponent.logoLight}
+              logoPreference={isHome ? 'theme' : 'light'}
+              code={hasLogo ? opponent.code : ''}
               primaryColor={opponent.primaryColor}
               textColor={opponent.textColor}
               size={logoSize}
-              shape={logo ? 'square' : 'circle'}
-              className={logo ? styles.logoImage : undefined}
+              shape={hasLogo ? 'square' : 'circle'}
+              className={hasLogo ? styles.logoImage : undefined}
             />
           </div>
           <span className={styles.detail}>{detail}</span>
