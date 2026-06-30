@@ -213,66 +213,66 @@
   }
 }
 
-// Light mode: outlined buttons borrow the filled variants' base colours.
+// Light mode: outlined buttons stay hollow with a subtle hover wash.
 :global(:root[data-theme='light']) {
   .outlined {
     &Accent {
-      background: rgba($accent, 0.06);
+      background: transparent;
       color: $accent;
-      border-color: $accent;
+      border-color: currentColor;
 
       &:hover:not(:disabled) {
-        background: $accent;
-        color: #fff;
-        border-color: $accent;
+        background: rgba($accent, 0.1);
+        color: $accent;
+        border-color: currentColor;
       }
     }
 
     &Success {
-      background: rgba($success, 0.06);
+      background: transparent;
       color: $success;
-      border-color: $success;
+      border-color: currentColor;
 
       &:hover:not(:disabled) {
-        background: $success;
-        color: #fff;
-        border-color: $success;
+        background: rgba($success, 0.1);
+        color: $success;
+        border-color: currentColor;
       }
     }
 
     &Warning {
-      background: rgba($warning, 0.08);
+      background: transparent;
       color: $warning-hover;
-      border-color: $warning;
+      border-color: currentColor;
 
       &:hover:not(:disabled) {
-        background: $warning-hover;
-        color: #fff;
-        border-color: $warning-hover;
+        background: rgba($warning, 0.12);
+        color: $warning-hover;
+        border-color: currentColor;
       }
     }
 
     &Danger {
-      background: rgba($danger, 0.06);
+      background: transparent;
       color: $danger;
-      border-color: $danger;
+      border-color: currentColor;
 
       &:hover:not(:disabled) {
-        background: $danger;
-        color: #fff;
-        border-color: $danger;
+        background: rgba($danger, 0.1);
+        color: $danger;
+        border-color: currentColor;
       }
     }
 
     &Info {
-      background: rgba($info, 0.06);
+      background: transparent;
       color: $info;
-      border-color: $info;
+      border-color: currentColor;
 
       &:hover:not(:disabled) {
-        background: $info;
-        color: #fff;
-        border-color: $info;
+        background: rgba($info, 0.1);
+        color: $info;
+        border-color: currentColor;
       }
     }
 
