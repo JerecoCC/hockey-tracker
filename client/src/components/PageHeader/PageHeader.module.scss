@@ -8,7 +8,7 @@
   z-index: 5;
   display: flex;
   flex-direction: column;
-  background: var(--app-bg, #{$bg-page});
+  background: var(--app-surface, #{$bg-card});
   border-bottom: 1px solid var(--app-border, #{$border});
   flex-shrink: 0;
 }

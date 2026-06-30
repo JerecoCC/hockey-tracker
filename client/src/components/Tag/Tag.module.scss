@@ -33,9 +33,9 @@
 }
 
 .neutral {
-  background: $border;
+  background: var(--app-border, #{$border});
   color: var(--app-text, #{$text-body});
-  border-color: $border;
+  border-color: var(--app-border, #{$border});
 }
 
 .danger {
