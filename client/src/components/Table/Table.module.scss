@@ -3,6 +3,8 @@
 
 // ── Table wrapper ──────────────────────────────────────────────────────
 .tableWrapper {
+  --table-row-hover-bg: rgba(255, 255, 255, 0.04);
+
   overflow-x: auto;
 }
 
@@ -28,7 +30,7 @@
       transition: background $transition-fast;
 
       &:hover {
-        background: rgba(255, 255, 255, 0.04);
+        background: var(--table-row-hover-bg);
       }
 
       &.clickableRow {
@@ -152,6 +154,12 @@
 
 :global(:root[data-theme='light']) {
   .tableWrapper {
+    --table-row-hover-bg: color-mix(
+      in srgb,
+      var(--app-accent-light, #2563eb) 8%,
+      var(--app-surface, #fff)
+    );
+
     table {
       tbody {
         tr {
