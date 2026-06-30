@@ -17,11 +17,18 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
   --accordion-header-bg: #{$_active-period-color};
 }
 
+:global(:root[data-theme='light']) .periodItemActive {
+  --accordion-header-text: #ffffff;
+  --accordion-header-muted: #dbeafe;
+  --accordion-toggle-color: #dbeafe;
+  --accordion-toggle-hover-color: #ffffff;
+}
+
 // Passed as label slot content to give the period name a fixed-width column.
 .periodLabel {
   font-size: $font-base;
   font-weight: 600;
-  color: var(--app-text, #{$text-body});
+  color: var(--accordion-header-text, var(--app-text, #{$text-body}));
   min-width: 96px;
   flex-shrink: 0;
   display: flex;

@@ -8,6 +8,10 @@
   // by overriding --accordion-header-bg on the root element via className.
   --accordion-header-bg: var(--app-border, #{$border});
   --accordion-border-color: var(--app-border, #{$border});
+  --accordion-header-text: var(--app-text, #{$text-body});
+  --accordion-header-muted: var(--app-text-muted, #{$text-dim});
+  --accordion-toggle-color: var(--accordion-header-muted);
+  --accordion-toggle-hover-color: var(--accordion-header-text);
 
   display: flex;
   flex-direction: column;
@@ -88,14 +92,14 @@
   height: auto;
   background: transparent;
   border: none;
-  color: var(--app-text-muted, #{$text-dim});
+  color: var(--accordion-toggle-color);
   cursor: pointer;
   padding: 0;
   border-radius: 0;
   transition: color $transition-fast;
 
   &:hover {
-    color: var(--app-text, #{$text-body});
+    color: var(--accordion-toggle-hover-color);
     background: transparent;
   }
 
@@ -135,12 +139,13 @@
   min-width: 0;
   font-size: $font-lg;
   font-weight: 500;
-  color: var(--app-text, #{$text-body});
+  color: var(--accordion-header-text);
 
   &Meta {
     display: inline-flex;
     align-items: center;
     flex-shrink: 0;
+    color: var(--accordion-header-muted);
   }
 }
 
@@ -151,6 +156,7 @@
   align-items: center;
   gap: $space-sm;
   flex-shrink: 0;
+  color: var(--accordion-header-muted);
 }
 
 // ── Hover-revealed action overlay (replaces ActionOverlay) ────────────────────

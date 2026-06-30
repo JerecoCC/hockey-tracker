@@ -5,7 +5,7 @@
 .soLabelSummary {
   font-size: $font-sm;
   font-weight: 500;
-  color: var(--app-text-muted, #{$text-dim});
+  color: var(--accordion-header-muted, var(--app-text-muted, #{$text-dim}));
 }
 
 // ── Attempt grid ──────────────────────────────────────────────────────────────
