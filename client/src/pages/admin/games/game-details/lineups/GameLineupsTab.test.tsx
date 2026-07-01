@@ -165,6 +165,13 @@ const renderTab = (
     />,
   );
 
+beforeAll(() => {
+  Object.defineProperty(window, 'scrollTo', {
+    configurable: true,
+    value: jest.fn(),
+  });
+});
+
 describe('GameLineupsTab starter tags', () => {
   it('shows Starter for inherited starters when the game is final and not in edit mode', () => {
     renderTab(false);
@@ -174,11 +181,22 @@ describe('GameLineupsTab starter tags', () => {
     expect(screen.queryByText('Last Starter')).not.toBeInTheDocument();
   });
 
-  it('keeps Last Starter for inherited starters while editing a final game', () => {
+  it('locks final admin lineups until correction is confirmed', () => {
     renderTab(true);
+
+    expect(screen.getByText('Starter')).toBeInTheDocument();
+    expect(screen.queryByText('Last Starter')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add to starting lineup' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /correct final lineup/i }));
+    expect(screen.getByText(/corrections can change player game logs/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /start correction/i }));
 
     expect(screen.getByText('Last Starter')).toBeInTheDocument();
     expect(screen.queryByText('Starter')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add to starting lineup' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove from lineup' })).toBeInTheDocument();
   });
 
   it('adds a roster player to the first matching empty starting lineup slot', async () => {

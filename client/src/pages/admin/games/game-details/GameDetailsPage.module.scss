@@ -487,6 +487,14 @@
 
 // Two-column grid inside the Card body — each column is a static Accordion
 .lineup {
+  &ActionBar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-sm;
+    flex-wrap: wrap;
+  }
+
   &Grid {
     display: grid;
     grid-template-columns: 1fr 1fr;

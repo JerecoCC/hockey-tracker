@@ -19,6 +19,7 @@ interface Props {
   players: TeamPlayerRecord[];
   /** All lineup entries for the game, filtered here to this team's entries. */
   lineup: LineupEntry[];
+  correctionMode?: boolean;
   saveTeamLineup: (
     teamId: string,
     slots: Array<{ position_slot: LineupPositionSlot; player_id: string | null }>,
@@ -71,6 +72,7 @@ const SetLineupModal = ({
   teamName,
   players,
   lineup,
+  correctionMode = false,
   saveTeamLineup,
 }: Props) => {
   const { control, watch, setValue, reset } = useForm<FormValues>({
@@ -262,7 +264,7 @@ const SetLineupModal = ({
   return (
     <Modal
       open={open}
-      title={`Set Starting Lineup - ${teamName}`}
+      title={`${correctionMode ? 'Correct Final Lineup' : 'Set Starting Lineup'} - ${teamName}`}
       onClose={handleClose}
       size="md"
       bodyClassName={styles.rosterBody}
@@ -298,7 +300,7 @@ const SetLineupModal = ({
             disabled={!canSave || !!lineupError}
             className={styles.footerSave}
           >
-            {saving ? 'Saving...' : 'Save Lineup'}
+            {saving ? 'Saving...' : correctionMode ? 'Save Correction' : 'Save Lineup'}
           </Button>
         </div>
       }

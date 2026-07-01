@@ -103,6 +103,13 @@ describe('SetLineupModal', () => {
     ]);
   });
 
+  it('uses correction wording when editing a final lineup correction', () => {
+    renderModal({ correctionMode: true });
+
+    expect(screen.getByText(/Correct Final Lineup - Test Team/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save correction/i })).toBeInTheDocument();
+  });
+
   it('uses the jersey quick field and saves checked players in jersey order with the goalie last', async () => {
     const user = userEvent.setup();
     const saveTeamLineup = jest.fn().mockResolvedValue(true);

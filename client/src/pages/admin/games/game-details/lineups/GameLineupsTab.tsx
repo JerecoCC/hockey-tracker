@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Accordion from '@/components/Accordion/Accordion';
+import Button from '@/components/Button/Button';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Section from '@/components/Section/Section';
 import ListItem from '@/components/ListItem/ListItem';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
@@ -126,9 +128,21 @@ const GameLineupsTab = ({
   } | null>(null);
   const [lineupSetTeam, setLineupSetTeam] = useState<'away' | 'home' | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<{ entry: GameRosterEntry } | null>(null);
+  const [confirmFinalCorrection, setConfirmFinalCorrection] = useState(false);
+  const [finalLineupCorrection, setFinalLineupCorrection] = useState(false);
   const [removingFromRoster, setRemovingFromRoster] = useState(false);
   const [addingStarterPlayerId, setAddingStarterPlayerId] = useState<string | null>(null);
   const [visibleTeam, setVisibleTeam] = useState<'away' | 'home'>('away');
+
+  const canOfferFinalLineupCorrection = !readOnly && isEditMode && isFinal;
+  const finalLineupCorrectionActive = canOfferFinalLineupCorrection && finalLineupCorrection;
+  const lineupActionsLocked = readOnly || (isFinal && !finalLineupCorrectionActive);
+
+  useEffect(() => {
+    if (canOfferFinalLineupCorrection) return;
+    setFinalLineupCorrection(false);
+    setConfirmFinalCorrection(false);
+  }, [canOfferFinalLineupCorrection]);
 
   const { createAndRosterPlayers: createAndRosterAway } = useTeamPlayers(
     game.away_team.id,
@@ -166,6 +180,11 @@ const GameLineupsTab = ({
     await removeFromRoster(confirmRemove.entry.id);
     setRemovingFromRoster(false);
     setConfirmRemove(null);
+  };
+
+  const handleConfirmFinalCorrection = () => {
+    setFinalLineupCorrection(true);
+    setConfirmFinalCorrection(false);
   };
 
   const buildStarterDraft = (teamId: string) => {
@@ -240,7 +259,7 @@ const GameLineupsTab = ({
       }
       labelMeta={<span className={styles.accordionTeamCount}>({rosterEntries.length}/23)</span>}
       hoverActions={
-        readOnly || (isFinal && !isEditMode)
+        lineupActionsLocked
           ? []
           : [
               ...(inheritedEntries.length > 0 && rosterEntries.length === 0
@@ -312,8 +331,10 @@ const GameLineupsTab = ({
             const isInheritedStarter = !isStarter && inheritedLineupMap.has(e.player_id);
             const showStarterTag =
               isStarter ||
-              (isFinal && !isEditMode && isInheritedStarter) ||
-              (isInheritedStarter && game.status !== 'scheduled' && !(isFinal && isEditMode));
+              (isFinal && !finalLineupCorrectionActive && isInheritedStarter) ||
+              (isInheritedStarter &&
+                game.status !== 'scheduled' &&
+                !(isFinal && finalLineupCorrectionActive));
             const positionPart = e.position
               ? (POSITION_LABEL[e.position] ?? e.position)
               : undefined;
@@ -347,7 +368,7 @@ const GameLineupsTab = ({
                       : undefined
                 }
                 actions={
-                  readOnly || (isFinal && !isEditMode)
+                  lineupActionsLocked
                     ? []
                     : [
                         !isStarter && {
@@ -395,24 +416,48 @@ const GameLineupsTab = ({
         <Section
           title="Lineups"
           action={
-            <div className={styles.lineupMobileToggle}>
-              <SegmentedControl
-                value={visibleTeam}
-                onChange={(value) => setVisibleTeam(value as 'away' | 'home')}
-                options={[
-                  {
-                    value: 'away',
-                    label: game.away_team.code,
-                    tooltip: game.away_team.name,
-                  },
-                  {
-                    value: 'home',
-                    label: game.home_team.code,
-                    tooltip: game.home_team.name,
-                  },
-                ]}
-                className={styles.lineupMobileToggleControl}
-              />
+            <div className={styles.lineupActionBar}>
+              {canOfferFinalLineupCorrection && (
+                <Button
+                  size="sm"
+                  variant="outlined"
+                  intent={finalLineupCorrectionActive ? 'neutral' : 'warning'}
+                  icon={finalLineupCorrectionActive ? 'check' : 'edit'}
+                  iconHeight="button"
+                  tooltip={
+                    finalLineupCorrectionActive ? 'Done Correcting' : 'Correct Final Lineup'
+                  }
+                  aria-label={
+                    finalLineupCorrectionActive ? 'Done Correcting' : 'Correct Final Lineup'
+                  }
+                  onClick={() => {
+                    if (finalLineupCorrectionActive) {
+                      setFinalLineupCorrection(false);
+                      return;
+                    }
+                    setConfirmFinalCorrection(true);
+                  }}
+                />
+              )}
+              <div className={styles.lineupMobileToggle}>
+                <SegmentedControl
+                  value={visibleTeam}
+                  onChange={(value) => setVisibleTeam(value as 'away' | 'home')}
+                  options={[
+                    {
+                      value: 'away',
+                      label: game.away_team.code,
+                      tooltip: game.away_team.name,
+                    },
+                    {
+                      value: 'home',
+                      label: game.home_team.code,
+                      tooltip: game.home_team.name,
+                    },
+                  ]}
+                  className={styles.lineupMobileToggleControl}
+                />
+              </div>
             </div>
           }
         >
@@ -468,7 +513,7 @@ const GameLineupsTab = ({
       </div>
 
       {/* ── Add from Roster ── */}
-      {!readOnly && lineupAddTeam !== null && (
+      {!lineupActionsLocked && lineupAddTeam !== null && (
         <LineupRosterModal
           open={lineupAddTeam !== null}
           onClose={() => setLineupAddTeam(null)}
@@ -492,7 +537,7 @@ const GameLineupsTab = ({
       )}
 
       {/* ── Create Player ── */}
-      {!readOnly && lineupCreateTeam !== null && (
+      {!lineupActionsLocked && lineupCreateTeam !== null && (
         <LineupCreatePlayersModal
           open={lineupCreateTeam !== null}
           onClose={() => {
@@ -530,7 +575,7 @@ const GameLineupsTab = ({
       )}
 
       {/* ── Set Starting Lineup ── */}
-      {!readOnly &&
+      {!lineupActionsLocked &&
         lineupSetTeam !== null &&
         (() => {
           const sideTeam = lineupSetTeam === 'away' ? game.away_team : game.home_team;
@@ -549,17 +594,37 @@ const GameLineupsTab = ({
               players={rosterForSide as unknown as Parameters<typeof SetLineupModal>[0]['players']}
               lineup={lineup}
               saveTeamLineup={saveTeamLineup}
+              correctionMode={finalLineupCorrectionActive}
             />
           );
         })()}
 
       {/* ── Remove from Lineup ── */}
-      {!readOnly && (
+      {!lineupActionsLocked && (
         <RemoveFromLineupModal
           entry={confirmRemove?.entry ?? null}
           busy={removingFromRoster}
           onConfirm={handleConfirmRemove}
           onCancel={() => setConfirmRemove(null)}
+        />
+      )}
+
+      {canOfferFinalLineupCorrection && (
+        <ConfirmModal
+          open={confirmFinalCorrection}
+          title="Correct Final Lineup"
+          body={
+            <>
+              This game is final. Corrections can change player game logs and season stats. Continue
+              editing the lineup for <strong>{game.away_team.code}</strong> vs{' '}
+              <strong>{game.home_team.code}</strong>?
+            </>
+          }
+          confirmLabel="Start Correction"
+          confirmIcon="edit"
+          variant="info"
+          onConfirm={handleConfirmFinalCorrection}
+          onCancel={() => setConfirmFinalCorrection(false)}
         />
       )}
     </>
