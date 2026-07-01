@@ -1,4 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react';
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+} from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -31,11 +41,12 @@ import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
-import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import { type GameRecord } from '@/hooks/useGames';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import { buildUserGameDetailsPath } from '@/lib/routeSlugs';
 import styles from './UserGames.module.scss';
+
+const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/ScoreImageModal'));
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
@@ -986,26 +997,26 @@ const UserGames = () => {
     });
   }, [groupedByDate, todayKey]);
 
-  const clearWeekSummaryScrollTarget = () => {
+  const clearWeekSummaryScrollTarget = useCallback(() => {
     weekSummaryScrollTargetRef.current = null;
     if (weekSummaryScrollTimeoutRef.current !== null) {
       window.clearTimeout(weekSummaryScrollTimeoutRef.current);
       weekSummaryScrollTimeoutRef.current = null;
     }
-  };
+  }, []);
 
-  const holdWeekSummaryScrollTarget = (
-    dateKey: string,
-    delay = USER_WEEK_SUMMARY_AUTO_SCROLL_IDLE_MS,
-  ) => {
-    weekSummaryScrollTargetRef.current = dateKey;
-    if (weekSummaryScrollTimeoutRef.current !== null) {
-      window.clearTimeout(weekSummaryScrollTimeoutRef.current);
-    }
-    weekSummaryScrollTimeoutRef.current = window.setTimeout(() => {
-      clearWeekSummaryScrollTarget();
-    }, delay);
-  };
+  const holdWeekSummaryScrollTarget = useCallback(
+    (dateKey: string, delay = USER_WEEK_SUMMARY_AUTO_SCROLL_IDLE_MS) => {
+      weekSummaryScrollTargetRef.current = dateKey;
+      if (weekSummaryScrollTimeoutRef.current !== null) {
+        window.clearTimeout(weekSummaryScrollTimeoutRef.current);
+      }
+      weekSummaryScrollTimeoutRef.current = window.setTimeout(() => {
+        clearWeekSummaryScrollTarget();
+      }, delay);
+    },
+    [clearWeekSummaryScrollTarget],
+  );
 
   const scrollToDay = (dateKey: string) => {
     const dayNode = dayRefs.current[dateKey];
@@ -1067,7 +1078,7 @@ const UserGames = () => {
       scrollEl.removeEventListener('scroll', scheduleUpdate);
       window.removeEventListener('resize', scheduleUpdate);
     };
-  }, [groupedByDate, isLoading, view]);
+  }, [clearWeekSummaryScrollTarget, groupedByDate, holdWeekSummaryScrollTarget, isLoading, view]);
 
   const leagueOptions: SelectOption[] = [
     { value: 'all', label: 'All Leagues' },
@@ -1268,21 +1279,19 @@ const UserGames = () => {
     return draggedGame;
   };
 
-  const handleCalendarDragEnter =
-    (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
-      setCalendarDropTarget(dateKey, event);
-    };
+  const handleCalendarDragEnter = (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
+    setCalendarDropTarget(dateKey, event);
+  };
 
   const handleCalendarDragOver = (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
     setCalendarDropTarget(dateKey, event);
   };
 
-  const handleCalendarDragLeave =
-    (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
-      const nextTarget = event.relatedTarget;
-      if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return;
-      setCalendarDropDateKey((current) => (current === dateKey ? null : current));
-    };
+  const handleCalendarDragLeave = (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return;
+    setCalendarDropDateKey((current) => (current === dateKey ? null : current));
+  };
 
   const handleCalendarDrop = (dateKey: string) => async (event: DragEvent<HTMLDivElement>) => {
     const draggedGame = setCalendarDropTarget(dateKey, event);
@@ -1609,19 +1618,23 @@ const UserGames = () => {
         onSave={saveSchedule}
       />
 
-      <ScoreImageModal
-        open={scoreImageOpen || !!scoreCardTarget}
-        game={scoreCardTarget ?? undefined}
-        liveAwayScore={scoreCardTarget?.away_score}
-        liveHomeScore={scoreCardTarget?.home_score}
-        overtimeSuffix={scoreCardTarget ? getOvertimeSuffix(scoreCardTarget) : ''}
-        showForm={scoreImageOpen}
-        allowPreview
-        onClose={() => {
-          setScoreImageOpen(false);
-          setScoreCardTarget(null);
-        }}
-      />
+      {(scoreImageOpen || scoreCardTarget) && (
+        <Suspense fallback={null}>
+          <ScoreImageModal
+            open
+            game={scoreCardTarget ?? undefined}
+            liveAwayScore={scoreCardTarget?.away_score}
+            liveHomeScore={scoreCardTarget?.home_score}
+            overtimeSuffix={scoreCardTarget ? getOvertimeSuffix(scoreCardTarget) : ''}
+            showForm={scoreImageOpen}
+            allowPreview
+            onClose={() => {
+              setScoreImageOpen(false);
+              setScoreCardTarget(null);
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

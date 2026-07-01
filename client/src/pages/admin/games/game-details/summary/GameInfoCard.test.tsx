@@ -69,6 +69,10 @@ beforeAll(() => {
       dispatchEvent: jest.fn(),
     })),
   });
+  Object.defineProperty(window, 'scrollTo', {
+    writable: true,
+    value: jest.fn(),
+  });
 });
 
 describe('GameInfoCard', () => {
@@ -82,6 +86,30 @@ describe('GameInfoCard', () => {
 
     expect(screen.getByText('Semifinal')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
+  });
+
+  it('shows scheduled watch date as a separate user-view field when available', () => {
+    render(
+      <GameInfoCard
+        game={{ ...baseGame, scheduled_for: '2024-05-04' }}
+        busy={null}
+        showScheduledWatchDate
+      />,
+    );
+
+    expect(screen.getByText('Scheduled Watch Date')).toBeInTheDocument();
+    expect(screen.getByText('May 4, 2024')).toBeInTheDocument();
+  });
+
+  it('does not show scheduled watch date in the default admin card', () => {
+    render(
+      <GameInfoCard
+        game={{ ...baseGame, scheduled_for: '2024-05-04' }}
+        busy={null}
+      />,
+    );
+
+    expect(screen.queryByText('Scheduled Watch Date')).not.toBeInTheDocument();
   });
 
   it('shows round and game-in-series fields in the edit modal for playoff games', async () => {

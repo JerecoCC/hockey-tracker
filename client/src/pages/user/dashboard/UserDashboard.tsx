@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -17,8 +17,9 @@ import { type GameRecord } from '@/hooks/useGames';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import { buildUserWatchedTeamPath } from '@/lib/routeSlugs';
 import { getWatchedTeamSummaries, type TeamWatchSummary } from '@/lib/watchedTeams';
-import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import styles from './UserDashboard.module.scss';
+
+const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/ScoreImageModal'));
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
@@ -590,7 +591,7 @@ const UserDashboard = () => {
             />
             {scheduleDateInvalid && (
               <p className={styles.scheduleModalError}>
-                Choose a watch date after the game's scheduled date.
+                Choose a watch date after the scheduled game date.
               </p>
             )}
           </div>
@@ -620,15 +621,19 @@ const UserDashboard = () => {
         }}
       />
 
-      <ScoreImageModal
-        open={!!scoreCardTarget}
-        game={scoreCardTarget ?? undefined}
-        liveAwayScore={scoreCardTarget?.away_score}
-        liveHomeScore={scoreCardTarget?.home_score}
-        overtimeSuffix={scoreCardTarget ? getOvertimeSuffix(scoreCardTarget) : ''}
-        showForm={false}
-        onClose={() => setScoreCardTarget(null)}
-      />
+      {scoreCardTarget && (
+        <Suspense fallback={null}>
+          <ScoreImageModal
+            open
+            game={scoreCardTarget}
+            liveAwayScore={scoreCardTarget.away_score}
+            liveHomeScore={scoreCardTarget.home_score}
+            overtimeSuffix={getOvertimeSuffix(scoreCardTarget)}
+            showForm={false}
+            onClose={() => setScoreCardTarget(null)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

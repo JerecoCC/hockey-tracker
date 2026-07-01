@@ -23,13 +23,24 @@ interface Props {
   busy: string | null;
   updateGameInfo?: (data: UpdateGameInfoData) => Promise<boolean>;
   useLocalTimezone?: boolean;
+  showScheduledWatchDate?: boolean;
 }
 
-const GameInfoCard = ({ game, busy, updateGameInfo, useLocalTimezone = false }: Props) => {
+const GameInfoCard = ({
+  game,
+  busy,
+  updateGameInfo,
+  useLocalTimezone = false,
+  showScheduledWatchDate = false,
+}: Props) => {
   const [editOpen, setEditOpen] = useState(false);
   const playoffRoundLabel =
     game.playoff_round != null
       ? (game.playoff_round_names?.[game.playoff_round] ?? `Round ${game.playoff_round}`)
+      : null;
+  const scheduledWatchDate =
+    showScheduledWatchDate && game.scheduled_for
+      ? formatScheduledDateLocal(game.scheduled_for, null)
       : null;
 
   return (
@@ -81,8 +92,8 @@ const GameInfoCard = ({ game, busy, updateGameInfo, useLocalTimezone = false }: 
               useLocalTimezone
                 ? formatScheduledTimeLocal(game.scheduled_time, game.scheduled_at)
                 : game.scheduled_time
-                ? formatScheduledTime(game.scheduled_time, game.scheduled_at)
-                : null
+                  ? formatScheduledTime(game.scheduled_time, game.scheduled_at)
+                  : null
             }
           />
           {game.status !== 'scheduled' && (
@@ -114,6 +125,19 @@ const GameInfoCard = ({ game, busy, updateGameInfo, useLocalTimezone = false }: 
             data={game.venue ?? null}
             full
           />
+          {scheduledWatchDate && (
+            <>
+              <div
+                className={styles.infoDivider}
+                aria-hidden="true"
+              />
+              <InfoItem
+                label="Scheduled Watch Date"
+                data={scheduledWatchDate}
+                full
+              />
+            </>
+          )}
           {game.notes && (
             <InfoItem
               label="Notes"

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import Tabs from '@/components/Tabs/Tabs';
@@ -12,8 +12,6 @@ import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import useTabState from '@/hooks/useTabState';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import type { NhlAutofillProgress } from './nhlGameAutofill';
-import GameLineupsTab from './lineups/GameLineupsTab';
-import GameSummaryTab from './summary/GameSummaryTab';
 import ScoreboardCard from './ScoreboardCard';
 import styles from './GameDetailsPage.module.scss';
 
@@ -31,6 +29,9 @@ import {
   toRouteSlug,
 } from '@/lib/routeSlugs';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
+
+const GameLineupsTab = lazy(() => import('./lineups/GameLineupsTab'));
+const GameSummaryTab = lazy(() => import('./summary/GameSummaryTab'));
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -102,10 +103,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     : routeSeasons.find((item) => toRouteSlug(item.name) === seasonSlug);
   const routeSeasonId = isLegacySeasonRoute ? seasonSlug : routeSeason?.id;
   const shouldResolveGameRoute =
-    isDatedGameRoute &&
-    !isLegacyGameRoute &&
-    !!gameSlug &&
-    (isAdminView ? !!routeSeasonId : true);
+    isDatedGameRoute && !isLegacyGameRoute && !!gameSlug && (isAdminView ? !!routeSeasonId : true);
   const {
     gameId: routeGameId,
     loading: routeGameLookupLoading,
@@ -150,10 +148,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   }, [game]);
 
   const waitingForRouteGameId =
-    shouldResolveGameRoute &&
-    !routeGameId &&
-    !routeGameLookupNotFound &&
-    !routeGameLookupFailed;
+    shouldResolveGameRoute && !routeGameId && !routeGameLookupNotFound && !routeGameLookupFailed;
   const loading =
     gameDetailsLoading ||
     (!isLegacyLeagueRoute && leaguesLoading) ||
@@ -619,71 +614,91 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
               label: 'Summary',
               icon: 'apps',
               content: lockTabContent(
-                <GameSummaryTab
-                  game={game}
-                  isFinal={isFinal}
-                  isInProgress={isInProgress}
-                  isEditMode={isEditMode}
-                  editable={isAdminView}
-                  showPlayerDataStatus={isAdminView}
-                  useLocalTimezone={!isAdminView}
-                  busy={busy}
-                  leagueId={leagueId}
-                  seasonId={seasonId ?? ''}
-                  liveAwayScore={liveAwayScore}
-                  liveHomeScore={liveHomeScore}
-                  overtimeSuffix={overtimeSuffix}
-                  gameHrefBuilder={gameHrefBuilder}
-                  playerHrefBuilder={playerHrefBuilder}
-                  linescorePeriods={linescorePeriods}
-                  goalieStats={goalieStats}
-                  awayRoster={awayRoster}
-                  homeRoster={homeRoster}
-                  roster={roster}
-                  lineup={lineup}
-                  rosterReady={rosterReady}
-                  lineupsReady={lineupsReady}
-                  upsertGoalieStat={upsertGoalieStat}
-                  switchGoalie={switchGoalie}
-                  removeGoalieStat={removeGoalieStat}
-                  updateGoalieStint={updateGoalieStint}
-                  removeGoalieStint={removeGoalieStint}
-                  startGame={startGame}
-                  updateStatus={updateStatus}
-                  advancePeriod={advancePeriod}
-                  advanceOTPeriod={advanceOTPeriod}
-                  revertOTPeriod={revertOTPeriod}
-                  endGame={endGame}
-                  updateStars={updateStars}
-                  updateGameInfo={updateGameInfo}
-                  updatePeriodShots={updatePeriodShots}
-                  deleteGame={deleteGame}
-                  onGameAutofillChange={setGameAutofillProgress}
-                />,
+                <Suspense
+                  fallback={
+                    <LoadingSpinner
+                      message="Loading summary..."
+                      layout="block"
+                      size="md"
+                    />
+                  }
+                >
+                  <GameSummaryTab
+                    game={game}
+                    isFinal={isFinal}
+                    isInProgress={isInProgress}
+                    isEditMode={isEditMode}
+                    editable={isAdminView}
+                    showPlayerDataStatus={isAdminView}
+                    useLocalTimezone={!isAdminView}
+                    busy={busy}
+                    leagueId={leagueId}
+                    seasonId={seasonId ?? ''}
+                    liveAwayScore={liveAwayScore}
+                    liveHomeScore={liveHomeScore}
+                    overtimeSuffix={overtimeSuffix}
+                    gameHrefBuilder={gameHrefBuilder}
+                    playerHrefBuilder={playerHrefBuilder}
+                    linescorePeriods={linescorePeriods}
+                    goalieStats={goalieStats}
+                    awayRoster={awayRoster}
+                    homeRoster={homeRoster}
+                    roster={roster}
+                    lineup={lineup}
+                    rosterReady={rosterReady}
+                    lineupsReady={lineupsReady}
+                    upsertGoalieStat={upsertGoalieStat}
+                    switchGoalie={switchGoalie}
+                    removeGoalieStat={removeGoalieStat}
+                    updateGoalieStint={updateGoalieStint}
+                    removeGoalieStint={removeGoalieStint}
+                    startGame={startGame}
+                    updateStatus={updateStatus}
+                    advancePeriod={advancePeriod}
+                    advanceOTPeriod={advanceOTPeriod}
+                    revertOTPeriod={revertOTPeriod}
+                    endGame={endGame}
+                    updateStars={updateStars}
+                    updateGameInfo={updateGameInfo}
+                    updatePeriodShots={updatePeriodShots}
+                    deleteGame={deleteGame}
+                    onGameAutofillChange={setGameAutofillProgress}
+                  />
+                </Suspense>,
               ),
             },
             {
               label: 'Lineups',
               icon: 'set_lineup',
               content: lockTabContent(
-                <GameLineupsTab
-                  game={game}
-                  isEditMode={isEditMode}
-                  readOnly={!isAdminView}
-                  showPlayerDataStatus={isAdminView}
-                  isFinal={isFinal}
-                  leagueId={leagueId}
-                  seasonId={seasonId}
-                  playerHrefBuilder={playerHrefBuilder}
-                  awayRoster={awayRoster}
-                  homeRoster={homeRoster}
-                  awayRosterInherited={awayRosterInherited}
-                  homeRosterInherited={homeRosterInherited}
-                  lineup={lineup}
-                  saveTeamLineup={saveTeamLineup}
-                  addToRoster={addToRoster}
-                  removeFromRoster={removeFromRoster}
-                />,
+                <Suspense
+                  fallback={
+                    <LoadingSpinner
+                      message="Loading lineups..."
+                      layout="block"
+                      size="md"
+                    />
+                  }
+                >
+                  <GameLineupsTab
+                    game={game}
+                    isEditMode={isEditMode}
+                    readOnly={!isAdminView}
+                    showPlayerDataStatus={isAdminView}
+                    isFinal={isFinal}
+                    leagueId={leagueId}
+                    seasonId={seasonId}
+                    playerHrefBuilder={playerHrefBuilder}
+                    awayRoster={awayRoster}
+                    homeRoster={homeRoster}
+                    awayRosterInherited={awayRosterInherited}
+                    homeRosterInherited={homeRosterInherited}
+                    lineup={lineup}
+                    saveTeamLineup={saveTeamLineup}
+                    addToRoster={addToRoster}
+                    removeFromRoster={removeFromRoster}
+                  />
+                </Suspense>,
               ),
             },
           ]}

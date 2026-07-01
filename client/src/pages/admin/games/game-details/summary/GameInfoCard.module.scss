@@ -1,8 +1,14 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 .infoGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: $space-xl $space-2xl;
+}
+
+.infoDivider {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: var(--app-border, #{$border});
 }

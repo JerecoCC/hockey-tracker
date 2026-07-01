@@ -1,3 +1,4 @@
+/* eslint-disable react/display-name, @typescript-eslint/no-explicit-any */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -385,7 +386,7 @@ describe('UserDashboard', () => {
       target: { value: toLocalDateKey(new Date('2026-06-21T19:00:00-04:00')) },
     });
 
-    expect(screen.getByText(/after the game's scheduled date/i)).toBeInTheDocument();
+    expect(screen.getByText(/after the scheduled game date/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save Schedule' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Save Schedule' }));
     expect(mockAxios.put).not.toHaveBeenCalled();
@@ -427,7 +428,7 @@ describe('UserDashboard', () => {
     expect(screen.queryByText('2025-26')).not.toBeInTheDocument();
   });
 
-  it('opens watched-game hover actions for details and score image', () => {
+  it('opens watched-game hover actions for details and score image', async () => {
     mockDashboardQueries({
       todayGames: [
         makeGame({ status: 'final', watched_by_user: true, home_score: 4, away_score: 2 }),
@@ -439,7 +440,7 @@ describe('UserDashboard', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/games/game-1');
 
     fireEvent.click(screen.getByLabelText('Download score card'));
-    expect(screen.getByText('Score Image')).toBeInTheDocument();
+    expect(await screen.findByText('Score Image')).toBeInTheDocument();
     expect(screen.getByText('BOS @ TOR')).toBeInTheDocument();
   });
 });
