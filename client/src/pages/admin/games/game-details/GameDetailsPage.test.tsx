@@ -188,13 +188,18 @@ describe('GameDetailsPage', () => {
     render(<GameDetailsPage mode="user" />);
     await waitForGameTabs();
 
-    expect(mockScoreboardCard.mock.calls[0][0].leagueId).toBeUndefined();
+    expect(mockScoreboardCard.mock.calls[0][0].leagueId).toBeFalsy();
     expect(mockScoreboardCard.mock.calls[0][0].isEditMode).toBe(false);
     expect(mockSummaryTab.mock.calls[0][0].editable).toBe(false);
     expect(mockSummaryTab.mock.calls[0][0].isEditMode).toBe(false);
     expect(mockSummaryTab.mock.calls[0][0].showPlayerDataStatus).toBe(false);
     expect(mockSummaryTab.mock.calls[0][0].gameHrefBuilder('game-2')).toBe('/games/game-2');
-    expect(mockSummaryTab.mock.calls[0][0].playerHrefBuilder).toBeUndefined();
+    expect(
+      mockSummaryTab.mock.calls[0][0].playerHrefBuilder('team-1', 'player-9', 'John', 'Smith'),
+    ).toBe('/leagues/nhl/teams/hom/players/john-smith');
+    expect(
+      mockLineupsTab.mock.calls[0][0].playerHrefBuilder('team-1', 'player-9', 'John', 'Smith'),
+    ).toBe('/leagues/nhl/teams/hom/players/john-smith');
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(true);
     expect(mockLineupsTab.mock.calls[0][0].isEditMode).toBe(false);
     expect(mockLineupsTab.mock.calls[0][0].showPlayerDataStatus).toBe(false);

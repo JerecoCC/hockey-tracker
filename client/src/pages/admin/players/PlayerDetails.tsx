@@ -947,6 +947,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
               setGameLogType(value);
               setGameLogPage(1);
             }}
+            variant="field"
             options={[
               { value: 'all', label: 'All' },
               { value: 'regular', label: 'Regular' },

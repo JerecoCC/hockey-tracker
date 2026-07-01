@@ -23,6 +23,7 @@ import {
   buildPlayerDetailsPath,
   buildSeasonDetailsPath,
   buildUserGameDetailsPath,
+  buildUserPlayerDetailsPath,
   gameDateRouteSlug,
   gameRouteSlug,
   UUID_PATTERN,
@@ -453,27 +454,30 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
           gameId,
         })
       : `/games/${gameId}`;
-  const playerHrefBuilder = isAdminView
-    ? (
-        teamId: string,
-        _playerId: string,
-        firstName: string | null | undefined,
-        lastName: string | null | undefined,
-      ) => {
-        const team =
-          teamId === game.away_team.id
-            ? game.away_team
-            : teamId === game.home_team.id
-              ? game.home_team
-              : null;
-        return buildPlayerDetailsPath({
-          leagueCode: game.league_code,
-          teamCode: team?.code,
-          firstName,
-          lastName,
-        });
-      }
-    : undefined;
+  const playerHrefBuilder = (
+    teamId: string,
+    _playerId: string,
+    firstName: string | null | undefined,
+    lastName: string | null | undefined,
+  ) => {
+    const team =
+      teamId === game.away_team.id
+        ? game.away_team
+        : teamId === game.home_team.id
+          ? game.home_team
+          : null;
+    const playerPathInput = {
+      leagueCode: game.league_code,
+      leagueId: game.league_id,
+      teamCode: team?.code,
+      teamId,
+      firstName,
+      lastName,
+    };
+    return isAdminView
+      ? buildPlayerDetailsPath(playerPathInput)
+      : buildUserPlayerDetailsPath(playerPathInput);
+  };
 
   const isFinal = game.status === 'final';
   const isInProgress = game.status === 'in_progress';
