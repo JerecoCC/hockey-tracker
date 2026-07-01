@@ -10,6 +10,17 @@ $hero-strip-duration: 0.42s;
   gap: $page-section-gap;
 }
 
+.yearFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.yearLabel {
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-sm;
+}
+
 .heroCard {
   position: sticky;
   top: 52px;

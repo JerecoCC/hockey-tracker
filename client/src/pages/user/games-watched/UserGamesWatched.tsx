@@ -126,7 +126,7 @@ const UserGamesWatched = () => {
     queryFn: async () => {
       const { data } = await axios.get<GameRecord[]>(`${API}/user/games`, {
         headers: authHeaders(),
-        params: { watched: true },
+        params: { watched: true, all_teams: true },
       });
       return data;
     },
@@ -175,6 +175,7 @@ const UserGamesWatched = () => {
               buildUserWatchedTeamPath({
                 teamCode: summary.team.code,
                 teamName: getTeamName(summary.team),
+                teamPlaceName: summary.team.place_name,
                 teamId: summary.team.id,
               }),
             )

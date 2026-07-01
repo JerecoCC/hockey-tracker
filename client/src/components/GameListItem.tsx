@@ -45,6 +45,7 @@ interface Props {
   time?: string;
   /** Venue / arena name */
   venue?: string;
+  supplementalMeta?: string;
   /** Playoff round number (1–4) */
   round?: number | null;
   /** Custom display label for the playoff round (overrides "Round N" when provided). */
@@ -81,6 +82,7 @@ const GameListItem = ({
   date,
   time,
   venue,
+  supplementalMeta,
   round,
   roundLabel,
   gameNumberInSeries,
@@ -165,6 +167,7 @@ const GameListItem = ({
       <div className={styles.middle}>
         {metaLine && <b className={styles.metaLine}>{metaLine}</b>}
         {venue && <span className={styles.venue}>{venue}</span>}
+        {supplementalMeta && <span className={styles.supplementalMeta}>{supplementalMeta}</span>}
       </div>
 
       {/* Status badge — rightmost */}

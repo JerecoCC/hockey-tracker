@@ -1,4 +1,9 @@
-import { buildGameDetailsPath, buildUserGameDetailsPath } from './routeSlugs';
+import {
+  buildGameDetailsPath,
+  buildUserGameDetailsPath,
+  buildUserWatchedTeamPath,
+  userWatchedTeamRouteSlug,
+} from './routeSlugs';
 
 describe('buildGameDetailsPath', () => {
   it('uses the dated matchup route when date and team codes are available', () => {
@@ -70,5 +75,26 @@ describe('buildUserGameDetailsPath', () => {
         scheduledAt: '2026-05-02T02:30:00.000Z',
       }),
     ).toBe('/games/game-1');
+  });
+});
+
+describe('userWatchedTeamRouteSlug', () => {
+  it('builds watched-team slugs from the team code and team name', () => {
+    expect(
+      userWatchedTeamRouteSlug({
+        teamCode: 'BOS',
+        teamName: 'Bruins',
+      }),
+    ).toBe('bos-bruins');
+  });
+
+  it('strips the place name from full team names when building watched-team slugs', () => {
+    expect(
+      buildUserWatchedTeamPath({
+        teamCode: 'CBJ',
+        teamName: 'Columbus Blue Jackets',
+        teamPlaceName: 'Columbus',
+      }),
+    ).toBe('/dashboard/games-watched/cbj-blue-jackets');
   });
 });
