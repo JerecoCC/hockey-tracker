@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
+import { invalidateGameStatDependents } from './gameStatCache';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -10,27 +11,6 @@ const authHeaders = () => ({
 
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
-
-const invalidateLineupDependents = async (
-  queryClient: ReturnType<typeof useQueryClient>,
-  gameId: string,
-) => {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['game-goalie-stats', gameId] }),
-    queryClient.invalidateQueries({ queryKey: ['games', gameId] }),
-    queryClient.invalidateQueries({ queryKey: ['user-game-details', gameId] }),
-    queryClient.invalidateQueries({ queryKey: ['season-stats'] }),
-    queryClient.invalidateQueries({ queryKey: ['season-standings'] }),
-    queryClient.invalidateQueries({ queryKey: ['player-career-stats'] }),
-    queryClient.invalidateQueries({ queryKey: ['user-player-career-stats'] }),
-    queryClient.invalidateQueries({ queryKey: ['player-latest-season-stats'] }),
-    queryClient.invalidateQueries({ queryKey: ['user-player-latest-season-stats'] }),
-    queryClient.invalidateQueries({ queryKey: ['player-last-five-games'] }),
-    queryClient.invalidateQueries({ queryKey: ['user-player-last-five-games'] }),
-    queryClient.invalidateQueries({ queryKey: ['player-game-logs'] }),
-    queryClient.invalidateQueries({ queryKey: ['user-player-game-logs'] }),
-  ]);
-};
 
 export type LineupPositionSlot = 'F1' | 'F2' | 'F3' | 'D1' | 'D2' | 'G';
 
@@ -80,6 +60,9 @@ const useGameLineup = (gameId: string | undefined) => {
       queryClient.setQueryData<LineupEntry[]>(queryKey, (current = []) =>
         current.filter((entry) => entry.team_id !== teamId),
       );
+      if (gameId) {
+        await invalidateGameStatDependents(queryClient, gameId);
+      }
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to clear lineup'));
@@ -104,7 +87,7 @@ const useGameLineup = (gameId: string | undefined) => {
         ...teamLineup,
       ]);
       if (gameId) {
-        await invalidateLineupDependents(queryClient, gameId);
+        await invalidateGameStatDependents(queryClient, gameId);
       }
       return true;
     } catch (err) {

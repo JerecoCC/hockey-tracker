@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '@/components/Button/Button';
+import Divider from '@/components/Divider/Divider';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
+import SearchField from '@/components/SearchField/SearchField';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import { type LineupEntry, type LineupPositionSlot } from '@/hooks/useGameLineup';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
@@ -154,6 +156,17 @@ const SetLineupModal = ({
     });
   }, [query, sortedPlayers]);
 
+  const displayedPlayers = useMemo(
+    () =>
+      [...filtered].sort((a, b) => {
+        const aSelected = selected.has(a.id);
+        const bSelected = selected.has(b.id);
+        if (aSelected === bSelected) return 0;
+        return aSelected ? -1 : 1;
+      }),
+    [filtered, selected],
+  );
+
   const toggle = (playerId: string) => {
     if (saving) return;
     setJerseyNotice(null);
@@ -252,6 +265,7 @@ const SetLineupModal = ({
       title={`Set Starting Lineup - ${teamName}`}
       onClose={handleClose}
       size="md"
+      bodyClassName={styles.rosterBody}
       busy={saving}
       footer={
         <div className={styles.footerActions}>
@@ -311,7 +325,6 @@ const SetLineupModal = ({
                 handleApplyJerseys();
               }}
               disabled={saving}
-              autoFocus
             />
             <Button
               size="sm"
@@ -323,19 +336,17 @@ const SetLineupModal = ({
               Apply
             </Button>
           </div>
-          <div className={styles.controlsDivider} />
           {jerseyNotice && <p className={styles.notice}>{jerseyNotice}</p>}
-          <div className={styles.searchRow}>
-            <Field
-              control={control}
-              name="query"
-              type="search"
-              className={styles.searchField}
-              placeholder="Search players..."
-              disabled={saving}
-            />
-          </div>
+          <SearchField
+            className={styles.searchWrap}
+            placeholder="Search players..."
+            value={query}
+            onChange={(value) => setValue('query', value)}
+            disabled={saving}
+            autoFocus
+          />
         </div>
+        <Divider className={styles.searchDivider} />
 
         {lineupError && <p className={styles.error}>{lineupError}</p>}
 
@@ -347,7 +358,7 @@ const SetLineupModal = ({
           </p>
         ) : (
           <ul className={styles.list}>
-            {filtered.map((player) => {
+            {displayedPlayers.map((player) => {
               const checked = selected.has(player.id);
               const disabled = saving || (!checked && selectedCount >= MAX_STARTERS);
               return (
@@ -355,16 +366,22 @@ const SetLineupModal = ({
                   key={player.id}
                   checked={checked}
                   onToggle={() => toggle(player.id)}
-                  imagePlaceholder={
-                    player.jersey_number != null
-                      ? String(player.jersey_number)
-                      : `${player.first_name[0] ?? ''}${player.last_name[0] ?? ''}`
-                  }
-                  imageShape="square"
+                  image={player.photo}
+                  imagePlaceholder={`${player.first_name[0] ?? ''}${player.last_name[0] ?? ''}`}
+                  imageShape="circle"
                   imagePrimaryColor={player.primary_color}
                   imageTextColor={player.text_color}
+                  chip={
+                    player.jersey_number != null
+                      ? {
+                          label: player.jersey_number,
+                          primaryColor: player.primary_color,
+                          textColor: player.text_color,
+                        }
+                      : null
+                  }
                   subtitle={formatPlayerPosition(player.position) ?? undefined}
-                  name={`${player.last_name}, ${player.first_name}`}
+                  name={`${player.first_name} ${player.last_name}`}
                   disabled={disabled}
                 />
               );

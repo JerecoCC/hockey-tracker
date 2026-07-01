@@ -94,12 +94,12 @@ describe('SetLineupModal', () => {
 
     const rows = Array.from(container.querySelectorAll('li')).map((row) => row.textContent);
     expect(rows).toEqual([
-      expect.stringContaining('D, Dan'),
-      expect.stringContaining('E, Eve'),
-      expect.stringContaining('A, Alice'),
-      expect.stringContaining('B, Bob'),
-      expect.stringContaining('C, Carol'),
-      expect.stringContaining('F, Frank'),
+      expect.stringContaining('Dan D'),
+      expect.stringContaining('Eve E'),
+      expect.stringContaining('Alice A'),
+      expect.stringContaining('Bob B'),
+      expect.stringContaining('Carol C'),
+      expect.stringContaining('Frank F'),
     ]);
   });
 
@@ -178,8 +178,19 @@ describe('SetLineupModal', () => {
     await user.type(screen.getByPlaceholderText(/search players/i), 'Frank');
 
     const list = screen.getByRole('list');
-    expect(within(list).getByText('F, Frank')).toBeInTheDocument();
-    expect(within(list).queryByText('A, Alice')).not.toBeInTheDocument();
+    expect(within(list).getByText('Frank F')).toBeInTheDocument();
+    expect(within(list).queryByText('Alice A')).not.toBeInTheDocument();
+  });
+
+  it('moves selected players to the top of the list', async () => {
+    const user = userEvent.setup();
+    const { container } = renderModal();
+
+    await user.click(screen.getByText('Frank F'));
+
+    const rows = Array.from(container.querySelectorAll('li')).map((row) => row.textContent);
+    expect(rows[0]).toEqual(expect.stringContaining('Frank F'));
+    expect(rows[1]).toEqual(expect.stringContaining('Dan D'));
   });
 
   it('clears selected players without saving or closing', async () => {
