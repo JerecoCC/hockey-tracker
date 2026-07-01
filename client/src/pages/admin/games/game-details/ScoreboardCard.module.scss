@@ -370,13 +370,18 @@ $scoreboard-stripe-overlap: 8px;
   }
 }
 
-// The place name also switches to the team's own text colour.
+// Team identity text switches to the team's own text colour when the card is stuck.
 // A shadow is applied only when the JS-computed contrast ratio is too low
 // (--team-text-shadow is 'transparent' when contrast is sufficient).
 .scoreboardCardStuck {
   .teamInfo {
+    .teamFullName,
+    .teamMobileCode,
     .teamPlaceName {
       color: var(--team-text);
+    }
+
+    .teamPlaceName {
       font-weight: 500;
     }
 
