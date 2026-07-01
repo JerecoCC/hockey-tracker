@@ -21,6 +21,7 @@ import {
 import PlayerDetails, { collapseSameTeamStints } from './PlayerDetails';
 
 const mockNavigate = jest.fn();
+const mockUsePageBreadcrumbs = jest.fn();
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 jest.mock('axios');
@@ -53,6 +54,9 @@ jest.mock('@/hooks/useTeamPlayers', () => ({
   useJerseyHistory: jest.fn(),
   usePlayerPhotoHistory: jest.fn(),
   useStintActions: jest.fn(),
+}));
+jest.mock('@/context/BreadcrumbContext', () => ({
+  usePageBreadcrumbs: (...args: any[]) => mockUsePageBreadcrumbs(...args),
 }));
 jest.mock('@/components/Breadcrumbs/Breadcrumbs', () => () => <div />);
 jest.mock(
@@ -282,6 +286,24 @@ describe('PlayerDetails info tab', () => {
     expect(container.querySelector('.infoSummaryGrid')).toBeInTheDocument();
     expect(container.querySelector('.playerInfoCard')).toBeInTheDocument();
     expect(container.querySelector('.currentSeasonCards')).toBeInTheDocument();
+  });
+
+  it('uses public breadcrumbs in user mode', () => {
+    render(<PlayerDetails mode="user" />);
+
+    const config = mockUsePageBreadcrumbs.mock.calls[0][0];
+    expect(config).toEqual(
+      expect.objectContaining({
+        backPath: '/leagues/nhl/teams/tor',
+        backLabel: 'Back to Toronto Maple Leafs',
+      }),
+    );
+    expect(config.items).toEqual([
+      { label: 'Games', path: '/games' },
+      { label: 'NHL' },
+      { label: 'Toronto Maple Leafs', path: '/leagues/nhl/teams/tor' },
+      { label: 'John Smith' },
+    ]);
   });
 
   it('shows the active or retired tag beside the player heading', () => {

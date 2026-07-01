@@ -204,6 +204,13 @@ describe('GameDetailsPage', () => {
     expect(mockLineupsTab.mock.calls[0][0].isEditMode).toBe(false);
     expect(mockLineupsTab.mock.calls[0][0].showPlayerDataStatus).toBe(false);
     expect(mockUsePageBreadcrumbs.mock.calls[0][0].backPath).toBe('/games');
+    expect(mockUsePageBreadcrumbs.mock.calls[0][0].items).toEqual([
+      { label: 'Games', path: '/games' },
+      { label: 'NHL' },
+      { label: '2024-25' },
+      { label: expect.stringContaining('AWY @ HOM') },
+    ]);
+    expect(mockUsePageBreadcrumbs.mock.calls[0][0].items[3].label).toContain('Oct 10, 2024');
     expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'user' });
   });
 

@@ -616,19 +616,37 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                   : []),
                 { label: fullName },
               ]
-            : [],
+            : [
+                { label: 'Games', path: '/games' },
+                {
+                  label:
+                    teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode ?? '...',
+                },
+                ...(hasTeamRoute
+                  ? [
+                      {
+                        label: latestStint?.team.name ?? teamDetails?.name ?? '...',
+                        path: teamHref,
+                      },
+                    ]
+                  : []),
+                { label: fullName },
+              ],
         },
     [
       loading,
       teamHref,
       teamDetails?.name,
+      teamDetails?.league_code,
       teamDetails?.league_name,
       latestStint?.team.name,
       fullName,
       hasTeamRoute,
       isAdminView,
+      leagueCode,
       leagueId,
       leagueHref,
+      routeLookup?.league_code,
     ],
   );
 

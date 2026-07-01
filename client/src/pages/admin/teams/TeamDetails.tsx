@@ -109,7 +109,11 @@ const TeamDetailsPage = ({ mode = 'admin' }: Props) => {
         },
         { label: team?.name ?? '...' },
       ]
-    : [];
+    : [
+        { label: 'Games', path: '/games' },
+        { label: team?.league_code ?? '...' },
+        { label: team?.name ?? '...' },
+      ];
 
   const backPath = isAdminView ? leagueDetailsPath : '/games';
   const backTooltip = isAdminView ? 'Back to League Details' : 'Back to Games';

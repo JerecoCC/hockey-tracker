@@ -402,7 +402,12 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                 { label: seasonName, path: seasonHref },
                 { label: gameCrumbLabel },
               ]
-            : [],
+            : [
+                { label: 'Games', path: '/games' },
+                { label: leagueCrumbLabel },
+                { label: seasonName },
+                { label: gameCrumbLabel },
+              ],
         },
     [
       pageLoading,
