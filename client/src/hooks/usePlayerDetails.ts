@@ -9,6 +9,15 @@ const authHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem('token')}`,
 });
 
+type PlayerDetailsMode = 'admin' | 'user';
+
+interface PlayerDetailsOptions {
+  mode?: PlayerDetailsMode;
+}
+
+const getPlayerEndpoint = (mode: PlayerDetailsMode) =>
+  `${API}/${mode === 'user' ? 'user' : 'admin'}/players`;
+
 // ── Career stat row returned by GET /players/:id/stats ─────────────────────
 export interface PlayerCareerStatRecord {
   season_id: string;
@@ -46,15 +55,18 @@ export interface PlayerAwardRecord {
 }
 
 // ── Single player fetch ─────────────────────────────────────────────────────
-export const usePlayer = (playerId: string | null | undefined) => {
+export const usePlayer = (
+  playerId: string | null | undefined,
+  options: PlayerDetailsOptions = {},
+) => {
+  const mode = options.mode ?? 'admin';
   const { data: player = null, isLoading: loading } = useQuery<PlayerRecord | null>({
-    queryKey: ['player', playerId],
+    queryKey: [mode === 'user' ? 'user-player' : 'player', playerId],
     queryFn: async () => {
       try {
-        const { data } = await axios.get<PlayerRecord>(
-          `${API}/admin/players/${playerId}`,
-          { headers: authHeaders() },
-        );
+        const { data } = await axios.get<PlayerRecord>(`${getPlayerEndpoint(mode)}/${playerId}`, {
+          headers: authHeaders(),
+        });
         return data;
       } catch {
         toast.error('Failed to load player');
@@ -67,13 +79,17 @@ export const usePlayer = (playerId: string | null | undefined) => {
 };
 
 // ── Career stats fetch ──────────────────────────────────────────────────────
-export const usePlayerCareerStats = (playerId: string | null | undefined) => {
+export const usePlayerCareerStats = (
+  playerId: string | null | undefined,
+  options: PlayerDetailsOptions = {},
+) => {
+  const mode = options.mode ?? 'admin';
   const { data: stats = [], isLoading: loading } = useQuery<PlayerCareerStatRecord[]>({
-    queryKey: ['player-career-stats', playerId],
+    queryKey: [mode === 'user' ? 'user-player-career-stats' : 'player-career-stats', playerId],
     queryFn: async () => {
       try {
         const { data } = await axios.get<PlayerCareerStatRecord[]>(
-          `${API}/admin/players/${playerId}/stats`,
+          `${getPlayerEndpoint(mode)}/${playerId}/stats`,
           { headers: authHeaders() },
         );
         return data;
@@ -87,13 +103,17 @@ export const usePlayerCareerStats = (playerId: string | null | undefined) => {
   return { stats, loading };
 };
 
-export const usePlayerAwards = (playerId: string | null | undefined) => {
+export const usePlayerAwards = (
+  playerId: string | null | undefined,
+  options: PlayerDetailsOptions = {},
+) => {
+  const mode = options.mode ?? 'admin';
   const { data: awards = [], isLoading: loading } = useQuery<PlayerAwardRecord[]>({
-    queryKey: ['player-awards', playerId],
+    queryKey: [mode === 'user' ? 'user-player-awards' : 'player-awards', playerId],
     queryFn: async () => {
       try {
         const { data } = await axios.get<PlayerAwardRecord[]>(
-          `${API}/admin/players/${playerId}/awards`,
+          `${getPlayerEndpoint(mode)}/${playerId}/awards`,
           { headers: authHeaders() },
         );
         return data;
@@ -178,13 +198,20 @@ export const usePlayerRouteLookup = (
   teamCode: string | null | undefined,
   playerSlug: string | null | undefined,
   enabled = true,
+  options: PlayerDetailsOptions = {},
 ) => {
+  const mode = options.mode ?? 'admin';
   const { data: routeLookup = null, isLoading: loading } = useQuery<PlayerRouteLookup | null>({
-    queryKey: ['player-route-lookup', leagueCode, teamCode, playerSlug],
+    queryKey: [
+      mode === 'user' ? 'user-player-route-lookup' : 'player-route-lookup',
+      leagueCode,
+      teamCode,
+      playerSlug,
+    ],
     queryFn: async () => {
       try {
         const { data } = await axios.get<PlayerRouteLookup>(
-          `${API}/admin/players/route-lookup`,
+          `${getPlayerEndpoint(mode)}/route-lookup`,
           {
             headers: authHeaders(),
             params: {
@@ -205,14 +232,21 @@ export const usePlayerRouteLookup = (
   return { routeLookup, loading };
 };
 
-export const usePlayerCurrentSeasonStats = (playerId: string | null | undefined) => {
+export const usePlayerCurrentSeasonStats = (
+  playerId: string | null | undefined,
+  options: PlayerDetailsOptions = {},
+) => {
+  const mode = options.mode ?? 'admin';
   const { data: currentSeasonStats = null, isLoading: loading } =
     useQuery<PlayerCurrentSeasonStats | null>({
-      queryKey: ['player-latest-season-stats', playerId],
+      queryKey: [
+        mode === 'user' ? 'user-player-latest-season-stats' : 'player-latest-season-stats',
+        playerId,
+      ],
       queryFn: async () => {
         try {
           const { data } = await axios.get<PlayerCurrentSeasonStats | null>(
-            `${API}/admin/players/${playerId}/latest-season-stats`,
+            `${getPlayerEndpoint(mode)}/${playerId}/latest-season-stats`,
             { headers: authHeaders() },
           );
           return data;
@@ -227,13 +261,20 @@ export const usePlayerCurrentSeasonStats = (playerId: string | null | undefined)
 };
 
 // ── Combined hook ───────────────────────────────────────────────────────────
-export const usePlayerLastFiveGames = (playerId: string | null | undefined) => {
+export const usePlayerLastFiveGames = (
+  playerId: string | null | undefined,
+  options: PlayerDetailsOptions = {},
+) => {
+  const mode = options.mode ?? 'admin';
   const { data: lastFiveGames = [], isLoading: loading } = useQuery<PlayerLastFiveGameRecord[]>({
-    queryKey: ['player-last-five-games', playerId],
+    queryKey: [
+      mode === 'user' ? 'user-player-last-five-games' : 'player-last-five-games',
+      playerId,
+    ],
     queryFn: async () => {
       try {
         const { data } = await axios.get<PlayerLastFiveGameRecord[]>(
-          `${API}/admin/players/${playerId}/last-five-games`,
+          `${getPlayerEndpoint(mode)}/${playerId}/last-five-games`,
           { headers: authHeaders() },
         );
         return data;
@@ -255,14 +296,23 @@ export const usePlayerGameLogs = (
     page?: number;
     pageSize?: number;
   },
+  options: PlayerDetailsOptions = {},
 ) => {
   const { seasonId = null, gameType = null, page = 1, pageSize = 20 } = params;
+  const mode = options.mode ?? 'admin';
   const { data, isLoading: loading } = useQuery<PlayerGameLogsResponse>({
-    queryKey: ['player-game-logs', playerId, seasonId, gameType, page, pageSize],
+    queryKey: [
+      mode === 'user' ? 'user-player-game-logs' : 'player-game-logs',
+      playerId,
+      seasonId,
+      gameType,
+      page,
+      pageSize,
+    ],
     queryFn: async () => {
       try {
         const { data } = await axios.get<PlayerGameLogsResponse>(
-          `${API}/admin/players/${playerId}/game-logs`,
+          `${getPlayerEndpoint(mode)}/${playerId}/game-logs`,
           {
             headers: authHeaders(),
             params: {
@@ -284,9 +334,12 @@ export const usePlayerGameLogs = (
   return { gameLogs: data?.games ?? [], total: data?.total ?? 0, loading };
 };
 
-const usePlayerDetails = (playerId: string | null | undefined) => {
-  const { player, loading: playerLoading } = usePlayer(playerId);
-  const { stats, loading: statsLoading } = usePlayerCareerStats(playerId);
+const usePlayerDetails = (
+  playerId: string | null | undefined,
+  options: PlayerDetailsOptions = {},
+) => {
+  const { player, loading: playerLoading } = usePlayer(playerId, options);
+  const { stats, loading: statsLoading } = usePlayerCareerStats(playerId, options);
 
   return {
     player,

@@ -159,6 +159,100 @@ describe('GET /api/user/seasons', () => {
   });
 });
 
+describe('GET /api/user/players/route-lookup', () => {
+  it('resolves a user player details route to database ids', async () => {
+    const lookup = {
+      player_id: 'player-1',
+      team_id: 'team-1',
+      league_id: 'league-1',
+      league_code: 'NHL',
+      team_code: 'TOR',
+      player_slug: 'auston-matthews',
+    };
+    sql.mockResolvedValueOnce([lookup]);
+
+    const res = await request(app).get(
+      '/api/user/players/route-lookup?league_code=nhl&team_code=tor&player_slug=auston-matthews',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(lookup);
+  });
+});
+
+describe('GET /api/user/players/:id/stats', () => {
+  it('returns career stats using the game_player_stats read model', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        season_id: 'season-1',
+        season_name: '2025-26',
+        jersey_number: 34,
+        gp: 10,
+        goals: 7,
+        assists: 4,
+        points: 11,
+      },
+    ]);
+
+    const res = await request(app).get('/api/user/players/player-1/stats');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toMatchObject({ season_id: 'season-1', points: 11 });
+    expect(queryText).toMatch(/WITH\s+stat_rows AS/);
+    expect(queryText).toContain('FROM game_player_stats gps');
+  });
+});
+
+describe('GET /api/user/players/:id/latest-season-stats', () => {
+  it('returns latest played season stats split by game type', async () => {
+    sql
+      .mockResolvedValueOnce([
+        { season_id: 'season-1', season_name: '2025-26', player_position: 'C' },
+      ])
+      .mockResolvedValueOnce([
+        {
+          game_type: 'regular',
+          skater_gp: 12,
+          goals: 8,
+          assists: 9,
+          points: 17,
+          goalie_gp: 0,
+        },
+      ]);
+
+    const res = await request(app).get('/api/user/players/player-1/latest-season-stats');
+
+    expect(res.status).toBe(200);
+    expect(res.body.regular).toMatchObject({ gp: 12, goals: 8, points: 17 });
+    expect(res.body.playoffs).toBeNull();
+  });
+});
+
+describe('GET /api/user/players/:id', () => {
+  it('returns read-only player details with roster context', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        id: 'player-1',
+        first_name: 'Auston',
+        last_name: 'Matthews',
+        team_id: 'team-1',
+        team_name: 'Maple Leafs',
+        jersey_number: 34,
+      },
+    ]);
+
+    const res = await request(app).get('/api/user/players/player-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: 'player-1',
+      team_name: 'Maple Leafs',
+      jersey_number: 34,
+    });
+  });
+});
+
 describe('GET /api/user/games', () => {
   it('returns games and scopes the query to the authenticated user favorites', async () => {
     sql.mockResolvedValueOnce([GAME]);

@@ -37,6 +37,8 @@ describe('PageHeader – title resolution', () => {
     ['/admin/users', 'Users'],
     ['/admin/leagues/123', 'League Details'],
     ['/admin/leagues/123/teams/456', 'Team Details'],
+    ['/leagues/nhl/teams/tor/players/auston-matthews', 'Player Details'],
+    ['/leagues/nhl/players/auston-matthews', 'Player Details'],
     ['/leagues/nhl/teams/tor', 'Team Details'],
     ['/dashboard/games-watched', 'Games Watched'],
     ['/dashboard/games-watched/tor-maple-leafs', 'Games Watched'],

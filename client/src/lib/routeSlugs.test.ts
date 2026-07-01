@@ -1,6 +1,8 @@
 import {
   buildGameDetailsPath,
   buildUserGameDetailsPath,
+  buildUserLeaguePlayerDetailsPath,
+  buildUserPlayerDetailsPath,
   buildUserTeamDetailsPath,
   buildUserWatchedTeamPath,
   userWatchedTeamRouteSlug,
@@ -88,6 +90,31 @@ describe('buildUserTeamDetailsPath', () => {
         seasonName: '2025-26',
       }),
     ).toBe('/leagues/nhl/teams/tor?season=2025-26');
+  });
+});
+
+describe('buildUserPlayerDetailsPath', () => {
+  it('builds the user team-scoped player details route', () => {
+    expect(
+      buildUserPlayerDetailsPath({
+        leagueCode: 'NHL',
+        teamCode: 'TOR',
+        firstName: 'Auston',
+        lastName: 'Matthews',
+      }),
+    ).toBe('/leagues/nhl/teams/tor/players/auston-matthews');
+  });
+});
+
+describe('buildUserLeaguePlayerDetailsPath', () => {
+  it('builds the user league-scoped player details route', () => {
+    expect(
+      buildUserLeaguePlayerDetailsPath({
+        leagueCode: 'NHL',
+        firstName: 'Sarah',
+        lastName: 'Nurse',
+      }),
+    ).toBe('/leagues/nhl/players/sarah-nurse');
   });
 });
 

@@ -83,7 +83,7 @@ describe('TeamPlayersTab', () => {
     expect(container.querySelector('.playerHeaderSeasonGroup .vertical')).toBeInTheDocument();
   });
 
-  it('renders a read-only user roster without admin actions or row navigation', async () => {
+  it('renders a read-only user roster without admin actions and opens the user player route', async () => {
     const user = userEvent.setup();
     renderTeamPlayersTab({ readOnly: true, mode: 'user' });
 
@@ -94,10 +94,10 @@ describe('TeamPlayersTab', () => {
       expect.objectContaining({ mode: 'user', prospectsOnly: false }),
     );
     expect(screen.queryByText('Add Players')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Open Auston Matthews' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open Auston Matthews' })).toBeInTheDocument();
 
-    await user.click(screen.getByText('Auston Matthews'));
+    await user.click(screen.getByRole('button', { name: 'Open Auston Matthews' }));
 
-    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(mockNavigate).toHaveBeenCalledWith('/leagues/nhl/teams/tor/players/auston-matthews');
   });
 });

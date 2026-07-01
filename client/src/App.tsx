@@ -16,13 +16,12 @@ const UserLayout = lazy(() => import('./components/UserLayout/UserLayout'));
 const UserDashboard = lazy(() => import('./pages/user/dashboard/UserDashboard'));
 const UserGames = lazy(() => import('./pages/user/games/UserGames'));
 const UserGamesWatched = lazy(() => import('./pages/user/games-watched/UserGamesWatched'));
-const UserGamesWatchedTeam = lazy(
-  () => import('./pages/user/games-watched/UserGamesWatchedTeam'),
-);
+const UserGamesWatchedTeam = lazy(() => import('./pages/user/games-watched/UserGamesWatchedTeam'));
 const UserGameDetailsPage = lazy(
   () => import('./pages/user/games/game-details/UserGameDetailsPage'),
 );
 const UserTeamDetailsPage = lazy(() => import('./pages/user/teams/UserTeamDetailsPage'));
+const UserPlayerDetailsPage = lazy(() => import('./pages/user/players/UserPlayerDetailsPage'));
 const UserSettings = lazy(() => import('./pages/user/settings/UserSettings'));
 
 const LeaguesPage = lazy(() => import('./pages/admin/leagues/Leagues'));
@@ -134,6 +133,14 @@ const router = createBrowserRouter([
       },
       { path: '/games/:gameDateSlug/:gameSlug', element: <UserGameDetailsPage /> },
       { path: '/games/:id', element: <UserGameDetailsPage /> },
+      {
+        path: '/leagues/:leagueCode/teams/:teamCode/players/:playerSlug',
+        element: <UserPlayerDetailsPage />,
+      },
+      {
+        path: '/leagues/:leagueCode/players/:playerSlug',
+        element: <UserPlayerDetailsPage />,
+      },
       { path: '/leagues/:leagueSlug/teams/:teamSlug', element: <UserTeamDetailsPage /> },
       { path: '/settings', element: <UserSettings /> },
     ],

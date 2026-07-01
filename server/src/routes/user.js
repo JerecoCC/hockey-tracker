@@ -1197,6 +1197,729 @@ router.get('/players', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/user/players/route-lookup - resolve pretty player detail URLs
+// ---------------------------------------------------------------------------
+router.get('/players/route-lookup', async (req, res) => {
+  const leagueCode = String(req.query.league_code || '').trim();
+  const teamCode = String(req.query.team_code || '').trim();
+  const playerSlug = String(req.query.player_slug || '')
+    .trim()
+    .toLowerCase();
+
+  if (!leagueCode || !playerSlug) {
+    return res.status(400).json({ error: 'league_code and player_slug are required' });
+  }
+
+  try {
+    const rows = await sql`
+      SELECT
+        p.id AS player_id,
+        t.id AS team_id,
+        l.id AS league_id,
+        l.code AS league_code,
+        ti.code AS team_code,
+        trim(both '-' from regexp_replace(
+          lower(trim(concat_ws(' ', p.first_name, p.last_name))),
+          '[^a-z0-9]+',
+          '-',
+          'g'
+        )) AS player_slug
+      FROM players p
+      JOIN player_teams pt ON pt.player_id = p.id
+      JOIN teams t ON t.id = pt.team_id
+      JOIN leagues l ON l.id = t.league_id
+      LEFT JOIN LATERAL (
+        SELECT code
+        FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY
+          CASE WHEN end_date IS NULL THEN 0 ELSE 1 END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC NULLS LAST
+        LIMIT 1
+      ) ti ON true
+      WHERE lower(l.code) = lower(${leagueCode})
+        AND (${teamCode || null}::text IS NULL OR lower(ti.code) = lower(${teamCode}))
+        AND trim(both '-' from regexp_replace(
+          lower(trim(concat_ws(' ', p.first_name, p.last_name))),
+          '[^a-z0-9]+',
+          '-',
+          'g'
+        )) = ${playerSlug}
+      ORDER BY
+        CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+        pt.end_date DESC NULLS LAST,
+        pt.created_at DESC NULLS LAST
+      LIMIT 1
+    `;
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Player route not found' });
+    }
+
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('user player route-lookup error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/user/players/:id/stats - career stats for one player
+// ---------------------------------------------------------------------------
+router.get('/players/:id/stats', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      WITH stat_rows AS (
+        SELECT
+          gps.season_id,
+          gps.team_id,
+          COUNT(*)::int AS gp,
+          SUM(gps.goals)::int AS goals,
+          SUM(gps.assists)::int AS assists,
+          SUM(gps.points)::int AS points
+        FROM game_player_stats gps
+        WHERE gps.player_id = ${id}
+        GROUP BY gps.season_id, gps.team_id
+      )
+      SELECT
+        s.id AS season_id,
+        s.name AS season_name,
+        ptr.jersey_number,
+        COALESCE(sr.gp, 0) AS gp,
+        COALESCE(sr.goals, 0) AS goals,
+        COALESCE(sr.assists, 0) AS assists,
+        COALESCE(sr.points, 0) AS points,
+        sr.team_id,
+        ti.name AS team_name,
+        ti.logo AS team_logo,
+        ti.logo_dark AS team_logo_dark,
+        ti.logo_light AS team_logo_light,
+        t.primary_color,
+        t.text_color
+      FROM stat_rows sr
+      JOIN seasons s ON s.id = sr.season_id
+      LEFT JOIN LATERAL (
+        SELECT
+          pt.jersey_number,
+          pt.start_date,
+          pt.end_date,
+          pt.created_at
+        FROM player_teams pt
+        WHERE pt.player_id = ${id}
+          AND pt.season_id = sr.season_id
+          AND pt.team_id = sr.team_id
+        ORDER BY pt.end_date DESC NULLS FIRST, pt.created_at DESC
+        LIMIT 1
+      ) ptr ON TRUE
+      LEFT JOIN teams t ON t.id = sr.team_id
+      LEFT JOIN LATERAL (
+        SELECT
+          name,
+          team_logo_default(logo_dark, logo_light) AS logo,
+          team_logo_dark(logo_dark, logo_light) AS logo_dark,
+          team_logo_light(logo_dark, logo_light) AS logo_light
+        FROM team_iterations
+        WHERE team_id = sr.team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(ptr.end_date, s.end_date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(ptr.start_date, s.start_date, ptr.created_at::date))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) ti ON sr.team_id IS NOT NULL
+      ORDER BY s.created_at DESC, ti.name NULLS LAST
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('user player stats error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/user/players/:id/awards - winner awards for one player
+// ---------------------------------------------------------------------------
+router.get('/players/:id/awards', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      WITH winning_awards AS (
+        SELECT
+          sar.id,
+          la.id AS award_id,
+          sa.id AS season_award_id,
+          la.name AS award_name,
+          s.id AS season_id,
+          s.name AS season_name,
+          sa.awarded_at::text AS awarded_at,
+          t.id AS team_id,
+          ti.name AS team_name,
+          ti.code AS team_code,
+          ti.logo AS team_logo,
+          ti.logo_dark AS team_logo_dark,
+          ti.logo_light AS team_logo_light,
+          t.primary_color AS team_primary_color,
+          t.text_color AS team_text_color,
+          s.start_date AS season_start_date,
+          s.created_at AS season_created_at,
+          sa.awarded_at AS awarded_date,
+          la.sort_order,
+          0 AS source_order
+        FROM season_award_recipients sar
+        JOIN season_awards sa ON sa.id = sar.season_award_id
+        JOIN league_awards la ON la.id = sa.award_id
+        JOIN seasons s ON s.id = sa.season_id
+        LEFT JOIN LATERAL (
+          SELECT team_id, start_date, end_date, created_at
+          FROM player_teams pt
+          WHERE pt.player_id = sar.player_id
+            AND pt.season_id = s.id
+          ORDER BY
+            CASE
+              WHEN sa.awarded_at IS NOT NULL
+               AND (pt.start_date IS NULL OR pt.start_date <= sa.awarded_at)
+               AND (pt.end_date IS NULL OR pt.end_date >= sa.awarded_at)
+              THEN 0
+              WHEN pt.end_date IS NULL THEN 1
+              ELSE 2
+            END,
+            COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+            pt.created_at DESC,
+            pt.id DESC
+          LIMIT 1
+        ) ptr ON TRUE
+        LEFT JOIN teams t ON t.id = COALESCE(sar.team_id, ptr.team_id)
+        LEFT JOIN LATERAL (
+          SELECT
+            name,
+            code,
+            team_logo_default(logo_dark, logo_light) AS logo,
+            team_logo_dark(logo_dark, logo_light) AS logo_dark,
+            team_logo_light(logo_dark, logo_light) AS logo_light
+          FROM team_iterations
+          WHERE team_id = t.id
+          ORDER BY
+            CASE
+              WHEN (start_date IS NULL OR start_date <= COALESCE(sa.awarded_at, s.end_date, s.start_date, CURRENT_DATE))
+               AND (end_date IS NULL OR end_date >= COALESCE(sa.awarded_at, s.start_date, CURRENT_DATE))
+              THEN 0
+              WHEN end_date IS NULL THEN 1
+              ELSE 2
+            END,
+            start_date DESC NULLS LAST,
+            recorded_at DESC
+          LIMIT 1
+        ) ti ON TRUE
+        WHERE sar.recipient_type = 'player'
+          AND sar.role = 'winner'
+          AND sar.player_id = ${id}
+
+        UNION ALL
+
+        SELECT
+          sar.id,
+          la.id AS award_id,
+          sa.id AS season_award_id,
+          la.name AS award_name,
+          s.id AS season_id,
+          s.name AS season_name,
+          sa.awarded_at::text AS awarded_at,
+          t.id AS team_id,
+          ti.name AS team_name,
+          ti.code AS team_code,
+          ti.logo AS team_logo,
+          ti.logo_dark AS team_logo_dark,
+          ti.logo_light AS team_logo_light,
+          t.primary_color AS team_primary_color,
+          t.text_color AS team_text_color,
+          s.start_date AS season_start_date,
+          s.created_at AS season_created_at,
+          sa.awarded_at AS awarded_date,
+          la.sort_order,
+          1 AS source_order
+        FROM season_award_recipients sar
+        JOIN season_awards sa ON sa.id = sar.season_award_id
+        JOIN league_awards la ON la.id = sa.award_id
+        JOIN seasons s ON s.id = sa.season_id
+        JOIN LATERAL (
+          SELECT team_id
+          FROM player_teams pt
+          WHERE pt.player_id = ${id}
+            AND pt.season_id = s.id
+          ORDER BY
+            CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+            COALESCE(pt.end_date, pt.start_date, pt.created_at::date, s.start_date) DESC NULLS LAST,
+            pt.created_at DESC,
+            pt.id DESC
+          LIMIT 1
+        ) latest_pt ON latest_pt.team_id = sar.team_id
+        LEFT JOIN teams t ON t.id = sar.team_id
+        LEFT JOIN LATERAL (
+          SELECT
+            name,
+            code,
+            team_logo_default(logo_dark, logo_light) AS logo,
+            team_logo_dark(logo_dark, logo_light) AS logo_dark,
+            team_logo_light(logo_dark, logo_light) AS logo_light
+          FROM team_iterations
+          WHERE team_id = t.id
+          ORDER BY
+            CASE
+              WHEN (start_date IS NULL OR start_date <= COALESCE(sa.awarded_at, s.end_date, s.start_date, CURRENT_DATE))
+               AND (end_date IS NULL OR end_date >= COALESCE(sa.awarded_at, s.start_date, CURRENT_DATE))
+              THEN 0
+              WHEN end_date IS NULL THEN 1
+              ELSE 2
+            END,
+            start_date DESC NULLS LAST,
+            recorded_at DESC
+          LIMIT 1
+        ) ti ON TRUE
+        WHERE sar.recipient_type = 'team'
+          AND sar.role = 'winner'
+      )
+      SELECT
+        id,
+        award_id,
+        season_award_id,
+        award_name,
+        season_id,
+        season_name,
+        awarded_at,
+        team_id,
+        team_name,
+        team_code,
+        team_logo,
+        team_logo_dark,
+        team_logo_light,
+        team_primary_color,
+        team_text_color
+      FROM winning_awards
+      ORDER BY
+        season_start_date DESC NULLS LAST,
+        season_created_at DESC,
+        sort_order ASC,
+        award_name ASC,
+        source_order ASC,
+        id ASC
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('user player awards error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/user/players/:id/latest-season-stats
+// ---------------------------------------------------------------------------
+router.get(['/players/:id/current-season-stats', '/players/:id/latest-season-stats'], async (req, res) => {
+  const { id } = req.params;
+  try {
+    const playedSeasonRows = await sql`
+      WITH player_info AS (
+        SELECT position FROM players WHERE id = ${id}
+      ),
+      played_seasons AS (
+        SELECT DISTINCT gps.season_id
+        FROM game_player_stats gps
+        JOIN games g ON g.id = gps.game_id
+        WHERE gps.player_id = ${id}
+          AND g.status = 'final'
+      )
+      SELECT
+        s.id AS season_id,
+        s.name AS season_name,
+        (SELECT position FROM player_info) AS player_position
+      FROM played_seasons ps
+      JOIN seasons s ON s.id = ps.season_id
+      ORDER BY s.start_date DESC NULLS LAST, s.created_at DESC, s.name DESC
+      LIMIT 1
+    `;
+
+    if (playedSeasonRows.length === 0) return res.json(null);
+    const { season_id, season_name, player_position } = playedSeasonRows[0];
+
+    const statRows = await sql`
+      SELECT
+        gps.game_type,
+        COUNT(*) FILTER (WHERE gps.is_goalie = false)::int AS skater_gp,
+        COALESCE(SUM(gps.goals) FILTER (WHERE gps.is_goalie = false), 0)::int AS goals,
+        COALESCE(SUM(gps.assists) FILTER (WHERE gps.is_goalie = false), 0)::int AS assists,
+        COALESCE(SUM(gps.points) FILTER (WHERE gps.is_goalie = false), 0)::int AS points,
+        COUNT(*) FILTER (WHERE gps.is_goalie = true)::int AS goalie_gp,
+        COALESCE(SUM(gps.shots_against) FILTER (WHERE gps.is_goalie = true), 0)::int AS shots_against,
+        COALESCE(SUM(gps.goals_against) FILTER (WHERE gps.is_goalie = true), 0)::int AS goals_against,
+        COALESCE(SUM(gps.saves) FILTER (WHERE gps.is_goalie = true), 0)::int AS saves,
+        COALESCE(SUM(gps.time_on_ice) FILTER (WHERE gps.is_goalie = true), 0)::int AS time_on_ice,
+        COUNT(*) FILTER (WHERE gps.is_goalie = true AND gps.goalie_win)::int AS wins,
+        COUNT(*) FILTER (WHERE gps.is_goalie = true AND gps.shootout_win)::int AS shootout_wins
+      FROM game_player_stats gps
+      WHERE gps.player_id = ${id}
+        AND gps.season_id = ${season_id}
+      GROUP BY gps.game_type
+    `;
+
+    const byType = Object.fromEntries(statRows.map((row) => [row.game_type, row]));
+    const makeStats = (gameType) => {
+      const row = byType[gameType];
+      if (!row) return null;
+
+      const isGoalie = player_position === 'G';
+      const goalieGp = Number(row.goalie_gp ?? 0);
+      const skaterGp = Number(row.skater_gp ?? 0);
+      if (isGoalie && goalieGp === 0) return null;
+      if (!isGoalie && skaterGp === 0 && goalieGp === 0) return null;
+
+      const shotsAgainst = Number(row.shots_against ?? 0);
+      const goalsAgainst = Number(row.goals_against ?? 0);
+      const saves = Number(row.saves ?? Math.max(shotsAgainst - goalsAgainst, 0));
+
+      return {
+        gp: isGoalie ? goalieGp : skaterGp,
+        goals: isGoalie ? 0 : Number(row.goals ?? 0),
+        assists: isGoalie ? 0 : Number(row.assists ?? 0),
+        points: isGoalie ? 0 : Number(row.points ?? 0),
+        wins: Number(row.wins ?? 0),
+        shootout_wins: Number(row.shootout_wins ?? 0),
+        goals_against: goalsAgainst,
+        shots_against: shotsAgainst,
+        save_pct: shotsAgainst > 0 ? Math.round((saves / shotsAgainst) * 1000) / 1000 : null,
+        time_on_ice: Number(row.time_on_ice ?? 0),
+      };
+    };
+
+    return res.json({
+      season_id,
+      season_name,
+      regular: makeStats('regular'),
+      playoffs: makeStats('playoff'),
+    });
+  } catch (err) {
+    console.error('user player latest-season-stats error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/user/players/:id/last-five-games
+// ---------------------------------------------------------------------------
+router.get('/players/:id/last-five-games', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      WITH recent_games AS (
+        SELECT
+          gps.game_id,
+          gps.season_id,
+          s.name AS season_name,
+          g.scheduled_at,
+          gps.game_type,
+          gps.team_id,
+          gps.opponent_team_id,
+          gps.is_home,
+          gps.goals,
+          gps.assists,
+          gps.points,
+          CASE WHEN gps.is_goalie THEN gps.goalie_started ELSE NULL::boolean END AS goalie_started,
+          CASE WHEN gps.is_goalie THEN gps.shots_against ELSE NULL::int END AS shots_against,
+          CASE WHEN gps.is_goalie THEN gps.goals_against ELSE NULL::int END AS goals_against,
+          CASE
+            WHEN gps.is_goalie AND gps.shots_against > 0
+              THEN ROUND(gps.saves::numeric / gps.shots_against, 3)::float
+            ELSE NULL::float
+          END AS save_pct,
+          CASE WHEN gps.is_goalie THEN gps.time_on_ice ELSE NULL::int END AS time_on_ice
+        FROM game_player_stats gps
+        JOIN games g ON g.id = gps.game_id
+          AND g.status = 'final'
+        JOIN seasons s ON s.id = gps.season_id
+        WHERE gps.player_id = ${id}
+        ORDER BY g.scheduled_at DESC NULLS LAST, gps.game_id DESC
+        LIMIT 5
+      )
+      SELECT
+        rg.game_id,
+        rg.season_id,
+        rg.season_name,
+        rg.scheduled_at,
+        rg.game_type,
+        rg.team_id,
+        ti.name AS team_name,
+        ti.code AS team_code,
+        ti.logo AS team_logo,
+        t.primary_color AS team_primary_color,
+        t.text_color AS team_text_color,
+        rg.opponent_team_id,
+        oti.name AS opponent_name,
+        oti.code AS opponent_code,
+        oti.logo AS opponent_logo,
+        ot.primary_color AS opponent_primary_color,
+        ot.text_color AS opponent_text_color,
+        rg.is_home,
+        rg.goals,
+        rg.assists,
+        rg.points,
+        rg.goalie_started,
+        rg.shots_against,
+        rg.goals_against,
+        rg.save_pct,
+        rg.time_on_ice
+      FROM recent_games rg
+      LEFT JOIN teams t ON t.id = rg.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo
+        FROM team_iterations
+        WHERE team_id = rg.team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(rg.scheduled_at::date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(rg.scheduled_at::date, CURRENT_DATE))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) ti ON TRUE
+      LEFT JOIN teams ot ON ot.id = rg.opponent_team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo
+        FROM team_iterations
+        WHERE team_id = rg.opponent_team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(rg.scheduled_at::date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(rg.scheduled_at::date, CURRENT_DATE))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) oti ON TRUE
+      ORDER BY rg.scheduled_at DESC NULLS LAST, rg.game_id DESC
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('user player last-five-games error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/user/players/:id/game-logs
+// ---------------------------------------------------------------------------
+router.get('/players/:id/game-logs', async (req, res) => {
+  const { id } = req.params;
+  const seasonId = typeof req.query.season_id === 'string' ? req.query.season_id : null;
+  const gameType = typeof req.query.game_type === 'string' ? req.query.game_type : null;
+  const limit = Math.min(Math.max(Number.parseInt(String(req.query.limit ?? '20'), 10) || 20, 1), 100);
+  const offset = Math.max(Number.parseInt(String(req.query.offset ?? '0'), 10) || 0, 0);
+
+  try {
+    const rows = await sql`
+      WITH counted_games AS (
+        SELECT
+          COUNT(*) OVER ()::int AS total_count,
+          gps.game_id,
+          gps.season_id,
+          s.name AS season_name,
+          g.scheduled_at,
+          gps.game_type,
+          gps.team_id,
+          gps.opponent_team_id,
+          gps.is_home,
+          gps.goals,
+          gps.assists,
+          gps.points,
+          CASE WHEN gps.is_goalie THEN gps.goalie_started ELSE NULL::boolean END AS goalie_started,
+          CASE WHEN gps.is_goalie THEN gps.shots_against ELSE NULL::int END AS shots_against,
+          CASE WHEN gps.is_goalie THEN gps.goals_against ELSE NULL::int END AS goals_against,
+          CASE
+            WHEN gps.is_goalie AND gps.shots_against > 0
+              THEN ROUND(gps.saves::numeric / gps.shots_against, 3)::float
+            ELSE NULL::float
+          END AS save_pct,
+          CASE WHEN gps.is_goalie THEN gps.time_on_ice ELSE NULL::int END AS time_on_ice
+        FROM game_player_stats gps
+        JOIN games g ON g.id = gps.game_id
+          AND g.status = 'final'
+          AND (${seasonId}::uuid IS NULL OR g.season_id = ${seasonId}::uuid)
+          AND (${gameType}::text IS NULL OR g.game_type = ${gameType}::text)
+        JOIN seasons s ON s.id = gps.season_id
+        WHERE gps.player_id = ${id}
+      ),
+      page_games AS (
+        SELECT *
+        FROM counted_games
+        ORDER BY scheduled_at DESC NULLS LAST, game_id DESC
+        LIMIT ${limit}
+        OFFSET ${offset}
+      )
+      SELECT
+        pg.total_count,
+        pg.game_id,
+        pg.season_id,
+        pg.season_name,
+        pg.scheduled_at,
+        pg.game_type,
+        pg.team_id,
+        ti.name AS team_name,
+        ti.code AS team_code,
+        ti.logo AS team_logo,
+        t.primary_color AS team_primary_color,
+        t.text_color AS team_text_color,
+        pg.opponent_team_id,
+        oti.name AS opponent_name,
+        oti.code AS opponent_code,
+        oti.logo AS opponent_logo,
+        ot.primary_color AS opponent_primary_color,
+        ot.text_color AS opponent_text_color,
+        pg.is_home,
+        pg.goals,
+        pg.assists,
+        pg.points,
+        pg.goalie_started,
+        pg.shots_against,
+        pg.goals_against,
+        pg.save_pct,
+        pg.time_on_ice
+      FROM page_games pg
+      LEFT JOIN teams t ON t.id = pg.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo
+        FROM team_iterations
+        WHERE team_id = pg.team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(pg.scheduled_at::date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(pg.scheduled_at::date, CURRENT_DATE))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) ti ON TRUE
+      LEFT JOIN teams ot ON ot.id = pg.opponent_team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo
+        FROM team_iterations
+        WHERE team_id = pg.opponent_team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(pg.scheduled_at::date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(pg.scheduled_at::date, CURRENT_DATE))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) oti ON TRUE
+      ORDER BY pg.scheduled_at DESC NULLS LAST, pg.game_id DESC
+    `;
+
+    const total = Number(rows[0]?.total_count ?? 0);
+    return res.json({
+      total,
+      games: rows.map(({ total_count, ...row }) => row),
+    });
+  } catch (err) {
+    console.error('user player game-logs error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/user/players/:id - read-only player detail
+// ---------------------------------------------------------------------------
+router.get('/players/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      SELECT
+        p.id,
+        p.first_name,
+        p.last_name,
+        COALESCE(best_player_photo(p.id, latest_pt.season_id, latest_pt.team_id), p.photo) AS photo,
+        p.date_of_birth::text AS date_of_birth,
+        p.birth_city,
+        p.birth_country,
+        p.height_cm,
+        p.weight_lbs,
+        COALESCE(latest_pt.position, p.position) AS position,
+        p.shoots,
+        p.rookie_season_id,
+        (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
+        p.is_active,
+        p.created_at,
+        latest_pt.id AS player_team_id,
+        latest_pt.team_id,
+        COALESCE(latest_jnh.jersey_number, latest_pt.jersey_number) AS jersey_number,
+        latest_pt.is_prospect,
+        latest_ti.name AS team_name,
+        latest_ti.code AS team_code,
+        latest_ti.logo AS team_logo,
+        latest_ti.logo_dark AS team_logo_dark,
+        latest_ti.logo_light AS team_logo_light,
+        latest_t.primary_color,
+        latest_t.text_color
+      FROM players p
+      LEFT JOIN LATERAL (
+        SELECT pt.*
+        FROM player_teams pt
+        WHERE pt.player_id = p.id
+        ORDER BY
+          CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+          COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+          pt.created_at DESC,
+          pt.id DESC
+        LIMIT 1
+      ) latest_pt ON TRUE
+      LEFT JOIN teams latest_t ON latest_t.id = latest_pt.team_id
+      LEFT JOIN LATERAL (
+        SELECT
+          name,
+          code,
+          team_logo_default(logo_dark, logo_light) AS logo,
+          team_logo_dark(logo_dark, logo_light) AS logo_dark,
+          team_logo_light(logo_dark, logo_light) AS logo_light
+        FROM team_iterations
+        WHERE team_id = latest_pt.team_id
+        ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
+        LIMIT 1
+      ) latest_ti ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT jersey_number
+        FROM jersey_number_history
+        WHERE player_teams_id = latest_pt.id
+        ORDER BY effective_from DESC, id DESC
+        LIMIT 1
+      ) latest_jnh ON TRUE
+      WHERE p.id = ${id}
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Player not found' });
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('user player detail error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/user/leagues - list all leagues (for filter picker and team routes)
 // ---------------------------------------------------------------------------
 router.get('/leagues', async (req, res) => {
@@ -1525,7 +2248,12 @@ router.get('/seasons', async (req, res) => {
       SELECT
         s.id,
         s.name,
+        s.league_id,
+        l.name AS league_name,
+        l.code AS league_code,
+        l.logo AS league_logo,
         s.start_date::text AS start_date,
+        s.end_date::text AS end_date,
         s.created_at,
         (l.current_season_id = s.id) AS is_current,
         s.best_of_playoff,

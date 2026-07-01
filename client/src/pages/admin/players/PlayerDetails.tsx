@@ -51,6 +51,10 @@ import {
   buildLeaguePlayerDetailsPath,
   buildPlayerDetailsPath,
   buildTeamDetailsPath,
+  buildUserGameDetailsPath,
+  buildUserLeaguePlayerDetailsPath,
+  buildUserPlayerDetailsPath,
+  buildUserTeamDetailsPath,
   toRouteSlug,
 } from '@/lib/routeSlugs';
 import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
@@ -296,8 +300,13 @@ const buildGameLogColumns = (isGoalie: boolean): Column<PlayerLastFiveGameRecord
 ];
 
 // ── Page ────────────────────────────────────────────────────────────────────
-const PlayerDetailsPage = () => {
+interface PlayerDetailsPageProps {
+  mode?: 'admin' | 'user';
+}
+
+const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const navigate = useNavigate();
+  const isAdminView = mode === 'admin';
   const {
     leagueCode,
     teamCode: routeTeamCode,
@@ -313,26 +322,30 @@ const PlayerDetailsPage = () => {
     routeTeamCode,
     playerSlug,
     !isLegacyIdRoute,
+    { mode },
   );
   const id = isLegacyIdRoute ? playerSlug : routeLookup?.player_id;
   const leagueId = isLegacyIdRoute ? leagueCode : routeLookup?.league_id;
   const teamId = isLegacyIdRoute ? routeTeamCode : routeLookup?.team_id;
-  const { player, stats, loading: playerDetailsLoading } = usePlayerDetails(id);
+  const { player, stats, loading: playerDetailsLoading } = usePlayerDetails(id, { mode });
   const loading = routeLookupLoading || playerDetailsLoading;
-  const { awards: playerAwards, loading: playerAwardsLoading } = usePlayerAwards(id);
-  const { currentSeasonStats: latestSeasonStats } = usePlayerCurrentSeasonStats(id);
-  const { lastFiveGames, loading: lastFiveGamesLoading } = usePlayerLastFiveGames(id);
-  const { team: teamDetails } = useTeamDetails(teamId);
+  const { awards: playerAwards, loading: playerAwardsLoading } = usePlayerAwards(id, { mode });
+  const { currentSeasonStats: latestSeasonStats } = usePlayerCurrentSeasonStats(id, { mode });
+  const { lastFiveGames, loading: lastFiveGamesLoading } = usePlayerLastFiveGames(id, { mode });
+  const { team: teamDetails } = useTeamDetails(teamId, { mode });
   useDocumentIcon(teamDetails?.icon);
-  const { stints } = usePlayerTradeHistory(id ?? null);
-  const { byStint: jerseyHistoryByStint } = useJerseyHistory(id ?? null);
-  const { byTeam: photoHistoryByTeam } = usePlayerPhotoHistory(id ?? null);
+  const adminPlayerId = isAdminView ? (id ?? null) : null;
+  const { stints } = usePlayerTradeHistory(adminPlayerId);
+  const { byStint: jerseyHistoryByStint } = useJerseyHistory(adminPlayerId);
+  const { byTeam: photoHistoryByTeam } = usePlayerPhotoHistory(adminPlayerId);
   const { createStint, updateStint, changeJerseyNumber, changePlayerPhoto, uploadStintPhoto } =
-    useStintActions(id ?? null);
-  const { teams } = useTeams();
-  const { seasons } = useSeasons();
+    useStintActions(adminPlayerId);
+  const { teams } = useTeams({ mode });
+  const { seasons } = useSeasons(leagueId, { mode });
   const queryClient = useQueryClient();
-  const [activeTab, handleTabChange] = useTabState('tab:player-details');
+  const [activeTab, handleTabChange] = useTabState(
+    isAdminView ? 'tab:player-details' : 'tab:user-player-details',
+  );
   const [editPlayerOpen, setEditPlayerOpen] = useState(false);
   const [editPlayerInfoOpen, setEditPlayerInfoOpen] = useState(false);
   const [editingStint, setEditingStint] = useState<PlayerStintRecord | null>(null);
@@ -350,12 +363,16 @@ const PlayerDetailsPage = () => {
     gameLogs,
     total: gameLogsTotal,
     loading: gameLogsLoading,
-  } = usePlayerGameLogs(id, {
-    seasonId: gameLogSeasonId === 'all' ? null : gameLogSeasonId,
-    gameType: gameLogType === 'all' ? null : gameLogType,
-    page: gameLogPage,
-    pageSize: GAME_LOG_PAGE_SIZE,
-  });
+  } = usePlayerGameLogs(
+    id,
+    {
+      seasonId: gameLogSeasonId === 'all' ? null : gameLogSeasonId,
+      gameType: gameLogType === 'all' ? null : gameLogType,
+      page: gameLogPage,
+      pageSize: GAME_LOG_PAGE_SIZE,
+    },
+    { mode },
+  );
 
   const updatePlayer = async (
     playerId: string,
@@ -487,34 +504,57 @@ const PlayerDetailsPage = () => {
   const latestStint = stints[0];
   const teamHistoryStints = collapseSameTeamStints(stints);
   const fullName = player ? `${player.first_name} ${player.last_name}` : 'Not Found';
-  const leagueHref = buildLeagueDetailsPath({
-    leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
-    leagueId,
-  });
-  const hasTeamRoute = !!(teamId || routeLookup?.team_id || routeTeamCode);
-  const teamHref = hasTeamRoute
-    ? buildTeamDetailsPath({
+  const leagueHref = isAdminView
+    ? buildLeagueDetailsPath({
         leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
         leagueId,
-        teamCode: teamDetails?.code ?? routeLookup?.team_code ?? routeTeamCode,
-        teamId,
       })
+    : '/games';
+  const hasTeamRoute = !!(teamId || routeLookup?.team_id || routeTeamCode);
+  const teamHref = hasTeamRoute
+    ? isAdminView
+      ? buildTeamDetailsPath({
+          leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
+          leagueId,
+          teamCode: teamDetails?.code ?? routeLookup?.team_code ?? routeTeamCode,
+          teamId,
+        })
+      : buildUserTeamDetailsPath({
+          leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
+          leagueId,
+          teamCode: teamDetails?.code ?? routeLookup?.team_code ?? routeTeamCode,
+          teamId,
+        })
     : leagueHref;
   const canonicalPlayerPath =
     player && routeLookup
       ? routeLookup.team_id && routeLookup.team_code
-        ? buildPlayerDetailsPath({
-            leagueCode: routeLookup.league_code,
-            teamCode: routeLookup.team_code,
-            firstName: player.first_name,
-            lastName: player.last_name,
-          })
-        : buildLeaguePlayerDetailsPath({
-            leagueCode: routeLookup.league_code,
-            leagueId: routeLookup.league_id,
-            firstName: player.first_name,
-            lastName: player.last_name,
-          })
+        ? isAdminView
+          ? buildPlayerDetailsPath({
+              leagueCode: routeLookup.league_code,
+              teamCode: routeLookup.team_code,
+              firstName: player.first_name,
+              lastName: player.last_name,
+            })
+          : buildUserPlayerDetailsPath({
+              leagueCode: routeLookup.league_code,
+              teamCode: routeLookup.team_code,
+              firstName: player.first_name,
+              lastName: player.last_name,
+            })
+        : isAdminView
+          ? buildLeaguePlayerDetailsPath({
+              leagueCode: routeLookup.league_code,
+              leagueId: routeLookup.league_id,
+              firstName: player.first_name,
+              lastName: player.last_name,
+            })
+          : buildUserLeaguePlayerDetailsPath({
+              leagueCode: routeLookup.league_code,
+              leagueId: routeLookup.league_id,
+              firstName: player.first_name,
+              lastName: player.last_name,
+            })
       : null;
 
   useEffect(() => {
@@ -551,23 +591,32 @@ const PlayerDetailsPage = () => {
     loading
       ? null
       : {
-          backPath: teamHref,
-          backLabel: hasTeamRoute ? `Back to ${teamDetails?.name ?? 'Team'}` : 'Back to League',
-          items: [
-            {
-              label: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode ?? '...',
-              path: leagueHref,
-            },
-            ...(hasTeamRoute
-              ? [
-                  {
-                    label: latestStint?.team.name ?? teamDetails?.name ?? '...',
-                    path: teamHref,
-                  },
-                ]
-              : []),
-            { label: fullName },
-          ],
+          backPath: isAdminView ? teamHref : hasTeamRoute ? teamHref : '/games',
+          backLabel: isAdminView
+            ? hasTeamRoute
+              ? `Back to ${teamDetails?.name ?? 'Team'}`
+              : 'Back to League'
+            : hasTeamRoute
+              ? `Back to ${teamDetails?.name ?? 'Team'}`
+              : 'Back to Games',
+          items: isAdminView
+            ? [
+                {
+                  label:
+                    teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode ?? '...',
+                  path: leagueHref,
+                },
+                ...(hasTeamRoute
+                  ? [
+                      {
+                        label: latestStint?.team.name ?? teamDetails?.name ?? '...',
+                        path: teamHref,
+                      },
+                    ]
+                  : []),
+                { label: fullName },
+              ]
+            : [],
         },
     [
       loading,
@@ -577,6 +626,7 @@ const PlayerDetailsPage = () => {
       latestStint?.team.name,
       fullName,
       hasTeamRoute,
+      isAdminView,
       leagueId,
       leagueHref,
     ],
@@ -599,14 +649,40 @@ const PlayerDetailsPage = () => {
   if (!player) return <p className={styles.loaderText}>Player not found.</p>;
 
   const initials = `${player.first_name[0]}${player.last_name[0]}`;
-  const jerseyNumber = latestStint?.jersey_number ?? null;
+  const heroTeam =
+    latestStint?.team ??
+    (teamDetails
+      ? {
+          id: teamDetails.id,
+          name: teamDetails.name,
+          code: teamDetails.code,
+          logo: teamDetails.logo,
+          logo_dark: teamDetails.logo_dark,
+          logo_light: teamDetails.logo_light,
+          primary_color: teamDetails.primary_color,
+          text_color: teamDetails.text_color,
+        }
+      : player.team_id
+        ? {
+            id: player.team_id,
+            name: player.team_name ?? null,
+            code: player.team_code ?? null,
+            logo: player.team_logo ?? null,
+            logo_dark: player.team_logo_dark ?? null,
+            logo_light: player.team_logo_light ?? null,
+            primary_color: player.primary_color ?? null,
+            text_color: player.text_color ?? null,
+          }
+        : null);
+  const jerseyNumber = latestStint?.jersey_number ?? player.jersey_number ?? null;
   // Use the first stint (active) photo; if that's missing, fall back to the most-recent
   // historical stint that does have a photo; then fall back to the global player photo.
   const photo = stints.find((s) => s.photo)?.photo ?? player.photo;
-  const avatarBg = latestStint?.team.primary_color ?? undefined;
-  const avatarColor = latestStint?.team.text_color ?? undefined;
+  const avatarBg = heroTeam?.primary_color ?? undefined;
+  const avatarColor = heroTeam?.text_color ?? undefined;
   const effectivePosition = latestStint?.position ?? player.position;
   const canMovePlayer = !!(
+    isAdminView &&
     latestStint?.team_id &&
     latestStint?.season_id &&
     !latestStint?.end_date
@@ -621,7 +697,7 @@ const PlayerDetailsPage = () => {
           },
         ]
       : []),
-    ...(player.is_active
+    ...(isAdminView && player.is_active
       ? [
           {
             label: 'Retire Player',
@@ -634,6 +710,24 @@ const PlayerDetailsPage = () => {
   ];
   const positionLabel = formatPlayerPosition(effectivePosition);
   const isGoalie = effectivePosition === 'G';
+  const buildGamePath = (row: PlayerLastFiveGameRecord) =>
+    isAdminView
+      ? buildGameDetailsPath({
+          leagueCode: routeLookup?.league_code ?? leagueCode,
+          leagueId,
+          seasonName: row.season_name,
+          seasonId: row.season_id,
+          gameId: row.game_id,
+          awayTeamCode: row.is_home ? row.opponent_code : row.team_code,
+          homeTeamCode: row.is_home ? row.team_code : row.opponent_code,
+          scheduledAt: row.scheduled_at,
+        })
+      : buildUserGameDetailsPath({
+          gameId: row.game_id,
+          awayTeamCode: row.is_home ? row.opponent_code : row.team_code,
+          homeTeamCode: row.is_home ? row.team_code : row.opponent_code,
+          scheduledAt: row.scheduled_at,
+        });
   const recentGameColumns: Column<PlayerLastFiveGameRecord>[] = [
     {
       type: 'custom',
@@ -773,13 +867,15 @@ const PlayerDetailsPage = () => {
       title="Player Info"
       className={styles.playerInfoCard}
       action={
-        <Button
-          variant="outlined"
-          intent="neutral"
-          icon="edit"
-          size="sm"
-          onClick={() => setEditPlayerInfoOpen(true)}
-        />
+        isAdminView ? (
+          <Button
+            variant="outlined"
+            intent="neutral"
+            icon="edit"
+            size="sm"
+            onClick={() => setEditPlayerInfoOpen(true)}
+          />
+        ) : null
       }
     >
       <div className={styles.infoGrid}>
@@ -826,20 +922,7 @@ const PlayerDetailsPage = () => {
         rowKey={(row) => row.game_id}
         loading={lastFiveGamesLoading}
         emptyMessage="No recent games recorded yet."
-        onRowClick={(row) =>
-          navigate(
-            buildGameDetailsPath({
-              leagueCode: routeLookup?.league_code ?? leagueCode,
-              leagueId,
-              seasonName: row.season_name,
-              seasonId: row.season_id,
-              gameId: row.game_id,
-              awayTeamCode: row.is_home ? row.opponent_code : row.team_code,
-              homeTeamCode: row.is_home ? row.team_code : row.opponent_code,
-              scheduledAt: row.scheduled_at,
-            }),
-          )
-        }
+        onRowClick={(row) => navigate(buildGamePath(row))}
       />
     </Section>
   );
@@ -880,20 +963,7 @@ const PlayerDetailsPage = () => {
         rowKey={(row) => row.game_id}
         loading={gameLogsLoading}
         emptyMessage="No game logs found."
-        onRowClick={(row) =>
-          navigate(
-            buildGameDetailsPath({
-              leagueCode: routeLookup?.league_code ?? leagueCode,
-              leagueId,
-              seasonName: row.season_name,
-              seasonId: row.season_id,
-              gameId: row.game_id,
-              awayTeamCode: row.is_home ? row.opponent_code : row.team_code,
-              homeTeamCode: row.is_home ? row.team_code : row.opponent_code,
-              scheduledAt: row.scheduled_at,
-            }),
-          )
-        }
+        onRowClick={(row) => navigate(buildGamePath(row))}
       />
       <div className={styles.paginationBar}>
         <span className={styles.paginationSummary}>
@@ -1018,42 +1088,44 @@ const PlayerDetailsPage = () => {
               />
             </div>
             <div className={styles.heroMeta}>
-              {latestStint?.team.name && (
+              {heroTeam?.name && (
                 <span className={styles.heroTeamMeta}>
                   <TeamLogo
-                    logo={latestStint.team.logo}
-                    logoDark={latestStint.team.logo_dark}
-                    logoLight={latestStint.team.logo_light}
-                    code={latestStint.team.code ?? '?'}
-                    primaryColor={latestStint.team.primary_color}
-                    textColor={latestStint.team.text_color}
+                    logo={heroTeam.logo}
+                    logoDark={heroTeam.logo_dark}
+                    logoLight={heroTeam.logo_light}
+                    code={heroTeam.code ?? '?'}
+                    primaryColor={heroTeam.primary_color}
+                    textColor={heroTeam.text_color}
                     size={18}
                     shape="square"
                   />
-                  {latestStint.team.name}
+                  {heroTeam.name}
                 </span>
               )}
               {jerseyNumber != null && <span>#{jerseyNumber}</span>}
               {positionLabel && <span>{positionLabel}</span>}
             </div>
           </div>
-          <div className={styles.heroActions}>
-            <Button
-              variant="outlined"
-              intent="neutral"
-              icon="edit"
-              size="sm"
-              tooltip="Edit player"
-              onClick={() => setEditPlayerOpen(true)}
-            />
-            {playerActionItems.length > 0 && (
-              <MoreActionsMenu
-                items={playerActionItems}
-                size="sm"
+          {isAdminView && (
+            <div className={styles.heroActions}>
+              <Button
                 variant="outlined"
+                intent="neutral"
+                icon="edit"
+                size="sm"
+                tooltip="Edit player"
+                onClick={() => setEditPlayerOpen(true)}
               />
-            )}
-          </div>
+              {playerActionItems.length > 0 && (
+                <MoreActionsMenu
+                  items={playerActionItems}
+                  size="sm"
+                  variant="outlined"
+                />
+              )}
+            </div>
+          )}
         </div>
       </Card>
 
@@ -1106,156 +1178,163 @@ const PlayerDetailsPage = () => {
               label: 'Awards',
               content: awardsCard,
             },
-            {
-              label: 'Team History',
-              content: (
-                <Section
-                  title="Team History"
-                  action={
-                    <Button
-                      variant="filled"
-                      intent="accent"
-                      icon="add"
-                      size="sm"
-                      onClick={() => setCreatingStint(true)}
+            isAdminView
+              ? {
+                  label: 'Team History',
+                  content: (
+                    <Section
+                      title="Team History"
+                      action={
+                        <Button
+                          variant="filled"
+                          intent="accent"
+                          icon="add"
+                          size="sm"
+                          onClick={() => setCreatingStint(true)}
+                        >
+                          Record Stint
+                        </Button>
+                      }
                     >
-                      Record Stint
-                    </Button>
-                  }
-                >
-                  {teamHistoryStints.length === 0 ? (
-                    <p className={styles.placeholder}>No team history yet.</p>
-                  ) : (
-                    <ul className={styles.stintList}>
-                      {teamHistoryStints.map((s) => (
-                        <ListItem
-                          key={s.id}
-                          className={styles.stintItem}
-                          image={s.team.logo}
-                          imageDark={s.team.logo_dark}
-                          imageLight={s.team.logo_light}
-                          image_shape="square"
-                          name={s.team.name ?? 'Unknown team'}
-                          placeholder={teamCodePlaceholder(s)}
-                          primaryColor={s.team.primary_color}
-                          textColor={s.team.text_color}
-                          chip={s.jersey_number != null ? { label: s.jersey_number } : null}
-                          subtitle={formatStintDates(s)}
-                          rightContent={
-                            s.acquisition_type
-                              ? {
-                                  type: 'tag',
-                                  label:
-                                    ACQUISITION_TYPE_LABELS[s.acquisition_type] ??
-                                    s.acquisition_type,
-                                  intent: 'info',
-                                }
-                              : undefined
-                          }
-                          actions={[
-                            !s.end_date && {
-                              icon: 'jersey',
-                              tooltip: 'Change jersey number',
-                              onClick: () => setChangingJerseyStint(s),
-                            },
-                            {
-                              icon: 'image',
-                              tooltip: 'Change season photo',
-                              onClick: () => setChangingPhotoStint(s),
-                            },
-                            {
-                              icon: 'edit',
-                              tooltip: 'Edit stint',
-                              onClick: () => setEditingStint(s),
-                            },
-                          ]}
-                        />
-                      ))}
-                    </ul>
-                  )}
-                </Section>
-              ),
-            },
-          ]}
+                      {teamHistoryStints.length === 0 ? (
+                        <p className={styles.placeholder}>No team history yet.</p>
+                      ) : (
+                        <ul className={styles.stintList}>
+                          {teamHistoryStints.map((s) => (
+                            <ListItem
+                              key={s.id}
+                              className={styles.stintItem}
+                              image={s.team.logo}
+                              imageDark={s.team.logo_dark}
+                              imageLight={s.team.logo_light}
+                              image_shape="square"
+                              name={s.team.name ?? 'Unknown team'}
+                              placeholder={teamCodePlaceholder(s)}
+                              primaryColor={s.team.primary_color}
+                              textColor={s.team.text_color}
+                              chip={s.jersey_number != null ? { label: s.jersey_number } : null}
+                              subtitle={formatStintDates(s)}
+                              rightContent={
+                                s.acquisition_type
+                                  ? {
+                                      type: 'tag',
+                                      label:
+                                        ACQUISITION_TYPE_LABELS[s.acquisition_type] ??
+                                        s.acquisition_type,
+                                      intent: 'info',
+                                    }
+                                  : undefined
+                              }
+                              actions={[
+                                !s.end_date && {
+                                  icon: 'jersey',
+                                  tooltip: 'Change jersey number',
+                                  onClick: () => setChangingJerseyStint(s),
+                                },
+                                {
+                                  icon: 'image',
+                                  tooltip: 'Change season photo',
+                                  onClick: () => setChangingPhotoStint(s),
+                                },
+                                {
+                                  icon: 'edit',
+                                  tooltip: 'Edit stint',
+                                  onClick: () => setEditingStint(s),
+                                },
+                              ]}
+                            />
+                          ))}
+                        </ul>
+                      )}
+                    </Section>
+                  ),
+                }
+              : null,
+          ].filter((tab): tab is NonNullable<typeof tab> => tab !== null)}
         />
       </div>
 
-      <TeamPlayerEditModal
-        open={editPlayerOpen}
-        editTarget={playerEditTarget}
-        teamId={latestStint?.team_id ?? ''}
-        seasonId={latestStint?.season_id ?? null}
-        onClose={() => setEditPlayerOpen(false)}
-        updatePlayer={updatePlayer}
-        updatePlayerTeam={updatePlayerTeam}
-        uploadPlayerPhoto={uploadStintPhoto}
-      />
+      {isAdminView && (
+        <>
+          <TeamPlayerEditModal
+            open={editPlayerOpen}
+            editTarget={playerEditTarget}
+            teamId={latestStint?.team_id ?? ''}
+            seasonId={latestStint?.season_id ?? null}
+            onClose={() => setEditPlayerOpen(false)}
+            updatePlayer={updatePlayer}
+            updatePlayerTeam={updatePlayerTeam}
+            uploadPlayerPhoto={uploadStintPhoto}
+          />
 
-      <MovePlayerModal
-        open={movePlayerOpen}
-        player={playerEditTarget}
-        currentTeamId={latestStint?.team_id ?? teamId ?? ''}
-        seasonId={latestStint?.season_id ?? ''}
-        leagueId={leagueId ?? ''}
-        onClose={() => setMovePlayerOpen(false)}
-        movePlayer={movePlayer}
-      />
+          <MovePlayerModal
+            open={movePlayerOpen}
+            player={playerEditTarget}
+            currentTeamId={latestStint?.team_id ?? teamId ?? ''}
+            seasonId={latestStint?.season_id ?? ''}
+            leagueId={leagueId ?? ''}
+            onClose={() => setMovePlayerOpen(false)}
+            movePlayer={movePlayer}
+          />
 
-      <RetirePlayerModal
-        open={retirePlayerOpen}
-        playerName={fullName}
-        busy={retirePlayerBusy}
-        onClose={() => setRetirePlayerOpen(false)}
-        onConfirm={retirePlayer}
-      />
+          <RetirePlayerModal
+            open={retirePlayerOpen}
+            playerName={fullName}
+            busy={retirePlayerBusy}
+            onClose={() => setRetirePlayerOpen(false)}
+            onConfirm={retirePlayer}
+          />
 
-      <PlayerInfoEditModal
-        open={editPlayerInfoOpen}
-        player={player}
-        seasons={gameLogSeasons}
-        onClose={() => setEditPlayerInfoOpen(false)}
-        updatePlayer={updatePlayer}
-      />
+          <PlayerInfoEditModal
+            open={editPlayerInfoOpen}
+            player={player}
+            seasons={gameLogSeasons}
+            onClose={() => setEditPlayerInfoOpen(false)}
+            updatePlayer={updatePlayer}
+          />
 
-      <ChangeJerseyModal
-        open={!!changingJerseyStint}
-        stint={changingJerseyStint}
-        history={
-          jerseyHistoryByStint[
-            changingJerseyStint?.roster_player_team_id ?? changingJerseyStint?.id ?? ''
-          ] ?? []
-        }
-        onClose={() => setChangingJerseyStint(null)}
-        changeJerseyNumber={changeJerseyNumber}
-      />
+          <ChangeJerseyModal
+            open={!!changingJerseyStint}
+            stint={changingJerseyStint}
+            history={
+              jerseyHistoryByStint[
+                changingJerseyStint?.roster_player_team_id ?? changingJerseyStint?.id ?? ''
+              ] ?? []
+            }
+            onClose={() => setChangingJerseyStint(null)}
+            changeJerseyNumber={changeJerseyNumber}
+          />
 
-      <StintEditModal
-        open={creatingStint || !!editingStint}
-        stint={editingStint}
-        teams={teams}
-        seasons={seasons}
-        history={stints}
-        leagueId={leagueId ?? null}
-        currentTeamId={latestStint?.team_id ?? teamId ?? null}
-        onClose={() => {
-          setEditingStint(null);
-          setCreatingStint(false);
-        }}
-        createStint={createStint}
-        updateStint={updateStint}
-      />
+          <StintEditModal
+            open={creatingStint || !!editingStint}
+            stint={editingStint}
+            teams={teams}
+            seasons={seasons}
+            history={stints}
+            leagueId={leagueId ?? null}
+            currentTeamId={latestStint?.team_id ?? teamId ?? null}
+            onClose={() => {
+              setEditingStint(null);
+              setCreatingStint(false);
+            }}
+            createStint={createStint}
+            updateStint={updateStint}
+          />
 
-      <ChangePhotoModal
-        open={!!changingPhotoStint}
-        stint={changingPhotoStint}
-        seasons={seasons.filter(
-          (s) => s.league_id === teams.find((t) => t.id === changingPhotoStint?.team_id)?.league_id,
-        )}
-        history={photoHistoryByTeam[changingPhotoStint?.team_id ?? ''] ?? []}
-        onClose={() => setChangingPhotoStint(null)}
-        uploadPhoto={uploadStintPhoto}
-        changePlayerPhoto={changePlayerPhoto}
-      />
+          <ChangePhotoModal
+            open={!!changingPhotoStint}
+            stint={changingPhotoStint}
+            seasons={seasons.filter(
+              (s) =>
+                s.league_id === teams.find((t) => t.id === changingPhotoStint?.team_id)?.league_id,
+            )}
+            history={photoHistoryByTeam[changingPhotoStint?.team_id ?? ''] ?? []}
+            onClose={() => setChangingPhotoStint(null)}
+            uploadPhoto={uploadStintPhoto}
+            changePlayerPhoto={changePlayerPhoto}
+          />
+        </>
+      )}
 
       <ImagePreviewModal
         open={photoPreviewOpen}

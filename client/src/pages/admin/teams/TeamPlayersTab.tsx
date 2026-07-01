@@ -14,7 +14,7 @@ import Skeleton from '@/components/Skeleton/Skeleton';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
-import { buildPlayerDetailsPath } from '@/lib/routeSlugs';
+import { buildPlayerDetailsPath, buildUserPlayerDetailsPath } from '@/lib/routeSlugs';
 import LineupCreatePlayersModal from '../games/game-details/lineups/LineupCreatePlayersModal';
 import AddPlayersModal from './AddPlayersModal';
 import BulkTradeModal from './BulkTradeModal';
@@ -142,12 +142,20 @@ const TeamPlayersTab = ({
 
   const renderPlayer = (p: TeamPlayerRecord) => {
     const playerName = `${p.first_name} ${p.last_name}`;
-    const playerDetailsPath = buildPlayerDetailsPath({
-      leagueCode,
-      teamCode,
-      firstName: p.first_name,
-      lastName: p.last_name,
-    });
+    const playerDetailsPath =
+      mode === 'user'
+        ? buildUserPlayerDetailsPath({
+            leagueCode,
+            teamCode,
+            firstName: p.first_name,
+            lastName: p.last_name,
+          })
+        : buildPlayerDetailsPath({
+            leagueCode,
+            teamCode,
+            firstName: p.first_name,
+            lastName: p.last_name,
+          });
     const actions: ListItemAction[] = [];
 
     if (!readOnly) {
@@ -224,8 +232,8 @@ const TeamPlayersTab = ({
                 intent: p.is_active ? 'success' : 'neutral',
               }
         }
-        onClick={readOnly ? undefined : () => navigate(playerDetailsPath)}
-        ariaLabel={readOnly ? undefined : `Open ${playerName}`}
+        onClick={() => navigate(playerDetailsPath)}
+        ariaLabel={`Open ${playerName}`}
         actions={actions}
       />
     );

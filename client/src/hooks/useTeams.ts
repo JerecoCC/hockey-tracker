@@ -54,15 +54,19 @@ const authHeaders = () => {
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-const useTeams = () => {
+type TeamsMode = 'admin' | 'user';
+
+const useTeams = (options: { mode?: TeamsMode } = {}) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const mode = options.mode ?? 'admin';
+  const basePath = mode === 'user' ? 'user' : 'admin';
 
   const { data: teams = [], isLoading: loading } = useQuery({
-    queryKey: ['teams'],
+    queryKey: [mode === 'user' ? 'user-teams' : 'teams'],
     queryFn: async () => {
       try {
-        const { data } = await axios.get<TeamRecord[]>(`${API}/admin/teams`, {
+        const { data } = await axios.get<TeamRecord[]>(`${API}/${basePath}/teams`, {
           headers: authHeaders(),
         });
         return data;
