@@ -93,6 +93,43 @@ describe('GET /api/user/teams', () => {
     expect(queryText).toContain('FROM teams t');
     expect(queryText).not.toContain('games');
   });
+
+  it('returns teams from the selected season alignment', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        id: 'team-1',
+        league_id: 'league-1',
+        name: 'Aligned Home',
+        place_name: 'Aligned',
+        team_name: 'Home',
+        code: 'HOM',
+        logo: null,
+        logo_dark: null,
+        logo_light: null,
+        primary_color: '#111111',
+        secondary_color: '#222222',
+        text_color: '#ffffff',
+        home_arena: 'Arena',
+      },
+    ]);
+
+    const seasonId = '00000000-0000-0000-0000-000000000002';
+    const res = await request(app).get(`/api/user/teams?season_id=${seasonId}`);
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toMatchObject({
+      id: 'team-1',
+      name: 'Aligned Home',
+      code: 'HOM',
+      primary_color: '#111111',
+    });
+    expect(sql.mock.calls[0].slice(1)).toContain(seasonId);
+    expect(queryText).toContain('season_alignment_group_teams');
+    expect(queryText).toContain('group_alignment_teams');
+    expect(queryText).toContain('group_alignment_set_teams');
+    expect(queryText).toContain('season_teams');
+  });
 });
 
 describe('GET /api/user/seasons', () => {

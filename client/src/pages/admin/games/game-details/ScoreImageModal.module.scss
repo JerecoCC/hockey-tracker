@@ -752,6 +752,9 @@
   }
 
   &Label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
     font-size: $font-xs;
     font-weight: 600;
     color: var(--app-text-muted, #{$text-dim});
@@ -814,12 +817,10 @@
 .playoff {
   &Section {
     --grouped-fields-grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr));
-
-    background: var(--app-surface-muted, var(--app-surface-subtle));
   }
 
   &FieldsRow {
-    align-items: end;
+    align-items: start;
   }
 
   &RoundField {

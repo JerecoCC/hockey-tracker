@@ -1096,20 +1096,168 @@ router.get('/leagues', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/user/teams  - list all teams for user-facing filters
+// GET /api/user/teams  - list teams for user-facing filters or a selected season
 // ---------------------------------------------------------------------------
-router.get('/teams', async (_req, res) => {
+router.get('/teams', async (req, res) => {
+  const seasonId =
+    typeof req.query.season_id === 'string' && req.query.season_id.trim()
+      ? req.query.season_id.trim()
+      : null;
+
   try {
+    if (seasonId) {
+      const teams = await sql`
+        WITH season_info AS (
+          SELECT id, league_id, start_date, group_alignment_set_id
+          FROM seasons
+          WHERE id = ${seasonId}
+        ),
+        alignment_info AS (
+          SELECT gas.id, gas.structure_type
+          FROM group_alignment_sets gas
+          WHERE gas.id = (SELECT group_alignment_set_id FROM season_info)
+        ),
+        alignment_group_overrides AS (
+          SELECT DISTINCT alignment_group_id
+          FROM season_alignment_group_teams
+          WHERE season_id = (SELECT id FROM season_info)
+        ),
+        participant_teams AS (
+          SELECT team_id
+          FROM group_alignment_set_teams
+          WHERE alignment_set_id = (SELECT id FROM alignment_info)
+            AND (SELECT structure_type FROM alignment_info) = 'league'
+
+          UNION
+
+          SELECT sagt.team_id
+          FROM season_alignment_group_teams sagt
+          JOIN group_alignment_groups ag ON ag.id = sagt.alignment_group_id
+          WHERE sagt.season_id = (SELECT id FROM season_info)
+            AND ag.alignment_set_id = (SELECT id FROM alignment_info)
+            AND (SELECT structure_type FROM alignment_info) = 'groups'
+
+          UNION
+
+          SELECT gat.team_id
+          FROM group_alignment_teams gat
+          JOIN group_alignment_groups ag ON ag.id = gat.alignment_group_id
+          WHERE ag.alignment_set_id = (SELECT id FROM alignment_info)
+            AND (SELECT structure_type FROM alignment_info) = 'groups'
+            AND gat.alignment_group_id NOT IN (
+              SELECT alignment_group_id FROM alignment_group_overrides
+            )
+
+          UNION
+
+          SELECT team_id
+          FROM season_teams
+          WHERE season_id = (SELECT id FROM season_info)
+            AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+
+          UNION
+
+          SELECT team_id
+          FROM season_group_teams
+          WHERE season_id = (SELECT id FROM season_info)
+            AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+
+          UNION
+
+          SELECT gt.team_id
+          FROM group_teams gt
+          JOIN groups gr ON gr.id = gt.group_id
+          WHERE (SELECT group_alignment_set_id FROM season_info) IS NULL
+            AND (
+              gr.season_id = (SELECT id FROM season_info)
+              OR (
+                gr.league_id = (SELECT league_id FROM season_info)
+                AND gr.season_id IS NULL
+                AND COALESCE(gr.is_auto, false) = false
+              )
+            )
+        )
+        SELECT DISTINCT
+          t.id,
+          t.league_id,
+          iter.name,
+          iter.place_name,
+          iter.team_name,
+          iter.code,
+          iter.logo,
+          iter.logo_dark,
+          iter.logo_light,
+          t.primary_color,
+          t.secondary_color,
+          t.text_color,
+          t.home_arena
+        FROM participant_teams pt
+        JOIN teams t ON t.id = pt.team_id
+        LEFT JOIN LATERAL (
+          (
+            SELECT
+              ti.name,
+              ti.place_name,
+              ti.team_name,
+              ti.code,
+              team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+              team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
+              team_logo_light(ti.logo_dark, ti.logo_light) AS logo_light
+            FROM team_iterations ti
+            LEFT JOIN seasons ss ON ss.id = ti.start_season_id
+            LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
+            WHERE ti.team_id = t.id
+              AND (
+                ti.start_season_id IS NULL
+                OR ss.start_date <= (SELECT start_date FROM season_info)
+              )
+              AND (
+                ti.latest_season_id IS NULL
+                OR ls.start_date >= (SELECT start_date FROM season_info)
+              )
+            ORDER BY ss.start_date DESC NULLS LAST, ti.recorded_at DESC
+            LIMIT 1
+          )
+          UNION ALL
+          (
+            SELECT
+              ti.name,
+              ti.place_name,
+              ti.team_name,
+              ti.code,
+              team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+              team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
+              team_logo_light(ti.logo_dark, ti.logo_light) AS logo_light
+            FROM team_iterations ti
+            WHERE ti.team_id = t.id
+            ORDER BY ti.recorded_at ASC
+            LIMIT 1
+          )
+          LIMIT 1
+        ) iter ON true
+        ORDER BY iter.name ASC NULLS LAST
+      `;
+      return res.json(teams);
+    }
+
     const teams = await sql`
       SELECT
         t.id,
         t.league_id,
         ti.name,
+        ti.place_name,
+        ti.team_name,
         ti.code,
-        team_logo_default(ti.logo_dark, ti.logo_light) AS logo
+        team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+        team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
+        team_logo_light(ti.logo_dark, ti.logo_light) AS logo_light,
+        t.primary_color,
+        t.secondary_color,
+        t.text_color,
+        t.home_arena
       FROM teams t
       LEFT JOIN LATERAL (
-        SELECT name, code, logo_dark, logo_light
+        SELECT name, place_name, team_name, code, logo_dark, logo_light
         FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC

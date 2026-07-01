@@ -15,6 +15,7 @@ import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import CheckboxAccordion from '@/components/CheckboxAccordion/CheckboxAccordion';
 import DatePicker from '@/components/DatePicker/DatePicker';
+import fieldStyles from '@/components/Field/Field.module.scss';
 import GroupedFields from '@/components/GroupedFields/GroupedFields';
 import Icon from '@/components/Icon/Icon';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
@@ -24,7 +25,6 @@ import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import type { GameRecord } from '@/hooks/useGames';
 import useLeagues, { type LeagueRecord } from '@/hooks/useLeagues';
-import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import { PERIOD_SUFFIX } from './constants';
 import { formatScheduledDate } from './formatUtils';
 import styles from './ScoreImageModal.module.scss';
@@ -237,17 +237,45 @@ interface Props {
 }
 
 type ScoreCardFormValues = {
-  awayScore: number;
-  homeScore: number;
-  playoffGameNum: number;
-  awayWins: number;
-  homeWins: number;
+  awayScore: string;
+  homeScore: string;
+  playoffGameNum: string;
+  awayWins: string;
+  homeWins: string;
 };
+type ScoreCardValidationField =
+  | 'league'
+  | 'season'
+  | 'awayTeam'
+  | 'homeTeam'
+  | 'gameDate'
+  | 'awayScore'
+  | 'homeScore'
+  | 'playoffRound'
+  | 'playoffGameNum'
+  | 'awayWins'
+  | 'homeWins';
 
 type ScoreCardLastPeriod = 'regular' | 'ot' | 'so';
 type ScoreCardSelectOption = Extract<SelectOption, { value: string }> & {
   round: number;
   matchupIndex?: number;
+};
+type ScoreCardSeasonRecord = {
+  id: string;
+  name: string;
+  start_date: string | null;
+  created_at: string;
+  is_current: boolean;
+  best_of_playoff: number | null;
+  league_best_of_playoff: number;
+  bracket_rule_set_id: string | null;
+  playoff_round_names: Record<string, string> | null;
+  playoff_matchup_names: Record<string, string> | null;
+};
+type ScoreCardTeamRecord = DrawTeam & {
+  league_id: string | null;
+  home_arena?: string | null;
 };
 
 const LAST_PERIOD_OPTIONS: Array<{ value: ScoreCardLastPeriod; label: string }> = [
@@ -292,14 +320,59 @@ const isWholeNumberInRange = (value: unknown, min: number, max?: number) => {
   return max == null || num <= max;
 };
 
+const isOptionalWholeNumberInRange = (value: unknown, min: number, max?: number) =>
+  value == null || value === '' || isWholeNumberInRange(value, min, max);
+
+const scoreCardNumberOrDefault = (value: unknown, fallback = 0) => {
+  if (value == null || value === '') return fallback;
+  const num = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(num) ? num : fallback;
+};
+
+const scoreCardRangeErrorMessage = (value: unknown, min: number, max?: number) => {
+  if (value == null || value === '') return null;
+  const num = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(num) || !Number.isInteger(num)) return 'Must be a whole number.';
+  if (num < min) return `Must not be less than ${min}.`;
+  if (max != null && num > max) return `Must not exceed ${max}.`;
+  return null;
+};
+
+interface ScoreCardFieldLabelProps {
+  children: string;
+  htmlFor?: string;
+  id?: string;
+  required?: boolean;
+}
+
+const ScoreCardFieldLabel = ({ children, htmlFor, id, required }: ScoreCardFieldLabelProps) => (
+  <label
+    id={id}
+    htmlFor={htmlFor}
+    className={`${styles.formLabel} ${fieldStyles.labelText}`}
+  >
+    <span>{children}</span>
+    {required && <span className={fieldStyles.required}>*</span>}
+  </label>
+);
+
+const ScoreCardFieldError = ({ children }: { children?: string | null }) => {
+  if (!children) return null;
+  return <span className={fieldStyles.errorMsg}>{children}</span>;
+};
+
 interface ScoreCardNumberFieldProps {
   control: Control<ScoreCardFormValues>;
   name: keyof ScoreCardFormValues;
   label: string;
   min?: number;
   max?: number;
+  placeholder?: string;
+  required?: boolean;
   disabled?: boolean;
   error?: boolean;
+  errorMessage?: string | null;
+  onTouched?: () => void;
 }
 
 const ScoreCardNumberField = ({
@@ -308,19 +381,23 @@ const ScoreCardNumberField = ({
   label,
   min,
   max,
+  placeholder,
+  required = false,
   disabled,
   error = false,
+  errorMessage,
+  onTouched,
 }: ScoreCardNumberFieldProps) => {
   const inputId = `score-card-${name}`;
 
   return (
     <div className={styles.formField}>
-      <label
+      <ScoreCardFieldLabel
         htmlFor={inputId}
-        className={styles.formLabel}
+        required={required}
       >
         {label}
-      </label>
+      </ScoreCardFieldLabel>
       <Controller
         control={control}
         name={name}
@@ -333,14 +410,24 @@ const ScoreCardNumberField = ({
             max={max}
             step={1}
             inputMode="numeric"
+            placeholder={placeholder}
+            required={required}
             className={`${styles.formInput}${error ? ` ${styles.formInputError}` : ''}`}
             disabled={disabled}
             aria-invalid={error || undefined}
             value={field.value ?? ''}
-            onChange={(e) => field.onChange(e.target.value)}
+            onChange={(e) => {
+              onTouched?.();
+              field.onChange(e.target.value);
+            }}
+            onBlur={() => {
+              field.onBlur();
+              onTouched?.();
+            }}
           />
         )}
       />
+      <ScoreCardFieldError>{error ? errorMessage : null}</ScoreCardFieldError>
     </div>
   );
 };
@@ -430,6 +517,10 @@ const ScoreImageModal = ({
   const [formIsPlayoff, setFormIsPlayoff] = useState(false);
   const [formPlayoffRound, setFormPlayoffRound] = useState('');
   const [formLastPeriod, setFormLastPeriod] = useState<ScoreCardLastPeriod>('regular');
+  const [scoreCardTouchedFields, setScoreCardTouchedFields] = useState<
+    Partial<Record<ScoreCardValidationField, boolean>>
+  >({});
+  const [scoreCardValidationAttempted, setScoreCardValidationAttempted] = useState(false);
 
   // Number inputs managed via react-hook-form for consistent score-card field spacing.
   const {
@@ -438,36 +529,34 @@ const ScoreImageModal = ({
     reset: resetNums,
   } = useForm<ScoreCardFormValues>({
     defaultValues: {
-      awayScore: 0,
-      homeScore: 0,
-      playoffGameNum: 1,
-      awayWins: 0,
-      homeWins: 0,
+      awayScore: '',
+      homeScore: '',
+      playoffGameNum: '1',
+      awayWins: '',
+      homeWins: '',
     },
   });
   const numVals = watchNums();
 
   const isStandaloneForm = showForm && !game;
+  const markScoreCardFieldTouched = (field: ScoreCardValidationField) => {
+    setScoreCardTouchedFields((prev) => ({ ...prev, [field]: true }));
+  };
+  const clearScoreCardTouchedFields = (...fields: ScoreCardValidationField[]) => {
+    setScoreCardTouchedFields((prev) => {
+      const next = { ...prev };
+      fields.forEach((field) => {
+        delete next[field];
+      });
+      return next;
+    });
+  };
 
-  // Leagues + teams come from existing hooks (data cached by UserDashboard)
+  // Leagues come from the existing hook; teams are scoped to the selected season below.
   const { leagues: allLeagues } = useLeagues();
-  const { teams: allTeams } = useTeams();
 
   // Seasons filtered by selected league — fetched via the user seasons endpoint
-  const { data: formSeasons = [] } = useQuery<
-    {
-      id: string;
-      name: string;
-      start_date: string | null;
-      created_at: string;
-      is_current: boolean;
-      best_of_playoff: number | null;
-      league_best_of_playoff: number;
-      bracket_rule_set_id: string | null;
-      playoff_round_names: Record<string, string> | null;
-      playoff_matchup_names: Record<string, string> | null;
-    }[]
-  >({
+  const { data: formSeasons = [] } = useQuery<ScoreCardSeasonRecord[]>({
     queryKey: ['user-form-seasons', formLeagueId],
     queryFn: async () => {
       const { data } = await axios.get(`${API}/user/seasons`, {
@@ -480,30 +569,34 @@ const ScoreImageModal = ({
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: formSeasonTeams = [] } = useQuery<ScoreCardTeamRecord[]>({
+    queryKey: ['user-form-season-teams', formSeasonId],
+    queryFn: async () => {
+      const { data } = await axios.get(`${API}/user/teams`, {
+        headers: authHeaders(),
+        params: { season_id: formSeasonId },
+      });
+      return data;
+    },
+    enabled: isStandaloneForm && !!formSeasonId,
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Derived selections
   const formLeague = (allLeagues as LeagueRecord[]).find((l) => l.id === formLeagueId) ?? null;
   const formSeason = formSeasons.find((s) => s.id === formSeasonId) ?? null;
-  const fallbackFormSeason =
-    formSeason ??
-    formSeasons.find((s) => s.is_current) ??
-    formSeasons[0] ??
-    null;
 
   // Effective wins-needed: season override → league default → hard fallback 4 (best-of-7).
   // Guard all paths against undefined/NaN so the canvas dot loop always receives a valid integer.
-  const formGamesToWin = (() => {
-    const bestOf =
-      fallbackFormSeason?.best_of_playoff ??
-      fallbackFormSeason?.league_best_of_playoff ??
-      formLeague?.best_of_playoff;
-    return bestOf ? Math.ceil(bestOf / 2) : 4;
-  })();
-  const formTeams = formLeagueId
-    ? (allTeams as TeamRecord[]).filter((t) => t.league_id === formLeagueId)
-    : (allTeams as TeamRecord[]);
-  const formAwayTeam = formTeams.find((t) => t.id === formAwayTeamId) ?? null;
-  const formHomeTeam = formTeams.find((t) => t.id === formHomeTeamId) ?? null;
-  const formControlsDisabled = !formLeagueId;
+  const formBestOfGames =
+    formSeason?.best_of_playoff ??
+    formSeason?.league_best_of_playoff ??
+    formLeague?.best_of_playoff ??
+    7;
+  const formGamesToWin = Math.ceil(formBestOfGames / 2);
+  const formAwayTeam = formSeasonTeams.find((t) => t.id === formAwayTeamId) ?? null;
+  const formHomeTeam = formSeasonTeams.find((t) => t.id === formHomeTeamId) ?? null;
+  const formControlsDisabled = !formSeasonId;
   const lastPeriodOptions = useMemo(
     () =>
       formIsPlayoff
@@ -511,23 +604,36 @@ const ScoreImageModal = ({
         : LAST_PERIOD_OPTIONS,
     [formIsPlayoff],
   );
-  const playoffRoundNames = fallbackFormSeason?.playoff_round_names ?? null;
-  const playoffMatchupNames = fallbackFormSeason?.playoff_matchup_names ?? null;
+  const playoffRoundNames = formSeason?.playoff_round_names ?? null;
+  const playoffMatchupNames = formSeason?.playoff_matchup_names ?? null;
   const playoffRoundOptions = useMemo<ScoreCardSelectOption[]>(() => {
-    const matchupOptions = Object.entries(playoffMatchupNames ?? {})
-      .map(getPlayoffMatchupOption)
-      .filter((option): option is ScoreCardSelectOption => Boolean(option))
-      .sort((a, b) => a.round - b.round || (a.matchupIndex ?? 0) - (b.matchupIndex ?? 0));
+    const matchupOptionsByRound = new Map<number, ScoreCardSelectOption[]>();
+    Object.entries(playoffMatchupNames ?? {}).forEach((entry) => {
+      const option = getPlayoffMatchupOption(entry);
+      if (!option) return;
+      const options = matchupOptionsByRound.get(option.round) ?? [];
+      options.push(option);
+      matchupOptionsByRound.set(option.round, options);
+    });
 
-    if (matchupOptions.length > 0) return matchupOptions;
+    matchupOptionsByRound.forEach((options) => {
+      options.sort((a, b) => (a.matchupIndex ?? 0) - (b.matchupIndex ?? 0));
+    });
 
     const customRounds = Object.keys(playoffRoundNames ?? {})
       .map(Number)
       .filter((round) => Number.isFinite(round) && round > 0);
-    const roundCount = Math.max(DEFAULT_PLAYOFF_ROUND_COUNT, ...customRounds);
+    const matchupRounds = Array.from(matchupOptionsByRound.keys());
+    const configuredRounds = [...customRounds, ...matchupRounds];
+    const roundCount = configuredRounds.length
+      ? Math.max(...configuredRounds)
+      : DEFAULT_PLAYOFF_ROUND_COUNT;
 
-    return Array.from({ length: roundCount }, (_, index) => {
+    return Array.from({ length: roundCount }).flatMap((_, index) => {
       const round = index + 1;
+      const matchupOptions = matchupOptionsByRound.get(round);
+      if (matchupOptions?.length) return matchupOptions;
+
       return {
         value: String(round),
         label: getPlayoffRoundLabel(round, roundCount, playoffRoundNames),
@@ -545,12 +651,33 @@ const ScoreImageModal = ({
   const formTeamsMatch = Boolean(
     formAwayTeamId && formHomeTeamId && formAwayTeamId === formHomeTeamId,
   );
+  const awayScoreInRange = isOptionalWholeNumberInRange(numVals.awayScore, 0);
+  const homeScoreInRange = isOptionalWholeNumberInRange(numVals.homeScore, 0);
+  const scoresAreTied =
+    awayScoreInRange &&
+    homeScoreInRange &&
+    scoreCardNumberOrDefault(numVals.awayScore) === scoreCardNumberOrDefault(numVals.homeScore);
+  const playoffGameNumInRange = isWholeNumberInRange(
+    numVals.playoffGameNum,
+    1,
+    formBestOfGames,
+  );
+  const awayWinsInRange = isOptionalWholeNumberInRange(numVals.awayWins, 0, formGamesToWin);
+  const homeWinsInRange = isOptionalWholeNumberInRange(numVals.homeWins, 0, formGamesToWin);
+  const playoffWinsTotalMatchesGame =
+    !formIsPlayoff ||
+    !playoffGameNumInRange ||
+    !awayWinsInRange ||
+    !homeWinsInRange ||
+    scoreCardNumberOrDefault(numVals.awayWins) + scoreCardNumberOrDefault(numVals.homeWins) ===
+      scoreCardNumberOrDefault(numVals.playoffGameNum, 1);
   const scoreCardFormValidation = useMemo(() => {
     if (!isStandaloneForm) {
       return {
         isValid: true,
         errors: {
           league: false,
+          season: false,
           awayTeam: false,
           homeTeam: false,
           gameDate: false,
@@ -566,15 +693,16 @@ const ScoreImageModal = ({
 
     const errors = {
       league: !formLeague,
+      season: !formSeason,
       awayTeam: !formAwayTeam || formTeamsMatch,
       homeTeam: !formHomeTeam || formTeamsMatch,
       gameDate: !DATE_VALUE_RE.test(formGameDate),
-      awayScore: !isWholeNumberInRange(numVals.awayScore, 0),
-      homeScore: !isWholeNumberInRange(numVals.homeScore, 0),
+      awayScore: !awayScoreInRange || scoresAreTied,
+      homeScore: !homeScoreInRange || scoresAreTied,
       playoffRound: formIsPlayoff && !selectedPlayoffOption,
-      playoffGameNum: formIsPlayoff && !isWholeNumberInRange(numVals.playoffGameNum, 1, 7),
-      awayWins: formIsPlayoff && !isWholeNumberInRange(numVals.awayWins, 0, formGamesToWin),
-      homeWins: formIsPlayoff && !isWholeNumberInRange(numVals.homeWins, 0, formGamesToWin),
+      playoffGameNum: formIsPlayoff && !playoffGameNumInRange,
+      awayWins: formIsPlayoff && (!awayWinsInRange || !playoffWinsTotalMatchesGame),
+      homeWins: formIsPlayoff && (!homeWinsInRange || !playoffWinsTotalMatchesGame),
     };
 
     return {
@@ -584,20 +712,94 @@ const ScoreImageModal = ({
   }, [
     isStandaloneForm,
     formLeague,
+    formSeason,
     formAwayTeam,
     formHomeTeam,
     formTeamsMatch,
     formGameDate,
     formIsPlayoff,
     selectedPlayoffOption,
+    awayScoreInRange,
+    homeScoreInRange,
+    scoresAreTied,
+    playoffGameNumInRange,
+    awayWinsInRange,
+    homeWinsInRange,
+    playoffWinsTotalMatchesGame,
     numVals.awayScore,
     numVals.homeScore,
     numVals.playoffGameNum,
     numVals.awayWins,
     numVals.homeWins,
-    formGamesToWin,
   ]);
   const isDownloadDisabled = generating || !scoreCardFormValidation.isValid;
+  const shouldShowScoreCardError = (field: ScoreCardValidationField) =>
+    Boolean(
+      scoreCardFormValidation.errors[field] &&
+        (scoreCardValidationAttempted || scoreCardTouchedFields[field]),
+    );
+  const shouldShowScoreError = (field: 'awayScore' | 'homeScore') =>
+    Boolean(
+      scoreCardFormValidation.errors[field] &&
+        (scoreCardValidationAttempted ||
+          scoreCardTouchedFields.awayScore ||
+          scoreCardTouchedFields.homeScore),
+    );
+  const shouldShowPlayoffWinsError = (field: 'awayWins' | 'homeWins') =>
+    Boolean(
+      scoreCardFormValidation.errors[field] &&
+        (scoreCardValidationAttempted ||
+          scoreCardTouchedFields.playoffGameNum ||
+          scoreCardTouchedFields.awayWins ||
+          scoreCardTouchedFields.homeWins),
+    );
+  const scoreCardErrorMessage = (field: ScoreCardValidationField) => {
+    switch (field) {
+      case 'league':
+        return 'League is required.';
+      case 'season':
+        return 'Season is required.';
+      case 'awayTeam':
+        return formTeamsMatch
+          ? 'Away and home teams must be different.'
+          : 'Away team is required.';
+      case 'homeTeam':
+        return formTeamsMatch
+          ? 'Away and home teams must be different.'
+          : 'Home team is required.';
+      case 'gameDate':
+        return 'Game date is required.';
+      case 'awayScore':
+        return (
+          scoreCardRangeErrorMessage(numVals.awayScore, 0) ??
+          (scoresAreTied ? "Can't be tied with home." : null)
+        );
+      case 'homeScore':
+        return (
+          scoreCardRangeErrorMessage(numVals.homeScore, 0) ??
+          (scoresAreTied ? "Can't be tied with away." : null)
+        );
+      case 'playoffRound':
+        return 'Round is required.';
+      case 'playoffGameNum':
+        return (
+          scoreCardRangeErrorMessage(numVals.playoffGameNum, 1, formBestOfGames) ??
+          'Required.'
+        );
+      case 'awayWins':
+        return (
+          scoreCardRangeErrorMessage(numVals.awayWins, 0, formGamesToWin) ??
+          (playoffWinsTotalMatchesGame ? null : 'Must add up to Game #.')
+        );
+      case 'homeWins':
+        return (
+          scoreCardRangeErrorMessage(numVals.homeWins, 0, formGamesToWin) ??
+          (playoffWinsTotalMatchesGame ? null : 'Must add up to Game #.')
+        );
+      default:
+        return null;
+    }
+  };
 
   useEffect(() => {
     if (!formIsPlayoff || formLastPeriod !== 'so') return;
@@ -651,13 +853,15 @@ const ScoreImageModal = ({
       league_name: formLeague?.name ?? null,
       league_logo: formLeague?.logo ?? null,
       league_primary_color: formLeague?.primary_color ?? null,
-      season_name: fallbackFormSeason?.name ?? null,
+      season_name: formSeason?.name ?? null,
       game_type: formIsPlayoff ? 'playoff' : 'regular',
       series_games_to_win: formIsPlayoff ? formGamesToWin : null,
-      series_home_wins: formIsPlayoff ? Number(numVals.homeWins) : null,
-      series_away_wins: formIsPlayoff ? Number(numVals.awayWins) : null,
+      series_home_wins: formIsPlayoff ? scoreCardNumberOrDefault(numVals.homeWins) : null,
+      series_away_wins: formIsPlayoff ? scoreCardNumberOrDefault(numVals.awayWins) : null,
       series_home_team_id: formIsPlayoff ? formHomeTeam.id : null,
-      game_number_in_series: formIsPlayoff ? Number(numVals.playoffGameNum) : null,
+      game_number_in_series: formIsPlayoff
+        ? scoreCardNumberOrDefault(numVals.playoffGameNum, 1)
+        : null,
       playoff_round: formIsPlayoff ? selectedPlayoffRound : null,
       playoff_round_names:
         formIsPlayoff && selectedPlayoffRound != null && selectedPlayoffRoundLabel
@@ -670,7 +874,7 @@ const ScoreImageModal = ({
     formAwayTeam,
     formHomeTeam,
     formLeague,
-    fallbackFormSeason,
+    formSeason,
     formIsPlayoff,
     formLastPeriod,
     formGamesToWin,
@@ -723,6 +927,8 @@ const ScoreImageModal = ({
       setFormIsPlayoff(false);
       setFormPlayoffRound('');
       setFormLastPeriod('regular');
+      setScoreCardTouchedFields({});
+      setScoreCardValidationAttempted(false);
       resetNums();
     }
   }, [open]);
@@ -811,8 +1017,8 @@ const ScoreImageModal = ({
   };
 
   const drawGame = (game ?? synthGame) as DrawGameType | null;
-  const drawAwayScore = liveAwayScore ?? Number(numVals.awayScore);
-  const drawHomeScore = liveHomeScore ?? Number(numVals.homeScore);
+  const drawAwayScore = liveAwayScore ?? scoreCardNumberOrDefault(numVals.awayScore);
+  const drawHomeScore = liveHomeScore ?? scoreCardNumberOrDefault(numVals.homeScore);
   const formOvertimeSuffix = (() => {
     if (formIsPlayoff) {
       return formLastPeriod === 'ot' ? PERIOD_SUFFIX.OVERTIME : '';
@@ -821,7 +1027,7 @@ const ScoreImageModal = ({
     if (formLastPeriod === 'ot') return PERIOD_SUFFIX.OVERTIME;
     return '';
   })();
-  const drawOvertimeSuffix = overtimeSuffix ?? formOvertimeSuffix;
+  const drawOvertimeSuffix = overtimeSuffix || formOvertimeSuffix;
   const awayWon = drawAwayScore > drawHomeScore;
   const homeWon = drawHomeScore > drawAwayScore;
   const awayPrimary = drawGame?.away_team.primary_color ?? '#ba0c2f';
@@ -890,7 +1096,9 @@ const ScoreImageModal = ({
       : drawGame.series_home_wins!
     : 0;
   const seriesStatusLine = scoreCardPhaseLabel;
-  const canPreview = allowPreview && !!game;
+  const canPreview = allowPreview || isStandaloneForm;
+  const isPreviewDisabled =
+    generating || previewing || (isStandaloneForm && !scoreCardFormValidation.isValid);
 
   const renderScoreCardImage = async () => {
     const scoreCardNode = scoreCardRef.current;
@@ -911,7 +1119,10 @@ const ScoreImageModal = ({
   };
 
   const handleDownload = async () => {
-    if (!scoreCardFormValidation.isValid) return;
+    if (!scoreCardFormValidation.isValid) {
+      setScoreCardValidationAttempted(true);
+      return;
+    }
 
     if (scoreCardRef.current) {
       setGenerating(true);
@@ -943,9 +1154,9 @@ const ScoreImageModal = ({
     try {
       // Resolve the effective game (prop takes priority; fall back to synth game from form)
       const drawGame = (game ?? synthGame) as DrawGameType | null;
-      const drawAwayScore = liveAwayScore ?? Number(numVals.awayScore);
-      const drawHomeScore = liveHomeScore ?? Number(numVals.homeScore);
-      const drawOvertimeSuffix = overtimeSuffix ?? formOvertimeSuffix;
+      const drawAwayScore = liveAwayScore ?? scoreCardNumberOrDefault(numVals.awayScore);
+      const drawHomeScore = liveHomeScore ?? scoreCardNumberOrDefault(numVals.homeScore);
+      const drawOvertimeSuffix = overtimeSuffix || formOvertimeSuffix;
       const awayLogo = getDarkScoreCardLogo(drawGame?.away_team ?? null);
       const homeLogo = getDarkScoreCardLogo(drawGame?.home_team ?? null);
 
@@ -1339,6 +1550,11 @@ const ScoreImageModal = ({
   };
 
   const handlePreview = async () => {
+    if (isStandaloneForm && !scoreCardFormValidation.isValid) {
+      setScoreCardValidationAttempted(true);
+      return;
+    }
+
     setPreviewing(true);
     try {
       const url = await renderScoreCardImage();
@@ -1374,7 +1590,7 @@ const ScoreImageModal = ({
                 intent="accent"
                 icon="visibility"
                 onClick={handlePreview}
-                disabled={generating || previewing}
+                disabled={isPreviewDisabled}
               >
                 {previewing ? 'Generating Preview…' : 'Preview Image'}
               </Button>
@@ -1476,7 +1692,7 @@ const ScoreImageModal = ({
                   logo: l.logo,
                   code: l.code,
                 }));
-                const teamOptions: SelectOption[] = formTeams.map((t) => ({
+                const teamOptions: SelectOption[] = formSeasonTeams.map((t) => ({
                   value: t.id,
                   label: t.name,
                   logo: t.logo,
@@ -1489,98 +1705,156 @@ const ScoreImageModal = ({
                     {/* Row: League | Season */}
                     <div className={styles.formRow}>
                       <div className={styles.formField}>
-                        <label className={styles.formLabel}>League</label>
+                        <ScoreCardFieldLabel required>League</ScoreCardFieldLabel>
                         <Select
                           value={formLeagueId || null}
                           options={leagueOptions}
                           placeholder="— Select league —"
                           onChange={(val) => {
+                            setScoreCardTouchedFields({ league: true });
+                            setScoreCardValidationAttempted(false);
                             setFormLeagueId(val);
                             setFormSeasonId('');
                             setFormAwayTeamId('');
                             setFormHomeTeamId('');
-                            if (!val) {
-                              setFormIsPlayoff(false);
-                              setFormPlayoffRound('');
-                            }
+                            setFormGameDate('');
+                            setFormIsPlayoff(false);
+                            setFormPlayoffRound('');
+                            setFormLastPeriod('regular');
+                            resetNums();
                           }}
-                          searchable
-                          error={Boolean(formLeagueId) && scoreCardFormValidation.errors.league}
+                          error={shouldShowScoreCardError('league')}
                         />
+                        <ScoreCardFieldError>
+                          {shouldShowScoreCardError('league')
+                            ? scoreCardErrorMessage('league')
+                            : null}
+                        </ScoreCardFieldError>
                       </div>
                       <div className={styles.formField}>
-                        <label className={styles.formLabel}>Season</label>
+                        <ScoreCardFieldLabel required>Season</ScoreCardFieldLabel>
                         <SeasonSelect
                           value={formSeasonId || null}
                           seasons={formSeasons}
                           placeholder="— Select season —"
-                          onChange={setFormSeasonId}
+                          onChange={(value) => {
+                            markScoreCardFieldTouched('season');
+                            clearScoreCardTouchedFields(
+                              'awayTeam',
+                              'homeTeam',
+                              'playoffRound',
+                              'playoffGameNum',
+                              'awayWins',
+                              'homeWins',
+                            );
+                            setScoreCardValidationAttempted(false);
+                            setFormSeasonId(value);
+                            setFormAwayTeamId('');
+                            setFormHomeTeamId('');
+                            setFormIsPlayoff(false);
+                            setFormPlayoffRound('');
+                          }}
                           disabled={!formLeagueId}
                         />
+                        <ScoreCardFieldError>
+                          {shouldShowScoreCardError('season')
+                            ? scoreCardErrorMessage('season')
+                            : null}
+                        </ScoreCardFieldError>
                       </div>
                     </div>
 
                     {/* Row: Away Team | Home Team */}
                     <div className={styles.formRow}>
                       <div className={styles.formField}>
-                        <label className={styles.formLabel}>Away Team</label>
+                        <ScoreCardFieldLabel required>Away Team</ScoreCardFieldLabel>
                         <Select
                           value={formAwayTeamId || null}
                           options={teamOptions}
                           placeholder="— Select team —"
-                          onChange={setFormAwayTeamId}
-                          disabled={!formLeagueId}
+                          onChange={(value) => {
+                            markScoreCardFieldTouched('awayTeam');
+                            setFormAwayTeamId(value);
+                          }}
+                          disabled={formControlsDisabled}
                           searchable
-                          error={!formControlsDisabled && scoreCardFormValidation.errors.awayTeam}
+                          error={!formControlsDisabled && shouldShowScoreCardError('awayTeam')}
                         />
+                        <ScoreCardFieldError>
+                          {!formControlsDisabled && shouldShowScoreCardError('awayTeam')
+                            ? scoreCardErrorMessage('awayTeam')
+                            : null}
+                        </ScoreCardFieldError>
                       </div>
                       <div className={styles.formField}>
-                        <label className={styles.formLabel}>Home Team</label>
+                        <ScoreCardFieldLabel required>Home Team</ScoreCardFieldLabel>
                         <Select
                           value={formHomeTeamId || null}
                           options={teamOptions}
                           placeholder="— Select team —"
-                          onChange={setFormHomeTeamId}
-                          disabled={!formLeagueId}
+                          onChange={(value) => {
+                            markScoreCardFieldTouched('homeTeam');
+                            setFormHomeTeamId(value);
+                          }}
+                          disabled={formControlsDisabled}
                           searchable
-                          error={!formControlsDisabled && scoreCardFormValidation.errors.homeTeam}
+                          error={!formControlsDisabled && shouldShowScoreCardError('homeTeam')}
                         />
+                        <ScoreCardFieldError>
+                          {!formControlsDisabled && shouldShowScoreCardError('homeTeam')
+                            ? scoreCardErrorMessage('homeTeam')
+                            : null}
+                        </ScoreCardFieldError>
                       </div>
                     </div>
 
                     {/* Row: Date | Away Score | Home Score */}
                     <div className={styles.formRow3}>
                       <div className={styles.formField}>
-                        <label
+                        <ScoreCardFieldLabel
                           id="score-card-game-date-label"
-                          className={styles.formLabel}
+                          required
                         >
                           Game Date
-                        </label>
+                        </ScoreCardFieldLabel>
                         <DatePicker
                           value={formGameDate}
-                          onChange={setFormGameDate}
+                          onChange={(value) => {
+                            markScoreCardFieldTouched('gameDate');
+                            setFormGameDate(value);
+                          }}
                           placeholder="Select date"
                           disabled={formControlsDisabled}
                           ariaLabelledBy="score-card-game-date-label"
-                          error={!formControlsDisabled && scoreCardFormValidation.errors.gameDate}
+                          error={!formControlsDisabled && shouldShowScoreCardError('gameDate')}
                         />
+                        <ScoreCardFieldError>
+                          {!formControlsDisabled && shouldShowScoreCardError('gameDate')
+                            ? scoreCardErrorMessage('gameDate')
+                            : null}
+                        </ScoreCardFieldError>
                       </div>
                       <ScoreCardNumberField
                         label="Away Score"
                         control={numControl}
                         name="awayScore"
                         min={0}
+                        placeholder="0"
                         disabled={formControlsDisabled}
-                        error={!formControlsDisabled && scoreCardFormValidation.errors.awayScore}
+                        error={!formControlsDisabled && shouldShowScoreError('awayScore')}
+                        errorMessage={scoreCardErrorMessage('awayScore')}
+                        onTouched={() => markScoreCardFieldTouched('awayScore')}
                       />
                       <ScoreCardNumberField
                         label="Home Score"
                         control={numControl}
                         name="homeScore"
                         min={0}
+                        placeholder="0"
                         disabled={formControlsDisabled}
-                        error={!formControlsDisabled && scoreCardFormValidation.errors.homeScore}
+                        error={!formControlsDisabled && shouldShowScoreError('homeScore')}
+                        errorMessage={scoreCardErrorMessage('homeScore')}
+                        onTouched={() => markScoreCardFieldTouched('homeScore')}
                       />
                       <div className={styles.formField}>
                         <label className={styles.formLabel}>Last Period</label>
@@ -1599,8 +1873,19 @@ const ScoreImageModal = ({
                     <CheckboxAccordion
                       checked={formIsPlayoff}
                       label="Playoff Game"
-                      onChange={setFormIsPlayoff}
-                      disabled={!formLeagueId}
+                      onChange={(checked) => {
+                        setFormIsPlayoff(checked);
+                        setScoreCardValidationAttempted(false);
+                        if (!checked) {
+                          clearScoreCardTouchedFields(
+                            'playoffRound',
+                            'playoffGameNum',
+                            'awayWins',
+                            'homeWins',
+                          );
+                        }
+                      }}
+                      disabled={formControlsDisabled}
                     >
                       <GroupedFields
                         className={styles.playoffSection}
@@ -1608,22 +1893,34 @@ const ScoreImageModal = ({
                         variant="plain"
                       >
                         <div className={`${styles.formField} ${styles.playoffRoundField}`}>
-                          <label className={styles.formLabel}>Round</label>
+                          <ScoreCardFieldLabel required>Round</ScoreCardFieldLabel>
                           <Select
                             value={formPlayoffRound}
                             options={playoffRoundOptions}
                             placeholder="Select round"
-                            onChange={setFormPlayoffRound}
-                            error={scoreCardFormValidation.errors.playoffRound}
+                            onChange={(value) => {
+                              markScoreCardFieldTouched('playoffRound');
+                              setFormPlayoffRound(value);
+                            }}
+                            error={shouldShowScoreCardError('playoffRound')}
                           />
+                          <ScoreCardFieldError>
+                            {shouldShowScoreCardError('playoffRound')
+                              ? scoreCardErrorMessage('playoffRound')
+                              : null}
+                          </ScoreCardFieldError>
                         </div>
                         <ScoreCardNumberField
                           label="Game #"
                           control={numControl}
                           name="playoffGameNum"
                           min={1}
-                          max={7}
-                          error={scoreCardFormValidation.errors.playoffGameNum}
+                          max={formBestOfGames}
+                          placeholder="1"
+                          required
+                          error={shouldShowScoreCardError('playoffGameNum')}
+                          errorMessage={scoreCardErrorMessage('playoffGameNum')}
+                          onTouched={() => markScoreCardFieldTouched('playoffGameNum')}
                         />
                         <ScoreCardNumberField
                           label="Away Wins"
@@ -1631,7 +1928,10 @@ const ScoreImageModal = ({
                           name="awayWins"
                           min={0}
                           max={formGamesToWin}
-                          error={scoreCardFormValidation.errors.awayWins}
+                          placeholder="0"
+                          error={shouldShowPlayoffWinsError('awayWins')}
+                          errorMessage={scoreCardErrorMessage('awayWins')}
+                          onTouched={() => markScoreCardFieldTouched('awayWins')}
                         />
                         <ScoreCardNumberField
                           label="Home Wins"
@@ -1639,7 +1939,10 @@ const ScoreImageModal = ({
                           name="homeWins"
                           min={0}
                           max={formGamesToWin}
-                          error={scoreCardFormValidation.errors.homeWins}
+                          placeholder="0"
+                          error={shouldShowPlayoffWinsError('homeWins')}
+                          errorMessage={scoreCardErrorMessage('homeWins')}
+                          onTouched={() => markScoreCardFieldTouched('homeWins')}
                         />
                       </GroupedFields>
                     </CheckboxAccordion>
