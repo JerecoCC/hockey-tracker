@@ -33,4 +33,17 @@ describe('GroupedFields', () => {
     expect(screen.getByText('Defense')).toHaveClass('customLegend');
     expect(screen.getByText('Pick player').parentElement).toHaveClass('customFields');
   });
+
+  it('can render without a legend as plain grouped content', () => {
+    render(
+      <GroupedFields variant="plain">
+        <input aria-label="Round" />
+      </GroupedFields>,
+    );
+
+    const fieldset = screen.getByRole('group');
+    expect(fieldset).toHaveClass('plain');
+    expect(screen.queryByText('Playoff Details')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Round')).toBeInTheDocument();
+  });
 });

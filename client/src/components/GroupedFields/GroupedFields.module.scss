@@ -13,6 +13,11 @@
   padding: var(--grouped-fields-padding);
 }
 
+.plain {
+  border: 0;
+  border-radius: 0;
+}
+
 .legend {
   padding: 0 $space-xs;
   color: var(--app-text-muted, #{$text-dim});

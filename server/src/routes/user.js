@@ -1138,9 +1138,13 @@ router.get('/seasons', async (req, res) => {
         s.created_at,
         (l.current_season_id = s.id) AS is_current,
         s.best_of_playoff,
-        l.best_of_playoff AS league_best_of_playoff
+        l.best_of_playoff AS league_best_of_playoff,
+        s.bracket_rule_set_id,
+        brs.round_names AS playoff_round_names,
+        brs.matchup_names AS playoff_matchup_names
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
+      LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
       WHERE (${league_id ?? null}::uuid IS NULL OR s.league_id = ${league_id ?? null}::uuid)
       ORDER BY s.start_date DESC NULLS LAST, s.name DESC
     `;

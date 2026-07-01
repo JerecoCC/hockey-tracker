@@ -13,8 +13,9 @@ import axios from 'axios';
 import { toPng } from 'html-to-image';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
-import CheckboxField from '@/components/CheckboxField/CheckboxField';
+import CheckboxAccordion from '@/components/CheckboxAccordion/CheckboxAccordion';
 import DatePicker from '@/components/DatePicker/DatePicker';
+import GroupedFields from '@/components/GroupedFields/GroupedFields';
 import Icon from '@/components/Icon/Icon';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
 import Modal from '@/components/Modal/Modal';
@@ -244,12 +245,42 @@ type ScoreCardFormValues = {
 };
 
 type ScoreCardLastPeriod = 'regular' | 'ot' | 'so';
+type ScoreCardSelectOption = Extract<SelectOption, { value: string }> & {
+  round: number;
+  matchupIndex?: number;
+};
 
-const LAST_PERIOD_OPTIONS = [
+const LAST_PERIOD_OPTIONS: Array<{ value: ScoreCardLastPeriod; label: string }> = [
   { value: 'regular', label: 'Regular' },
   { value: 'ot', label: 'OT' },
   { value: 'so', label: 'SO' },
 ];
+
+const DEFAULT_PLAYOFF_ROUND_COUNT = 4;
+
+const getPlayoffRoundLabel = (
+  round: number,
+  totalRounds: number,
+  roundNames?: Record<string, string> | null,
+) => {
+  const customLabel = roundNames?.[String(round)]?.trim();
+  if (customLabel) return customLabel;
+  if (round === totalRounds) return 'Final';
+  return `Round ${round}`;
+};
+
+const getPlayoffMatchupOption = ([key, label]: [string, string]): ScoreCardSelectOption | null => {
+  const match = key.match(/^r(\d+)m(\d+)$/i);
+  const cleanLabel = label?.trim();
+  if (!match || !cleanLabel) return null;
+
+  return {
+    value: key,
+    label: cleanLabel,
+    round: Number(match[1]),
+    matchupIndex: Number(match[2]),
+  };
+};
 
 interface ScoreCardNumberFieldProps {
   control: Control<ScoreCardFormValues>;
@@ -257,9 +288,17 @@ interface ScoreCardNumberFieldProps {
   label: string;
   min?: number;
   max?: number;
+  disabled?: boolean;
 }
 
-const ScoreCardNumberField = ({ control, name, label, min, max }: ScoreCardNumberFieldProps) => {
+const ScoreCardNumberField = ({
+  control,
+  name,
+  label,
+  min,
+  max,
+  disabled,
+}: ScoreCardNumberFieldProps) => {
   const inputId = `score-card-${name}`;
 
   return (
@@ -283,6 +322,7 @@ const ScoreCardNumberField = ({ control, name, label, min, max }: ScoreCardNumbe
             step={1}
             inputMode="numeric"
             className={styles.formInput}
+            disabled={disabled}
             value={field.value ?? ''}
             onChange={(e) => field.onChange(e.target.value)}
           />
@@ -384,7 +424,13 @@ const ScoreImageModal = ({
     watch: watchNums,
     reset: resetNums,
   } = useForm<ScoreCardFormValues>({
-    defaultValues: { awayScore: 0, homeScore: 0, playoffGameNum: 1, awayWins: 0, homeWins: 0 },
+    defaultValues: {
+      awayScore: 0,
+      homeScore: 0,
+      playoffGameNum: 1,
+      awayWins: 0,
+      homeWins: 0,
+    },
   });
   const numVals = watchNums();
 
@@ -404,6 +450,9 @@ const ScoreImageModal = ({
       is_current: boolean;
       best_of_playoff: number | null;
       league_best_of_playoff: number;
+      bracket_rule_set_id: string | null;
+      playoff_round_names: Record<string, string> | null;
+      playoff_matchup_names: Record<string, string> | null;
     }[]
   >({
     queryKey: ['user-form-seasons', formLeagueId],
@@ -421,13 +470,18 @@ const ScoreImageModal = ({
   // Derived selections
   const formLeague = (allLeagues as LeagueRecord[]).find((l) => l.id === formLeagueId) ?? null;
   const formSeason = formSeasons.find((s) => s.id === formSeasonId) ?? null;
+  const fallbackFormSeason =
+    formSeason ??
+    formSeasons.find((s) => s.is_current) ??
+    formSeasons[0] ??
+    null;
 
   // Effective wins-needed: season override → league default → hard fallback 4 (best-of-7).
   // Guard all paths against undefined/NaN so the canvas dot loop always receives a valid integer.
   const formGamesToWin = (() => {
     const bestOf =
-      formSeason?.best_of_playoff ??
-      formSeason?.league_best_of_playoff ??
+      fallbackFormSeason?.best_of_playoff ??
+      fallbackFormSeason?.league_best_of_playoff ??
       formLeague?.best_of_playoff;
     return bestOf ? Math.ceil(bestOf / 2) : 4;
   })();
@@ -436,6 +490,62 @@ const ScoreImageModal = ({
     : (allTeams as TeamRecord[]);
   const formAwayTeam = formTeams.find((t) => t.id === formAwayTeamId) ?? null;
   const formHomeTeam = formTeams.find((t) => t.id === formHomeTeamId) ?? null;
+  const formControlsDisabled = !formLeagueId;
+  const lastPeriodOptions = useMemo(
+    () =>
+      formIsPlayoff
+        ? LAST_PERIOD_OPTIONS.filter((option) => option.value !== 'so')
+        : LAST_PERIOD_OPTIONS,
+    [formIsPlayoff],
+  );
+  const playoffRoundNames = fallbackFormSeason?.playoff_round_names ?? null;
+  const playoffMatchupNames = fallbackFormSeason?.playoff_matchup_names ?? null;
+  const playoffRoundOptions = useMemo<ScoreCardSelectOption[]>(() => {
+    const matchupOptions = Object.entries(playoffMatchupNames ?? {})
+      .map(getPlayoffMatchupOption)
+      .filter((option): option is ScoreCardSelectOption => Boolean(option))
+      .sort((a, b) => a.round - b.round || (a.matchupIndex ?? 0) - (b.matchupIndex ?? 0));
+
+    if (matchupOptions.length > 0) return matchupOptions;
+
+    const customRounds = Object.keys(playoffRoundNames ?? {})
+      .map(Number)
+      .filter((round) => Number.isFinite(round) && round > 0);
+    const roundCount = Math.max(DEFAULT_PLAYOFF_ROUND_COUNT, ...customRounds);
+
+    return Array.from({ length: roundCount }, (_, index) => {
+      const round = index + 1;
+      return {
+        value: String(round),
+        label: getPlayoffRoundLabel(round, roundCount, playoffRoundNames),
+        round,
+      };
+    });
+  }, [playoffMatchupNames, playoffRoundNames]);
+  const selectedPlayoffOption = formIsPlayoff
+    ? (playoffRoundOptions.find((option) => option.value === formPlayoffRound) ??
+      playoffRoundOptions[0] ??
+      null)
+    : null;
+  const selectedPlayoffRound = selectedPlayoffOption?.round ?? null;
+  const selectedPlayoffRoundLabel = selectedPlayoffOption?.label ?? null;
+
+  useEffect(() => {
+    if (!formIsPlayoff || formLastPeriod !== 'so') return;
+    setFormLastPeriod('regular');
+  }, [formIsPlayoff, formLastPeriod]);
+
+  useEffect(() => {
+    if (!formIsPlayoff) return;
+    const firstRound = playoffRoundOptions[0]?.value ?? '';
+    if (!firstRound) {
+      if (formPlayoffRound) setFormPlayoffRound('');
+      return;
+    }
+    if (!playoffRoundOptions.some((option) => option.value === formPlayoffRound)) {
+      setFormPlayoffRound(firstRound);
+    }
+  }, [formIsPlayoff, formPlayoffRound, playoffRoundOptions]);
 
   // Synthetic game built from form data; null until both teams are selected
   const synthGame = useMemo((): DrawGameType | null => {
@@ -472,15 +582,18 @@ const ScoreImageModal = ({
       league_name: formLeague?.name ?? null,
       league_logo: formLeague?.logo ?? null,
       league_primary_color: formLeague?.primary_color ?? null,
-      season_name: formSeason?.name ?? null,
+      season_name: fallbackFormSeason?.name ?? null,
       game_type: formIsPlayoff ? 'playoff' : 'regular',
       series_games_to_win: formIsPlayoff ? formGamesToWin : null,
       series_home_wins: formIsPlayoff ? Number(numVals.homeWins) : null,
       series_away_wins: formIsPlayoff ? Number(numVals.awayWins) : null,
       series_home_team_id: formIsPlayoff ? formHomeTeam.id : null,
       game_number_in_series: formIsPlayoff ? Number(numVals.playoffGameNum) : null,
-      playoff_round: formIsPlayoff && formPlayoffRound ? 1 : null,
-      playoff_round_names: formIsPlayoff && formPlayoffRound ? { 1: formPlayoffRound } : null,
+      playoff_round: formIsPlayoff ? selectedPlayoffRound : null,
+      playoff_round_names:
+        formIsPlayoff && selectedPlayoffRound != null && selectedPlayoffRoundLabel
+          ? { [selectedPlayoffRound]: selectedPlayoffRoundLabel }
+          : null,
       scheduled_at: formGameDate ? `${formGameDate}T00:00:00` : null,
     };
   }, [
@@ -488,13 +601,15 @@ const ScoreImageModal = ({
     formAwayTeam,
     formHomeTeam,
     formLeague,
-    formSeason,
+    fallbackFormSeason,
     formIsPlayoff,
+    formLastPeriod,
     formGamesToWin,
     numVals.homeWins,
     numVals.awayWins,
     numVals.playoffGameNum,
-    formPlayoffRound,
+    selectedPlayoffRound,
+    selectedPlayoffRoundLabel,
     formGameDate,
   ]);
 
@@ -629,12 +744,14 @@ const ScoreImageModal = ({
   const drawGame = (game ?? synthGame) as DrawGameType | null;
   const drawAwayScore = liveAwayScore ?? Number(numVals.awayScore);
   const drawHomeScore = liveHomeScore ?? Number(numVals.homeScore);
-  const formOvertimeSuffix =
-    formLastPeriod === 'so'
-      ? PERIOD_SUFFIX.SHOOTOUT
-      : formLastPeriod === 'ot'
-        ? PERIOD_SUFFIX.OVERTIME
-        : '';
+  const formOvertimeSuffix = (() => {
+    if (formIsPlayoff) {
+      return formLastPeriod === 'ot' ? PERIOD_SUFFIX.OVERTIME : '';
+    }
+    if (formLastPeriod === 'so') return PERIOD_SUFFIX.SHOOTOUT;
+    if (formLastPeriod === 'ot') return PERIOD_SUFFIX.OVERTIME;
+    return '';
+  })();
   const drawOvertimeSuffix = overtimeSuffix ?? formOvertimeSuffix;
   const awayWon = drawAwayScore > drawHomeScore;
   const homeWon = drawHomeScore > drawAwayScore;
@@ -1360,11 +1477,18 @@ const ScoreImageModal = ({
                     {/* Row: Date | Away Score | Home Score */}
                     <div className={styles.formRow3}>
                       <div className={styles.formField}>
-                        <label className={styles.formLabel}>Game Date</label>
+                        <label
+                          id="score-card-game-date-label"
+                          className={styles.formLabel}
+                        >
+                          Game Date
+                        </label>
                         <DatePicker
                           value={formGameDate}
                           onChange={setFormGameDate}
                           placeholder="Select date"
+                          disabled={formControlsDisabled}
+                          ariaLabelledBy="score-card-game-date-label"
                         />
                       </div>
                       <ScoreCardNumberField
@@ -1372,12 +1496,14 @@ const ScoreImageModal = ({
                         control={numControl}
                         name="awayScore"
                         min={0}
+                        disabled={formControlsDisabled}
                       />
                       <ScoreCardNumberField
                         label="Home Score"
                         control={numControl}
                         name="homeScore"
                         min={0}
+                        disabled={formControlsDisabled}
                       />
                       <div className={styles.formField}>
                         <label className={styles.formLabel}>Last Period</label>
@@ -1386,58 +1512,56 @@ const ScoreImageModal = ({
                           onChange={(value) =>
                             setFormLastPeriod(value as ScoreCardLastPeriod)
                           }
-                          options={LAST_PERIOD_OPTIONS}
+                          options={lastPeriodOptions}
                           variant="field"
+                          disabled={formControlsDisabled}
                         />
                       </div>
                     </div>
 
-                    {/* Playoff checkbox */}
-                    <CheckboxField
+                    <CheckboxAccordion
                       checked={formIsPlayoff}
                       label="Playoff Game"
                       onChange={setFormIsPlayoff}
                       disabled={!formLeagueId}
-                    />
-
-                    {/* Playoff sub-section */}
-                    {formIsPlayoff && (
-                      <div className={styles.playoffSection}>
-                        <div className={styles.playoffFieldsRow}>
-                          <div className={`${styles.formField} ${styles.playoffRoundField}`}>
-                            <label className={styles.formLabel}>Round</label>
-                            <input
-                              type="text"
-                              className={styles.formInput}
-                              placeholder="e.g. Quarterfinals"
-                              value={formPlayoffRound}
-                              onChange={(e) => setFormPlayoffRound(e.target.value)}
-                            />
-                          </div>
-                          <ScoreCardNumberField
-                            label="Game #"
-                            control={numControl}
-                            name="playoffGameNum"
-                            min={1}
-                            max={7}
-                          />
-                          <ScoreCardNumberField
-                            label="Away Wins"
-                            control={numControl}
-                            name="awayWins"
-                            min={0}
-                            max={4}
-                          />
-                          <ScoreCardNumberField
-                            label="Home Wins"
-                            control={numControl}
-                            name="homeWins"
-                            min={0}
-                            max={4}
+                    >
+                      <GroupedFields
+                        className={styles.playoffSection}
+                        fieldsClassName={styles.playoffFieldsRow}
+                        variant="plain"
+                      >
+                        <div className={`${styles.formField} ${styles.playoffRoundField}`}>
+                          <label className={styles.formLabel}>Round</label>
+                          <Select
+                            value={formPlayoffRound}
+                            options={playoffRoundOptions}
+                            placeholder="Select round"
+                            onChange={setFormPlayoffRound}
                           />
                         </div>
-                      </div>
-                    )}
+                        <ScoreCardNumberField
+                          label="Game #"
+                          control={numControl}
+                          name="playoffGameNum"
+                          min={1}
+                          max={7}
+                        />
+                        <ScoreCardNumberField
+                          label="Away Wins"
+                          control={numControl}
+                          name="awayWins"
+                          min={0}
+                          max={formGamesToWin}
+                        />
+                        <ScoreCardNumberField
+                          label="Home Wins"
+                          control={numControl}
+                          name="homeWins"
+                          min={0}
+                          max={formGamesToWin}
+                        />
+                      </GroupedFields>
+                    </CheckboxAccordion>
                   </>
                 );
               })()}

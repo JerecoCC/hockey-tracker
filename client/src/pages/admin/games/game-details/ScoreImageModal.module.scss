@@ -783,6 +783,11 @@
       border-color: var(--app-field-border-hover, #{$text-dim});
     }
 
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     &[type="number"] {
       appearance: textfield;
     }
@@ -804,19 +809,12 @@
 
 .playoff {
   &Section {
-    display: flex;
-    flex-direction: column;
-    gap: $space-md;
-    padding: $space-md;
+    --grouped-fields-grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr));
+
     background: var(--app-surface-muted, var(--app-surface-subtle));
-    border: 1px solid var(--app-border, #{$border});
-    border-radius: $radius-md;
   }
 
   &FieldsRow {
-    display: grid;
-    grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr));
-    gap: $space-md;
     align-items: end;
   }
 
@@ -826,15 +824,18 @@
 }
 
 @media (max-width: 960px) {
-  .playoffFieldsRow {
-    grid-template-columns: 1fr 1fr;
+  .playoffSection {
+    --grouped-fields-grid-template-columns: 1fr 1fr;
   }
 }
 
 @media (max-width: 640px) {
-  .formRow3,
-  .playoffFieldsRow {
+  .formRow3 {
     grid-template-columns: 1fr;
+  }
+
+  .playoffSection {
+    --grouped-fields-grid-template-columns: 1fr;
   }
 }
 

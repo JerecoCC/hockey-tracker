@@ -95,6 +95,33 @@ describe('GET /api/user/teams', () => {
   });
 });
 
+describe('GET /api/user/seasons', () => {
+  it('includes bracket round and matchup names for score card playoff round options', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        id: 'season-1',
+        name: '2025-26',
+        bracket_rule_set_id: 'rule-set-1',
+        playoff_round_names: { 1: 'Wild Card', 2: 'Final' },
+        playoff_matchup_names: { r1m0: 'Opening Matchup' },
+      },
+    ]);
+
+    const res = await request(app).get('/api/user/seasons?league_id=00000000-0000-0000-0000-000000000001');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toMatchObject({
+      bracket_rule_set_id: 'rule-set-1',
+      playoff_round_names: { 1: 'Wild Card', 2: 'Final' },
+      playoff_matchup_names: { r1m0: 'Opening Matchup' },
+    });
+    expect(queryText).toContain('brs.round_names AS playoff_round_names');
+    expect(queryText).toContain('brs.matchup_names AS playoff_matchup_names');
+    expect(queryText).toContain('LEFT JOIN bracket_rule_sets brs');
+  });
+});
+
 describe('GET /api/user/games', () => {
   it('returns games and scopes the query to the authenticated user favorites', async () => {
     sql.mockResolvedValueOnce([GAME]);

@@ -8,6 +8,9 @@ interface CheckboxFieldProps {
   onChange?: (checked: boolean) => void;
   className?: string;
   disabled?: boolean;
+  id?: string;
+  ariaControls?: string;
+  ariaExpanded?: boolean;
 }
 
 const CheckboxField = ({
@@ -16,11 +19,17 @@ const CheckboxField = ({
   onChange,
   className,
   disabled = false,
+  id,
+  ariaControls,
+  ariaExpanded,
 }: CheckboxFieldProps) => (
   <button
+    id={id}
     type="button"
     role="checkbox"
     aria-checked={checked}
+    aria-controls={ariaControls}
+    aria-expanded={ariaExpanded}
     className={[styles.field, checked ? styles.checked : '', className].filter(Boolean).join(' ')}
     disabled={disabled}
     onClick={() => {

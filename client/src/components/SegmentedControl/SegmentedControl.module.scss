@@ -20,6 +20,16 @@
   overflow: visible;
   // Compact: size to the options rather than stretching full width.
   width: fit-content;
+
+  &:has(.option:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:has(.option:disabled) .option {
+    opacity: 1;
+    cursor: not-allowed;
+  }
 }
 
 .field {
@@ -99,7 +109,6 @@
   }
 
   &:disabled {
-    opacity: 0.5;
     cursor: not-allowed;
   }
 }

@@ -50,6 +50,28 @@ beforeEach(() => {
 describe('ScoreImageModal', () => {
   it('disables playoff fields until a league is selected and tracks the last period', async () => {
     const user = userEvent.setup();
+    mockUseQuery.mockReturnValue({
+      data: [
+        {
+          id: 'season-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          created_at: '2025-09-01T00:00:00Z',
+          is_current: true,
+          best_of_playoff: null,
+          league_best_of_playoff: 5,
+          bracket_rule_set_id: 'rule-set-1',
+          playoff_round_names: {
+            1: 'Wild Card',
+            2: 'Semifinals',
+            3: 'Cup Final',
+          },
+          playoff_matchup_names: {
+            r1m0: 'Opening Matchup',
+          },
+        },
+      ],
+    });
     mockUseLeagues.mockReturnValue({
       leagues: [
         {
@@ -60,7 +82,7 @@ describe('ScoreImageModal', () => {
           icon: null,
           primary_color: '#111111',
           text_color: '#ffffff',
-          best_of_playoff: 7,
+          best_of_playoff: 5,
           best_of_shootout: 3,
           scoring_system: '2-1-0',
           playoff_format: null,
@@ -77,9 +99,15 @@ describe('ScoreImageModal', () => {
     );
 
     expect(screen.queryByPlaceholderText('e.g. Quarterfinals')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Playoff Game' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Preview Image' })).not.toBeInTheDocument();
     expect(screen.getByText('Last Period')).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: 'Playoff Game' })).toBeDisabled();
+    expect(screen.getByLabelText('Game Date')).toHaveAttribute('readonly');
+    expect(screen.getByLabelText('Away Score')).toBeDisabled();
+    expect(screen.getByLabelText('Home Score')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Regular' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'OT' })).toBeDisabled();
 
     await user.click(screen.getByPlaceholderText('— Select league —'));
     const leagueOption = await screen.findByRole('option', { name: /Hockey League/ });
@@ -94,14 +122,23 @@ describe('ScoreImageModal', () => {
 
     await user.click(playoffToggle);
 
-    expect(screen.getByPlaceholderText('e.g. Quarterfinals')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Playoff Game' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'SO' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Playoff Details')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('e.g. Quarterfinals')).not.toBeInTheDocument();
+    expect(await screen.findByText('Opening Matchup')).toBeInTheDocument();
     expect(screen.getByLabelText('Game #')).toBeInTheDocument();
-    expect(screen.getByLabelText('Away Wins')).toBeInTheDocument();
-    expect(screen.getByLabelText('Home Wins')).toBeInTheDocument();
+    expect(screen.getByLabelText('Away Wins')).toHaveAttribute('max', '3');
+    expect(screen.getByLabelText('Home Wins')).toHaveAttribute('max', '3');
+
+    await user.click(screen.getByRole('button', { name: 'OT' }));
+
+    expect(screen.getByTitle('Final in OT')).toBeInTheDocument();
 
     await user.click(playoffToggle);
 
-    expect(screen.queryByPlaceholderText('e.g. Quarterfinals')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Playoff Game' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'SO' })).toBeInTheDocument();
   });
 
   it('downloads using away vs home and game date in the filename', async () => {
