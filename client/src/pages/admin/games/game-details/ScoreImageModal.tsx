@@ -2004,9 +2004,37 @@ const ScoreImageModal = ({
                 />
               ) : (
                 <div className={styles.scoreCardHeroFallback}>
-                  <ScoreCardTeamLogo team={drawGame?.away_team ?? null} />
+                  <div
+                    className={[
+                      styles.scoreCardHeroFallbackLogo,
+                      styles.scoreCardHeroFallbackLogoAway,
+                      awayWon
+                        ? styles.scoreCardHeroFallbackLogoWinner
+                        : homeWon
+                          ? styles.scoreCardHeroFallbackLogoLoser
+                          : styles.scoreCardHeroFallbackLogoEven,
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <ScoreCardTeamLogo team={drawGame?.away_team ?? null} />
+                  </div>
                   <span>VS</span>
-                  <ScoreCardTeamLogo team={drawGame?.home_team ?? null} />
+                  <div
+                    className={[
+                      styles.scoreCardHeroFallbackLogo,
+                      styles.scoreCardHeroFallbackLogoHome,
+                      homeWon
+                        ? styles.scoreCardHeroFallbackLogoWinner
+                        : awayWon
+                          ? styles.scoreCardHeroFallbackLogoLoser
+                          : styles.scoreCardHeroFallbackLogoEven,
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <ScoreCardTeamLogo team={drawGame?.home_team ?? null} />
+                  </div>
                 </div>
               )}
               <div className={styles.scoreCardHeroShade} />
