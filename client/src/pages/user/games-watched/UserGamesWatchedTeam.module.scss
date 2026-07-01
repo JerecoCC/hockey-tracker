@@ -2,6 +2,7 @@
 @use 'styles/mixins' as *;
 
 $hero-strip-width: 64px;
+$hero-strip-slant-offset: $hero-strip-width * 0.3;
 $hero-strip-duration: 0.42s;
 
 .page {
@@ -44,15 +45,12 @@ $hero-strip-duration: 0.42s;
   width: $hero-strip-width;
   z-index: 0;
   background: var(--team-primary);
-  clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%);
-  transition:
-    clip-path $hero-strip-duration ease,
-    width $hero-strip-duration ease;
+  clip-path: polygon(0 0, 100% 0, calc(100% - #{$hero-strip-slant-offset}) 100%, 0 100%);
+  transition: width $hero-strip-duration ease;
 }
 
 .heroCardStuck .heroPrimaryFill {
-  width: 100%;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  width: calc(100% + #{$hero-strip-slant-offset});
 }
 
 .heroStrip {
@@ -66,7 +64,7 @@ $hero-strip-duration: 0.42s;
 
 .heroStripLeft {
   left: 0;
-  clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%);
+  clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
 }
 
 .heroStripRight {
@@ -120,6 +118,16 @@ $hero-strip-duration: 0.42s;
     gap: $space-lg;
     max-width: calc(100% - #{$space-2xl});
     text-align: center;
+  }
+}
+
+.heroStripLeft {
+  .heroStripSecondary {
+    clip-path: polygon(42.5% 0%, 55% 0%, 25% 100%, 12.5% 100%);
+  }
+
+  .heroStripSecondary2 {
+    clip-path: polygon(67.5% 0%, 80% 0%, 50% 100%, 37.5% 100%);
   }
 }
 
