@@ -229,7 +229,10 @@
   }
 
   &LineDim {
-    opacity: 0.55;
+    .teamScore {
+      color: var(--app-text-muted, #{$text-dim});
+      opacity: 0.68;
+    }
   }
 
   &Code {

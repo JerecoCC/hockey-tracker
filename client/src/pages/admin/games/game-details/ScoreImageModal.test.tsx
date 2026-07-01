@@ -525,6 +525,13 @@ describe('ScoreImageModal', () => {
     );
     expect(mockToPng.mock.calls[0][0]).toHaveAttribute('data-theme', 'dark');
     expect(mockToPng.mock.calls[0][0]).toHaveStyle('--league-band: #003d7a');
+    expect(mockToPng.mock.calls[0][0].querySelector('footer')).toHaveAttribute(
+      'data-theme',
+      'light',
+    );
+    expect(within(mockToPng.mock.calls[0][0]).getByText('1')).toHaveClass(
+      'scoreCardLosingScore',
+    );
     const exportedImageSources = Array.from(document.querySelectorAll('img')).map((img) =>
       img.getAttribute('src'),
     );

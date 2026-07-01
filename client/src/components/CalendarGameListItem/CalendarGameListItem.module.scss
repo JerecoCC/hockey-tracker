@@ -285,6 +285,7 @@
     border-color: rgba($danger, 0.38);
     background: rgba($danger, 0.12);
     color: color-mix(in srgb, var(--app-text, #{$text-body}) 72%, transparent);
+    opacity: 0.72;
   }
 
   &Missing {
@@ -315,7 +316,7 @@
   .scoreLose {
     background: transparent;
     color: var(--app-text, #{$text-body});
-    opacity: 0.55;
+    opacity: 0.68;
   }
 
   .scoreMissing {

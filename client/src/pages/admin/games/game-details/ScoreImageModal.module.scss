@@ -538,6 +538,10 @@
     text-shadow: 0 0 0 #000;
   }
 
+  &LosingScore {
+    color: rgba(21, 21, 21, 0.58) !important;
+  }
+
   &ResultBadge {
     position: relative;
     isolation: isolate;
@@ -691,6 +695,11 @@
     gap: 34px;
     padding: 0 80px;
     box-sizing: border-box;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+    background:
+      linear-gradient(135deg, rgba(15, 23, 42, 0.035) 25%, transparent 25%) 0 0 / 44px 44px,
+      linear-gradient(315deg, rgba(15, 23, 42, 0.035) 25%, transparent 25%) 0 0 / 44px 44px,
+      #f8fafc;
     color: #111827;
     text-transform: uppercase;
 
@@ -849,6 +858,18 @@
 .footer {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: $space-md;
+  width: 100%;
+}
+
+.footerStart,
+.footerEnd {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.footerEnd {
+  margin-left: auto;
 }

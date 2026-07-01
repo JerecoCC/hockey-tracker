@@ -1030,6 +1030,16 @@ const ScoreImageModal = ({
   const drawOvertimeSuffix = overtimeSuffix || formOvertimeSuffix;
   const awayWon = drawAwayScore > drawHomeScore;
   const homeWon = drawHomeScore > drawAwayScore;
+  const awayScoreClassName = awayWon
+    ? styles.scoreCardWinnerScore
+    : homeWon
+      ? styles.scoreCardLosingScore
+      : undefined;
+  const homeScoreClassName = homeWon
+    ? styles.scoreCardWinnerScore
+    : awayWon
+      ? styles.scoreCardLosingScore
+      : undefined;
   const awayPrimary = drawGame?.away_team.primary_color ?? '#ba0c2f';
   const homePrimary = drawGame?.home_team.primary_color ?? '#003087';
   const winnerCode = awayWon
@@ -1448,10 +1458,10 @@ const ScoreImageModal = ({
         // Score numbers
         ctx.textBaseline = 'middle';
         ctx.font = 'bold 267px "Inter",system-ui,sans-serif';
-        ctx.fillStyle = awayWon ? '#f8fafc' : '#475569';
+        ctx.fillStyle = awayWon || !homeWon ? '#f8fafc' : 'rgba(248, 250, 252, 0.62)';
         ctx.textAlign = 'right';
         ctx.fillText(String(drawAwayScore), W / 2 - 115, scoreMidY - 24);
-        ctx.fillStyle = homeWon ? '#f8fafc' : '#475569';
+        ctx.fillStyle = homeWon || !awayWon ? '#f8fafc' : 'rgba(248, 250, 252, 0.62)';
         ctx.textAlign = 'left';
         ctx.fillText(String(drawHomeScore), W / 2 + 115, scoreMidY - 24);
 
@@ -1577,33 +1587,37 @@ const ScoreImageModal = ({
         disableBackdropClose={isStandaloneForm}
         footer={
           <div className={styles.footer}>
-            <Button
-              variant="outlined"
-              intent="neutral"
-              onClick={onClose}
-            >
-              Close
-            </Button>
             {canPreview && (
+              <div className={styles.footerStart}>
+                <Button
+                  variant="outlined"
+                  intent="accent"
+                  icon="visibility"
+                  onClick={handlePreview}
+                  disabled={isPreviewDisabled}
+                >
+                  {previewing ? 'Generating Preview…' : 'Preview Image'}
+                </Button>
+              </div>
+            )}
+            <div className={styles.footerEnd}>
               <Button
                 variant="outlined"
-                intent="accent"
-                icon="visibility"
-                onClick={handlePreview}
-                disabled={isPreviewDisabled}
+                intent="neutral"
+                onClick={onClose}
               >
-                {previewing ? 'Generating Preview…' : 'Preview Image'}
+                Close
               </Button>
-            )}
-            <Button
-              variant="filled"
-              intent="accent"
-              icon="download"
-              onClick={handleDownload}
-              disabled={isDownloadDisabled}
-            >
-              {generating ? 'Generating…' : 'Download Image'}
-            </Button>
+              <Button
+                variant="filled"
+                intent="accent"
+                icon="download"
+                onClick={handleDownload}
+                disabled={isDownloadDisabled}
+              >
+                {generating ? 'Generating…' : 'Download Image'}
+              </Button>
+            </div>
           </div>
         }
       >
@@ -2024,9 +2038,7 @@ const ScoreImageModal = ({
                       aria-hidden="true"
                     />
                   )}
-                  <strong className={awayWon ? styles.scoreCardWinnerScore : undefined}>
-                    {drawAwayScore}
-                  </strong>
+                  <strong className={awayScoreClassName}>{drawAwayScore}</strong>
                 </div>
 
                 <span
@@ -2059,9 +2071,7 @@ const ScoreImageModal = ({
                       aria-hidden="true"
                     />
                   )}
-                  <strong className={homeWon ? styles.scoreCardWinnerScore : undefined}>
-                    {drawHomeScore}
-                  </strong>
+                  <strong className={homeScoreClassName}>{drawHomeScore}</strong>
                 </div>
               </div>
 
@@ -2097,7 +2107,10 @@ const ScoreImageModal = ({
               </div>
             </section>
 
-            <footer className={styles.scoreCardFooter}>
+            <footer
+              className={styles.scoreCardFooter}
+              data-theme="light"
+            >
               {footerLeagueLogo ? (
                 <img
                   src={footerLeagueLogo}
