@@ -401,14 +401,40 @@ describe('TeamGamesTab', () => {
       .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
       .mockImplementation(function () {
         const element = this as HTMLElement;
+        if (element.classList.contains('calendarScroll')) {
+          return {
+            bottom: 0,
+            height: 0,
+            left: 0,
+            right: 760,
+            top: 0,
+            width: 760,
+            x: 0,
+            y: 0,
+            toJSON: () => ({}),
+          } as DOMRect;
+        }
+        if (element.classList.contains('grid')) {
+          return {
+            bottom: 0,
+            height: 0,
+            left: 0,
+            right: 1320,
+            top: 0,
+            width: 1320,
+            x: 0,
+            y: 0,
+            toJSON: () => ({}),
+          } as DOMRect;
+        }
         if (element.classList.contains('dayCell') || element.classList.contains('emptyCell')) {
           return {
             bottom: 0,
             height: 0,
             left: 0,
-            right: 188.2,
+            right: 114.3,
             top: 0,
-            width: 188.2,
+            width: 114.3,
             x: 0,
             y: 0,
             toJSON: () => ({}),
@@ -450,16 +476,29 @@ describe('TeamGamesTab', () => {
     expect(capturedNode).toHaveStyle({ width: '1376px' });
     expect(capturedNode.querySelector('style')?.textContent).toContain('aspect-ratio: auto');
     expect(capturedNode.querySelector('style')?.textContent).toContain(
+      'width: var(--calendar-export-grid-width, 100%)',
+    );
+    expect(capturedNode.querySelector('style')?.textContent).toContain(
       'min-height: var(--calendar-export-day-min-height, 0px)',
     );
     expect(capturedNode.querySelector('style')?.textContent).toContain('margin-bottom: 0');
     expect(capturedNode.querySelector('style')?.textContent).toContain('overflow: visible');
+    expect(capturedNode.querySelector('style')?.textContent).toContain(
+      'padding-right: var(--month-calendar-cell-padding, 0.5rem)',
+    );
     expect(capturedNode.querySelector('style')?.textContent).not.toContain('align-items: start');
     expect(capturedNode.querySelector('style')?.textContent).not.toContain('align-self: start');
     const capturedCalendar = capturedNode.querySelector('.grid') as HTMLElement | null;
     expect(capturedCalendar).not.toBeNull();
+    expect(capturedCalendar).toHaveStyle({
+      width: '840px',
+      minWidth: '840px',
+    });
+    expect(capturedCalendar?.style.getPropertyValue('--calendar-export-grid-width')).toBe(
+      '840px',
+    );
     expect(capturedCalendar?.style.getPropertyValue('--calendar-export-day-min-height')).toBe(
-      '189px',
+      '115px',
     );
     expect(createdAnchor?.download).toBe(
       `Home Team Game Schedule - ${new Intl.DateTimeFormat('en-US', {

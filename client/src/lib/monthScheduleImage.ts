@@ -8,6 +8,7 @@ const MONTH_IMAGE_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
 const EXPORT_IMAGE_WIDTH = 1376;
 const EXPORT_PADDING = 28;
 const EXPORT_CALENDAR_WIDTH = EXPORT_IMAGE_WIDTH - EXPORT_PADDING * 2;
+const MIN_CALENDAR_GRID_WIDTH = 840;
 
 interface DownloadMonthScheduleImageOptions {
   calendarNode: HTMLElement;
@@ -34,6 +35,7 @@ export const downloadMonthScheduleImage = async ({
   const exportStyleNode = document.createElement('style');
   const headerNode = document.createElement('div');
   const clonedCalendar = calendarNode.cloneNode(true) as HTMLElement;
+  const calendarExportWidth = getCalendarExportWidth(calendarNode);
   const monthLabel = MONTH_IMAGE_LABEL_FMT.format(calendarMonth);
   const displayLabel = headerLabel ?? monthLabel;
 
@@ -64,8 +66,9 @@ export const downloadMonthScheduleImage = async ({
     }
 
     [data-calendar-export="true"] [class*="grid"] {
-      width: 100% !important;
-      min-width: 0 !important;
+      width: var(--calendar-export-grid-width, 100%) !important;
+      min-width: var(--calendar-export-grid-width, 0px) !important;
+      max-width: 100% !important;
     }
 
     [data-calendar-export="true"] [class*="dayCell"],
@@ -83,6 +86,7 @@ export const downloadMonthScheduleImage = async ({
       max-height: none !important;
       min-height: 0 !important;
       overflow: visible !important;
+      padding-right: var(--month-calendar-cell-padding, 0.5rem) !important;
       scrollbar-gutter: auto !important;
     }
 
@@ -103,9 +107,10 @@ export const downloadMonthScheduleImage = async ({
     lineHeight: '1.15',
   });
   headerNode.textContent = displayLabel;
+  clonedCalendar.style.setProperty('--calendar-export-grid-width', `${calendarExportWidth}px`);
   Object.assign(clonedCalendar.style, {
-    width: `${EXPORT_CALENDAR_WIDTH}px`,
-    minWidth: `${EXPORT_CALENDAR_WIDTH}px`,
+    width: `${calendarExportWidth}px`,
+    minWidth: `${calendarExportWidth}px`,
     pointerEvents: 'none',
   });
 
@@ -173,6 +178,25 @@ const getNearestCustomPropertyValue = (
     .getPropertyValue(propertyName)
     .trim();
   return rootValue || fallback;
+};
+
+const getCalendarExportWidth = (calendarNode: HTMLElement) => {
+  const renderedWidth = calendarNode.getBoundingClientRect().width;
+  const viewportWidth = calendarNode.parentElement?.getBoundingClientRect().width ?? 0;
+  const fallbackWidth = calendarNode.scrollWidth;
+  const minGridWidth =
+    parseCssPixelValue(window.getComputedStyle(calendarNode).minWidth) || MIN_CALENDAR_GRID_WIDTH;
+  const viewportLayoutWidth = viewportWidth > 0 ? Math.max(viewportWidth, minGridWidth) : 0;
+  const nextWidth = Math.ceil(
+    viewportLayoutWidth || renderedWidth || fallbackWidth || EXPORT_CALENDAR_WIDTH,
+  );
+
+  return Math.min(nextWidth, EXPORT_CALENDAR_WIDTH);
+};
+
+const parseCssPixelValue = (value: string) => {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
 };
 
 const setCalendarExportDayMinHeight = (calendarNode: HTMLElement) => {
