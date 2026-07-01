@@ -323,6 +323,7 @@ const GameLineupsTab = ({
               <ListItem
                 key={e.id}
                 className={styles.lineupPlayerItem}
+                variant="plain"
                 image={e.photo}
                 image_shape="circle"
                 hideImage
