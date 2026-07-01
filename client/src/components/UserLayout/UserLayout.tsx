@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
 import TitleRowContext from '@/context/TitleRowContext';
 import MobileTabsContext, { type MobileTabsState } from '@/context/MobileTabsContext';
+import QueryProvider from '@/context/QueryProvider';
 import BreadcrumbTitleRow from '../Breadcrumbs/BreadcrumbTitleRow';
 import Icon from '../Icon/Icon';
 import PageHeader from '../PageHeader/PageHeader';
@@ -31,56 +32,58 @@ const UserLayout = () => {
   );
 
   return (
-    <BreadcrumbContext.Provider value={breadcrumbCtx}>
-      <MobileTabsContext.Provider value={mobileTabsCtx}>
-        <TitleRowContext.Provider value={titleRowCtx}>
-          <div className={styles.page}>
-            {/* Mobile backdrop */}
-            {mobileOpen && (
-              <div
-                className={styles.overlay}
-                onClick={() => setMobileOpen(false)}
-                aria-hidden="true"
-              />
-            )}
-
-            <div className={styles.sidebarWrapper}>
-              <UserNav
-                collapsed={collapsed}
-                onToggle={() => setCollapsed((c) => !c)}
-                mobileOpen={mobileOpen}
-                onMobileClose={() => setMobileOpen(false)}
-              />
-              <button
-                className={styles.sidebarToggle}
-                onClick={() => setCollapsed((c) => !c)}
-                aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              >
-                <Icon
-                  name={collapsed ? 'chevron_right' : 'chevron_left'}
-                  size="0.75rem"
+    <QueryProvider>
+      <BreadcrumbContext.Provider value={breadcrumbCtx}>
+        <MobileTabsContext.Provider value={mobileTabsCtx}>
+          <TitleRowContext.Provider value={titleRowCtx}>
+            <div className={styles.page}>
+              {/* Mobile backdrop */}
+              {mobileOpen && (
+                <div
+                  className={styles.overlay}
+                  onClick={() => setMobileOpen(false)}
+                  aria-hidden="true"
                 />
-              </button>
+              )}
+
+              <div className={styles.sidebarWrapper}>
+                <UserNav
+                  collapsed={collapsed}
+                  onToggle={() => setCollapsed((c) => !c)}
+                  mobileOpen={mobileOpen}
+                  onMobileClose={() => setMobileOpen(false)}
+                />
+                <button
+                  className={styles.sidebarToggle}
+                  onClick={() => setCollapsed((c) => !c)}
+                  aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                >
+                  <Icon
+                    name={collapsed ? 'chevron_right' : 'chevron_left'}
+                    size="0.75rem"
+                  />
+                </button>
+              </div>
+              <div
+                className={styles.scrollArea}
+                data-app-scroll-lock-target="true"
+              >
+                <PageHeader
+                  onMenuToggle={() => setMobileOpen((o) => !o)}
+                  mobileTitleLeftRef={setMobileTitleLeftContainer}
+                />
+                <main className={styles.main}>
+                  {/* Portal target - TitleRow from any child page renders here */}
+                  <div ref={setTitleRowContainer} />
+                  <BreadcrumbTitleRow />
+                  <Outlet />
+                </main>
+              </div>
             </div>
-            <div
-              className={styles.scrollArea}
-              data-app-scroll-lock-target="true"
-            >
-              <PageHeader
-                onMenuToggle={() => setMobileOpen((o) => !o)}
-                mobileTitleLeftRef={setMobileTitleLeftContainer}
-              />
-              <main className={styles.main}>
-                {/* Portal target - TitleRow from any child page renders here */}
-                <div ref={setTitleRowContainer} />
-                <BreadcrumbTitleRow />
-                <Outlet />
-              </main>
-            </div>
-          </div>
-        </TitleRowContext.Provider>
-      </MobileTabsContext.Provider>
-    </BreadcrumbContext.Provider>
+          </TitleRowContext.Provider>
+        </MobileTabsContext.Provider>
+      </BreadcrumbContext.Provider>
+    </QueryProvider>
   );
 };
 

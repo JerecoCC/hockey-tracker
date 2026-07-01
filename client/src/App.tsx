@@ -1,28 +1,39 @@
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
-import { type ReactNode } from 'react';
+import { Suspense, lazy, type ReactNode } from 'react';
 import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTheme } from './context/ThemeContext';
 import { ThemeProvider } from './context/ThemeProvider';
-import LoginPage from './pages/login/Login';
-import SignupPage from './pages/signup/Signup';
-import AdminLayout from './components/AdminLayout/AdminLayout';
-import UserLayout from './components/UserLayout/UserLayout';
-import UserDashboard from './pages/user/dashboard/UserDashboard';
-import UserGames from './pages/user/games/UserGames';
-import UserGamesWatched from './pages/user/games-watched/UserGamesWatched';
-import UserGamesWatchedTeam from './pages/user/games-watched/UserGamesWatchedTeam';
-import UserGameDetailsPage from './pages/user/games/game-details/UserGameDetailsPage';
-import UserSettings from './pages/user/settings/UserSettings';
-import LeaguesPage from './pages/admin/leagues/Leagues';
-import LeagueDetailsPage from './pages/admin/leagues/LeagueDetails';
-import UsersPage from './pages/admin/users/Users';
-import TeamDetailsPage from './pages/admin/teams/TeamDetails';
-import SeasonDetailsPage from './pages/admin/seasons/SeasonDetails';
-import PlayoffSeriesDetailsPage from './pages/admin/seasons/PlayoffSeriesDetailsPage';
-import GameDetailsPage from './pages/admin/games/game-details/GameDetailsPage';
-import PlayerDetailsPage from './pages/admin/players/PlayerDetails';
-import AuthCallbackPage from './pages/auth/callback/AuthCallback';
+import LoadingSpinner from './components/LoadingSpinner/LoadingSpinner';
+
+const LoginPage = lazy(() => import('./pages/login/Login'));
+const SignupPage = lazy(() => import('./pages/signup/Signup'));
+const AuthCallbackPage = lazy(() => import('./pages/auth/callback/AuthCallback'));
+
+const AdminLayout = lazy(() => import('./components/AdminLayout/AdminLayout'));
+const UserLayout = lazy(() => import('./components/UserLayout/UserLayout'));
+
+const UserDashboard = lazy(() => import('./pages/user/dashboard/UserDashboard'));
+const UserGames = lazy(() => import('./pages/user/games/UserGames'));
+const UserGamesWatched = lazy(() => import('./pages/user/games-watched/UserGamesWatched'));
+const UserGamesWatchedTeam = lazy(
+  () => import('./pages/user/games-watched/UserGamesWatchedTeam'),
+);
+const UserGameDetailsPage = lazy(
+  () => import('./pages/user/games/game-details/UserGameDetailsPage'),
+);
+const UserSettings = lazy(() => import('./pages/user/settings/UserSettings'));
+
+const LeaguesPage = lazy(() => import('./pages/admin/leagues/Leagues'));
+const LeagueDetailsPage = lazy(() => import('./pages/admin/leagues/LeagueDetails'));
+const UsersPage = lazy(() => import('./pages/admin/users/Users'));
+const TeamDetailsPage = lazy(() => import('./pages/admin/teams/TeamDetails'));
+const SeasonDetailsPage = lazy(() => import('./pages/admin/seasons/SeasonDetails'));
+const PlayoffSeriesDetailsPage = lazy(
+  () => import('./pages/admin/seasons/PlayoffSeriesDetailsPage'),
+);
+const GameDetailsPage = lazy(() => import('./pages/admin/games/game-details/GameDetailsPage'));
+const PlayerDetailsPage = lazy(() => import('./pages/admin/players/PlayerDetails'));
 
 const PrivateRoute = (props: { children: ReactNode }) => {
   const { children } = props;
@@ -190,7 +201,16 @@ const AppShell = () => {
         hideProgressBar
         theme={theme}
       />
-      <RouterProvider router={router} />
+      <Suspense
+        fallback={
+          <LoadingSpinner
+            layout="page"
+            size="lg"
+          />
+        }
+      >
+        <RouterProvider router={router} />
+      </Suspense>
     </AuthProvider>
   );
 };
