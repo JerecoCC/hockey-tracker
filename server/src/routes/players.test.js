@@ -300,6 +300,47 @@ describe('GET /api/admin/players/:id/awards', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/players/:id/stats
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/players/:id/stats', () => {
+  it('returns career stats using a valid stat_rows CTE', async () => {
+    const statRow = {
+      season_id: 'season-1',
+      season_name: '2025-26',
+      jersey_number: 97,
+      gp: 12,
+      goals: 8,
+      assists: 10,
+      points: 18,
+      team_id: 'team-1',
+      team_name: 'Oilers',
+      team_logo: 'oilers.png',
+      primary_color: '#ff4500',
+      text_color: '#ffffff',
+    };
+    sql.mockResolvedValueOnce([statRow]);
+
+    const res = await request(app).get('/api/admin/players/player-1/stats');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([statRow]);
+    expect(sql).toHaveBeenCalledTimes(1);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toMatch(/WITH\s+stat_rows AS/);
+    expect(queryText).toContain('FROM game_player_stats gps');
+    expect(queryText).toContain('WHERE gps.player_id =');
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+
+    const res = await request(app).get('/api/admin/players/player-1/stats');
+
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/players/:id/latest-season-stats
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/players/:id/latest-season-stats', () => {

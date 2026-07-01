@@ -731,6 +731,7 @@ router.get('/:id/stats', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
+      WITH
       stat_rows AS (
         SELECT
           gps.season_id,
