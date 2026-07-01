@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
+import { invalidateGameStatDependents } from './gameStatCache';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -14,26 +15,6 @@ const apiError = (err: unknown, fallback: string): string =>
 
 const goalieStintsPath = (gameId: string) => `${API}/admin/games/${gameId}/goalie-stints`;
 
-const invalidateGoalieStatDependents = async (
-  queryClient: ReturnType<typeof useQueryClient>,
-  gameId: string,
-) => {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['games', gameId] }),
-    queryClient.invalidateQueries({ queryKey: ['user-game-details', gameId] }),
-    queryClient.invalidateQueries({ queryKey: ['season-stats'] }),
-    queryClient.invalidateQueries({ queryKey: ['season-standings'] }),
-    queryClient.invalidateQueries({ queryKey: ['player-career-stats'] }),
-    queryClient.invalidateQueries({ queryKey: ['user-player-career-stats'] }),
-    queryClient.invalidateQueries({ queryKey: ['player-latest-season-stats'] }),
-    queryClient.invalidateQueries({ queryKey: ['user-player-latest-season-stats'] }),
-    queryClient.invalidateQueries({ queryKey: ['player-last-five-games'] }),
-    queryClient.invalidateQueries({ queryKey: ['user-player-last-five-games'] }),
-    queryClient.invalidateQueries({ queryKey: ['player-game-logs'] }),
-    queryClient.invalidateQueries({ queryKey: ['user-player-game-logs'] }),
-  ]);
-};
-
 const setGoalieStatsAndRefreshDependents = async (
   queryClient: ReturnType<typeof useQueryClient>,
   gameId: string,
@@ -41,7 +22,9 @@ const setGoalieStatsAndRefreshDependents = async (
   rows: GoalieStatRecord[],
 ) => {
   queryClient.setQueryData<GoalieStatRecord[]>(queryKey, rows);
-  await invalidateGoalieStatDependents(queryClient, gameId);
+  await invalidateGameStatDependents(queryClient, gameId, {
+    includeGameGoalieStats: false,
+  });
 };
 
 // ── Types ────────────────────────────────────────────────────────────────────

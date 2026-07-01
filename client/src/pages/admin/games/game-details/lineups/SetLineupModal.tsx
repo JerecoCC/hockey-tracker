@@ -317,7 +317,6 @@ const SetLineupModal = ({
               control={control}
               name="jerseyInput"
               type="text"
-              className={styles.quickAddField}
               placeholder="Jersey numbers (e.g. 7 11 25)..."
               onKeyDown={(event) => {
                 if (event.key !== 'Enter') return;
