@@ -1,12 +1,14 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import BreadcrumbTitleRow from '@/components/Breadcrumbs/BreadcrumbTitleRow';
 import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
 import UserGamesWatched from './UserGamesWatched';
 
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn() }));
+jest.mock('axios');
 jest.mock('@/components/Select/Select', () => ({
   __esModule: true,
   default: ({ value, options, onChange }: any) => (
@@ -29,6 +31,7 @@ jest.mock('@/components/Select/Select', () => ({
 jest.mock('@/components/TeamLogo/TeamLogo', () => ({ code }: any) => <span>{code}</span>);
 
 const mockUseQuery = useQuery as jest.Mock;
+const mockAxios = axios as jest.Mocked<typeof axios>;
 
 const LocationProbe = () => {
   const location = useLocation();
@@ -60,6 +63,7 @@ const renderWatchedPage = () =>
 const teamHome = {
   id: 'team-home',
   name: 'Toronto Maple Leafs',
+  place_name: 'Toronto',
   code: 'TOR',
   logo: null,
   primary_color: '#003e7e',
@@ -70,6 +74,7 @@ const teamHome = {
 const teamAway = {
   id: 'team-away',
   name: 'Boston Bruins',
+  place_name: 'Boston',
   code: 'BOS',
   logo: null,
   primary_color: '#ffb81c',
@@ -80,6 +85,7 @@ const teamAway = {
 const teamOther = {
   id: 'team-other',
   name: 'New York Rangers',
+  place_name: 'New York',
   code: 'NYR',
   logo: null,
   primary_color: '#0038a8',
@@ -138,6 +144,7 @@ const makeWatchedGame = (
 
 describe('UserGamesWatched', () => {
   beforeEach(() => {
+    mockAxios.get.mockReset();
     mockUseQuery.mockReturnValue({
       isLoading: false,
       data: [
@@ -155,6 +162,24 @@ describe('UserGamesWatched', () => {
         }),
       ],
     });
+  });
+
+  it('requests watched games across all teams', async () => {
+    mockUseQuery.mockReturnValueOnce({
+      isLoading: true,
+      data: [],
+    });
+    mockAxios.get.mockResolvedValueOnce({ data: [] });
+
+    renderWatchedPage();
+    await mockUseQuery.mock.calls[0][0].queryFn();
+
+    expect(mockAxios.get).toHaveBeenCalledWith(
+      expect.stringContaining('/user/games'),
+      expect.objectContaining({
+        params: { watched: true, all_teams: true },
+      }),
+    );
   });
 
   it('shows every watched team with a positive count and filters by year', () => {
@@ -203,7 +228,9 @@ describe('UserGamesWatched', () => {
     const rows = screen.getAllByRole('row').slice(1);
     fireEvent.click(rows[1]);
 
-    expect(screen.getByTestId('location')).toHaveTextContent('/dashboard/games-watched/tor');
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      '/dashboard/games-watched/tor-maple-leafs',
+    );
   });
 
   it('shows a dashboard breadcrumb trail and back button', () => {

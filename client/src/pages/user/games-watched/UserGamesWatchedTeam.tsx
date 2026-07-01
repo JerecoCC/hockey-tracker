@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -6,19 +6,23 @@ import Card from '@/components/Card/Card';
 import GameListItem from '@/components/GameListItem';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import Section from '@/components/Section/Section';
+import Select, { type SelectOption } from '@/components/Select/Select';
 import Tag, { type TagIntent } from '@/components/Tag/Tag';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import type { GameRecord, GameStatus } from '@/hooks/useGames';
 import { buildUserGameDetailsPath, userWatchedTeamRouteSlug } from '@/lib/routeSlugs';
 import {
+  getScheduledGameYear,
   getWatchedTeamSummaries,
+  getWatchedYears,
   type TeamWatchSummary,
   type WatchedTeam,
 } from '@/lib/watchedTeams';
 import styles from './UserGamesWatchedTeam.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
+const ALL_YEARS = 'all';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
 const STATUS_LABEL: Record<GameStatus, string> = {
@@ -64,6 +68,11 @@ const formatDate = (value: string | null | undefined) => {
   return DATE_FMT.format(date);
 };
 
+const formatScheduledWatchDate = (value: string | null | undefined) => {
+  const date = formatDate(value);
+  return date ? `Scheduled watch: ${date}` : undefined;
+};
+
 const formatTime = (hhmm: string | null | undefined) => {
   if (!hhmm) return undefined;
   const [hStr, mStr] = hhmm.split(':');
@@ -101,6 +110,13 @@ const getTeamSlug = (team: WatchedTeam) =>
   userWatchedTeamRouteSlug({
     teamCode: team.code,
     teamName: getTeamName(team),
+    teamPlaceName: team.place_name,
+    teamId: team.id,
+  });
+
+const getLegacyTeamSlug = (team: WatchedTeam) =>
+  userWatchedTeamRouteSlug({
+    teamCode: team.code,
     teamId: team.id,
   });
 
@@ -216,37 +232,71 @@ const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
 
 const UserGamesWatchedTeam = () => {
   const { teamSlug = '' } = useParams<{ teamSlug?: string }>();
+  const yearFilterLabelId = useId();
+  const [selectedYear, setSelectedYear] = useState(ALL_YEARS);
 
   const { data: watchedGames = [], isLoading } = useQuery<GameRecord[]>({
     queryKey: ['user-games-watched'],
     queryFn: async () => {
       const { data } = await axios.get<GameRecord[]>(`${API}/user/games`, {
         headers: authHeaders(),
-        params: { watched: true },
+        params: { watched: true, all_teams: true },
       });
       return data;
     },
   });
 
-  const summaries = useMemo(() => getWatchedTeamSummaries(watchedGames), [watchedGames]);
-  const summary = useMemo(
+  const allSummaries = useMemo(() => getWatchedTeamSummaries(watchedGames), [watchedGames]);
+  const allTeamSummary = useMemo(
     () =>
-      summaries.find((item) => item.team.id === teamSlug || getTeamSlug(item.team) === teamSlug) ??
-      null,
-    [summaries, teamSlug],
+      allSummaries.find(
+        (item) =>
+          item.team.id === teamSlug ||
+          getTeamSlug(item.team) === teamSlug ||
+          getLegacyTeamSlug(item.team) === teamSlug,
+      ) ?? null,
+    [allSummaries, teamSlug],
   );
-  const teamGames = useMemo(() => {
-    if (!summary) return [];
+
+  const allTeamGames = useMemo(() => {
+    if (!allTeamSummary) return [];
     return watchedGames
-      .filter((game) => game.watched_by_user && gameIncludesTeam(game, summary.team.id))
+      .filter((game) => game.watched_by_user && gameIncludesTeam(game, allTeamSummary.team.id))
       .sort((a, b) => {
         const dateDiff = dateSortValue(b) - dateSortValue(a);
         if (dateDiff !== 0) return dateDiff;
         return b.id.localeCompare(a.id);
       });
-  }, [summary, watchedGames]);
+  }, [allTeamSummary, watchedGames]);
 
-  const teamName = summary ? getTeamName(summary.team) : 'Team';
+  const years = useMemo(() => getWatchedYears(allTeamGames), [allTeamGames]);
+  const yearOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: ALL_YEARS, label: 'All' },
+      ...years.map((year) => ({ value: year, label: year })),
+    ],
+    [years],
+  );
+
+  const summary = useMemo(() => {
+    if (!allTeamSummary) return null;
+    if (selectedYear === ALL_YEARS) return allTeamSummary;
+    return (
+      getWatchedTeamSummaries(allTeamGames, selectedYear).find(
+        (item) => item.team.id === allTeamSummary.team.id,
+      ) ?? allTeamSummary
+    );
+  }, [allTeamGames, allTeamSummary, selectedYear]);
+
+  const teamGames = useMemo(
+    () =>
+      selectedYear === ALL_YEARS
+        ? allTeamGames
+        : allTeamGames.filter((game) => getScheduledGameYear(game) === selectedYear),
+    [allTeamGames, selectedYear],
+  );
+
+  const teamName = allTeamSummary ? getTeamName(allTeamSummary.team) : 'Team';
 
   usePageBreadcrumbs(
     isLoading
@@ -257,18 +307,24 @@ const UserGamesWatchedTeam = () => {
           items: [
             { label: 'Dashboard', path: '/dashboard' },
             { label: 'Games Watched', path: '/dashboard/games-watched' },
-            { label: summary ? teamName : 'Not Found' },
+            { label: allTeamSummary ? teamName : 'Not Found' },
           ],
         },
-    [isLoading, summary, teamName],
+    [allTeamSummary, isLoading, teamName],
   );
 
   useEffect(() => {
-    document.title = summary ? `${teamName} Games Watched` : 'Games Watched';
+    if (selectedYear !== ALL_YEARS && !years.includes(selectedYear)) {
+      setSelectedYear(ALL_YEARS);
+    }
+  }, [selectedYear, years]);
+
+  useEffect(() => {
+    document.title = allTeamSummary ? `${teamName} Games Watched` : 'Games Watched';
     return () => {
       document.title = 'Hockey Tracker';
     };
-  }, [summary, teamName]);
+  }, [allTeamSummary, teamName]);
 
   if (isLoading) {
     return (
@@ -280,7 +336,7 @@ const UserGamesWatchedTeam = () => {
     );
   }
 
-  if (!summary) {
+  if (!allTeamSummary || !summary) {
     return <p className={styles.emptyState}>Watched team not found.</p>;
   }
 
@@ -288,7 +344,26 @@ const UserGamesWatchedTeam = () => {
     <div className={styles.page}>
       <TeamWatchedHero summary={summary} />
 
-      <Section title="Watched Games">
+      <Section
+        title="Watched Games"
+        action={
+          <div className={styles.yearFilter}>
+            <span
+              id={yearFilterLabelId}
+              className={styles.yearLabel}
+            >
+              Year
+            </span>
+            <Select
+              value={selectedYear}
+              options={yearOptions}
+              onChange={setSelectedYear}
+              ariaLabelledBy={yearFilterLabelId}
+              width="content"
+            />
+          </div>
+        }
+      >
         {teamGames.length === 0 ? (
           <p className={styles.emptyState}>No watched games found for this team.</p>
         ) : (
@@ -333,6 +408,7 @@ const UserGamesWatchedTeam = () => {
                   date={formatDate(getGameDateValue(game))}
                   time={formatTime(game.scheduled_time)}
                   venue={game.venue ?? undefined}
+                  supplementalMeta={formatScheduledWatchDate(game.scheduled_for)}
                   round={game.playoff_round}
                   roundLabel={roundLabel}
                   gameNumberInSeries={game.game_number_in_series}

@@ -228,10 +228,11 @@ router.post('/watched-games/:gameId/skip', async (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /api/user/games  – read-only game list for authenticated users
 // Query params: season_id, league_id, team_id/team_ids, game_type, status, include_skipped,
-// watched, date, week (YYYY-MM-DD week start), month (YYYY-MM)
+// watched, all_teams, date, week (YYYY-MM-DD week start), month (YYYY-MM)
 // `date` (YYYY-MM-DD) filters to games whose effective user date matches — the
 // user's personal scheduled_for if set, otherwise the game's Eastern-time date.
 // Results default to the user's favourite teams; selected team filters override that scope.
+// all_teams=true removes the favourite-team default when no selected team filter is present.
 // ---------------------------------------------------------------------------
 router.get('/games', async (req, res) => {
   const userId = req.user.id;
@@ -252,6 +253,7 @@ router.get('/games', async (req, res) => {
   const teamIdsParam = teamIds.length > 0 ? `{${teamIds.join(',')}}` : null;
   const includeSkipped = req.query.include_skipped === 'true' || req.query.include_skipped === '1';
   const watchedOnly = req.query.watched === 'true' || req.query.watched === '1';
+  const allTeams = req.query.all_teams === 'true' || req.query.all_teams === '1';
   const week = req.query.week ?? req.query.week_start ?? null;
   const month = req.query.month ?? null;
   if (week && !/^\d{4}-\d{2}-\d{2}$/.test(String(week))) {
@@ -497,11 +499,14 @@ router.get('/games', async (req, res) => {
           )
           OR (
             ${teamIdsParam}::uuid[] IS NULL
-            AND EXISTS (
-              SELECT 1
-              FROM user_favorite_teams uft
-              WHERE uft.user_id = ${userId}
-                AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
+            AND (
+              ${allTeams}::boolean IS TRUE
+              OR EXISTS (
+                SELECT 1
+                FROM user_favorite_teams uft
+                WHERE uft.user_id = ${userId}
+                  AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
+              )
             )
           )
         )

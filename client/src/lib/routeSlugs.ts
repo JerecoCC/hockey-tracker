@@ -11,6 +11,21 @@ export const UUID_PATTERN =
 const slugOrId = (value: string | null | undefined, fallbackId?: string | null) =>
   toRouteSlug(value) || fallbackId || '';
 
+const teamNameRouteSlug = ({
+  teamName,
+  teamPlaceName,
+}: {
+  teamName?: string | null;
+  teamPlaceName?: string | null;
+}) => {
+  const nameSlug = toRouteSlug(teamName);
+  const placeSlug = toRouteSlug(teamPlaceName);
+  if (placeSlug && nameSlug.startsWith(`${placeSlug}-`)) {
+    return nameSlug.slice(placeSlug.length + 1);
+  }
+  return nameSlug;
+};
+
 const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/;
 
 export const playerRouteSlug = (
@@ -169,22 +184,37 @@ export const buildUserGameDetailsPath = ({
 export const userWatchedTeamRouteSlug = ({
   teamCode,
   teamName,
+  teamPlaceName,
   teamId,
 }: {
   teamCode?: string | null;
   teamName?: string | null;
+  teamPlaceName?: string | null;
   teamId?: string | null;
-}) => slugOrId(teamCode || teamName, teamId);
+}) => {
+  const codeSlug = toRouteSlug(teamCode);
+  const nameSlug = teamNameRouteSlug({ teamName, teamPlaceName });
+  if (codeSlug && nameSlug) return `${codeSlug}-${nameSlug}`;
+  return codeSlug || nameSlug || teamId || '';
+};
 
 export const buildUserWatchedTeamPath = ({
   teamCode,
   teamName,
+  teamPlaceName,
   teamId,
 }: {
   teamCode?: string | null;
   teamName?: string | null;
+  teamPlaceName?: string | null;
   teamId?: string | null;
-}) => `/dashboard/games-watched/${userWatchedTeamRouteSlug({ teamCode, teamName, teamId })}`;
+}) =>
+  `/dashboard/games-watched/${userWatchedTeamRouteSlug({
+    teamCode,
+    teamName,
+    teamPlaceName,
+    teamId,
+  })}`;
 
 export const buildPlayoffSeriesDetailsPath = ({
   leagueCode,
