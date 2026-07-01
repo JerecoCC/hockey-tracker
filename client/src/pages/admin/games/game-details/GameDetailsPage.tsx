@@ -610,6 +610,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
 
         {/* ── Tabs ── */}
         <Tabs
+          className={gameAutofillProgress ? undefined : styles.gameDetailsTabs}
           activeIndex={activeTab}
           onTabChange={handleTabChange}
           keepMounted={isGameAutofilling}
