@@ -796,7 +796,7 @@
 
   &Row3 {
     display: grid;
-    grid-template-columns: 1fr 110px 110px;
+    grid-template-columns: minmax(160px, 1fr) 110px 110px minmax(180px, 0.8fr);
     gap: $space-md;
   }
 

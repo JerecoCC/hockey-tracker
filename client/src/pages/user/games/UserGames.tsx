@@ -1416,11 +1416,11 @@ const UserGames = () => {
                 variant="outlined"
                 intent="neutral"
                 icon="image"
-                aria-label="Generate Score Image"
+                iconHeight="button"
+                aria-label="Generate Score Card"
+                tooltip="Generate Score Card"
                 onClick={() => setScoreImageOpen(true)}
-              >
-                Generate Score Image
-              </Button>
+              />
               <SegmentedControl
                 value={view}
                 onChange={(value) => handleViewChange(value as 'list' | 'calendar')}

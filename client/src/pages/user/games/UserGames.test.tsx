@@ -796,9 +796,9 @@ describe('UserGames schedule views', () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
-    await user.click(screen.getByRole('button', { name: /Generate Score Image/ }));
+    await user.click(screen.getByRole('button', { name: /Generate Score Card/ }));
 
-    expect(screen.getByText('Generate Score Card')).toBeInTheDocument();
+    expect(screen.getAllByText('Generate Score Card')).toHaveLength(2);
     expect(screen.getByText('Score image form')).toBeInTheDocument();
   });
 
@@ -838,7 +838,7 @@ describe('UserGames schedule views', () => {
 
     await user.click(screen.getByRole('button', { name: 'Download score card' }));
 
-    expect(screen.getByText('Generate Score Card')).toBeInTheDocument();
+    expect(screen.getAllByText('Generate Score Card')).toHaveLength(2);
     expect(screen.getByText('OPP @ HOM')).toBeInTheDocument();
     expect(screen.getByText('Score 1-2')).toBeInTheDocument();
     expect(screen.getByText((content) => content.startsWith('Suffix'))).toBeInTheDocument();

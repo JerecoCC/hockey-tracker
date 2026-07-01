@@ -19,10 +19,12 @@ import Icon from '@/components/Icon/Icon';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
 import Modal from '@/components/Modal/Modal';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import type { GameRecord } from '@/hooks/useGames';
 import useLeagues, { type LeagueRecord } from '@/hooks/useLeagues';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
+import { PERIOD_SUFFIX } from './constants';
 import { formatScheduledDate } from './formatUtils';
 import styles from './ScoreImageModal.module.scss';
 
@@ -241,6 +243,14 @@ type ScoreCardFormValues = {
   homeWins: number;
 };
 
+type ScoreCardLastPeriod = 'regular' | 'ot' | 'so';
+
+const LAST_PERIOD_OPTIONS = [
+  { value: 'regular', label: 'Regular' },
+  { value: 'ot', label: 'OT' },
+  { value: 'so', label: 'SO' },
+];
+
 interface ScoreCardNumberFieldProps {
   control: Control<ScoreCardFormValues>;
   name: keyof ScoreCardFormValues;
@@ -366,6 +376,7 @@ const ScoreImageModal = ({
   const [formGameDate, setFormGameDate] = useState('');
   const [formIsPlayoff, setFormIsPlayoff] = useState(false);
   const [formPlayoffRound, setFormPlayoffRound] = useState('');
+  const [formLastPeriod, setFormLastPeriod] = useState<ScoreCardLastPeriod>('regular');
 
   // Number inputs managed via react-hook-form for consistent score-card field spacing.
   const {
@@ -527,6 +538,7 @@ const ScoreImageModal = ({
       setFormGameDate('');
       setFormIsPlayoff(false);
       setFormPlayoffRound('');
+      setFormLastPeriod('regular');
       resetNums();
     }
   }, [open]);
@@ -617,7 +629,13 @@ const ScoreImageModal = ({
   const drawGame = (game ?? synthGame) as DrawGameType | null;
   const drawAwayScore = liveAwayScore ?? Number(numVals.awayScore);
   const drawHomeScore = liveHomeScore ?? Number(numVals.homeScore);
-  const drawOvertimeSuffix = overtimeSuffix ?? '';
+  const formOvertimeSuffix =
+    formLastPeriod === 'so'
+      ? PERIOD_SUFFIX.SHOOTOUT
+      : formLastPeriod === 'ot'
+        ? PERIOD_SUFFIX.OVERTIME
+        : '';
+  const drawOvertimeSuffix = overtimeSuffix ?? formOvertimeSuffix;
   const awayWon = drawAwayScore > drawHomeScore;
   const homeWon = drawHomeScore > drawAwayScore;
   const awayPrimary = drawGame?.away_team.primary_color ?? '#ba0c2f';
@@ -739,7 +757,7 @@ const ScoreImageModal = ({
       const drawGame = (game ?? synthGame) as DrawGameType | null;
       const drawAwayScore = liveAwayScore ?? Number(numVals.awayScore);
       const drawHomeScore = liveHomeScore ?? Number(numVals.homeScore);
-      const drawOvertimeSuffix = overtimeSuffix ?? '';
+      const drawOvertimeSuffix = overtimeSuffix ?? formOvertimeSuffix;
       const awayLogo = getDarkScoreCardLogo(drawGame?.away_team ?? null);
       const homeLogo = getDarkScoreCardLogo(drawGame?.home_team ?? null);
 
@@ -1151,7 +1169,7 @@ const ScoreImageModal = ({
         open={open}
         title="Generate Score Card"
         onClose={onClose}
-        size="xl"
+        size="lg"
         disableBackdropClose={isStandaloneForm}
         footer={
           <div className={styles.footer}>
@@ -1293,6 +1311,10 @@ const ScoreImageModal = ({
                             setFormSeasonId('');
                             setFormAwayTeamId('');
                             setFormHomeTeamId('');
+                            if (!val) {
+                              setFormIsPlayoff(false);
+                              setFormPlayoffRound('');
+                            }
                           }}
                           searchable
                         />
@@ -1357,6 +1379,17 @@ const ScoreImageModal = ({
                         name="homeScore"
                         min={0}
                       />
+                      <div className={styles.formField}>
+                        <label className={styles.formLabel}>Last Period</label>
+                        <SegmentedControl
+                          value={formLastPeriod}
+                          onChange={(value) =>
+                            setFormLastPeriod(value as ScoreCardLastPeriod)
+                          }
+                          options={LAST_PERIOD_OPTIONS}
+                          variant="field"
+                        />
+                      </div>
                     </div>
 
                     {/* Playoff checkbox */}
@@ -1364,6 +1397,7 @@ const ScoreImageModal = ({
                       checked={formIsPlayoff}
                       label="Playoff Game"
                       onChange={setFormIsPlayoff}
+                      disabled={!formLeagueId}
                     />
 
                     {/* Playoff sub-section */}

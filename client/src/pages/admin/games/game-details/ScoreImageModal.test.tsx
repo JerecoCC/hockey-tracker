@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useQuery } from '@tanstack/react-query';
 import { toPng } from 'html-to-image';
@@ -48,8 +48,25 @@ beforeEach(() => {
 });
 
 describe('ScoreImageModal', () => {
-  it('toggles playoff fields when the Playoff Game label is clicked', async () => {
+  it('disables playoff fields until a league is selected and tracks the last period', async () => {
     const user = userEvent.setup();
+    mockUseLeagues.mockReturnValue({
+      leagues: [
+        {
+          id: 'league-1',
+          name: 'Hockey League',
+          code: 'HL',
+          logo: null,
+          icon: null,
+          primary_color: '#111111',
+          text_color: '#ffffff',
+          best_of_playoff: 7,
+          best_of_shootout: 3,
+          scoring_system: '2-1-0',
+          playoff_format: null,
+        },
+      ],
+    });
 
     render(
       <ScoreImageModal
@@ -61,15 +78,28 @@ describe('ScoreImageModal', () => {
 
     expect(screen.queryByPlaceholderText('e.g. Quarterfinals')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Preview Image' })).not.toBeInTheDocument();
+    expect(screen.getByText('Last Period')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Playoff Game' })).toBeDisabled();
 
-    await user.click(screen.getByText('Playoff Game'));
+    await user.click(screen.getByPlaceholderText('— Select league —'));
+    const leagueOption = await screen.findByRole('option', { name: /Hockey League/ });
+    await user.click(within(leagueOption).getByRole('button'));
+
+    const playoffToggle = screen.getByRole('checkbox', { name: 'Playoff Game' });
+    expect(playoffToggle).not.toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'SO' }));
+
+    expect(screen.getByTitle('Final in SO')).toBeInTheDocument();
+
+    await user.click(playoffToggle);
 
     expect(screen.getByPlaceholderText('e.g. Quarterfinals')).toBeInTheDocument();
     expect(screen.getByLabelText('Game #')).toBeInTheDocument();
     expect(screen.getByLabelText('Away Wins')).toBeInTheDocument();
     expect(screen.getByLabelText('Home Wins')).toBeInTheDocument();
 
-    await user.click(screen.getByText('Playoff Game'));
+    await user.click(playoffToggle);
 
     expect(screen.queryByPlaceholderText('e.g. Quarterfinals')).not.toBeInTheDocument();
   });
