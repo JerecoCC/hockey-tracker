@@ -11,6 +11,7 @@ import Tag, { type TagIntent } from '@/components/Tag/Tag';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import type { GameRecord, GameStatus } from '@/hooks/useGames';
+import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import { buildUserGameDetailsPath, userWatchedTeamRouteSlug } from '@/lib/routeSlugs';
 import {
   getScheduledGameYear,
@@ -51,6 +52,30 @@ const getTeamName = (team: WatchedTeam) => team.team_name || team.name;
 
 const formatRecord = ({ wins, losses, otSoLosses }: TeamWatchSummary['record']) =>
   `${wins}-${losses}-${otSoLosses}`;
+
+const toWatchedTeam = (team: WatchedTeam | TeamRecord): WatchedTeam => ({
+  id: team.id,
+  name: team.name,
+  place_name: team.place_name,
+  team_name: team.team_name,
+  code: team.code,
+  logo: team.logo,
+  logo_dark: team.logo_dark,
+  logo_light: team.logo_light,
+  primary_color: team.primary_color,
+  secondary_color: team.secondary_color,
+  text_color: team.text_color,
+});
+
+const createEmptySummary = (team: WatchedTeam | TeamRecord): TeamWatchSummary => ({
+  team: toWatchedTeam(team),
+  count: 0,
+  record: {
+    wins: 0,
+    losses: 0,
+    otSoLosses: 0,
+  },
+});
 
 const parseDateValue = (value: string | null | undefined) => {
   if (!value) return null;
@@ -119,6 +144,11 @@ const getLegacyTeamSlug = (team: WatchedTeam) =>
     teamCode: team.code,
     teamId: team.id,
   });
+
+const teamMatchesSlug = (team: WatchedTeam | TeamRecord, teamSlug: string) =>
+  team.id === teamSlug ||
+  getTeamSlug(team) === teamSlug ||
+  getLegacyTeamSlug(team) === teamSlug;
 
 const getScrollParent = (el: HTMLElement): HTMLElement => {
   let parent = el.parentElement;
@@ -234,8 +264,9 @@ const UserGamesWatchedTeam = () => {
   const { teamSlug = '' } = useParams<{ teamSlug?: string }>();
   const yearFilterLabelId = useId();
   const [selectedYear, setSelectedYear] = useState(ALL_YEARS);
+  const { teams, loading: teamsLoading } = useTeams();
 
-  const { data: watchedGames = [], isLoading } = useQuery<GameRecord[]>({
+  const { data: watchedGames = [], isLoading: watchedGamesLoading } = useQuery<GameRecord[]>({
     queryKey: ['user-games-watched'],
     queryFn: async () => {
       const { data } = await axios.get<GameRecord[]>(`${API}/user/games`, {
@@ -247,16 +278,24 @@ const UserGamesWatchedTeam = () => {
   });
 
   const allSummaries = useMemo(() => getWatchedTeamSummaries(watchedGames), [watchedGames]);
-  const allTeamSummary = useMemo(
+  const watchedSummary = useMemo(
     () =>
       allSummaries.find(
-        (item) =>
-          item.team.id === teamSlug ||
-          getTeamSlug(item.team) === teamSlug ||
-          getLegacyTeamSlug(item.team) === teamSlug,
+        (item) => teamMatchesSlug(item.team, teamSlug),
       ) ?? null,
     [allSummaries, teamSlug],
   );
+  const selectedTeam = useMemo(
+    () =>
+      watchedSummary?.team ??
+      teams.find((team) => teamMatchesSlug(team, teamSlug)) ??
+      null,
+    [teams, teamSlug, watchedSummary],
+  );
+  const allTeamSummary = useMemo(() => {
+    if (watchedSummary) return watchedSummary;
+    return selectedTeam ? createEmptySummary(selectedTeam) : null;
+  }, [selectedTeam, watchedSummary]);
 
   const allTeamGames = useMemo(() => {
     if (!allTeamSummary) return [];
@@ -297,6 +336,7 @@ const UserGamesWatchedTeam = () => {
   );
 
   const teamName = allTeamSummary ? getTeamName(allTeamSummary.team) : 'Team';
+  const isLoading = watchedGamesLoading || teamsLoading;
 
   usePageBreadcrumbs(
     isLoading
@@ -365,7 +405,7 @@ const UserGamesWatchedTeam = () => {
         }
       >
         {teamGames.length === 0 ? (
-          <p className={styles.emptyState}>No watched games found for this team.</p>
+          <p className={styles.emptyState}>No watched games.</p>
         ) : (
           <ul className={styles.gameList}>
             {teamGames.map((game) => {
