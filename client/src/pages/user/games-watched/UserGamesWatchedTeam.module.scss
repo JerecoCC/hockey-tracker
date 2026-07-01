@@ -3,6 +3,8 @@
 
 $hero-strip-width: 64px;
 $hero-strip-slant-offset: $hero-strip-width * 0.3;
+$hero-strip-fill-overlap: 2px;
+$hero-strip-meet-offset: ($hero-strip-slant-offset * 0.5) + $hero-strip-fill-overlap;
 $hero-strip-duration: 0.42s;
 
 .page {
@@ -41,16 +43,26 @@ $hero-strip-duration: 0.42s;
 
 .heroPrimaryFill {
   position: absolute;
-  inset: 0 auto 0 0;
+  top: 0;
+  bottom: 0;
   width: $hero-strip-width;
   z-index: 0;
   background: var(--team-primary);
-  clip-path: polygon(0 0, 100% 0, calc(100% - #{$hero-strip-slant-offset}) 100%, 0 100%);
   transition: width $hero-strip-duration ease;
 }
 
+.heroPrimaryFillLeft {
+  left: 0;
+  clip-path: polygon(0 0, 100% 0, calc(100% - #{$hero-strip-slant-offset}) 100%, 0 100%);
+}
+
+.heroPrimaryFillRight {
+  right: 0;
+  clip-path: polygon(#{$hero-strip-slant-offset} 0, 100% 0, 100% 100%, 0 100%);
+}
+
 .heroCardStuck .heroPrimaryFill {
-  width: calc(100% + #{$hero-strip-slant-offset});
+  width: calc(50% + #{$hero-strip-meet-offset});
 }
 
 .heroStrip {

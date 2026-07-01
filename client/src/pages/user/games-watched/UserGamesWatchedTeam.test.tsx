@@ -219,6 +219,7 @@ describe('UserGamesWatchedTeam', () => {
     expect(screen.getByTestId('team-hero-left-strip')).toBeInTheDocument();
     expect(screen.getByTestId('team-hero-right-strip')).toBeInTheDocument();
     expect(screen.getByTestId('team-hero-primary-fill')).toBeInTheDocument();
+    expect(screen.getByTestId('team-hero-right-primary-fill')).toBeInTheDocument();
     expect(screen.getByLabelText('Toronto Maple Leafs watched games summary')).toHaveTextContent(
       '2x',
     );

@@ -174,8 +174,12 @@ const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
         aria-label={`${teamName} watched games summary`}
       >
         <div
-          className={styles.heroPrimaryFill}
+          className={`${styles.heroPrimaryFill} ${styles.heroPrimaryFillLeft}`}
           data-testid="team-hero-primary-fill"
+        />
+        <div
+          className={`${styles.heroPrimaryFill} ${styles.heroPrimaryFillRight}`}
+          data-testid="team-hero-right-primary-fill"
         />
         <div
           className={`${styles.heroStrip} ${styles.heroStripLeft}`}
