@@ -338,6 +338,23 @@ const lineupsEquivalent = (left, right) => {
   return sameIds(a.forwards, b.forwards) && sameIds(a.defense, b.defense) && a.goalie === b.goalie;
 };
 
+const syncFinalStartingGoalieStint = async (gameId, teamId, goalieId) => {
+  if (!goalieId) return;
+  await sql`
+    UPDATE game_goalie_stints st
+    SET goalie_id = ${goalieId}
+    FROM games g
+    WHERE g.id = st.game_id
+      AND g.id = ${gameId}
+      AND g.status = 'final'
+      AND st.team_id = ${teamId}
+      AND st.stint_ord = 1
+      AND st.entered_period = '1'
+      AND (st.entered_time IS NULL OR st.entered_time = '00:00')
+      AND st.goalie_id <> ${goalieId}
+  `;
+};
+
 const selectPreviousSavedLineupRow = (gameId, teamId) => sql`
   SELECT
     sl.forward_1_id,
@@ -2327,6 +2344,7 @@ router.put('/:id/lineup', async (req, res) => {
         defense_2_id  = EXCLUDED.defense_2_id,
         goalie_id     = EXCLUDED.goalie_id
     `;
+    await syncFinalStartingGoalieStint(id, team_id, goalieId);
     await refreshGameStatSnapshots(id);
 
     // Return the saved slots in unpivoted LineupEntry shape.

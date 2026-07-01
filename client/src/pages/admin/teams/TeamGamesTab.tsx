@@ -10,6 +10,7 @@ import TeamCalendarGameCard from '@/components/TeamCalendarGameCard/TeamCalendar
 import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import { buildGameDetailsPath, buildUserGameDetailsPath } from '@/lib/routeSlugs';
+import { toEasternDateKey } from '@/pages/admin/seasons/seasonDateUtils';
 import styles from './TeamGamesTab.module.scss';
 
 const MONTH_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
@@ -45,6 +46,9 @@ const toLocalDateKey = (iso: string) => {
   const d = new Date(iso);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
+
+const toGameDateKey = (iso: string, mode: 'admin' | 'user') =>
+  mode === 'admin' ? toEasternDateKey(iso) : toLocalDateKey(iso);
 
 const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const addMonths = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, 1);
@@ -215,13 +219,13 @@ const TeamGamesTab = ({
   const gamesByDate = useMemo(() => {
     const map = new Map<string, GameRecord>();
     scheduledGames.forEach((game) => {
-      const key = toLocalDateKey(game.scheduled_at!);
+      const key = toGameDateKey(game.scheduled_at!, mode);
       if (!map.has(key)) {
         map.set(key, game);
       }
     });
     return map;
-  }, [scheduledGames]);
+  }, [mode, scheduledGames]);
 
   const openGame = (game: GameRecord) => {
     const path =

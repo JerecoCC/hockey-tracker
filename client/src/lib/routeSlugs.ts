@@ -26,7 +26,7 @@ const teamNameRouteSlug = ({
   return nameSlug;
 };
 
-const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/;
+const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})?$/;
 
 export const playerRouteSlug = (
   firstName: string | null | undefined,
@@ -208,7 +208,11 @@ export const buildGameDetailsPath = ({
   scheduledAt?: string | null;
   scheduledTime?: string | null;
 }) => {
-  const dateSlug = gameDateRouteSlug(scheduledAt, { leagueCode, scheduledTime });
+  const dateSlug = gameDateRouteSlug(scheduledAt, {
+    leagueCode,
+    forceEastern: true,
+    scheduledTime,
+  });
   const matchupSlug = gameRouteSlug({ awayTeamCode, homeTeamCode });
   return `${buildSeasonDetailsPath({ leagueCode, leagueId, seasonName, seasonId })}/games/${
     dateSlug && matchupSlug ? `${dateSlug}/${matchupSlug}` : gameId

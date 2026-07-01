@@ -785,8 +785,6 @@ const GoalieStatsEditModal = ({
                   const isStarter =
                     !!originalStint &&
                     isStartingWindow(stintRow.entered_period, stintRow.entered_time);
-                  const canRemoveStint =
-                    isPendingId(stintRow.id) || (row.stints.length > 1 && !isStarter);
 
                   return (
                     <div
@@ -878,19 +876,17 @@ const GoalieStatsEditModal = ({
                       <span className={styles.goalieStatsEditorValue}>
                         {stintSaves(stintRow, originalStint)}
                       </span>
-                      {canRemoveStint && (
-                        <Button
-                          variant="outlined"
-                          intent="danger"
-                          icon="delete"
-                          size="sm"
-                          tooltip={
-                            isPendingId(stintRow.id) ? 'Discard this stint' : 'Remove this stint'
-                          }
-                          disabled={busy}
-                          onClick={() => handleRemoveStint(goalieIdx, stintRow.id)}
-                        />
-                      )}
+                      <Button
+                        variant="outlined"
+                        intent="danger"
+                        icon="delete"
+                        size="sm"
+                        tooltip={
+                          isPendingId(stintRow.id) ? 'Discard this stint' : 'Remove this stint'
+                        }
+                        disabled={busy}
+                        onClick={() => handleRemoveStint(goalieIdx, stintRow.id)}
+                      />
                     </div>
                   );
                 })}

@@ -382,6 +382,50 @@ describe('TeamGamesTab', () => {
     expect(screen.queryByText('Select a season to view games.')).not.toBeInTheDocument();
   });
 
+  it('places admin games on their Eastern calendar day', () => {
+    mockUseGames.mockReturnValueOnce({
+      games: [
+        {
+          ...games[0],
+          id: 'late-et-game',
+          scheduled_at: '2026-01-02T02:00:00.000Z',
+          scheduled_time: '21:00',
+        },
+      ],
+      loading: false,
+    });
+
+    const { container } = renderTeamGamesTab({
+      calendarMonth: new Date(2026, 0, 1),
+    });
+
+    const gameDayCell = container.querySelector('.calendarDayGameCell');
+    expect(gameDayCell).not.toBeNull();
+    expect(gameDayCell).toHaveTextContent(/^1/);
+  });
+
+  it('keeps timezone-less midnight admin games on their stored calendar day', () => {
+    mockUseGames.mockReturnValueOnce({
+      games: [
+        {
+          ...games[0],
+          id: 'midnight-placeholder-game',
+          scheduled_at: '2026-01-02T00:00:00.000',
+          scheduled_time: '19:00',
+        },
+      ],
+      loading: false,
+    });
+
+    const { container } = renderTeamGamesTab({
+      calendarMonth: new Date(2026, 0, 1),
+    });
+
+    const gameDayCell = container.querySelector('.calendarDayGameCell');
+    expect(gameDayCell).not.toBeNull();
+    expect(gameDayCell).toHaveTextContent(/^2/);
+  });
+
   it('uses user game detail routes in user mode', async () => {
     const user = userEvent.setup();
     const currentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);

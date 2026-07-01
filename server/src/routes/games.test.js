@@ -951,6 +951,28 @@ describe('PUT /api/admin/games/:id/lineup', () => {
     expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
   });
 
+  it('syncs a final game starting goalie stint when the lineup goalie changes', async () => {
+    sql
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'lineup-G', position_slot: 'G', player_id: 'goalie-2' }]);
+
+    const res = await request(app).put('/api/admin/games/game-1/lineup').send({
+      team_id: 'team-1',
+      slots: [{ position_slot: 'G', player_id: 'goalie-2' }],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([{ id: 'lineup-G', position_slot: 'G', player_id: 'goalie-2' }]);
+    const queries = sql.mock.calls.map((call) => call[0].join(' '));
+    expect(queries[2]).toMatch(/UPDATE game_goalie_stints st/);
+    expect(queries[2]).toMatch(/g\.status = 'final'/);
+    expect(queries[2]).toMatch(/st\.stint_ord = 1/);
+    expect(queries[2]).toMatch(/st\.entered_period = '1'/);
+    expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
+  });
+
   it('does not save a consecutive unchanged starting lineup', async () => {
     sql
       .mockResolvedValueOnce([{
@@ -1050,5 +1072,35 @@ describe('GET /api/admin/games/:id/goalie-stints', () => {
     sql.mockRejectedValueOnce(new Error('DB down'));
     const res = await request(app).get('/api/admin/games/game-1/goalie-stints');
     expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/games/:id/goalie-stints/:stintId
+// ---------------------------------------------------------------------------
+describe('DELETE /api/admin/games/:id/goalie-stints/:stintId', () => {
+  it('deletes a goalie stint, returns refreshed goalie stats, and rebuilds stat snapshots', async () => {
+    sql
+      .mockResolvedValueOnce([{ team_id: 'team-1' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    mockSqlFragments(1); // goalieStintsCTE(id)
+    sql.mockResolvedValueOnce([GOALIE_STAT]);
+
+    const res = await request(app).delete('/api/admin/games/game-1/goalie-stints/stint-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([expect.objectContaining({ id: 'gs-1', shots_against: 30 })]);
+    expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
+  });
+
+  it('returns 404 without rebuilding stats when the goalie stint is missing', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app).delete('/api/admin/games/game-1/goalie-stints/missing-stint');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/stint not found/i);
+    expect(rebuildGameStats).not.toHaveBeenCalled();
   });
 });

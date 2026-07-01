@@ -341,7 +341,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const canonicalDateSlug = game
     ? gameDateRouteSlug(game.scheduled_at, {
         leagueCode: game.league_code,
-        forceEastern: !isAdminView,
+        forceEastern: true,
         scheduledTime: game.scheduled_time,
       })
     : '';

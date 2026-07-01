@@ -18,8 +18,36 @@ describe('buildGameDetailsPath', () => {
         awayTeamCode: 'MIN',
         homeTeamCode: 'MTL',
         scheduledAt: '2025-11-21T00:00:00.000Z',
+        scheduledTime: '19:00',
       }),
     ).toBe('/admin/leagues/pwhl/seasons/2025-26/games/11-21-2025/min-vs-mtl');
+  });
+
+  it('always uses the Eastern game date for admin dated routes', () => {
+    expect(
+      buildGameDetailsPath({
+        leagueCode: 'PWHL',
+        seasonName: '2025-26',
+        gameId: 'game-1',
+        awayTeamCode: 'MIN',
+        homeTeamCode: 'MTL',
+        scheduledAt: '2026-05-02T02:30:00.000Z',
+      }),
+    ).toBe('/admin/leagues/pwhl/seasons/2025-26/games/05-01-2026/min-vs-mtl');
+  });
+
+  it('keeps timezone-less midnight placeholder admin routes on their stored date', () => {
+    expect(
+      buildGameDetailsPath({
+        leagueCode: 'NHL',
+        seasonName: '2025-26',
+        gameId: 'game-1',
+        awayTeamCode: 'MTL',
+        homeTeamCode: 'CHI',
+        scheduledAt: '2025-10-11T00:00:00.000',
+        scheduledTime: '19:00',
+      }),
+    ).toBe('/admin/leagues/nhl/seasons/2025-26/games/10-11-2025/mtl-vs-chi');
   });
 
   it('falls back to the direct game id route when the matchup slug cannot be built', () => {
