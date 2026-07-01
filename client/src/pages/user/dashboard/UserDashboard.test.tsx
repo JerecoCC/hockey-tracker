@@ -122,21 +122,23 @@ jest.mock(
         </div>
       ) : null,
 );
-jest.mock('@/components/DatePicker/DatePicker', () => (props: any) =>
-  props.triggerLabel ? (
-    <button
-      type="button"
-      aria-label={props.triggerAriaLabel ?? props.triggerLabel}
-    >
-      {props.triggerLabel}
-    </button>
-  ) : (
-    <input
-      aria-label={props.placeholder}
-      value={props.value}
-      onChange={(e) => props.onChange(e.target.value)}
-    />
-  ),
+jest.mock(
+  '@/components/DatePicker/DatePicker',
+  () => (props: any) =>
+    props.triggerLabel ? (
+      <button
+        type="button"
+        aria-label={props.triggerAriaLabel ?? props.triggerLabel}
+      >
+        {props.triggerLabel}
+      </button>
+    ) : (
+      <input
+        aria-label={props.placeholder}
+        value={props.value}
+        onChange={(e) => props.onChange(e.target.value)}
+      />
+    ),
 );
 jest.mock('@/pages/admin/games/game-details/ScoreImageModal', () => ({
   __esModule: true,
@@ -323,7 +325,7 @@ describe('UserDashboard', () => {
     ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'View All' }));
-    expect(mockNavigate).toHaveBeenCalledWith('/games/watched');
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard/games-watched');
   });
 
   it('shows the admin test date field in numeric format in the day section header', () => {

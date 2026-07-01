@@ -20,6 +20,7 @@ const BreadcrumbTitleRow = () => {
             icon="arrow_back"
             size="sm"
             tooltip={config.backLabel ?? 'Back'}
+            aria-label={config.backLabel ?? 'Back'}
             onClick={() => navigate(config.backPath!)}
           />
         ) : undefined

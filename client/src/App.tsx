@@ -11,6 +11,7 @@ import UserLayout from './components/UserLayout/UserLayout';
 import UserDashboard from './pages/user/dashboard/UserDashboard';
 import UserGames from './pages/user/games/UserGames';
 import UserGamesWatched from './pages/user/games-watched/UserGamesWatched';
+import UserGamesWatchedTeam from './pages/user/games-watched/UserGamesWatchedTeam';
 import UserGameDetailsPage from './pages/user/games/game-details/UserGameDetailsPage';
 import UserSettings from './pages/user/settings/UserSettings';
 import LeaguesPage from './pages/admin/leagues/Leagues';
@@ -107,8 +108,18 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: '/dashboard', element: <UserDashboard /> },
+      { path: '/dashboard/games-watched', element: <UserGamesWatched /> },
+      { path: '/dashboard/games-watched/:teamSlug', element: <UserGamesWatchedTeam /> },
       { path: '/games', element: <UserGames /> },
-      { path: '/games/watched', element: <UserGamesWatched /> },
+      {
+        path: '/games/watched',
+        element: (
+          <Navigate
+            to="/dashboard/games-watched"
+            replace
+          />
+        ),
+      },
       { path: '/games/:gameDateSlug/:gameSlug', element: <UserGameDetailsPage /> },
       { path: '/games/:id', element: <UserGameDetailsPage /> },
       { path: '/settings', element: <UserSettings /> },

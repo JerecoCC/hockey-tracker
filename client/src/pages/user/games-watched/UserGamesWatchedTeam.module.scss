@@ -1,0 +1,194 @@
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
+
+$hero-strip-width: 64px;
+$hero-strip-duration: 0.42s;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: $page-section-gap;
+}
+
+.heroCard {
+  position: sticky;
+  top: 52px;
+  z-index: 4;
+  overflow: hidden;
+  margin-bottom: $space-lg;
+  transition:
+    border-color $transition-layout ease,
+    border-radius $transition-layout ease,
+    box-shadow $transition-layout ease;
+
+  @media (max-width: $bp-tablet) {
+    position: static;
+    top: auto;
+    z-index: auto;
+  }
+}
+
+.heroCardStuck {
+  border-radius: 0 0 $radius-lg $radius-lg !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.hero {
+  position: relative;
+  min-height: 96px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+
+  @media (max-width: 768px) {
+    min-height: 88px;
+  }
+}
+
+.heroPrimaryFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: $hero-strip-width;
+  z-index: 0;
+  background: var(--team-primary);
+  clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%);
+  transition:
+    clip-path $hero-strip-duration ease,
+    width $hero-strip-duration ease;
+}
+
+.heroCardStuck .heroPrimaryFill {
+  width: 100%;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.heroStrip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: $hero-strip-width;
+  pointer-events: none;
+}
+
+.heroStripLeft {
+  left: 0;
+  clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%);
+}
+
+.heroStripRight {
+  right: 0;
+  clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
+}
+
+.heroStripPrimary,
+.heroStripSecondary,
+.heroStripSecondary2 {
+  position: absolute;
+  inset: 0;
+}
+
+.heroStripPrimary {
+  background: var(--team-primary);
+}
+
+.heroStripSecondary {
+  background: var(--team-secondary);
+  clip-path: polygon(45% 0%, 57.5% 0%, 87.5% 100%, 75% 100%);
+}
+
+.heroStripSecondary2 {
+  background: var(--team-secondary);
+  clip-path: polygon(20% 0%, 32.5% 0%, 62.5% 100%, 50% 100%);
+}
+
+.heroStripRight {
+  .heroStripSecondary {
+    clip-path: polygon(42.5% 0%, 55% 0%, 25% 100%, 12.5% 100%);
+  }
+
+  .heroStripSecondary2 {
+    clip-path: polygon(67.5% 0%, 80% 0%, 50% 100%, 37.5% 100%);
+  }
+}
+
+.heroContent {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-md;
+  max-width: min(720px, calc(100% - #{$hero-strip-width * 2} - #{$space-xl * 2}));
+  padding: $space-md $space-lg;
+  text-align: left;
+
+  @media (max-width: 768px) {
+    gap: $space-sm;
+    max-width: calc(100% - #{$space-2xl});
+    text-align: center;
+  }
+}
+
+.heroLogo {
+  flex: 0 0 auto;
+  width: 60px !important;
+  height: 60px !important;
+
+  @media (max-width: 768px) {
+    width: 44px !important;
+    height: 44px !important;
+  }
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  min-width: 0;
+}
+
+.heroPlace,
+.heroMeta {
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-xs;
+  line-height: 1.2;
+  transition: color $transition-layout ease;
+}
+
+.heroName {
+  margin: 0;
+  color: var(--app-text-strong, #{$text-bright});
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  line-height: 1;
+  letter-spacing: 0;
+  transition: color $transition-layout ease;
+}
+
+.heroCardStuck {
+  .heroPlace,
+  .heroMeta,
+  .heroName {
+    color: var(--team-text);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  }
+}
+
+.gameList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  margin: 0;
+  padding: 0;
+}
+
+.emptyState {
+  margin: 0;
+  padding: $space-lg 0;
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-sm;
+  font-style: italic;
+  text-align: center;
+}

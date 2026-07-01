@@ -37,6 +37,9 @@ describe('PageHeader – title resolution', () => {
     ['/admin/users', 'Users'],
     ['/admin/leagues/123', 'League Details'],
     ['/admin/leagues/123/teams/456', 'Team Details'],
+    ['/dashboard/games-watched', 'Games Watched'],
+    ['/dashboard/games-watched/tor', 'Games Watched'],
+    ['/games/watched', 'Games Watched'],
     ['/settings', 'Settings'],
   ])('shows "%s" title for %s', (pathname, title) => {
     setup(pathname);

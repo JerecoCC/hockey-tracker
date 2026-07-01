@@ -181,6 +181,11 @@ const getFavoriteTeamSummaries = (
     .map((team) => ({
       team,
       count: watchedCounts.get(team.id) ?? 0,
+      record: {
+        wins: 0,
+        losses: 0,
+        otSoLosses: 0,
+      },
     }))
     .sort(sortWatchedTeamSummaries);
 };
@@ -266,12 +271,9 @@ const UserDashboard = () => {
   const watchedTeamCounts = useMemo(
     () =>
       new Map(
-        getWatchedTeamSummaries(watchedGames, favorites).map((summary) => [
-          summary.team.id,
-          summary.count,
-        ]),
+        getWatchedTeamSummaries(watchedGames).map((summary) => [summary.team.id, summary.count]),
       ),
-    [favorites, watchedGames],
+    [watchedGames],
   );
   const watchedTeamSummaries = useMemo(
     () => getFavoriteTeamSummaries(teams, favorites, watchedTeamCounts),
@@ -502,7 +504,7 @@ const UserDashboard = () => {
                 intent="neutral"
                 size="sm"
                 icon="open_in_new"
-                onClick={() => navigate('/games/watched')}
+                onClick={() => navigate('/dashboard/games-watched')}
               >
                 View All
               </Button>

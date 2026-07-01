@@ -1,5 +1,5 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 .page {
   display: flex;
@@ -29,27 +29,52 @@
   padding: $space-lg 0;
 }
 
-.watchList {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
+.teamCell {
+  display: inline-flex;
+  align-items: center;
   gap: $space-md;
-  padding: 0;
+  min-width: 220px;
 }
 
-.watchCount {
+.teamLogo {
+  flex: 0 0 auto;
+}
+
+.teamText {
   display: inline-flex;
   flex-direction: column;
-  align-items: flex-end;
   gap: 2px;
+  min-width: 0;
+}
+
+.teamName {
+  color: var(--app-text-strong, #{$text-bright});
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.teamPlace {
   color: var(--app-text-muted, #{$text-dim});
   font-size: $font-xs;
-  line-height: 1;
-  white-space: nowrap;
+  line-height: 1.2;
+}
 
-  strong {
-    color: var(--app-text-strong, #{$text-bright});
-    font-size: $font-lg;
-    line-height: 1;
-  }
+.recordHeader {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-xs;
+  white-space: nowrap;
+}
+
+.seenCount,
+.recordValue {
+  color: var(--app-text-strong, #{$text-bright});
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.recordValue {
+  letter-spacing: 0.02em;
 }

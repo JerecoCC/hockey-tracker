@@ -1,12 +1,12 @@
+import { useMemo, useState, type ReactNode } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import BreadcrumbTitleRow from '@/components/Breadcrumbs/BreadcrumbTitleRow';
+import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
 import UserGamesWatched from './UserGamesWatched';
 
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn() }));
-jest.mock('@/hooks/useFavoriteTeams', () => ({
-  __esModule: true,
-  default: () => ({ favorites: ['team-home', 'team-away'] }),
-}));
 jest.mock('@/components/Select/Select', () => ({
   __esModule: true,
   default: ({ value, options, onChange }: any) => (
@@ -29,6 +29,33 @@ jest.mock('@/components/Select/Select', () => ({
 jest.mock('@/components/TeamLogo/TeamLogo', () => ({ code }: any) => <span>{code}</span>);
 
 const mockUseQuery = useQuery as jest.Mock;
+
+const LocationProbe = () => {
+  const location = useLocation();
+  return <span data-testid="location">{location.pathname}</span>;
+};
+
+const BreadcrumbHarness = ({ children }: { children: ReactNode }) => {
+  const [config, setBreadcrumbs] = useState<BreadcrumbConfig | null>(null);
+  const value = useMemo(() => ({ config, setBreadcrumbs }), [config]);
+
+  return (
+    <MemoryRouter initialEntries={['/dashboard/games-watched']}>
+      <BreadcrumbContext.Provider value={value}>
+        <BreadcrumbTitleRow />
+        <LocationProbe />
+        {children}
+      </BreadcrumbContext.Provider>
+    </MemoryRouter>
+  );
+};
+
+const renderWatchedPage = () =>
+  render(
+    <BreadcrumbHarness>
+      <UserGamesWatched />
+    </BreadcrumbHarness>,
+  );
 
 const teamHome = {
   id: 'team-home',
@@ -60,7 +87,13 @@ const teamOther = {
   text_color: '#ffffff',
 };
 
-const makeWatchedGame = (id: string, watchedOn: string, homeTeam: any, awayTeam: any) => ({
+const makeWatchedGame = (
+  id: string,
+  watchedOn: string,
+  homeTeam: any,
+  awayTeam: any,
+  overrides: Record<string, unknown> = {},
+) => ({
   id,
   season_id: 'season-1',
   game_type: 'regular',
@@ -100,6 +133,7 @@ const makeWatchedGame = (id: string, watchedOn: string, homeTeam: any, awayTeam:
   watched_on: watchedOn,
   skipped_by_user: false,
   scheduled_for: null,
+  ...overrides,
 });
 
 describe('UserGamesWatched', () => {
@@ -108,32 +142,77 @@ describe('UserGamesWatched', () => {
       isLoading: false,
       data: [
         makeWatchedGame('game-1', '2026-02-10', teamHome, teamOther),
-        makeWatchedGame('game-2', '2026-03-11', teamHome, teamOther),
+        makeWatchedGame('game-2', '2026-03-11', teamOther, teamHome, {
+          home_score: 2,
+          away_score: 3,
+          overtime_periods: 1,
+        }),
         makeWatchedGame('game-3', '2025-12-12', teamAway, teamOther),
+        makeWatchedGame('game-4', '2026-04-20', teamHome, teamAway, {
+          game_type: 'playoff',
+          home_score: 4,
+          away_score: 2,
+        }),
       ],
     });
   });
 
-  it('shows favorite teams ordered by watched count and filters by year', () => {
-    render(<UserGamesWatched />);
+  it('shows every watched team with a positive count and filters by year', () => {
+    renderWatchedPage();
 
-    expect(screen.getByText('Games Watched')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Games Watched' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'All' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: '2026' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: '2025' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Team' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Seen' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /Your Record/ })).toBeInTheDocument();
+    expect(screen.getByLabelText('How your watched record is calculated')).toBeInTheDocument();
 
-    let items = screen.getAllByRole('listitem');
-    expect(within(items[0]).getByText('Toronto Maple Leafs')).toBeInTheDocument();
-    expect(within(items[0]).getByLabelText('2 watched games')).toBeInTheDocument();
-    expect(within(items[1]).getByText('Boston Bruins')).toBeInTheDocument();
-    expect(screen.queryByText('New York Rangers')).not.toBeInTheDocument();
+    let rows = screen.getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(3);
+    expect(within(rows[0]).getByText('New York Rangers')).toBeInTheDocument();
+    expect(within(rows[0]).getByLabelText('3 watched games')).toBeInTheDocument();
+    expect(within(rows[0]).getByLabelText('3 watched games').closest('td')).toHaveStyle({
+      textAlign: 'center',
+    });
+    expect(within(rows[0]).getByText('0-2-1')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('Toronto Maple Leafs')).toBeInTheDocument();
+    expect(within(rows[1]).getByLabelText('3 watched games')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('3-0-0')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('Boston Bruins')).toBeInTheDocument();
+    expect(within(rows[2]).getByLabelText('2 watched games')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('1-1-0')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Year'), { target: { value: '2025' } });
 
-    items = screen.getAllByRole('listitem');
-    expect(items).toHaveLength(1);
-    expect(within(items[0]).getByText('Boston Bruins')).toBeInTheDocument();
-    expect(within(items[0]).getByLabelText('1 watched game')).toBeInTheDocument();
+    rows = screen.getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]).getByText('Boston Bruins')).toBeInTheDocument();
+    expect(within(rows[0]).getByLabelText('1 watched game')).toBeInTheDocument();
+    expect(within(rows[0]).getByText('1-0-0')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('New York Rangers')).toBeInTheDocument();
+    expect(within(rows[1]).getByLabelText('1 watched game')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('0-1-0')).toBeInTheDocument();
     expect(screen.queryByText('Toronto Maple Leafs')).not.toBeInTheDocument();
+  });
+
+  it('opens a team watched-games page from a team row', () => {
+    renderWatchedPage();
+
+    const rows = screen.getAllByRole('row').slice(1);
+    fireEvent.click(rows[1]);
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/dashboard/games-watched/tor');
+  });
+
+  it('shows a dashboard breadcrumb trail and back button', () => {
+    renderWatchedPage();
+
+    expect(screen.getByRole('button', { name: 'Back to Dashboard' })).toBeInTheDocument();
+
+    const breadcrumb = screen.getByRole('navigation', { name: 'Breadcrumb' });
+    expect(within(breadcrumb).getByRole('button', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(within(breadcrumb).getByText('Games Watched')).toBeInTheDocument();
   });
 });

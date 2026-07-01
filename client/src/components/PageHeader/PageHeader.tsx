@@ -10,7 +10,9 @@ const EXACT_TITLES: Record<string, string> = {
   '/admin/leagues': 'Leagues',
   '/admin/users': 'Users',
   '/dashboard': 'Dashboard',
+  '/dashboard/games-watched': 'Games Watched',
   '/games': 'Games',
+  '/games/watched': 'Games Watched',
   '/settings': 'Settings',
 };
 
@@ -19,12 +21,12 @@ const getTitle = (pathname: string): string => {
   if (/\/admin\/leagues\/[^/]+\/teams\/[^/]+\/players\/[^/]+/.test(pathname))
     return 'Player Details';
   if (/\/admin\/leagues\/[^/]+\/teams\//.test(pathname)) return 'Team Details';
-  if (/\/admin\/leagues\/[^/]+\/seasons\/[^/]+\/playoffs\//.test(pathname))
-    return 'Series Details';
+  if (/\/admin\/leagues\/[^/]+\/seasons\/[^/]+\/playoffs\//.test(pathname)) return 'Series Details';
   if (/\/admin\/leagues\/[^/]+\/seasons\/[^/]+\/games\//.test(pathname)) return 'Game Details';
   if (/\/admin\/leagues\/[^/]+\/seasons\//.test(pathname)) return 'Season Details';
   if (/\/admin\/leagues\/[^/]+/.test(pathname)) return 'League Details';
   if (/\/admin\/teams\/[^/]+/.test(pathname)) return 'Team Details';
+  if (/\/dashboard\/games-watched\/[^/]+/.test(pathname)) return 'Games Watched';
   if (/\/games\/[^/]+/.test(pathname)) return 'Game Details';
   if (/\/leagues\/[^/]+/.test(pathname)) return 'League Details';
   return '';
