@@ -146,7 +146,7 @@ describe('POST /api/admin/player-teams', () => {
         season_id: 'season-1',
         jersey_number: 16,
         position: 'C',
-        acquisition_type: 'draft',
+        acquisition_type: 'foundational_signing',
         start_date: '2024-10-01',
         end_date: null,
       }])
@@ -161,7 +161,7 @@ describe('POST /api/admin/player-teams', () => {
         season_id: 'season-1',
         jersey_number: 16,
         position: 'C',
-        acquisition_type: 'draft',
+        acquisition_type: 'foundational_signing',
         start_date: '2024-10-01',
         photo: 'https://example.com/player.png',
       });
@@ -169,7 +169,7 @@ describe('POST /api/admin/player-teams', () => {
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({
       id: 'stint-1',
-      acquisition_type: 'draft',
+      acquisition_type: 'foundational_signing',
       photo: 'https://example.com/player.png',
     });
     expect(sql).toHaveBeenCalledTimes(3);

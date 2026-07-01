@@ -1025,7 +1025,7 @@ async function initSchema() {
   await sql`ALTER TABLE player_teams DROP CONSTRAINT IF EXISTS player_teams_check`;
   await sql`
     ALTER TABLE player_teams ADD CONSTRAINT player_teams_acquisition_type_check
-    CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'expansion_draft', 'team_transfer', 'loan', 'other'))
+    CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'foundational_signing', 'expansion_draft', 'team_transfer', 'loan', 'other'))
   `;
 
   // Player photos are one per player/team/season. They are intentionally
@@ -1113,7 +1113,7 @@ async function initSchema() {
       player_id        UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
       team_id          UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
       position         TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G')),
-      acquisition_type TEXT CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'expansion_draft', 'team_transfer', 'loan', 'other')),
+      acquisition_type TEXT CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'foundational_signing', 'expansion_draft', 'team_transfer', 'loan', 'other')),
       start_date       DATE,
       end_date         DATE,
       created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -1131,7 +1131,7 @@ async function initSchema() {
   await sql`ALTER TABLE player_team_stints DROP CONSTRAINT IF EXISTS player_team_stints_acquisition_type_check`;
   await sql`
     ALTER TABLE player_team_stints ADD CONSTRAINT player_team_stints_acquisition_type_check
-    CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'expansion_draft', 'team_transfer', 'loan', 'other'))
+    CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'foundational_signing', 'expansion_draft', 'team_transfer', 'loan', 'other'))
   `;
   await sql`
     CREATE INDEX IF NOT EXISTS player_team_stints_player_dates

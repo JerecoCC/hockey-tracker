@@ -164,6 +164,9 @@ describe('StintEditModal', () => {
     );
 
     expect(screen.getByLabelText('Acquisition Type')).toHaveValue('signing');
+    expect(screen.getByRole('option', { name: 'Foundational Signing' })).toHaveValue(
+      'foundational_signing',
+    );
     expect(screen.getByText('Team History')).toBeInTheDocument();
     expect(screen.getAllByText('San Jose Sharks').length).toBeGreaterThan(0);
     expect(

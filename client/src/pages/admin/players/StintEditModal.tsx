@@ -31,6 +31,7 @@ export const ACQUISITION_TYPE_OPTIONS = [
   { value: 'free_agency', label: 'Free Agency' },
   { value: 'waivers', label: 'Waivers' },
   { value: 'signing', label: 'Signing' },
+  { value: 'foundational_signing', label: 'Foundational Signing' },
   { value: 'expansion_draft', label: 'Expansion Draft' },
   { value: 'team_transfer', label: 'Team Transfer' },
   { value: 'loan', label: 'Loan' },

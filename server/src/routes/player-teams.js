@@ -10,6 +10,7 @@ const ACQUISITION_TYPES = new Set([
   'free_agency',
   'waivers',
   'signing',
+  'foundational_signing',
   'expansion_draft',
   'team_transfer',
   'loan',
