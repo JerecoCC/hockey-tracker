@@ -330,12 +330,21 @@ export const ScheduleGameStack = ({ children }: ScheduleGameListProps) => (
 interface ScheduleCalendarCardProps {
   children: ReactNode;
   className?: string;
+  title?: ReactNode;
+  action?: ReactNode;
 }
 
-export const ScheduleCalendarCard = ({ children, className }: ScheduleCalendarCardProps) => (
+export const ScheduleCalendarCard = ({
+  children,
+  className,
+  title,
+  action,
+}: ScheduleCalendarCardProps) => (
   <Section
     className={[styles.calendarCard, className].filter(Boolean).join(' ')}
-    noHeaderMargin
+    title={title}
+    action={action}
+    noHeaderMargin={!title && !action}
   >
     <div className={styles.calendarWrap}>
       <div className={styles.calendarScroll}>{children}</div>

@@ -5,13 +5,16 @@ const MONTH_IMAGE_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
+const EXPORT_IMAGE_WIDTH = 1376;
+const EXPORT_PADDING = 28;
+const EXPORT_CALENDAR_WIDTH = EXPORT_IMAGE_WIDTH - EXPORT_PADDING * 2;
+
 interface DownloadMonthScheduleImageOptions {
   calendarNode: HTMLElement;
   calendarMonth: Date;
   filename?: string;
   filenamePrefix?: string;
   headerLabel?: string;
-  exportWidth?: number;
 }
 
 export const downloadMonthScheduleImage = async ({
@@ -20,10 +23,13 @@ export const downloadMonthScheduleImage = async ({
   filename,
   filenamePrefix,
   headerLabel,
-  exportWidth = 1600,
 }: DownloadMonthScheduleImageOptions) => {
   const backgroundColor = getNearestBackgroundColor(calendarNode);
-  const exportPadding = 28;
+  const headerColor = getNearestCustomPropertyValue(
+    calendarNode,
+    '--app-text-strong',
+    '#f8fafc',
+  );
   const exportNode = document.createElement('div');
   const exportStyleNode = document.createElement('style');
   const headerNode = document.createElement('div');
@@ -37,8 +43,8 @@ export const downloadMonthScheduleImage = async ({
     left: '0',
     top: '0',
     zIndex: '-1',
-    width: `${exportWidth + exportPadding * 2}px`,
-    padding: `${exportPadding}px`,
+    width: `${EXPORT_IMAGE_WIDTH}px`,
+    padding: `${EXPORT_PADDING}px`,
     boxSizing: 'border-box',
     background: backgroundColor,
     pointerEvents: 'none',
@@ -56,35 +62,71 @@ export const downloadMonthScheduleImage = async ({
       height: 0 !important;
       display: none !important;
     }
+
+    [data-calendar-export="true"] [class*="grid"] {
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+
+    [data-calendar-export="true"] [class*="dayCell"],
+    [data-calendar-export="true"] [class*="emptyCell"] {
+      aspect-ratio: auto !important;
+      min-height: var(--calendar-export-day-min-height, 0px) !important;
+    }
+
+    [data-calendar-export="true"] [class*="dayCell"] {
+      overflow: visible !important;
+    }
+
+    [data-calendar-export="true"] [class*="dayBody"] {
+      height: auto !important;
+      max-height: none !important;
+      min-height: 0 !important;
+      overflow: visible !important;
+      scrollbar-gutter: auto !important;
+    }
+
+    [data-calendar-export="true"] [class*="dayContent"] {
+      height: auto !important;
+      min-height: 0 !important;
+    }
+
+    [data-calendar-export="true"] [class*="calendarGameList"] > :last-child {
+      margin-bottom: 0 !important;
+    }
   `;
   Object.assign(headerNode.style, {
     margin: '0 0 20px',
-    color: '#f8fafc',
+    color: headerColor,
     fontSize: '28px',
     fontWeight: '700',
     lineHeight: '1.15',
   });
   headerNode.textContent = displayLabel;
   Object.assign(clonedCalendar.style, {
-    width: `${exportWidth}px`,
-    minWidth: `${exportWidth}px`,
+    width: `${EXPORT_CALENDAR_WIDTH}px`,
+    minWidth: `${EXPORT_CALENDAR_WIDTH}px`,
     pointerEvents: 'none',
   });
 
   exportNode.append(exportStyleNode, headerNode, clonedCalendar);
   document.body.appendChild(exportNode);
   await new Promise((resolve) => requestAnimationFrame(resolve));
+  setCalendarExportDayMinHeight(clonedCalendar);
+  await new Promise((resolve) => requestAnimationFrame(resolve));
 
-  const width = exportNode.scrollWidth;
-  const height = exportNode.scrollHeight;
+  const width = EXPORT_IMAGE_WIDTH;
+  const height = Math.ceil(exportNode.scrollHeight);
   let url: string;
   try {
     url = await toPng(exportNode, {
       cacheBust: true,
-      pixelRatio: 2,
+      pixelRatio: 1,
       backgroundColor,
       width,
       height,
+      canvasWidth: width,
+      canvasHeight: height,
       style: {
         width: `${width}px`,
         height: `${height}px`,
@@ -112,4 +154,36 @@ const getNearestBackgroundColor = (node: HTMLElement) => {
     current = current.parentElement;
   }
   return '#0f172a';
+};
+
+const getNearestCustomPropertyValue = (
+  node: HTMLElement,
+  propertyName: string,
+  fallback: string,
+) => {
+  let current: HTMLElement | null = node;
+  while (current) {
+    const value = window.getComputedStyle(current).getPropertyValue(propertyName).trim();
+    if (value) return value;
+    current = current.parentElement;
+  }
+
+  const rootValue = window
+    .getComputedStyle(document.documentElement)
+    .getPropertyValue(propertyName)
+    .trim();
+  return rootValue || fallback;
+};
+
+const setCalendarExportDayMinHeight = (calendarNode: HTMLElement) => {
+  const firstDayCell = calendarNode.querySelector<HTMLElement>(
+    '[class*="dayCell"], [class*="emptyCell"]',
+  );
+  const cellWidth = firstDayCell?.getBoundingClientRect().width ?? 0;
+  if (cellWidth <= 0) return;
+
+  calendarNode.style.setProperty(
+    '--calendar-export-day-min-height',
+    `${Math.ceil(cellWidth)}px`,
+  );
 };

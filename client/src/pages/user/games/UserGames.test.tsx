@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import calendarItemStyles from '@/components/CalendarGameListItem/CalendarGameListItem.module.scss';
 import gameCardStyles from '@/components/GameCard/GameCard.module.scss';
 import scheduleLayoutStyles from '@/components/ScheduleGamesLayout/ScheduleGamesLayout.module.scss';
+import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import UserGames from './UserGames';
 import styles from './UserGames.module.scss';
 
@@ -28,6 +29,7 @@ jest.mock('react-router-dom', () => ({
 }));
 jest.mock('axios');
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn(), useQueryClient: jest.fn() }));
+jest.mock('@/lib/monthScheduleImage', () => ({ downloadMonthScheduleImage: jest.fn() }));
 jest.mock('react-toastify', () => ({
   toast: {
     success: jest.fn(),
@@ -180,6 +182,8 @@ jest.mock('@/components/MultiSelect/MultiSelect', () => ({
 const mockUseQuery = useQuery as jest.Mock;
 const mockUseQueryClient = useQueryClient as jest.Mock;
 const mockAxios = axios as jest.Mocked<typeof axios>;
+const mockDownloadMonthScheduleImage =
+  downloadMonthScheduleImage as jest.MockedFunction<typeof downloadMonthScheduleImage>;
 
 const currentDate = new Date(2026, 4, 15, 12, 0, 0);
 const dateOffset = (days: number) => new Date(currentDate.getTime() + days * 86_400_000);
@@ -445,6 +449,7 @@ beforeEach(() => {
   mockAxios.post.mockResolvedValue({ data: {} } as any);
   mockAxios.delete.mockResolvedValue({ data: {} } as any);
   mockAxios.put.mockResolvedValue({ data: {} } as any);
+  mockDownloadMonthScheduleImage.mockResolvedValue(undefined);
   mockUseQuery.mockImplementation(({ queryKey }: any) => {
     if (queryKey[0] === 'user-leagues')
       return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
@@ -795,6 +800,36 @@ describe('UserGames schedule views', () => {
 
     expect(screen.getByText('Generate Score Card')).toBeInTheDocument();
     expect(screen.getByText('Score image form')).toBeInTheDocument();
+  });
+
+  it('shows the selected month title and downloads the month calendar', async () => {
+    const user = userEvent.setup();
+    const monthLabel = new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      year: 'numeric',
+    }).format(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
+
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+    expect(screen.getAllByText(monthLabel).length).toBeGreaterThan(0);
+
+    await user.click(screen.getByRole('button', { name: 'Download monthly schedule' }));
+
+    await waitFor(() => expect(mockDownloadMonthScheduleImage).toHaveBeenCalled());
+    expect(mockDownloadMonthScheduleImage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        calendarNode: expect.any(HTMLElement),
+        calendarMonth: expect.any(Date),
+        headerLabel: monthLabel,
+        filename: `Games - ${monthLabel}.png`,
+      }),
+    );
+    const options = mockDownloadMonthScheduleImage.mock.calls[0][0];
+    expect(options.calendarMonth).toEqual(
+      new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
+    );
+    expect(toast.success).toHaveBeenCalledWith('Monthly schedule downloaded!');
   });
 
   it('opens the score card modal from a watched game hover action', async () => {

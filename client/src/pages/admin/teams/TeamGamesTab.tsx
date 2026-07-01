@@ -238,16 +238,12 @@ const TeamGamesTab = ({
   const handleDownloadMonthImage = async () => {
     const calendarNode = calendarGridRef.current;
     if (exportingMonthImage || scheduledGames.length === 0 || !calendarNode) return;
-    const renderedCalendarWidth = Math.ceil(
-      Math.max(calendarNode.getBoundingClientRect().width, calendarNode.scrollWidth),
-    );
     setExportingMonthImage(true);
     try {
       await downloadMonthScheduleImage({
         calendarNode,
         calendarMonth,
         headerLabel: MONTH_LABEL_FMT.format(calendarMonth),
-        exportWidth: renderedCalendarWidth || undefined,
         filename: `${teamName} Game Schedule - ${new Intl.DateTimeFormat('en-US', {
           month: 'short',
           year: 'numeric',

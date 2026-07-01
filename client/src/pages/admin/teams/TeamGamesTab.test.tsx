@@ -385,8 +385,10 @@ describe('TeamGamesTab', () => {
   it('downloads the current calendar month as an image', async () => {
     const user = userEvent.setup();
     const originalCreateElement = document.createElement.bind(document);
+    const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
     const clickMock = jest.fn();
     let createdAnchor: HTMLAnchorElement | null = null;
+    document.documentElement.style.setProperty('--app-text-strong', '#0f172a');
     const createElementSpy = jest.spyOn(document, 'createElement').mockImplementation((tagName) => {
       const element = originalCreateElement(tagName);
       if (String(tagName).toLowerCase() === 'a') {
@@ -395,6 +397,25 @@ describe('TeamGamesTab', () => {
       }
       return element;
     });
+    const getBoundingClientRectSpy = jest
+      .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(function () {
+        const element = this as HTMLElement;
+        if (element.classList.contains('dayCell') || element.classList.contains('emptyCell')) {
+          return {
+            bottom: 0,
+            height: 0,
+            left: 0,
+            right: 188.2,
+            top: 0,
+            width: 188.2,
+            x: 0,
+            y: 0,
+            toJSON: () => ({}),
+          } as DOMRect;
+        }
+        return originalGetBoundingClientRect.call(this);
+      });
 
     const { container } = renderTeamGamesTab();
 
@@ -416,15 +437,30 @@ describe('TeamGamesTab', () => {
       expect.objectContaining({ dataset: expect.objectContaining({ calendarExport: 'true' }) }),
       expect.objectContaining({
         backgroundColor: expect.any(String),
+        canvasWidth: 1376,
         cacheBust: true,
-        pixelRatio: 2,
+        pixelRatio: 1,
+        width: 1376,
       }),
     );
     expect(capturedNode.textContent).toContain(
       new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(currentDate),
     );
-    expect(capturedNode).toHaveStyle({ width: '1656px' });
-    expect(capturedNode.querySelector('.grid')).not.toBeNull();
+    expect(capturedNode.children[1]).toHaveStyle({ color: '#0f172a' });
+    expect(capturedNode).toHaveStyle({ width: '1376px' });
+    expect(capturedNode.querySelector('style')?.textContent).toContain('aspect-ratio: auto');
+    expect(capturedNode.querySelector('style')?.textContent).toContain(
+      'min-height: var(--calendar-export-day-min-height, 0px)',
+    );
+    expect(capturedNode.querySelector('style')?.textContent).toContain('margin-bottom: 0');
+    expect(capturedNode.querySelector('style')?.textContent).toContain('overflow: visible');
+    expect(capturedNode.querySelector('style')?.textContent).not.toContain('align-items: start');
+    expect(capturedNode.querySelector('style')?.textContent).not.toContain('align-self: start');
+    const capturedCalendar = capturedNode.querySelector('.grid') as HTMLElement | null;
+    expect(capturedCalendar).not.toBeNull();
+    expect(capturedCalendar?.style.getPropertyValue('--calendar-export-day-min-height')).toBe(
+      '189px',
+    );
     expect(createdAnchor?.download).toBe(
       `Home Team Game Schedule - ${new Intl.DateTimeFormat('en-US', {
         month: 'short',
@@ -435,6 +471,8 @@ describe('TeamGamesTab', () => {
     expect(toast.success).toHaveBeenCalledWith('Monthly schedule downloaded!');
 
     createElementSpy.mockRestore();
+    getBoundingClientRectSpy.mockRestore();
+    document.documentElement.style.removeProperty('--app-text-strong');
   });
 
   it('starts on the current month even when the first game is in a later month', () => {

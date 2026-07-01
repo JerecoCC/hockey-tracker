@@ -33,6 +33,7 @@ import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
 import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import { type GameRecord } from '@/hooks/useGames';
+import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import { buildUserGameDetailsPath } from '@/lib/routeSlugs';
 import styles from './UserGames.module.scss';
 
@@ -779,6 +780,7 @@ const UserGames = () => {
   const [scoreImageOpen, setScoreImageOpen] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
+  const [calendarDownloadBusy, setCalendarDownloadBusy] = useState(false);
   const hasSeededTeamFilterRef = useRef(false);
   const calendarGridRef = useRef<HTMLDivElement>(null);
 
@@ -1310,6 +1312,27 @@ const UserGames = () => {
     });
   };
 
+  const handleDownloadCalendarMonth = async () => {
+    const calendarNode = calendarGridRef.current;
+    if (!calendarNode || calendarDownloadBusy || scheduledGames.length === 0) return;
+
+    setCalendarDownloadBusy(true);
+    try {
+      await downloadMonthScheduleImage({
+        calendarNode,
+        calendarMonth,
+        headerLabel: MONTH_LABEL_FMT.format(calendarMonth),
+        filename: `Games - ${MONTH_LABEL_FMT.format(calendarMonth)}.png`,
+      });
+      toast.success('Monthly schedule downloaded!');
+    } catch (err) {
+      console.error('Failed to download month calendar', err);
+      toast.error('Failed to generate schedule image');
+    } finally {
+      setCalendarDownloadBusy(false);
+    }
+  };
+
   const handleViewChange = (nextView: 'list' | 'calendar') => {
     if (nextView === view) return;
     if (nextView === 'list') {
@@ -1504,7 +1527,23 @@ const UserGames = () => {
         </div>
       ) : (
         <div className={styles.scheduleContentBlock}>
-          <ScheduleCalendarCard>
+          <ScheduleCalendarCard
+            title={MONTH_LABEL_FMT.format(calendarMonth)}
+            action={
+              <Button
+                type="button"
+                variant="outlined"
+                intent="neutral"
+                size="sm"
+                icon="download"
+                iconHeight="field"
+                aria-label="Download monthly schedule"
+                tooltip="Download monthly schedule"
+                onClick={handleDownloadCalendarMonth}
+                disabled={isLoading || calendarDownloadBusy || scheduledGames.length === 0}
+              />
+            }
+          >
             <MonthCalendar
               ref={calendarGridRef}
               month={calendarMonth}
