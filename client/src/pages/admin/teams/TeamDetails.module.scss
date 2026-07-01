@@ -200,6 +200,7 @@
     display: flex;
     align-items: center;
     gap: $space-sm;
+    flex: 0 0 auto;
   }
 
   &Empty {
@@ -285,6 +286,11 @@
   .playerViewSegmentedControl.playerViewSegmentedControl {
     width: 100%;
     flex-basis: 100%;
+  }
+
+  .rosterActions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .playerHeaderSeasonGroup {

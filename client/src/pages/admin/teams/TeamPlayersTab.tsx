@@ -226,6 +226,49 @@ const TeamPlayersTab = ({
     );
   };
 
+  const playerViewControl = (
+    <SegmentedControl
+      className={styles.playerViewSegmentedControl}
+      variant="field"
+      value={playerView}
+      onChange={(value) => setPlayerView(value as PlayerView)}
+      options={[
+        { value: 'roster', label: 'Roster' },
+        { value: 'prospects', label: 'Prospects' },
+      ]}
+    />
+  );
+
+  const rosterActions = (
+    <div className={styles.rosterActions}>
+      <Button
+        intent="accent"
+        icon="group_add"
+        size="sm"
+        disabled={!selectedSeasonId}
+        onClick={() => setAddModalOpen(true)}
+      >
+        Add Players
+      </Button>
+      <MoreActionsMenu
+        items={[
+          {
+            label: 'Create Players',
+            icon: 'person_edit',
+            disabled: !selectedSeasonId,
+            onClick: () => setCreateModalOpen(true),
+          },
+          {
+            label: 'Trade Players',
+            icon: 'swap_horiz',
+            disabled: !selectedSeasonId || players.length === 0,
+            onClick: () => setTradeModalOpen(true),
+          },
+        ]}
+      />
+    </div>
+  );
+
   return (
     <>
       <Section
@@ -248,35 +291,7 @@ const TeamPlayersTab = ({
             </div>
           ) : null
         }
-        action={
-          <div className={styles.rosterActions}>
-            <Button
-              intent="accent"
-              icon="group_add"
-              size="sm"
-              disabled={!selectedSeasonId}
-              onClick={() => setAddModalOpen(true)}
-            >
-              Add Players
-            </Button>
-            <MoreActionsMenu
-              items={[
-                {
-                  label: 'Create Players',
-                  icon: 'person_edit',
-                  disabled: !selectedSeasonId,
-                  onClick: () => setCreateModalOpen(true),
-                },
-                {
-                  label: 'Trade Players',
-                  icon: 'swap_horiz',
-                  disabled: !selectedSeasonId || players.length === 0,
-                  onClick: () => setTradeModalOpen(true),
-                },
-              ]}
-            />
-          </div>
-        }
+        action={playerViewControl}
       >
         <div className={styles.rosterToolbar}>
           <SearchField
@@ -285,16 +300,7 @@ const TeamPlayersTab = ({
             value={query}
             onChange={setQuery}
           />
-          <SegmentedControl
-            className={styles.playerViewSegmentedControl}
-            variant="field"
-            value={playerView}
-            onChange={(value) => setPlayerView(value as PlayerView)}
-            options={[
-              { value: 'roster', label: 'Roster' },
-              { value: 'prospects', label: 'Prospects' },
-            ]}
-          />
+          {rosterActions}
         </div>
       </Section>
 
