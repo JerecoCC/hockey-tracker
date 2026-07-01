@@ -83,6 +83,10 @@
     padding: 0;
   }
 
+  &TeamItem {
+    --list-item-logo-size: 34px;
+  }
+
   &Count {
     display: inline-flex;
     flex-direction: column;
