@@ -50,8 +50,8 @@ const columns: Column<TeamWatchSummary>[] = [
             className={styles.teamLogo}
           />
           <span className={styles.teamText}>
-            <span className={styles.teamName}>{teamName}</span>
             {team.place_name && <span className={styles.teamPlace}>{team.place_name}</span>}
+            <span className={styles.teamName}>{teamName}</span>
           </span>
         </span>
       );

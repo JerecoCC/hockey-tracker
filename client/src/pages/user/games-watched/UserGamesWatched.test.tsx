@@ -6,6 +6,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import BreadcrumbTitleRow from '@/components/Breadcrumbs/BreadcrumbTitleRow';
 import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
 import UserGamesWatched from './UserGamesWatched';
+import styles from './UserGamesWatched.module.scss';
 
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn() }));
 jest.mock('axios');
@@ -205,6 +206,9 @@ describe('UserGamesWatched', () => {
     expect(within(rows[1]).getByText('Toronto Maple Leafs')).toBeInTheDocument();
     expect(within(rows[1]).getByLabelText('3 watched games')).toBeInTheDocument();
     expect(within(rows[1]).getByText('3-0-0')).toBeInTheDocument();
+    const torontoTeamText = rows[1].querySelector(`.${styles.teamText}`);
+    expect(torontoTeamText?.children[0]).toHaveClass(styles.teamPlace);
+    expect(torontoTeamText?.children[1]).toHaveClass(styles.teamName);
     expect(within(rows[2]).getByText('Boston Bruins')).toBeInTheDocument();
     expect(within(rows[2]).getByLabelText('2 watched games')).toBeInTheDocument();
     expect(within(rows[2]).getByText('1-1-0')).toBeInTheDocument();
