@@ -9,6 +9,7 @@ import SearchField from '@/components/SearchField/SearchField';
 import Section from '@/components/Section/Section';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -20,6 +21,7 @@ import TeamPlayerEditModal from './TeamPlayerEditModal';
 import styles from './TeamDetails.module.scss';
 
 const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD', 'D1', 'D2']);
+const PLAYER_SECTION_SKELETON_ROW_COUNT = 3;
 
 const PLAYER_SECTIONS = [
   {
@@ -226,6 +228,22 @@ const TeamPlayersTab = ({
     );
   };
 
+  const renderPlayerSkeletons = (sectionTitle: string) => (
+    <ul
+      className={[styles.rosterList, styles.rosterSkeletonList].join(' ')}
+      aria-label={`${sectionTitle} loading`}
+    >
+      {Array.from({ length: PLAYER_SECTION_SKELETON_ROW_COUNT }, (_, index) => (
+        <Skeleton
+          as="li"
+          key={`${sectionTitle}-skeleton-${index}`}
+          type="card"
+          className={styles.rosterSkeletonRow}
+        />
+      ))}
+    </ul>
+  );
+
   const playerViewControl = (
     <SegmentedControl
       className={styles.playerViewSegmentedControl}
@@ -313,7 +331,7 @@ const TeamPlayersTab = ({
               title={`${section.title} (${sectionPlayers.length})`}
             >
               {loading ? (
-                <p className={styles.rosterEmpty}>Loading...</p>
+                renderPlayerSkeletons(section.title)
               ) : sectionPlayers.length > 0 ? (
                 <ul className={styles.rosterList}>{sectionPlayers.map(renderPlayer)}</ul>
               ) : (

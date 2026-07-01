@@ -275,6 +275,15 @@
     flex-direction: column;
     gap: $space-md;
   }
+
+  &SkeletonList {
+    pointer-events: none;
+  }
+
+  &SkeletonRow {
+    min-height: 74px;
+    border-radius: $radius-md;
+  }
 }
 
 @media (max-width: $bp-tablet) {
