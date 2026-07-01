@@ -49,11 +49,28 @@
 
 // Visual styling for the button itself (rendered inside the Tooltip wrapper).
 .closeBtnInner {
-  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.72);
   border-radius: 50%;
-  color: var(--app-text-strong, #{$text-bright});
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
 
   &:hover {
-    background: rgba(0, 0, 0, 0.75);
+    border-color: rgba(255, 255, 255, 0.36);
+    background: rgba(15, 23, 42, 0.9);
+    color: #fff;
+  }
+}
+
+:global(:root[data-theme='light']) .closeBtnInner {
+  border-color: rgba(15, 23, 42, 0.18);
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
+
+  &:hover {
+    border-color: rgba(15, 23, 42, 0.28);
+    background: #fff;
+    color: #0f172a;
   }
 }
