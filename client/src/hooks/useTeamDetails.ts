@@ -48,18 +48,21 @@ const apiError = (err: unknown, fallback: string) => {
   return e.response?.data?.error ?? fallback;
 };
 
-const useTeamDetails = (id: string | undefined) => {
+type TeamDetailsMode = 'admin' | 'user';
+
+const useTeamDetails = (id: string | undefined, options: { mode?: TeamDetailsMode } = {}) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const mode = options.mode ?? 'admin';
+  const basePath = mode === 'user' ? 'user' : 'admin';
 
   const { data: team = null, isLoading: loading } = useQuery({
-    queryKey: ['teams', id],
+    queryKey: [mode === 'user' ? 'user-team-details' : 'teams', id],
     queryFn: async () => {
       try {
-        const { data } = await axios.get<TeamDetailRecord>(
-          `${API}/admin/teams/${id}`,
-          { headers: authHeaders() },
-        );
+        const { data } = await axios.get<TeamDetailRecord>(`${API}/${basePath}/teams/${id}`, {
+          headers: authHeaders(),
+        });
         return data;
       } catch (err) {
         toast.error(apiError(err, 'Failed to load team'));

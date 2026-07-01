@@ -9,7 +9,7 @@ import { ScheduleGamesTitle } from '@/components/ScheduleGamesLayout/ScheduleGam
 import TeamCalendarGameCard from '@/components/TeamCalendarGameCard/TeamCalendarGameCard';
 import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
-import { buildGameDetailsPath } from '@/lib/routeSlugs';
+import { buildGameDetailsPath, buildUserGameDetailsPath } from '@/lib/routeSlugs';
 import styles from './TeamGamesTab.module.scss';
 
 const MONTH_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
@@ -169,6 +169,7 @@ interface Props {
   leagueCode?: string | null;
   calendarMonth?: Date;
   onCalendarMonthChange?: (month: Date) => void;
+  mode?: 'admin' | 'user';
 }
 
 const TeamGamesTab = ({
@@ -178,6 +179,7 @@ const TeamGamesTab = ({
   leagueCode,
   calendarMonth: controlledCalendarMonth,
   onCalendarMonthChange,
+  mode = 'admin',
 }: Props) => {
   const navigate = useNavigate();
   const [exportingMonthImage, setExportingMonthImage] = useState(false);
@@ -200,10 +202,13 @@ const TeamGamesTab = ({
     }
   };
 
-  const { games, loading } = useGames({
-    teamId,
-    month: toMonthPickerValue(calendarMonth),
-  });
+  const { games, loading } = useGames(
+    {
+      teamId,
+      month: toMonthPickerValue(calendarMonth),
+    },
+    { mode },
+  );
 
   const scheduledGames = useMemo(() => games.filter((game) => !!game.scheduled_at), [games]);
 
@@ -218,19 +223,29 @@ const TeamGamesTab = ({
     return map;
   }, [scheduledGames]);
 
-  const openGame = (game: GameRecord) =>
-    navigate(
-      buildGameDetailsPath({
-        leagueCode: game.league_code ?? leagueCode,
-        leagueId,
-        seasonName: game.season_name,
-        seasonId: game.season_id,
-        gameId: game.id,
-        awayTeamCode: game.away_team.code,
-        homeTeamCode: game.home_team.code,
-        scheduledAt: game.scheduled_at,
-      }),
-    );
+  const openGame = (game: GameRecord) => {
+    const path =
+      mode === 'user'
+        ? buildUserGameDetailsPath({
+            gameId: game.id,
+            awayTeamCode: game.away_team.code,
+            homeTeamCode: game.home_team.code,
+            scheduledAt: game.scheduled_at,
+            scheduledTime: game.scheduled_time,
+          })
+        : buildGameDetailsPath({
+            leagueCode: game.league_code ?? leagueCode,
+            leagueId,
+            seasonName: game.season_name,
+            seasonId: game.season_id,
+            gameId: game.id,
+            awayTeamCode: game.away_team.code,
+            homeTeamCode: game.home_team.code,
+            scheduledAt: game.scheduled_at,
+            scheduledTime: game.scheduled_time,
+          });
+    navigate(path);
+  };
   const changeCalendarMonth = (value: string) => {
     if (!value) return;
     setCalendarMonth(fromMonthPickerValue(value));

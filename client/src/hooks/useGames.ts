@@ -11,8 +11,8 @@ const apiError = (err: unknown, fallback: string) =>
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type GameType      = 'preseason' | 'regular' | 'playoff';
-export type GameStatus    = 'scheduled' | 'in_progress' | 'final' | 'postponed';
+export type GameType = 'preseason' | 'regular' | 'playoff';
+export type GameStatus = 'scheduled' | 'in_progress' | 'final' | 'postponed';
 export type CurrentPeriod = '1' | '2' | '3' | 'OT' | 'SO';
 
 export interface UpdateGameInfoData {
@@ -30,146 +30,146 @@ export type SeriesStatus = 'upcoming' | 'active' | 'complete';
 
 /** A head-to-head meeting between the two teams in the current game's season. */
 export interface PreviousMeeting {
-  game_id:               string;
-  scheduled_at:          string | null;
-  created_at:            string;
-  status:                GameStatus;
+  game_id: string;
+  scheduled_at: string | null;
+  created_at: string;
+  status: GameStatus;
   /** True when the current game's home team was also home in this meeting. */
   current_home_was_home: boolean;
   /** Actual home team for this meeting. */
-  home_team:             TeamInfo;
+  home_team: TeamInfo;
   /** Actual away team for this meeting. */
-  away_team:             TeamInfo;
+  away_team: TeamInfo;
   /** Score of the meeting's home team (not necessarily the current game's home team). */
-  home_score:            number;
+  home_score: number;
   /** Score of the meeting's away team (not necessarily the current game's away team). */
-  away_score:            number;
-  overtime_periods:      number | null;
-  shootout:              boolean;
+  away_score: number;
+  overtime_periods: number | null;
+  shootout: boolean;
 }
 
 /** A single entry in a team's last-five-games form guide. */
 export interface LastFiveGame {
-  game_id:          string;
-  scheduled_at:     string | null;
-  home_score:       number;
-  away_score:       number;
+  game_id: string;
+  scheduled_at: string | null;
+  home_score: number;
+  away_score: number;
   overtime_periods: number | null;
-  shootout:         boolean;
+  shootout: boolean;
   /** Result from the perspective of the team whose last-five list this belongs to. */
-  result:           'W' | 'L' | 'T';
+  result: 'W' | 'L' | 'T';
   /** True if the team was the home team in that historical game (determines square background color). */
-  is_home:          boolean;
+  is_home: boolean;
   opponent_team_id: string;
-  opponent_name:    string;
-  opponent_code:    string;
-  opponent_logo:    string | null;
+  opponent_name: string;
+  opponent_code: string;
+  opponent_logo: string | null;
   opponent_logo_dark?: string | null;
   opponent_logo_light?: string | null;
 }
 
 export interface TeamInfo {
-  id:              string;
-  name:            string;
-  place_name?:     string | null;
-  team_name?:      string | null;
-  code:            string;
-  logo:            string | null;
-  logo_dark?:      string | null;
-  logo_light?:     string | null;
-  primary_color:   string;
+  id: string;
+  name: string;
+  place_name?: string | null;
+  team_name?: string | null;
+  code: string;
+  logo: string | null;
+  logo_dark?: string | null;
+  logo_light?: string | null;
+  primary_color: string;
   secondary_color: string;
-  text_color:      string;
+  text_color: string;
 }
 
 export interface GameRecord {
-  id:                    string;
-  season_id:             string;
-  game_type:             GameType;
-  status:                GameStatus;
-  scheduled_at:          string | null;
-  scheduled_time:        string | null;
-  venue:                 string | null;
+  id: string;
+  season_id: string;
+  game_type: GameType;
+  status: GameStatus;
+  scheduled_at: string | null;
+  scheduled_time: string | null;
+  venue: string | null;
   /** Actual kick-off timestamp (set when the game starts, distinct from scheduled_at). */
-  time_start:            string | null;
+  time_start: string | null;
   /** Actual end timestamp (set when the game is finalised). */
-  time_end:              string | null;
-  home_team:             TeamInfo;
-  away_team:             TeamInfo;
-  home_score:            number;
-  away_score:            number;
-  overtime_periods:         number | null;
-  shootout:                 boolean;
+  time_end: string | null;
+  home_team: TeamInfo;
+  away_team: TeamInfo;
+  home_score: number;
+  away_score: number;
+  overtime_periods: number | null;
+  shootout: boolean;
   /** Winning team for a completed game when it can be derived from goals / shootout attempts. */
-  winner_team_id?:          string | null;
+  winner_team_id?: string | null;
   /** UUID of the team that shoots first in a shootout, or null if not applicable. */
-  shootout_first_team_id:   string | null;
-  playoff_series_id:        string | null;
+  shootout_first_team_id: string | null;
+  playoff_series_id: string | null;
   game_number_in_series: number | null;
-  game_number:           number | null;
-  playoff_round:         number | null;
-  series_home_team_id:   string | null;
-  series_away_team_id:   string | null;
-  series_home_wins:      number | null;
-  series_away_wins:      number | null;
+  game_number: number | null;
+  playoff_round: number | null;
+  series_home_team_id: string | null;
+  series_away_team_id: string | null;
+  series_home_wins: number | null;
+  series_away_wins: number | null;
   series_home_wins_at_game?: number | null;
   series_away_wins_at_game?: number | null;
-  series_games_to_win:   number | null;
-  notes:                 string | null;
-  created_at:            string;
-  current_period?:       CurrentPeriod | null;
+  series_games_to_win: number | null;
+  notes: string | null;
+  created_at: string;
+  current_period?: CurrentPeriod | null;
   /** Period-by-period goal totals aggregated from the goals table. */
-  period_scores:         { period: string; home_goals: number; away_goals: number }[];
+  period_scores: { period: string; home_goals: number; away_goals: number }[];
   /** Period-by-period shots on goal entered manually via the admin UI. */
-  period_shots:          { period: string; home_shots: number; away_shots: number }[];
-  star_1_id:             string | null;
-  star_2_id:             string | null;
-  star_3_id:             string | null;
-  season_name?:          string;
-  league_id?:            string;
-  league_code?:          string;
-  league_name?:          string;
+  period_shots: { period: string; home_shots: number; away_shots: number }[];
+  star_1_id: string | null;
+  star_2_id: string | null;
+  star_3_id: string | null;
+  season_name?: string;
+  league_id?: string;
+  league_code?: string;
+  league_name?: string;
   league_primary_color?: string;
-  league_text_color?:    string;
-  watched_by_user?:      boolean;
-  watched_on?:           string | null;
-  skipped_by_user?:      boolean;
-  scheduled_for?:        string | null;
+  league_text_color?: string;
+  watched_by_user?: boolean;
+  watched_on?: string | null;
+  skipped_by_user?: boolean;
+  scheduled_for?: string | null;
   /** Last 5 final games for the home team within the same season (detail endpoint only). */
-  home_last_five?:       LastFiveGame[];
+  home_last_five?: LastFiveGame[];
   /** Last 5 final games for the away team within the same season (detail endpoint only). */
-  away_last_five?:       LastFiveGame[];
+  away_last_five?: LastFiveGame[];
   /** All other meetings between home and away teams this season (detail endpoint only). */
-  previous_meetings?:    PreviousMeeting[];
+  previous_meetings?: PreviousMeeting[];
   /** Number of regulation shootout rounds before sudden death (from the league settings). */
-  best_of_shootout:      number;
+  best_of_shootout: number;
   /** Custom display names for each playoff round from the season's bracket rule set (detail endpoint only). */
-  playoff_round_names?:  Record<string, string> | null;
+  playoff_round_names?: Record<string, string> | null;
 }
 
 export interface SeriesGame {
-  id:                    string;
+  id: string;
   game_number_in_series: number;
-  status:                GameStatus;
-  scheduled_at:          string | null;
-  scheduled_time:        string | null;
-  venue:                 string | null;
-  home_team_id:          string;
-  away_team_id:          string;
-  overtime_periods:      number | null;
-  shootout:              boolean;
-  home_goals:            number;
-  away_goals:            number;
+  status: GameStatus;
+  scheduled_at: string | null;
+  scheduled_time: string | null;
+  venue: string | null;
+  home_team_id: string;
+  away_team_id: string;
+  overtime_periods: number | null;
+  shootout: boolean;
+  home_goals: number;
+  away_goals: number;
 }
 
 export interface PlayoffSeriesRecord {
-  id:             string;
-  season_id:      string;
-  round:          number;
-  series_letter:  string | null;
+  id: string;
+  season_id: string;
+  round: number;
+  series_letter: string | null;
   playoff_round_names?: Record<string, string> | null;
   /** Null when the team has not yet been determined (partial series shell). */
-  home_team_id:   string | null;
+  home_team_id: string | null;
   home_team_name: string | null;
   home_team_code: string | null;
   home_team_logo: string | null;
@@ -179,7 +179,7 @@ export interface PlayoffSeriesRecord {
   home_team_secondary_color?: string | null;
   home_team_text_color?: string | null;
   /** Null when the team has not yet been determined (partial series shell). */
-  away_team_id:   string | null;
+  away_team_id: string | null;
   away_team_name: string | null;
   away_team_code: string | null;
   away_team_logo: string | null;
@@ -188,43 +188,45 @@ export interface PlayoffSeriesRecord {
   away_team_primary_color?: string | null;
   away_team_secondary_color?: string | null;
   away_team_text_color?: string | null;
-  games_to_win:   number;
-  home_wins:      number;
-  away_wins:      number;
-  status:           SeriesStatus;
-  winner_team_id:   string | null;
+  games_to_win: number;
+  home_wins: number;
+  away_wins: number;
+  status: SeriesStatus;
+  winner_team_id: string | null;
   bracket_slot_key: string | null;
-  created_at:       string;
-  games:            SeriesGame[];
+  created_at: string;
+  games: SeriesGame[];
 }
 
 export interface CreateGameData {
-  season_id:             string;
-  home_team_id:          string;
-  away_team_id:          string;
-  game_type?:            GameType;
-  status?:               GameStatus;
-  scheduled_at?:         string | null;
-  scheduled_time?:       string | null;
-  venue?:                string | null;
-  overtime_periods?:     number | null;
-  shootout?:             boolean;
-  playoff_series_id?:    string | null;
+  season_id: string;
+  home_team_id: string;
+  away_team_id: string;
+  game_type?: GameType;
+  status?: GameStatus;
+  scheduled_at?: string | null;
+  scheduled_time?: string | null;
+  venue?: string | null;
+  overtime_periods?: number | null;
+  shootout?: boolean;
+  playoff_series_id?: string | null;
   game_number_in_series?: number | null;
-  game_number?:          number | null;
-  notes?:                string | null;
+  game_number?: number | null;
+  notes?: string | null;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 interface Filters {
-  seasonId?:  string;
-  teamId?:    string;
-  gameType?:  GameType;
-  status?:    GameStatus;
-  week?:      string;
-  month?:     string;
+  seasonId?: string;
+  teamId?: string;
+  gameType?: GameType;
+  status?: GameStatus;
+  week?: string;
+  month?: string;
 }
+
+type GamesMode = 'admin' | 'user';
 
 interface GameRouteLookupInput {
   seasonId?: string;
@@ -286,25 +288,27 @@ const removeCachedGame = (queryClient: ReturnType<typeof useQueryClient>, id: st
   }
 };
 
-const useGames = (filters: Filters = {}) => {
+const useGames = (filters: Filters = {}, options: { mode?: GamesMode } = {}) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const mode = options.mode ?? 'admin';
+  const basePath = mode === 'user' ? 'user' : 'admin';
 
   const params: Record<string, string> = {};
-  if (filters.seasonId)  params.season_id  = filters.seasonId;
-  if (filters.teamId)    params.team_id    = filters.teamId;
-  if (filters.gameType)  params.game_type  = filters.gameType;
-  if (filters.status)    params.status     = filters.status;
-  if (filters.week)      params.week       = filters.week;
-  if (filters.month)     params.month      = filters.month;
+  if (filters.seasonId) params.season_id = filters.seasonId;
+  if (filters.teamId) params.team_id = filters.teamId;
+  if (filters.gameType) params.game_type = filters.gameType;
+  if (filters.status) params.status = filters.status;
+  if (filters.week) params.week = filters.week;
+  if (filters.month) params.month = filters.month;
 
-  const queryKey = ['games', params];
+  const queryKey = [mode === 'user' ? 'user-team-games' : 'games', params];
 
   const { data: games = [], isLoading: loading } = useQuery<GameRecord[]>({
     queryKey,
     queryFn: async () => {
       try {
-        const { data } = await axios.get<GameRecord[]>(`${API}/admin/games`, {
+        const { data } = await axios.get<GameRecord[]>(`${API}/${basePath}/games`, {
           headers: authHeaders(),
           params,
         });

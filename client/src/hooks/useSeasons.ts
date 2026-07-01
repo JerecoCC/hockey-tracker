@@ -77,16 +77,23 @@ const authHeaders = () => {
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-const useSeasons = (leagueId?: string) => {
+type SeasonsMode = 'admin' | 'user';
+
+const useSeasons = (leagueId?: string, options: { mode?: SeasonsMode } = {}) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const mode = options.mode ?? 'admin';
+  const basePath = mode === 'user' ? 'user' : 'admin';
 
   const { data: seasons = [], isLoading: loading } = useQuery({
-    queryKey: leagueId ? ['seasons', { league_id: leagueId }] : ['seasons'],
+    queryKey: [
+      mode === 'user' ? 'user-seasons' : 'seasons',
+      ...(leagueId ? [{ league_id: leagueId }] : []),
+    ],
     queryFn: async () => {
       try {
         const params = leagueId ? { league_id: leagueId } : undefined;
-        const { data } = await axios.get<SeasonRecord[]>(`${API}/admin/seasons`, {
+        const { data } = await axios.get<SeasonRecord[]>(`${API}/${basePath}/seasons`, {
           headers: authHeaders(),
           params,
         });

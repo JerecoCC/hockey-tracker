@@ -1,6 +1,7 @@
 import {
   buildGameDetailsPath,
   buildUserGameDetailsPath,
+  buildUserTeamDetailsPath,
   buildUserWatchedTeamPath,
   userWatchedTeamRouteSlug,
 } from './routeSlugs';
@@ -75,6 +76,18 @@ describe('buildUserGameDetailsPath', () => {
         scheduledAt: '2026-05-02T02:30:00.000Z',
       }),
     ).toBe('/games/game-1');
+  });
+});
+
+describe('buildUserTeamDetailsPath', () => {
+  it('builds the user team details route with an optional season slug', () => {
+    expect(
+      buildUserTeamDetailsPath({
+        leagueCode: 'NHL',
+        teamCode: 'TOR',
+        seasonName: '2025-26',
+      }),
+    ).toBe('/leagues/nhl/teams/tor?season=2025-26');
   });
 });
 

@@ -206,11 +206,9 @@ export const useStintActions = (playerId: string | null) => {
     const formData = new FormData();
     formData.append('photo', file);
     try {
-      const { data } = await axios.post<{ url: string }>(
-        `${API}/admin/players/upload`,
-        formData,
-        { headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' } },
-      );
+      const { data } = await axios.post<{ url: string }>(`${API}/admin/players/upload`, formData, {
+        headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' },
+      });
       return data.url;
     } catch (err) {
       toast.error(apiError(err, 'Failed to upload photo'));
@@ -285,7 +283,14 @@ export const useStintActions = (playerId: string | null) => {
     }
   };
 
-  return { createStint, updateStint, changeJerseyNumber, changePlayerPhoto, uploadStintPhoto, saving };
+  return {
+    createStint,
+    updateStint,
+    changeJerseyNumber,
+    changePlayerPhoto,
+    uploadStintPhoto,
+    saving,
+  };
 };
 
 export interface PlayerRosterInput {
@@ -318,6 +323,7 @@ const apiError = (err: unknown, fallback: string): string =>
 interface UseTeamPlayersOptions {
   includeProspects?: boolean;
   prospectsOnly?: boolean;
+  mode?: 'admin' | 'user';
 }
 
 type PlayersCacheData =
@@ -392,20 +398,25 @@ const useTeamPlayers = (
 ) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const { mode = 'admin', ...playerFilters } = options;
+  const basePath = mode === 'user' ? 'user' : 'admin';
 
   const { data: players = [], isLoading: loading } = useQuery<TeamPlayerRecord[]>({
-    queryKey: ['players', { team_id: teamId, season_id: seasonId, ...options }],
+    queryKey: [
+      mode === 'user' ? 'user-team-players' : 'players',
+      { team_id: teamId, season_id: seasonId, ...playerFilters },
+    ],
     queryFn: async () => {
       try {
         const params: Record<string, string> = {};
         if (teamId) params.team_id = teamId;
         if (seasonId) params.season_id = seasonId;
-        if (options.includeProspects) params.include_prospects = 'true';
-        if (options.prospectsOnly) params.prospects_only = 'true';
-        const { data } = await axios.get<TeamPlayerRecord[]>(
-          `${API}/admin/players`,
-          { headers: authHeaders(), params },
-        );
+        if (playerFilters.includeProspects) params.include_prospects = 'true';
+        if (playerFilters.prospectsOnly) params.prospects_only = 'true';
+        const { data } = await axios.get<TeamPlayerRecord[]>(`${API}/${basePath}/players`, {
+          headers: authHeaders(),
+          params,
+        });
         return data;
       } catch (err) {
         toast.error(apiError(err, 'Failed to load roster'));
@@ -471,11 +482,9 @@ const useTeamPlayers = (
     const formData = new FormData();
     formData.append('photo', file);
     try {
-      const { data } = await axios.post<{ url: string }>(
-        `${API}/admin/players/upload`,
-        formData,
-        { headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' } },
-      );
+      const { data } = await axios.post<{ url: string }>(`${API}/admin/players/upload`, formData, {
+        headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' },
+      });
       return data.url;
     } catch (err) {
       toast.error(apiError(err, 'Failed to upload player photo'));
@@ -501,9 +510,7 @@ const useTeamPlayers = (
         { headers: authHeaders() },
       );
       updatePlayerCaches(queryClient, (player) =>
-        player.id === playerId && player.team_id === tId
-          ? { ...player, ...payload }
-          : player,
+        player.id === playerId && player.team_id === tId ? { ...player, ...payload } : player,
       );
       await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
@@ -593,9 +600,7 @@ const useTeamPlayers = (
       });
       toast.success('Player removed from team');
       updatePlayerCaches(queryClient, (cachedPlayer) =>
-        isSameRosterRecord(cachedPlayer, player)
-          ? null
-          : cachedPlayer,
+        isSameRosterRecord(cachedPlayer, player) ? null : cachedPlayer,
       );
       await queryClient.invalidateQueries({ queryKey: ['player-trade-history', player.id] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
@@ -646,7 +651,12 @@ const useTeamPlayers = (
   const createAndRosterPlayers = async (
     tId: string,
     sId: string,
-    players: Array<Omit<BulkPlayerInput, 'shoots'> & { shoots?: BulkPlayerInput['shoots']; jersey_number?: number | null }>,
+    players: Array<
+      Omit<BulkPlayerInput, 'shoots'> & {
+        shoots?: BulkPlayerInput['shoots'];
+        jersey_number?: number | null;
+      }
+    >,
   ): Promise<string[] | null> => {
     // Step 1: bulk-create the new players.
     // If this fails, nothing was written — return null so the modal stays open.
@@ -708,7 +718,10 @@ const useTeamPlayers = (
       const { data } = await axios.post(
         `${API}/admin/player-teams/bulk-trade`,
         {
-          players: playerRows.map((r) => ({ player_id: r.playerId, jersey_number: r.jerseyNumber })),
+          players: playerRows.map((r) => ({
+            player_id: r.playerId,
+            jersey_number: r.jerseyNumber,
+          })),
           season_id: sId,
           to_team_id: toTeamId,
           trade_date: tradeDate,

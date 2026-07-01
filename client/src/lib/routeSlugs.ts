@@ -61,6 +61,26 @@ export const buildTeamDetailsPath = ({
   return seasonParam ? `${path}?season=${encodeURIComponent(seasonParam)}` : path;
 };
 
+export const buildUserTeamDetailsPath = ({
+  leagueCode,
+  leagueId,
+  teamCode,
+  teamId,
+  seasonName,
+  seasonId,
+}: {
+  leagueCode: string | null | undefined;
+  leagueId?: string | null;
+  teamCode: string | null | undefined;
+  teamId?: string | null;
+  seasonName?: string | null;
+  seasonId?: string | null;
+}) => {
+  const path = `/leagues/${slugOrId(leagueCode, leagueId)}/teams/${slugOrId(teamCode, teamId)}`;
+  const seasonParam = slugOrId(seasonName, seasonId);
+  return seasonParam ? `${path}?season=${encodeURIComponent(seasonParam)}` : path;
+};
+
 export const buildSeasonDetailsPath = ({
   leagueCode,
   leagueId,

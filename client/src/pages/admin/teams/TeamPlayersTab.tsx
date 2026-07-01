@@ -49,6 +49,8 @@ interface Props {
   leagueCode: string | null;
   teamCode: string | null;
   defaultSeasonId?: string | null;
+  readOnly?: boolean;
+  mode?: 'admin' | 'user';
 }
 
 const TeamPlayersTab = ({
@@ -58,9 +60,11 @@ const TeamPlayersTab = ({
   leagueCode,
   teamCode,
   defaultSeasonId,
+  readOnly = false,
+  mode = 'admin',
 }: Props) => {
   const navigate = useNavigate();
-  const { seasons: leagueSeasons } = useSeasons(leagueId);
+  const { seasons: leagueSeasons } = useSeasons(leagueId, { mode });
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(defaultSeasonId ?? null);
   const [playerView, setPlayerView] = useState<PlayerView>('roster');
   const [query, setQuery] = useState('');
@@ -83,9 +87,11 @@ const TeamPlayersTab = ({
     createAndRosterPlayers,
     bulkTradePlayers,
   } = useTeamPlayers(teamId, selectedSeasonId ?? undefined, {
+    mode,
     prospectsOnly: isProspectsView,
   });
   const { players: allTeamPlayers } = useTeamPlayers(teamId, selectedSeasonId ?? undefined, {
+    mode,
     includeProspects: true,
   });
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -144,47 +150,49 @@ const TeamPlayersTab = ({
     });
     const actions: ListItemAction[] = [];
 
-    if (isProspectsView) {
-      actions.push(
-        {
-          icon: 'north',
-          intent: 'neutral',
-          tooltip: 'Move to roster',
-          disabled: busy === p.id,
-          onClick: () => updatePlayerRosterRole(p, false),
-        },
-        {
-          icon: 'person_remove',
-          intent: 'danger',
-          tooltip: 'Remove From Team',
-          disabled: busy === p.id,
-          onClick: () => setConfirmRemove(p),
-        },
-      );
-    } else {
-      actions.push(
-        {
-          icon: 'edit',
-          intent: 'neutral',
-          tooltip: 'Edit player',
-          disabled: busy === p.id,
-          onClick: () => setEditTarget(p),
-        },
-        {
-          icon: 'south',
-          intent: 'neutral',
-          tooltip: 'Move to prospects',
-          disabled: busy === p.id,
-          onClick: () => updatePlayerRosterRole(p, true),
-        },
-        {
-          icon: 'person_remove',
-          intent: 'danger',
-          tooltip: 'Remove From Team',
-          disabled: busy === p.id,
-          onClick: () => setConfirmRemove(p),
-        },
-      );
+    if (!readOnly) {
+      if (isProspectsView) {
+        actions.push(
+          {
+            icon: 'north',
+            intent: 'neutral',
+            tooltip: 'Move to roster',
+            disabled: busy === p.id,
+            onClick: () => updatePlayerRosterRole(p, false),
+          },
+          {
+            icon: 'person_remove',
+            intent: 'danger',
+            tooltip: 'Remove From Team',
+            disabled: busy === p.id,
+            onClick: () => setConfirmRemove(p),
+          },
+        );
+      } else {
+        actions.push(
+          {
+            icon: 'edit',
+            intent: 'neutral',
+            tooltip: 'Edit player',
+            disabled: busy === p.id,
+            onClick: () => setEditTarget(p),
+          },
+          {
+            icon: 'south',
+            intent: 'neutral',
+            tooltip: 'Move to prospects',
+            disabled: busy === p.id,
+            onClick: () => updatePlayerRosterRole(p, true),
+          },
+          {
+            icon: 'person_remove',
+            intent: 'danger',
+            tooltip: 'Remove From Team',
+            disabled: busy === p.id,
+            onClick: () => setConfirmRemove(p),
+          },
+        );
+      }
     }
 
     return (
@@ -216,8 +224,8 @@ const TeamPlayersTab = ({
                 intent: p.is_active ? 'success' : 'neutral',
               }
         }
-        onClick={() => navigate(playerDetailsPath)}
-        ariaLabel={`Open ${playerName}`}
+        onClick={readOnly ? undefined : () => navigate(playerDetailsPath)}
+        ariaLabel={readOnly ? undefined : `Open ${playerName}`}
         actions={actions}
       />
     );
@@ -252,7 +260,7 @@ const TeamPlayersTab = ({
     />
   );
 
-  const rosterActions = (
+  const rosterActions = readOnly ? null : (
     <div className={styles.rosterActions}>
       <Button
         intent="accent"
@@ -344,80 +352,84 @@ const TeamPlayersTab = ({
         })}
       </div>
 
-      <TeamPlayerEditModal
-        open={!!editTarget}
-        editTarget={editTarget}
-        teamId={teamId}
-        seasonId={selectedSeasonId}
-        onClose={() => setEditTarget(null)}
-        updatePlayer={updatePlayer}
-        updatePlayerTeam={updatePlayerTeam}
-        uploadPlayerPhoto={uploadPlayerPhoto}
-      />
+      {!readOnly && (
+        <>
+          <TeamPlayerEditModal
+            open={!!editTarget}
+            editTarget={editTarget}
+            teamId={teamId}
+            seasonId={selectedSeasonId}
+            onClose={() => setEditTarget(null)}
+            updatePlayer={updatePlayer}
+            updatePlayerTeam={updatePlayerTeam}
+            uploadPlayerPhoto={uploadPlayerPhoto}
+          />
 
-      <BulkTradeModal
-        open={tradeModalOpen}
-        onClose={() => setTradeModalOpen(false)}
-        players={players}
-        teamId={teamId}
-        leagueId={leagueId}
-        seasonId={selectedSeasonId}
-        bulkTradePlayers={bulkTradePlayers}
-      />
+          <BulkTradeModal
+            open={tradeModalOpen}
+            onClose={() => setTradeModalOpen(false)}
+            players={players}
+            teamId={teamId}
+            leagueId={leagueId}
+            seasonId={selectedSeasonId}
+            bulkTradePlayers={bulkTradePlayers}
+          />
 
-      <AddPlayersModal
-        open={addModalOpen}
-        onClose={() => setAddModalOpen(false)}
-        teamId={teamId}
-        leagueId={leagueId}
-        seasonId={selectedSeasonId}
-        existingPlayerIds={existingPlayerIds}
-        addPlayersToRoster={addPlayersToRoster}
-      />
+          <AddPlayersModal
+            open={addModalOpen}
+            onClose={() => setAddModalOpen(false)}
+            teamId={teamId}
+            leagueId={leagueId}
+            seasonId={selectedSeasonId}
+            existingPlayerIds={existingPlayerIds}
+            addPlayersToRoster={addPlayersToRoster}
+          />
 
-      {selectedSeasonId && (
-        <LineupCreatePlayersModal
-          open={createModalOpen}
-          onClose={() => setCreateModalOpen(false)}
-          teamId={teamId}
-          leagueId={leagueId}
-          seasonId={selectedSeasonId}
-          teamName={teamName}
-          existingCount={rosterPlayerCount}
-          existingGoalieCount={rosterGoalieCount}
-          existingRoster={allTeamPlayers.map((p) => ({
-            first_name: p.first_name,
-            last_name: p.last_name,
-            jersey_number: p.jersey_number ?? null,
-          }))}
-          allowRosterOverflow
-          createAndRosterPlayers={createAndRosterPlayers}
-        />
+          {selectedSeasonId && (
+            <LineupCreatePlayersModal
+              open={createModalOpen}
+              onClose={() => setCreateModalOpen(false)}
+              teamId={teamId}
+              leagueId={leagueId}
+              seasonId={selectedSeasonId}
+              teamName={teamName}
+              existingCount={rosterPlayerCount}
+              existingGoalieCount={rosterGoalieCount}
+              existingRoster={allTeamPlayers.map((p) => ({
+                first_name: p.first_name,
+                last_name: p.last_name,
+                jersey_number: p.jersey_number ?? null,
+              }))}
+              allowRosterOverflow
+              createAndRosterPlayers={createAndRosterPlayers}
+            />
+          )}
+
+          <ConfirmModal
+            open={!!confirmRemove}
+            title="Remove From Team"
+            body={
+              confirmRemove ? (
+                <>
+                  Remove{' '}
+                  <strong>
+                    {confirmRemove.first_name} {confirmRemove.last_name}
+                  </strong>{' '}
+                  from {teamName} for this season?
+                </>
+              ) : (
+                ''
+              )
+            }
+            confirmLabel="Remove From Team"
+            confirmIcon="person_remove"
+            variant="danger"
+            busy={isRemoving}
+            onConfirm={handleConfirmRemove}
+            onCancel={() => setConfirmRemove(null)}
+          />
+        </>
       )}
-
-      <ConfirmModal
-        open={!!confirmRemove}
-        title="Remove From Team"
-        body={
-          confirmRemove ? (
-            <>
-              Remove{' '}
-              <strong>
-                {confirmRemove.first_name} {confirmRemove.last_name}
-              </strong>{' '}
-              from {teamName} for this season?
-            </>
-          ) : (
-            ''
-          )
-        }
-        confirmLabel="Remove From Team"
-        confirmIcon="person_remove"
-        variant="danger"
-        busy={isRemoving}
-        onConfirm={handleConfirmRemove}
-        onCancel={() => setConfirmRemove(null)}
-      />
     </>
   );
 };

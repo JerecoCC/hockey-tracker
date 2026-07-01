@@ -382,6 +382,25 @@ describe('TeamGamesTab', () => {
     expect(screen.queryByText('Select a season to view games.')).not.toBeInTheDocument();
   });
 
+  it('uses user game detail routes in user mode', async () => {
+    const user = userEvent.setup();
+    const currentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+
+    renderTeamGamesTab({ mode: 'user' });
+
+    expect(mockUseGames).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamId: 'team-1',
+        month: monthParam(currentMonth),
+      }),
+      { mode: 'user' },
+    );
+
+    await user.click(screen.getByLabelText('Open game vs Away Team'));
+
+    expect(mockNavigate).toHaveBeenCalledWith(`/games/${routeDateSegment(5)}/awy-vs-hom`);
+  });
+
   it('downloads the current calendar month as an image', async () => {
     const user = userEvent.setup();
     const originalCreateElement = document.createElement.bind(document);
@@ -494,9 +513,7 @@ describe('TeamGamesTab', () => {
       width: '840px',
       minWidth: '840px',
     });
-    expect(capturedCalendar?.style.getPropertyValue('--calendar-export-grid-width')).toBe(
-      '840px',
-    );
+    expect(capturedCalendar?.style.getPropertyValue('--calendar-export-grid-width')).toBe('840px');
     expect(capturedCalendar?.style.getPropertyValue('--calendar-export-day-min-height')).toBe(
       '115px',
     );

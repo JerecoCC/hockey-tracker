@@ -570,8 +570,9 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
           liveAwayScore={liveAwayScore}
           liveHomeScore={liveHomeScore}
           overtimeSuffix={overtimeSuffix}
-          leagueId={isAdminView ? leagueId : undefined}
+          leagueId={leagueId}
           leagueCode={game.league_code}
+          mode={mode}
           disabled={isGameAutofilling}
           useLocalTimezone={!isAdminView}
         />

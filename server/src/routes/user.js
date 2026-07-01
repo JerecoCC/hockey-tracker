@@ -519,7 +519,7 @@ router.get('/games', async (req, res) => {
         (${season_id ?? null}::uuid IS NULL OR g.season_id    = ${season_id ?? null}::uuid)
         AND (${league_id ?? null}::uuid IS NULL OR l.id        = ${league_id ?? null}::uuid)
         AND (${game_type ?? null}::text IS NULL OR g.game_type = ${game_type ?? null})
-        AND (${status    ?? null}::text IS NULL OR g.status    = ${status    ?? null})
+        AND (${status ?? null}::text IS NULL OR g.status    = ${status ?? null})
         AND (
           ${dateFilter}::date IS NULL
           OR COALESCE(
@@ -1090,12 +1090,198 @@ router.get('/games/:id', async (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /api/user/leagues  – list all leagues (for filter picker)
 // ---------------------------------------------------------------------------
+// GET /api/user/players - read-only roster list for team detail pages
+router.get('/players', async (req, res) => {
+  const { team_id, season_id, game_date } = req.query;
+  const prospectsOnly = req.query.prospects_only === 'true';
+  const includeProspects =
+    prospectsOnly || req.query.include_prospects === 'true';
+
+  if (!team_id) return res.status(400).json({ error: 'team_id is required' });
+
+  try {
+    const players = season_id
+      ? await sql`
+          SELECT
+            id, first_name, last_name, photo,
+            date_of_birth::text AS date_of_birth,
+            birth_city, birth_country,
+            height_cm, weight_lbs, position, shoots,
+            rookie_season_id, rookie_season_name,
+            is_active, created_at,
+            jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
+          FROM (
+            SELECT DISTINCT ON (p.id)
+              p.id, p.first_name, p.last_name,
+              COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
+              p.date_of_birth,
+              p.birth_city, p.birth_country,
+              p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
+              p.rookie_season_id,
+              (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
+              p.is_active, p.created_at,
+              pt.jersey_number,
+              pt.id AS player_team_id,
+              pt.team_id,
+              pt.is_prospect,
+              ti.name AS team_name,
+              t.primary_color,
+              t.text_color
+            FROM players p
+            JOIN player_teams pt ON pt.player_id = p.id
+                                AND pt.team_id = ${team_id}
+                                AND pt.season_id = ${season_id}
+                                AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
+                                AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(${game_date ?? null}::date, CURRENT_DATE))
+                                AND (pt.end_date IS NULL OR pt.end_date >= COALESCE(${game_date ?? null}::date, CURRENT_DATE))
+            JOIN teams t ON t.id = pt.team_id
+            LEFT JOIN LATERAL (
+              SELECT name FROM team_iterations
+              WHERE team_id = t.id
+              ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
+              LIMIT 1
+            ) ti ON TRUE
+            ORDER BY p.id
+          ) sub
+          ORDER BY last_name, first_name
+        `
+      : await sql`
+          SELECT
+            id, first_name, last_name, photo,
+            date_of_birth::text AS date_of_birth,
+            birth_city, birth_country,
+            height_cm, weight_lbs, position, shoots,
+            rookie_season_id, rookie_season_name,
+            is_active, created_at,
+            jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
+          FROM (
+            SELECT DISTINCT ON (p.id)
+              p.id, p.first_name, p.last_name,
+              COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
+              p.date_of_birth,
+              p.birth_city, p.birth_country,
+              p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
+              p.rookie_season_id,
+              (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
+              p.is_active, p.created_at,
+              pt.jersey_number,
+              pt.id AS player_team_id,
+              pt.team_id,
+              pt.is_prospect,
+              ti.name AS team_name,
+              t.primary_color,
+              t.text_color
+            FROM players p
+            JOIN player_teams pt ON pt.player_id = p.id
+                                AND pt.team_id = ${team_id}
+                                AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
+            JOIN teams t ON t.id = pt.team_id
+            LEFT JOIN LATERAL (
+              SELECT name FROM team_iterations
+              WHERE team_id = t.id
+              ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
+              LIMIT 1
+            ) ti ON TRUE
+            ORDER BY p.id, pt.season_id DESC
+          ) sub
+          ORDER BY last_name, first_name
+        `;
+
+    return res.json(players);
+  } catch (err) {
+    console.error('user players list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/user/leagues - list all leagues (for filter picker and team routes)
+// ---------------------------------------------------------------------------
 router.get('/leagues', async (req, res) => {
   try {
-    const leagues = await sql`SELECT id, name, code, logo FROM leagues ORDER BY name ASC`;
+    const leagues = await sql`
+      SELECT
+        l.id, l.name, l.code, l.logo, l.icon, l.primary_color, l.text_color,
+        l.best_of_playoff, l.best_of_shootout, l.scoring_system, l.playoff_format,
+        CASE
+          WHEN cs.id IS NULL OR cs.is_ended THEN 'postseason'
+          WHEN cs.playoffs_started THEN 'playoffs'
+          ELSE 'regular'
+        END AS season_phase
+      FROM leagues l
+      LEFT JOIN seasons cs ON cs.id = l.current_season_id
+      ORDER BY l.name ASC
+    `;
     return res.json(leagues);
   } catch (err) {
     console.error('user leagues list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/user/leagues/:id - league + associated teams + seasons
+// ---------------------------------------------------------------------------
+router.get('/leagues/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      SELECT
+        l.id, l.name, l.code, l.description, l.logo, l.icon, l.primary_color, l.text_color,
+        l.best_of_playoff, l.best_of_shootout, l.scoring_system, l.playoff_format,
+        CASE
+          WHEN cs.id IS NULL OR cs.is_ended THEN 'postseason'
+          WHEN cs.playoffs_started THEN 'playoffs'
+          ELSE 'regular'
+        END AS season_phase,
+        l.created_at
+      FROM leagues l
+      LEFT JOIN seasons cs ON cs.id = l.current_season_id
+      WHERE l.id = ${id}
+    `;
+    if (rows.length === 0)
+      return res.status(404).json({ error: 'League not found' });
+
+    const [teams, seasons] = await Promise.all([
+      sql`
+        SELECT
+          t.id, t.description, t.location, t.league_id, t.created_at,
+          t.primary_color, t.secondary_color, t.text_color,
+          ti.name, ti.place_name, ti.team_name, ti.code,
+          ti.logo, ti.logo_dark, ti.logo_light, COALESCE(ti.icon, ti_icon.icon) AS icon
+        FROM teams t
+        LEFT JOIN LATERAL (
+          SELECT name, place_name, team_name, code, team_logo_default(logo_dark, logo_light) AS logo, logo_dark, logo_light, icon FROM team_iterations
+          WHERE team_id = t.id
+          ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+          LIMIT 1
+        ) ti ON true
+        LEFT JOIN LATERAL (
+          SELECT icon FROM team_iterations
+          WHERE team_id = t.id AND icon IS NOT NULL
+          ORDER BY recorded_at DESC
+          LIMIT 1
+        ) ti_icon ON true
+        WHERE t.league_id = ${id}
+        ORDER BY ti.name ASC
+      `,
+      sql`
+        SELECT s.id, s.name, s.league_id,
+               s.start_date::text AS start_date, s.end_date::text AS end_date,
+               s.created_at,
+               (l.current_season_id = s.id) AS is_current
+        FROM seasons s
+        JOIN leagues l ON l.id = s.league_id
+        WHERE s.league_id = ${id}
+        ORDER BY (l.current_season_id = s.id) DESC, s.start_date DESC NULLS LAST, s.name ASC
+      `,
+    ]);
+
+    return res.json({ ...rows[0], teams, seasons });
+  } catch (err) {
+    console.error('user league details error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -1273,6 +1459,58 @@ router.get('/teams', async (req, res) => {
     return res.json(teams);
   } catch (err) {
     console.error('user teams list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/user/teams/:id - read-only team detail
+// ---------------------------------------------------------------------------
+router.get('/teams/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      SELECT
+        t.id, t.description, t.location, t.city, t.home_arena,
+        t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
+        ti.name, ti.place_name, ti.team_name, ti.code,
+        team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+        ti.logo_dark,
+        ti.logo_light,
+        COALESCE(ti.icon, ti_icon.icon) AS icon,
+        l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+        l.primary_color AS league_primary_color, l.text_color AS league_text_color,
+        t.start_season_id,
+        t.latest_season_id,
+        ss.start_date::text AS start_season_start_date,
+        ls.end_date::text AS latest_season_end_date
+      FROM teams t
+      LEFT JOIN LATERAL (
+        SELECT
+          name, place_name, team_name, code,
+          team_logo_default(logo_dark, logo_light) AS logo,
+          logo_dark, logo_light, icon
+        FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      LEFT JOIN LATERAL (
+        SELECT icon FROM team_iterations
+        WHERE team_id = t.id AND icon IS NOT NULL
+        ORDER BY recorded_at DESC
+        LIMIT 1
+      ) ti_icon ON true
+      LEFT JOIN leagues l ON l.id = t.league_id
+      LEFT JOIN seasons ss ON ss.id = t.start_season_id
+      LEFT JOIN seasons ls ON ls.id = t.latest_season_id
+      WHERE t.id = ${id}
+    `;
+    if (rows.length === 0)
+      return res.status(404).json({ error: 'Team not found' });
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('user team detail error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

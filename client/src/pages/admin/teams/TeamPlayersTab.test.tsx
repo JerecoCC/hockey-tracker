@@ -1,3 +1,4 @@
+import { type ComponentProps } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import useSeasons from '@/hooks/useSeasons';
@@ -46,7 +47,7 @@ const teamPlayersState = {
   bulkTradePlayers: jest.fn(),
 };
 
-const renderTeamPlayersTab = () =>
+const renderTeamPlayersTab = (props: Partial<ComponentProps<typeof TeamPlayersTab>> = {}) =>
   render(
     <TeamPlayersTab
       teamId="team-1"
@@ -55,6 +56,7 @@ const renderTeamPlayersTab = () =>
       leagueCode="NHL"
       teamCode="TOR"
       defaultSeasonId="season-1"
+      {...props}
     />,
   );
 
@@ -79,5 +81,23 @@ describe('TeamPlayersTab', () => {
     expect(screen.queryByRole('button', { name: /view player/i })).not.toBeInTheDocument();
     expect(container.querySelector('.playerHeaderDivider')).not.toBeInTheDocument();
     expect(container.querySelector('.playerHeaderSeasonGroup .vertical')).toBeInTheDocument();
+  });
+
+  it('renders a read-only user roster without admin actions or row navigation', async () => {
+    const user = userEvent.setup();
+    renderTeamPlayersTab({ readOnly: true, mode: 'user' });
+
+    expect(mockUseSeasons).toHaveBeenCalledWith('league-1', { mode: 'user' });
+    expect(mockUseTeamPlayers).toHaveBeenCalledWith(
+      'team-1',
+      'season-1',
+      expect.objectContaining({ mode: 'user', prospectsOnly: false }),
+    );
+    expect(screen.queryByText('Add Players')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open Auston Matthews' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByText('Auston Matthews'));
+
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

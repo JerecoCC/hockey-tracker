@@ -61,15 +61,19 @@ const authHeaders = () => {
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-const useLeagues = () => {
+type LeagueDataMode = 'admin' | 'user';
+
+const useLeagues = (options: { mode?: LeagueDataMode } = {}) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const mode = options.mode ?? 'admin';
+  const basePath = mode === 'user' ? 'user' : 'admin';
 
   const { data: leagues = [], isLoading: loading } = useQuery({
-    queryKey: ['leagues'],
+    queryKey: [mode === 'user' ? 'user-leagues' : 'leagues'],
     queryFn: async () => {
       try {
-        const { data } = await axios.get<LeagueRecord[]>(`${API}/admin/leagues`, {
+        const { data } = await axios.get<LeagueRecord[]>(`${API}/${basePath}/leagues`, {
           headers: authHeaders(),
         });
         return data;

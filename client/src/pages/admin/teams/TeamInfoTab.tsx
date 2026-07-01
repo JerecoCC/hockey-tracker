@@ -12,9 +12,10 @@ interface Props {
   groups: GroupRecord[];
   uploadLogo: (file: File) => Promise<string | null>;
   updateTeam: (id: string, payload: Partial<CreateTeamData>) => Promise<boolean>;
+  readOnly?: boolean;
 }
 
-const TeamInfoTab = ({ team, groups, uploadLogo, updateTeam }: Props) => {
+const TeamInfoTab = ({ team, groups, uploadLogo, updateTeam, readOnly = false }: Props) => {
   const [editModalOpen, setEditModalOpen] = useState(false);
 
   const userGroups = groups.filter((g) => !g.is_auto && g.teams.some((t) => t.id === team.id));
@@ -39,7 +40,7 @@ const TeamInfoTab = ({ team, groups, uploadLogo, updateTeam }: Props) => {
           code={team.code}
           primaryColor={team.primary_color}
           textColor={team.text_color}
-          onEdit={() => setEditModalOpen(true)}
+          onEdit={readOnly ? undefined : () => setEditModalOpen(true)}
           editIconOnly
           swatches={[
             { label: 'Primary', color: team.primary_color },
@@ -53,13 +54,15 @@ const TeamInfoTab = ({ team, groups, uploadLogo, updateTeam }: Props) => {
         />
       </Card>
 
-      <TeamEditModal
-        open={editModalOpen}
-        team={team}
-        uploadLogo={uploadLogo}
-        updateTeam={updateTeam}
-        onClose={() => setEditModalOpen(false)}
-      />
+      {!readOnly && (
+        <TeamEditModal
+          open={editModalOpen}
+          team={team}
+          uploadLogo={uploadLogo}
+          updateTeam={updateTeam}
+          onClose={() => setEditModalOpen(false)}
+        />
+      )}
     </>
   );
 };

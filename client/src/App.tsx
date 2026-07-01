@@ -22,6 +22,7 @@ const UserGamesWatchedTeam = lazy(
 const UserGameDetailsPage = lazy(
   () => import('./pages/user/games/game-details/UserGameDetailsPage'),
 );
+const UserTeamDetailsPage = lazy(() => import('./pages/user/teams/UserTeamDetailsPage'));
 const UserSettings = lazy(() => import('./pages/user/settings/UserSettings'));
 
 const LeaguesPage = lazy(() => import('./pages/admin/leagues/Leagues'));
@@ -133,6 +134,7 @@ const router = createBrowserRouter([
       },
       { path: '/games/:gameDateSlug/:gameSlug', element: <UserGameDetailsPage /> },
       { path: '/games/:id', element: <UserGameDetailsPage /> },
+      { path: '/leagues/:leagueSlug/teams/:teamSlug', element: <UserTeamDetailsPage /> },
       { path: '/settings', element: <UserSettings /> },
     ],
   },

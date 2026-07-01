@@ -28,6 +28,7 @@ const getTitle = (pathname: string): string => {
   if (/\/admin\/teams\/[^/]+/.test(pathname)) return 'Team Details';
   if (/\/dashboard\/games-watched\/[^/]+/.test(pathname)) return 'Games Watched';
   if (/\/games\/[^/]+/.test(pathname)) return 'Game Details';
+  if (/\/leagues\/[^/]+\/teams\/[^/]+/.test(pathname)) return 'Team Details';
   if (/\/leagues\/[^/]+/.test(pathname)) return 'League Details';
   return '';
 };

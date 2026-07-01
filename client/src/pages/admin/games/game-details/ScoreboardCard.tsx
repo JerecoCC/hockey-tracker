@@ -4,7 +4,7 @@ import Tag from '@/components/Tag/Tag';
 import StickyHeroCard from '@/components/StickyHeroCard/StickyHeroCard';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameStatus, TeamInfo } from '@/hooks/useGames';
-import { buildTeamDetailsPath } from '@/lib/routeSlugs';
+import { buildTeamDetailsPath, buildUserTeamDetailsPath } from '@/lib/routeSlugs';
 import {
   DATE_FMT_LONG,
   LOCAL_DATE_FMT_LONG,
@@ -50,9 +50,10 @@ interface Props {
   liveAwayScore: number;
   liveHomeScore: number;
   overtimeSuffix: string;
-  /** When omitted, team logo buttons don't navigate anywhere (read-only user view). */
+  /** When omitted, team logo buttons don't navigate anywhere. */
   leagueId?: string;
   leagueCode?: string | null;
+  mode?: 'admin' | 'user';
   disabled?: boolean;
   useLocalTimezone?: boolean;
 }
@@ -104,10 +105,25 @@ const ScoreboardCard = ({
   overtimeSuffix,
   leagueId,
   leagueCode,
+  mode = 'admin',
   disabled = false,
   useLocalTimezone = false,
 }: Props) => {
   const navigate = useNavigate();
+  const buildTeamPath = (team: TeamInfo) =>
+    mode === 'user'
+      ? buildUserTeamDetailsPath({
+          leagueCode,
+          leagueId,
+          teamCode: team.code,
+          teamId: team.id,
+        })
+      : buildTeamDetailsPath({
+          leagueCode,
+          leagueId,
+          teamCode: team.code,
+          teamId: team.id,
+        });
 
   return (
     <StickyHeroCard
@@ -155,17 +171,7 @@ const ScoreboardCard = ({
             className={styles.teamLogoBtn}
             disabled={disabled}
             onClick={
-              leagueId && !disabled
-                ? () =>
-                    navigate(
-                      buildTeamDetailsPath({
-                        leagueCode,
-                        leagueId,
-                        teamCode: game.away_team.code,
-                        teamId: game.away_team.id,
-                      }),
-                    )
-                : undefined
+              leagueId && !disabled ? () => navigate(buildTeamPath(game.away_team)) : undefined
             }
           >
             <TeamLogo
@@ -307,17 +313,7 @@ const ScoreboardCard = ({
             className={`${styles.teamLogoBtn} ${styles.teamLogoBtnHome}`}
             disabled={disabled}
             onClick={
-              leagueId && !disabled
-                ? () =>
-                    navigate(
-                      buildTeamDetailsPath({
-                        leagueCode,
-                        leagueId,
-                        teamCode: game.home_team.code,
-                        teamId: game.home_team.id,
-                      }),
-                    )
-                : undefined
+              leagueId && !disabled ? () => navigate(buildTeamPath(game.home_team)) : undefined
             }
           >
             <div className={`${styles.teamInfo} ${styles.teamInfoHome}`}>
