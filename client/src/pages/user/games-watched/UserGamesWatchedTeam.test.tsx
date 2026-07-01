@@ -199,6 +199,8 @@ describe('UserGamesWatchedTeam', () => {
     mockAxios.get.mockResolvedValueOnce({ data: [] });
 
     renderTeamPage();
+    expect(screen.getByLabelText('Loading watched games')).toBeInTheDocument();
+    expect(screen.queryByText('Loading watched games...')).not.toBeInTheDocument();
     await mockUseQuery.mock.calls[0][0].queryFn();
 
     expect(mockAxios.get).toHaveBeenCalledWith(

@@ -4,9 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import Card from '@/components/Card/Card';
 import GameListItem from '@/components/GameListItem';
-import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import Section from '@/components/Section/Section';
 import Select, { type SelectOption } from '@/components/Select/Select';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import Tag, { type TagIntent } from '@/components/Tag/Tag';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
@@ -47,6 +47,7 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
 });
 
 const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
+const SKELETON_GAME_ROWS = 4;
 
 const getTeamName = (team: WatchedTeam | TeamRecord) => team.team_name || team.name;
 
@@ -263,6 +264,119 @@ const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
   );
 };
 
+const UserGamesWatchedTeamSkeleton = () => (
+  <div
+    className={styles.page}
+    aria-label="Loading watched games"
+  >
+    <Card
+      className={styles.heroCard}
+      style={{ padding: 0 }}
+    >
+      <section className={styles.hero}>
+        <div className={styles.heroContent}>
+          <Skeleton
+            type="picture"
+            width={60}
+            height={60}
+            className={styles.heroLogo}
+          />
+          <div className={styles.heroTeamInfo}>
+            <div className={styles.heroText}>
+              <Skeleton
+                type="subtitle"
+                width={92}
+              />
+              <Skeleton
+                type="title"
+                width={220}
+                height={28}
+              />
+              <Skeleton
+                type="subtitle"
+                width={64}
+              />
+            </div>
+            <Skeleton
+              type="title"
+              width={76}
+              height={44}
+            />
+          </div>
+        </div>
+      </section>
+    </Card>
+
+    <Section
+      title="Watched Games"
+      titleAccessory={
+        <Skeleton
+          type="tag"
+          width={36}
+        />
+      }
+      action={
+        <Skeleton
+          type="block"
+          width={104}
+          height={36}
+        />
+      }
+    >
+      <ul className={styles.gameList}>
+        {Array.from({ length: SKELETON_GAME_ROWS }, (_, index) => `game-skeleton-${index}`).map(
+          (rowKey) => (
+          <li
+            key={rowKey}
+            className={styles.skeletonGameItem}
+          >
+            <div className={styles.skeletonGameMain}>
+              <Skeleton
+                type="subtitle"
+                width={128}
+              />
+              <div className={styles.skeletonTeamRows}>
+                <Skeleton type="circle" />
+                <Skeleton
+                  type="code"
+                  width={48}
+                />
+                <Skeleton
+                  type="code"
+                  width={24}
+                />
+              </div>
+              <div className={styles.skeletonTeamRows}>
+                <Skeleton type="circle" />
+                <Skeleton
+                  type="code"
+                  width={48}
+                />
+                <Skeleton
+                  type="code"
+                  width={24}
+                />
+              </div>
+            </div>
+            <div className={styles.skeletonGameMiddle}>
+              <Skeleton
+                type="subtitle"
+                width="70%"
+              />
+              <Skeleton
+                type="subtitle"
+                width="55%"
+              />
+            </div>
+            <Skeleton type="tag" />
+          </li>
+          ),
+        )}
+      </ul>
+    </Section>
+  </div>
+);
+
 const UserGamesWatchedTeam = () => {
   const { teamSlug = '' } = useParams<{ teamSlug?: string }>();
   const yearFilterLabelId = useId();
@@ -360,13 +474,7 @@ const UserGamesWatchedTeam = () => {
   }, [allTeamSummary, teamName]);
 
   if (isLoading) {
-    return (
-      <LoadingSpinner
-        message="Loading watched games..."
-        layout="page"
-        size="lg"
-      />
-    );
+    return <UserGamesWatchedTeamSkeleton />;
   }
 
   if (!allTeamSummary) {

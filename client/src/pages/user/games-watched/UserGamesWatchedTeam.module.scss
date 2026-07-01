@@ -250,6 +250,47 @@ $hero-strip-duration: 0.42s;
   padding: 0;
 }
 
+.skeletonGameItem {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: $space-lg;
+  padding: $space-md $space-lg;
+  border: 1px solid var(--app-border, #{$border});
+  border-radius: $radius-md;
+
+  @media (max-width: 720px) {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.skeletonGameMain {
+  flex: 0 0 160px;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  min-width: 0;
+
+  @media (max-width: 720px) {
+    flex-basis: auto;
+  }
+}
+
+.skeletonTeamRows {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.skeletonGameMiddle {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  min-width: 0;
+}
+
 .emptyState {
   margin: 0;
   padding: $space-lg 0;
