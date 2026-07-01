@@ -96,6 +96,10 @@
     padding-left: $space-sm;
   }
 
+  &ButtonLabelIconless {
+    padding-left: 0;
+  }
+
   &Disabled {
     opacity: 0.5;
     cursor: not-allowed;

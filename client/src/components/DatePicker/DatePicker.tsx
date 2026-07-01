@@ -518,7 +518,16 @@ const DatePicker = (props: Props) => {
                 />
               </>
             )}
-            <span className={styles.triggerButtonLabel}>{triggerLabel}</span>
+            <span
+              className={[
+                styles.triggerButtonLabel,
+                hideTriggerIcon && styles.triggerButtonLabelIconless,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {triggerLabel}
+            </span>
           </button>
         ) : (
           <>
