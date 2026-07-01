@@ -159,10 +159,26 @@ $hero-strip-duration: 0.42s;
   flex-direction: column;
   gap: $space-xs;
   min-width: 0;
+
+  @media (max-width: 768px) {
+    align-items: center;
+  }
+}
+
+.heroTeamInfo {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2xl;
+  min-width: 0;
+
+  @media (max-width: 768px) {
+    justify-content: center;
+    gap: $space-lg;
+  }
 }
 
 .heroPlace,
-.heroMeta {
+.heroTeamMeta {
   color: var(--app-text-muted, #{$text-dim});
   font-size: $font-xs;
   line-height: 1.2;
@@ -178,13 +194,52 @@ $hero-strip-duration: 0.42s;
   transition: color $transition-layout ease;
 }
 
+.heroRecord {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-xs;
+  flex-shrink: 0;
+}
+
+.heroRecordValue {
+  color: var(--app-text-strong, #{$text-bright});
+  font-size: 2.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  min-width: 2rem;
+  text-align: center;
+  transition: color $transition-layout ease;
+
+  @media (max-width: 768px) {
+    font-size: 2rem;
+  }
+}
+
 .heroCardStuck {
   .heroPlace,
-  .heroMeta,
-  .heroName {
+  .heroTeamMeta,
+  .heroName,
+  .heroRecordValue {
     color: var(--team-text);
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
   }
+}
+
+.sectionSeenCount {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 $space-sm;
+  border: 1px solid var(--app-border, #{$border});
+  border-radius: $radius-sm;
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-xs;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .gameList {

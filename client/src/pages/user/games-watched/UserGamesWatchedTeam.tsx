@@ -48,7 +48,7 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
 
 const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
 
-const getTeamName = (team: WatchedTeam) => team.team_name || team.name;
+const getTeamName = (team: WatchedTeam | TeamRecord) => team.team_name || team.name;
 
 const formatRecord = ({ wins, losses, otSoLosses }: TeamWatchSummary['record']) =>
   `${wins}-${losses}-${otSoLosses}`;
@@ -95,7 +95,7 @@ const formatDate = (value: string | null | undefined) => {
 
 const formatScheduledWatchDate = (value: string | null | undefined) => {
   const date = formatDate(value);
-  return date ? `Scheduled watch: ${date}` : undefined;
+  return date ? `Watched on ${date}` : undefined;
 };
 
 const formatTime = (hhmm: string | null | undefined) => {
@@ -131,7 +131,7 @@ const formatStatusLabel = (game: GameRecord) => {
 const gameIncludesTeam = (game: GameRecord, teamId: string) =>
   game.home_team.id === teamId || game.away_team.id === teamId;
 
-const getTeamSlug = (team: WatchedTeam) =>
+const getTeamSlug = (team: WatchedTeam | TeamRecord) =>
   userWatchedTeamRouteSlug({
     teamCode: team.code,
     teamName: getTeamName(team),
@@ -139,7 +139,7 @@ const getTeamSlug = (team: WatchedTeam) =>
     teamId: team.id,
   });
 
-const getLegacyTeamSlug = (team: WatchedTeam) =>
+const getLegacyTeamSlug = (team: WatchedTeam | TeamRecord) =>
   userWatchedTeamRouteSlug({
     teamCode: team.code,
     teamId: team.id,
@@ -246,12 +246,15 @@ const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
               size={60}
               className={styles.heroLogo}
             />
-            <div className={styles.heroText}>
-              {team.place_name && <span className={styles.heroPlace}>{team.place_name}</span>}
-              <h2 className={styles.heroName}>{teamName}</h2>
-              <span className={styles.heroMeta}>
-                {count} seen <span aria-hidden="true">•</span> {formatRecord(record)}
-              </span>
+            <div className={styles.heroTeamInfo}>
+              <div className={styles.heroText}>
+                {team.place_name && <span className={styles.heroPlace}>{team.place_name}</span>}
+                <h2 className={styles.heroName}>{teamName}</h2>
+                <span className={styles.heroTeamMeta}>{formatRecord(record)}</span>
+              </div>
+              <div className={styles.heroRecord}>
+                <span className={styles.heroRecordValue}>{count}x</span>
+              </div>
             </div>
           </div>
         </section>
@@ -317,16 +320,6 @@ const UserGamesWatchedTeam = () => {
     [years],
   );
 
-  const summary = useMemo(() => {
-    if (!allTeamSummary) return null;
-    if (selectedYear === ALL_YEARS) return allTeamSummary;
-    return (
-      getWatchedTeamSummaries(allTeamGames, selectedYear).find(
-        (item) => item.team.id === allTeamSummary.team.id,
-      ) ?? allTeamSummary
-    );
-  }, [allTeamGames, allTeamSummary, selectedYear]);
-
   const teamGames = useMemo(
     () =>
       selectedYear === ALL_YEARS
@@ -376,16 +369,24 @@ const UserGamesWatchedTeam = () => {
     );
   }
 
-  if (!allTeamSummary || !summary) {
+  if (!allTeamSummary) {
     return <p className={styles.emptyState}>Watched team not found.</p>;
   }
 
   return (
     <div className={styles.page}>
-      <TeamWatchedHero summary={summary} />
+      <TeamWatchedHero summary={allTeamSummary} />
 
       <Section
         title="Watched Games"
+        titleAccessory={
+          <span
+            className={styles.sectionSeenCount}
+            aria-label={`${teamGames.length} watched ${teamGames.length === 1 ? 'game' : 'games'} shown`}
+          >
+            {teamGames.length}
+          </span>
+        }
         action={
           <div className={styles.yearFilter}>
             <span

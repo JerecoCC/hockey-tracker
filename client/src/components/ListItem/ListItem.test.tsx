@@ -52,6 +52,11 @@ describe('ListItem – image', () => {
     expect(screen.getByAltText('')).toHaveAttribute('src', 'https://example.com/logo.png');
   });
 
+  it('uses a custom image size when provided', () => {
+    renderItem({ name: 'Leafs', image: 'https://example.com/logo.png', imageSize: 34 });
+    expect(screen.getByAltText('').parentElement).toHaveStyle({ width: '34px', height: '34px' });
+  });
+
   it('does not render a placeholder when image is provided', () => {
     renderItem({ name: 'Leafs', image: 'https://example.com/logo.png' });
     expect(screen.queryByText('Lea')).not.toBeInTheDocument();

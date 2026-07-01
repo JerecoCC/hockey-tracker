@@ -64,6 +64,8 @@ interface Props {
   image?: string | null;
   imageDark?: string | null;
   imageLight?: string | null;
+  /** Overrides the default main image size in pixels. */
+  imageSize?: number;
   /** Optional custom node that replaces the built-in image / placeholder block. */
   imageNode?: ReactNode;
   /** Controls the shape of the image and placeholder. Defaults to 'square'. */
@@ -121,6 +123,7 @@ const ListItem = ({
   image,
   imageDark,
   imageLight,
+  imageSize = 48,
   imageNode,
   image_shape = 'square',
   hideImage = false,
@@ -159,7 +162,6 @@ const ListItem = ({
   const hasRightContent = rightContent !== undefined && rightContent !== null && rightContent !== false;
   const isButtonRow = Boolean(onClick) && !href;
   const imageLabel = placeholder ?? (codeValue ?? name ?? '').slice(0, 3);
-  const imageSize = 48;
   const imageClassName = image
     ? [styles.logo, isCircle && styles.logoCircle].filter(Boolean).join(' ')
     : [styles.logoPlaceholder, isCircle && styles.logoPlaceholderCircle].filter(Boolean).join(' ');

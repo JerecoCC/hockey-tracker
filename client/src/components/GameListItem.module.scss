@@ -11,11 +11,13 @@
   gap: $space-lg;
   padding: $space-md $space-lg;
   border-radius: $radius-md;
-  border: 1px solid $border;
-  transition: background $transition-fast;
+  border: 1px solid var(--app-border, #{$border});
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
 
     .actions {
       opacity: 1;

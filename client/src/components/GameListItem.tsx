@@ -166,8 +166,8 @@ const GameListItem = ({
       {/* Middle — always present so the badge is always pushed to the right */}
       <div className={styles.middle}>
         {metaLine && <b className={styles.metaLine}>{metaLine}</b>}
-        {venue && <span className={styles.venue}>{venue}</span>}
         {supplementalMeta && <span className={styles.supplementalMeta}>{supplementalMeta}</span>}
+        {venue && <span className={styles.venue}>{venue}</span>}
       </div>
 
       {/* Status badge — rightmost */}
