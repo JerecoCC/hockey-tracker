@@ -7,15 +7,6 @@
   gap: $space-md;
 }
 
-.assetRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  column-gap: $space-md;
-  row-gap: $space-lg;
-}
-
 .identityRow {
   display: grid;
   grid-template-columns: minmax(5.75rem, 1fr) minmax(0, 3fr) minmax(0, 3fr);

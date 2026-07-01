@@ -7,6 +7,7 @@ import Modal from '@/components/Modal/Modal';
 import { type TeamDetailRecord } from '@/hooks/useTeamDetails';
 import { type CreateTeamData } from '@/hooks/useTeams';
 import { descriptionHtmlToTextarea, textareaToDescriptionHtml } from '@/lib/descriptionHtml';
+import TeamLogoUploadGroup from './TeamLogoUploadGroup';
 import styles from './TeamEditModal.module.scss';
 
 interface FormValues {
@@ -142,28 +143,21 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <div className={styles.assetRow}>
-          <LogoUpload
-            control={control}
-            name="logo_dark"
-            label="Logo (Dark)"
-            disabled={isSubmitting}
-          />
-          <LogoUpload
-            control={control}
-            name="logo_light"
-            label="Logo (Light)"
-            disabled={isSubmitting}
-          />
-          <LogoUpload
-            control={control}
-            name="icon"
-            label="Header Icon"
-            accept="image/x-icon,image/vnd.microsoft.icon,.ico"
-            hint="Upload .ico"
-            disabled={isSubmitting}
-          />
-        </div>
+        <LogoUpload
+          control={control}
+          name="icon"
+          label="Header Icon"
+          accept="image/x-icon,image/vnd.microsoft.icon,.ico"
+          hint="Upload .ico"
+          full
+          previewSize="icon"
+          pasteMode="focus"
+          disabled={isSubmitting}
+        />
+        <TeamLogoUploadGroup
+          control={control}
+          disabled={isSubmitting}
+        />
         <div className={styles.identityRow}>
           <Field
             label="Code"

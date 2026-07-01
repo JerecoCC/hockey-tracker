@@ -1,0 +1,11 @@
+@use 'styles/mixins' as *;
+
+.logoGroup {
+  --grouped-fields-grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: $bp-tablet) {
+  .logoGroup {
+    --grouped-fields-grid-template-columns: minmax(0, 1fr);
+  }
+}

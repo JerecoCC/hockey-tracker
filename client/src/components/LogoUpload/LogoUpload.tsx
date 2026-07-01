@@ -15,8 +15,11 @@ interface Props {
   /** `'square'` (default) for logos; `'circle'` for player photos. */
   shape?: 'square' | 'circle';
   align?: 'center' | 'start';
+  full?: boolean;
+  previewSize?: 'default' | 'icon';
   accept?: string;
   hint?: string;
+  pasteMode?: 'document' | 'focus' | 'none';
 }
 
 const LogoUpload = (props: Props) => {
@@ -29,8 +32,11 @@ const LogoUpload = (props: Props) => {
     autoFocus,
     shape = 'square',
     align = 'center',
+    full = false,
+    previewSize = 'default',
     accept = 'image/*,image/svg+xml,.svg',
     hint = 'Click to browse · or paste from clipboard',
+    pasteMode = 'document',
   } = props;
   const isCircle = shape === 'circle';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -39,6 +45,7 @@ const LogoUpload = (props: Props) => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const labelRef = useRef<HTMLLabelElement>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
   const [preview, setPreview] = useState('');
   const [previewFailed, setPreviewFailed] = useState(false);
 
@@ -65,7 +72,8 @@ const LogoUpload = (props: Props) => {
   const displayIsIco =
     displayNameLower.endsWith('.ico') ||
     displayUrlPath.endsWith('.ico') ||
-    (field.value instanceof File && ['image/x-icon', 'image/vnd.microsoft.icon'].includes(field.value.type));
+    (field.value instanceof File &&
+      ['image/x-icon', 'image/vnd.microsoft.icon'].includes(field.value.type));
 
   useEffect(() => {
     setPreviewFailed(false);
@@ -104,8 +112,11 @@ const LogoUpload = (props: Props) => {
 
   // Clipboard paste support — active while the component is mounted and not disabled
   useEffect(() => {
-    if (disabled) return;
+    if (disabled || pasteMode === 'none') return;
     const handlePaste = (e: ClipboardEvent) => {
+      if (pasteMode === 'focus' && !sectionRef.current?.contains(document.activeElement)) {
+        return;
+      }
       const items = e.clipboardData?.items;
       if (!items) return;
       for (const item of Array.from(items)) {
@@ -122,10 +133,13 @@ const LogoUpload = (props: Props) => {
     document.addEventListener('paste', handlePaste);
     return () => document.removeEventListener('paste', handlePaste);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [disabled]);
+  }, [disabled, pasteMode]);
 
   return (
-    <div className={`${styles.logoSection} ${align === 'start' ? styles.logoSectionStart : ''}`}>
+    <div
+      ref={sectionRef}
+      className={`${styles.logoSection} ${align === 'start' ? styles.logoSectionStart : ''} ${full ? styles.logoSectionFull : ''} ${previewSize === 'icon' ? styles.logoSectionIcon : ''}`}
+    >
       {label && <span className={styles.labelText}>{label}</span>}
       {displayUrl ? (
         <div className={`${styles.previewWrapper} ${isCircle ? styles.previewWrapperCircle : ''}`}>
