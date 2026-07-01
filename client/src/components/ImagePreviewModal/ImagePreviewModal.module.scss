@@ -1,10 +1,21 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 .overlay {
+  --image-preview-overlay-bg: rgba(0, 0, 0, 0.6);
+  --image-preview-img-bg: rgba(15, 23, 42, 0.16);
+  --image-preview-img-border: rgba(255, 255, 255, 0.08);
+  --image-preview-shadow: rgba(0, 0, 0, 0.6);
+  --image-preview-close-border: rgba(255, 255, 255, 0.22);
+  --image-preview-close-bg: rgba(15, 23, 42, 0.72);
+  --image-preview-close-color: #fff;
+  --image-preview-close-shadow: rgba(0, 0, 0, 0.28);
+  --image-preview-close-hover-border: rgba(255, 255, 255, 0.36);
+  --image-preview-close-hover-bg: rgba(15, 23, 42, 0.9);
+
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--image-preview-overlay-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -32,8 +43,10 @@
   max-height: calc(100vh - #{$space-4xl} * 2);
   width: auto;
   height: auto;
+  background: var(--image-preview-img-bg);
+  border: 1px solid var(--image-preview-img-border);
   border-radius: $radius-lg;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 25px 60px var(--image-preview-shadow);
   user-select: none;
 }
 
@@ -49,28 +62,27 @@
 
 // Visual styling for the button itself (rendered inside the Tooltip wrapper).
 .closeBtnInner {
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid var(--image-preview-close-border);
+  background: var(--image-preview-close-bg);
   border-radius: 50%;
-  color: #fff;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  color: var(--image-preview-close-color);
+  box-shadow: 0 10px 24px var(--image-preview-close-shadow);
 
   &:hover {
-    border-color: rgba(255, 255, 255, 0.36);
-    background: rgba(15, 23, 42, 0.9);
-    color: #fff;
+    border-color: var(--image-preview-close-hover-border);
+    background: var(--image-preview-close-hover-bg);
+    color: var(--image-preview-close-color);
   }
 }
 
-:global(:root[data-theme='light']) .closeBtnInner {
-  border-color: rgba(15, 23, 42, 0.18);
-  background: rgba(255, 255, 255, 0.92);
-  color: #0f172a;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.2);
-
-  &:hover {
-    border-color: rgba(15, 23, 42, 0.28);
-    background: #fff;
-    color: #0f172a;
-  }
+:global(:root[data-theme='light']) .overlay {
+  --image-preview-img-bg: rgba(255, 255, 255, 0.7);
+  --image-preview-img-border: rgba(15, 23, 42, 0.12);
+  --image-preview-shadow: rgba(15, 23, 42, 0.24);
+  --image-preview-close-border: rgba(15, 23, 42, 0.16);
+  --image-preview-close-bg: rgba(255, 255, 255, 0.82);
+  --image-preview-close-color: #0f172a;
+  --image-preview-close-shadow: rgba(15, 23, 42, 0.18);
+  --image-preview-close-hover-border: rgba(15, 23, 42, 0.28);
+  --image-preview-close-hover-bg: #fff;
 }
