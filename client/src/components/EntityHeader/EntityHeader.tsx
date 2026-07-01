@@ -26,6 +26,7 @@ interface Props {
   textColor: string;
   swatches?: Swatch[];
   onEdit?: () => void;
+  editIconOnly?: boolean;
 }
 
 const EntityHeader = ({
@@ -41,6 +42,7 @@ const EntityHeader = ({
   textColor,
   swatches = [],
   onEdit,
+  editIconOnly = false,
 }: Props) => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const themeContext = useContext(ThemeContext);
@@ -95,9 +97,11 @@ const EntityHeader = ({
                     variant="outlined"
                     intent="neutral"
                     icon="edit"
+                    tooltip={editIconOnly ? 'Edit' : undefined}
+                    aria-label={editIconOnly ? 'Edit' : undefined}
                     onClick={onEdit}
                   >
-                    Edit
+                    {editIconOnly ? undefined : 'Edit'}
                   </Button>
                 )}
                 {actions}

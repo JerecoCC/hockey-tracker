@@ -40,6 +40,7 @@ const TeamInfoTab = ({ team, groups, uploadLogo, updateTeam }: Props) => {
           primaryColor={team.primary_color}
           textColor={team.text_color}
           onEdit={() => setEditModalOpen(true)}
+          editIconOnly
           swatches={[
             { label: 'Primary', color: team.primary_color },
             { label: 'Secondary', color: team.secondary_color },

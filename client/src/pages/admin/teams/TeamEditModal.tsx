@@ -1,6 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
+import GroupedFields from '@/components/GroupedFields/GroupedFields';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
 import Modal from '@/components/Modal/Modal';
 import { type TeamDetailRecord } from '@/hooks/useTeamDetails';
@@ -192,29 +193,6 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
             disabled={isSubmitting}
           />
         </div>
-        <div className={styles.colorRow}>
-          <Field
-            label="Primary Color"
-            type="color"
-            control={control}
-            name="primary_color"
-            disabled={isSubmitting}
-          />
-          <Field
-            label="Secondary Color"
-            type="color"
-            control={control}
-            name="secondary_color"
-            disabled={isSubmitting}
-          />
-          <Field
-            label="Text Color"
-            type="color"
-            control={control}
-            name="text_color"
-            disabled={isSubmitting}
-          />
-        </div>
         <div className={styles.locationRow}>
           <Field
             label="City"
@@ -231,6 +209,32 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
             disabled={isSubmitting}
           />
         </div>
+        <GroupedFields
+          legend="Team Colors"
+          className={styles.colorGroup}
+        >
+          <Field
+            label="Primary"
+            type="color"
+            control={control}
+            name="primary_color"
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Secondary"
+            type="color"
+            control={control}
+            name="secondary_color"
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Text"
+            type="color"
+            control={control}
+            name="text_color"
+            disabled={isSubmitting}
+          />
+        </GroupedFields>
         <Field
           label="Description"
           type="textarea"

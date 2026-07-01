@@ -10,6 +10,10 @@ const defaultProps = {
   textColor: '#ffffff',
 };
 
+beforeAll(() => {
+  Object.defineProperty(window, 'scrollTo', { value: jest.fn(), writable: true });
+});
+
 beforeEach(() => jest.clearAllMocks());
 
 describe('EntityHeader – name and code', () => {
@@ -72,6 +76,17 @@ describe('EntityHeader – edit button', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /edit/i }));
     expect(onEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders an accessible icon-only edit button when requested', () => {
+    render(
+      <EntityHeader
+        {...defaultProps}
+        onEdit={jest.fn()}
+        editIconOnly
+      />,
+    );
+    expect(screen.getByRole('button', { name: /edit/i })).toHaveAttribute('aria-label', 'Edit');
   });
 
   it('renders no button when onEdit is omitted', () => {
