@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Accordion from '@/components/Accordion/Accordion';
+import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import Modal from '@/components/Modal/Modal';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
@@ -21,8 +22,7 @@ import styles from './GameDetailsPage.module.scss';
 import { PERIOD, PERIOD_ORDER } from './constants';
 import { compareGoalieStats } from './goalieStatsOrdering';
 
-const fmt = (first: string | null, last: string | null) =>
-  [first, last].filter(Boolean).join(' ');
+const fmt = (first: string | null, last: string | null) => [first, last].filter(Boolean).join(' ');
 
 const jerseyChipLabel = (jerseyNumber: number | null) =>
   jerseyNumber == null ? null : String(jerseyNumber).replace(/\D/g, '').slice(0, 2);
@@ -72,8 +72,7 @@ const addPeriodsThrough = (periods: Set<string>, period: string | null | undefin
   const normalized = normalizeGamePeriodForStints(period);
   const periodIndex = normalized ? PERIOD_ORDER_VALUES.indexOf(normalized) : -1;
   const thirdPeriodIndex = PERIOD_ORDER_VALUES.indexOf(PERIOD.THIRD);
-  const lastRegulationIndex =
-    periodIndex >= 0 ? Math.min(periodIndex, thirdPeriodIndex) : 0;
+  const lastRegulationIndex = periodIndex >= 0 ? Math.min(periodIndex, thirdPeriodIndex) : 0;
 
   for (let index = 0; index <= lastRegulationIndex; index += 1) {
     const periodId = PERIOD_ORDER_VALUES[index];
@@ -175,9 +174,7 @@ interface GoalieStatsFormValues {
 const lastStintForRow = (row: GoalieEditRow) => row.stints[row.stints.length - 1];
 
 const addStintBlockReason = (row: GoalieEditRow) => {
-  const incompleteExit = row.stints.find(
-    (stint) => !stint.exited_period || !stint.exited_time,
-  );
+  const incompleteExit = row.stints.find((stint) => !stint.exited_period || !stint.exited_time);
   if (!incompleteExit) return null;
   return incompleteExit.exited_period
     ? 'Set an exit time before adding another stint'
@@ -729,18 +726,18 @@ const GoalieStatsEditModal = ({
               }
               headerRight={
                 <div className={styles.goalieStatsEditorTotals}>
-                  <span className={styles.goalieStatsEditorTotalPill}>
-                    <b>{totals.shots}</b>
-                    SA
-                  </span>
-                  <span className={styles.goalieStatsEditorTotalPill}>
-                    <b>{totals.saves}</b>
-                    SV
-                  </span>
-                  <span className={styles.goalieStatsEditorTotalPill}>
-                    <b>{totals.goals}</b>
-                    GA
-                  </span>
+                  <Badge
+                    label="SA"
+                    value={totals.shots}
+                  />
+                  <Badge
+                    label="SV"
+                    value={totals.saves}
+                  />
+                  <Badge
+                    label="GA"
+                    value={totals.goals}
+                  />
                 </div>
               }
               hoverActions={[

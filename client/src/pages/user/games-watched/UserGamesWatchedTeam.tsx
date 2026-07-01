@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import Badge from '@/components/Badge/Badge';
 import Card from '@/components/Card/Card';
 import GameListItem from '@/components/GameListItem';
 import Section from '@/components/Section/Section';
@@ -148,9 +149,7 @@ const getLegacyTeamSlug = (team: WatchedTeam | TeamRecord) =>
   });
 
 const teamMatchesSlug = (team: WatchedTeam | TeamRecord, teamSlug: string) =>
-  team.id === teamSlug ||
-  getTeamSlug(team) === teamSlug ||
-  getLegacyTeamSlug(team) === teamSlug;
+  team.id === teamSlug || getTeamSlug(team) === teamSlug || getLegacyTeamSlug(team) === teamSlug;
 
 const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
   const { team, count, record } = summary;
@@ -325,17 +324,11 @@ const UserGamesWatchedTeam = () => {
 
   const allSummaries = useMemo(() => getWatchedTeamSummaries(watchedGames), [watchedGames]);
   const watchedSummary = useMemo(
-    () =>
-      allSummaries.find(
-        (item) => teamMatchesSlug(item.team, teamSlug),
-      ) ?? null,
+    () => allSummaries.find((item) => teamMatchesSlug(item.team, teamSlug)) ?? null,
     [allSummaries, teamSlug],
   );
   const selectedTeam = useMemo(
-    () =>
-      watchedSummary?.team ??
-      teams.find((team) => teamMatchesSlug(team, teamSlug)) ??
-      null,
+    () => watchedSummary?.team ?? teams.find((team) => teamMatchesSlug(team, teamSlug)) ?? null,
     [teams, teamSlug, watchedSummary],
   );
   const allTeamSummary = useMemo(() => {
@@ -417,12 +410,10 @@ const UserGamesWatchedTeam = () => {
       <Section
         title="Watched Games"
         titleAccessory={
-          <span
-            className={styles.sectionSeenCount}
+          <Badge
+            value={teamGames.length}
             aria-label={`${teamGames.length} watched ${teamGames.length === 1 ? 'game' : 'games'} shown`}
-          >
-            {teamGames.length}
-          </span>
+          />
         }
         action={
           <div className={styles.yearFilter}>

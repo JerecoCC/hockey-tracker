@@ -1,0 +1,51 @@
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
+
+.badge {
+  --badge-default-bg: color-mix(
+    in srgb,
+    var(--app-surface, #{$bg-card}) 72%,
+    var(--app-bg, #{$bg-page})
+  );
+  --badge-default-border-color: color-mix(
+    in srgb,
+    var(--app-text-subtle, #{$text-light}) 44%,
+    transparent
+  );
+
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: var(--badge-justify-content, center);
+  gap: var(--badge-gap, 4px);
+  flex-shrink: 0;
+  min-width: var(--badge-min-width, 48px);
+  min-height: var(--badge-min-height, 24px);
+  padding: var(--badge-padding, 4px #{$space-sm});
+  border: 1px solid var(--badge-border-color, var(--badge-default-border-color));
+  border-radius: var(--badge-border-radius, #{$radius-sm});
+  background: var(--badge-bg, var(--badge-default-bg));
+  color: var(--badge-label-color, var(--app-text-muted, #{$text-dim}));
+  font-size: var(--badge-font-size, #{$font-xs});
+  font-weight: var(--badge-font-weight, 700);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.label {
+  color: var(--badge-label-color, var(--app-text-muted, #{$text-dim}));
+  font-size: var(--badge-label-font-size, var(--badge-font-size, #{$font-xs}));
+  font-weight: var(--badge-label-font-weight, var(--badge-font-weight, 700));
+}
+
+.value {
+  color: var(--badge-value-color, var(--app-text, #{$text-body}));
+  font-size: var(--badge-value-font-size, #{$font-sm});
+  font-weight: var(--badge-value-font-weight, var(--badge-font-weight, 700));
+}
+
+:global(:root[data-theme='light']) .badge {
+  --badge-default-bg: var(--app-field-bg, #edf3fa);
+  --badge-default-border-color: var(--app-field-border, #bfccd9);
+}

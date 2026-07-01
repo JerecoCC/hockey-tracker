@@ -228,20 +228,6 @@ $hero-strip-duration: 0.42s;
   }
 }
 
-.sectionSeenCount {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 0 $space-sm;
-  border: 1px solid var(--app-border, #{$border});
-  border-radius: $radius-sm;
-  color: var(--app-text-muted, #{$text-dim});
-  font-size: $font-xs;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
-}
-
 .gameList {
   display: flex;
   flex-direction: column;

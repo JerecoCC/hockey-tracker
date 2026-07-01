@@ -1,5 +1,5 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 // ── Shared text helpers ───────────────────────────────────────────────────────
 
@@ -279,16 +279,14 @@
     border: 2px solid rgba($info-light, 0.9);
     border-radius: $radius-lg;
     overflow: hidden;
-    background:
-      linear-gradient(90deg, rgba($info, 0.34), rgba($bg-card, 0.98) 42%),
-      $bg-card;
+    background: linear-gradient(90deg, rgba($info, 0.34), rgba($bg-card, 0.98) 42%), $bg-card;
     box-shadow:
       0 0 0 1px rgba($info-light, 0.16),
       0 16px 34px rgba(0, 0, 0, 0.36),
       0 0 28px rgba($info, 0.22);
 
     &::before {
-      content: "";
+      content: '';
       position: absolute;
       inset: 0 auto 0 0;
       width: 5px;
@@ -365,7 +363,7 @@
   &LockedRegion {
     opacity: 0.62;
 
-    :is(button, a, input, select, textarea, [role="button"]) {
+    :is(button, a, input, select, textarea, [role='button']) {
       pointer-events: none;
     }
 
@@ -899,7 +897,7 @@
       flex-shrink: 0;
     }
 
-    input[type="number"] {
+    input[type='number'] {
       display: block;
       width: 100%;
       box-sizing: border-box;
@@ -945,7 +943,7 @@
   }
 
   // Inputs fill their label container and use compact horizontal padding
-  input[type="number"] {
+  input[type='number'] {
     display: block;
     width: 100%;
     box-sizing: border-box;
@@ -967,11 +965,7 @@
 }
 
 .goalieStatsEditor {
-  --goalie-stats-editor-border: color-mix(
-    in srgb,
-    var(--app-border, #{$border}) 78%,
-    transparent
-  );
+  --goalie-stats-editor-border: color-mix(in srgb, var(--app-border, #{$border}) 78%, transparent);
   --goalie-stats-editor-chip-bg: color-mix(
     in srgb,
     var(--app-surface, #{$bg-card}) 84%,
@@ -983,16 +977,6 @@
     transparent
   );
   --goalie-stats-editor-chip-text: var(--app-text-subtle, #{$text-light});
-  --goalie-stats-editor-pill-bg: color-mix(
-    in srgb,
-    var(--app-surface, #{$bg-card}) 72%,
-    transparent
-  );
-  --goalie-stats-editor-pill-border: color-mix(
-    in srgb,
-    var(--app-text-subtle, #{$text-light}) 44%,
-    transparent
-  );
   --goalie-stats-editor-stint-bg: var(--app-surface, #{$bg-card});
 
   display: flex;
@@ -1125,26 +1109,6 @@
     align-items: center;
     gap: $space-sm;
     flex-shrink: 0;
-
-    b {
-      color: var(--app-text, #{$text-body});
-      font-size: $font-sm;
-    }
-  }
-
-  &TotalPill {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 4px;
-    min-width: 48px;
-    justify-content: center;
-    padding: 4px $space-sm;
-    border: 1px solid var(--goalie-stats-editor-pill-border);
-    border-radius: $radius-sm;
-    background: var(--goalie-stats-editor-pill-bg);
-    color: var(--app-text-muted, #{$text-dim});
-    font-size: $font-xs;
-    font-weight: 700;
   }
 
   &Table {
@@ -1162,8 +1126,6 @@
   --goalie-stats-editor-chip-bg: #f8fafc;
   --goalie-stats-editor-chip-border: #dbe3ee;
   --goalie-stats-editor-chip-text: #64748b;
-  --goalie-stats-editor-pill-bg: #f8fafc;
-  --goalie-stats-editor-pill-border: #dbe3ee;
   --goalie-stats-editor-stint-bg: #ffffff;
 }
 
@@ -1236,7 +1198,7 @@
       font-variant-numeric: tabular-nums;
     }
 
-    input[type="number"] {
+    input[type='number'] {
       width: 56px;
       min-width: 0;
       text-align: center;
@@ -1438,7 +1400,7 @@
     &Totals {
       width: 100%;
 
-      .goalieStatsEditorTotalPill {
+      > * {
         flex: 1;
       }
     }
