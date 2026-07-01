@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import Divider from '@/components/Divider/Divider';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
@@ -134,22 +135,14 @@ const TeamPlayersTab = ({
   };
 
   const renderPlayer = (p: TeamPlayerRecord) => {
-    const actions: ListItemAction[] = [
-      {
-        icon: 'open_in_new',
-        intent: 'neutral',
-        tooltip: 'View player',
-        onClick: () =>
-          navigate(
-            buildPlayerDetailsPath({
-              leagueCode,
-              teamCode,
-              firstName: p.first_name,
-              lastName: p.last_name,
-            }),
-          ),
-      },
-    ];
+    const playerName = `${p.first_name} ${p.last_name}`;
+    const playerDetailsPath = buildPlayerDetailsPath({
+      leagueCode,
+      teamCode,
+      firstName: p.first_name,
+      lastName: p.last_name,
+    });
+    const actions: ListItemAction[] = [];
 
     if (isProspectsView) {
       actions.push(
@@ -208,7 +201,7 @@ const TeamPlayersTab = ({
             size={48}
           />
         }
-        name={`${p.first_name} ${p.last_name}`}
+        name={playerName}
         placeholder={`${p.first_name[0]}${p.last_name[0]}`}
         primaryColor={p.primary_color ?? undefined}
         textColor={p.text_color ?? undefined}
@@ -223,6 +216,8 @@ const TeamPlayersTab = ({
                 intent: p.is_active ? 'success' : 'neutral',
               }
         }
+        onClick={() => navigate(playerDetailsPath)}
+        ariaLabel={`Open ${playerName}`}
         actions={actions}
       />
     );
@@ -230,7 +225,7 @@ const TeamPlayersTab = ({
 
   const renderPlayerSkeletons = (sectionTitle: string) => (
     <ul
-      className={[styles.rosterList, styles.rosterSkeletonList].join(' ')}
+      className={[styles.rosterList, styles.listSkeletonList].join(' ')}
       aria-label={`${sectionTitle} loading`}
     >
       {Array.from({ length: PLAYER_SECTION_SKELETON_ROW_COUNT }, (_, index) => (
@@ -238,7 +233,7 @@ const TeamPlayersTab = ({
           as="li"
           key={`${sectionTitle}-skeleton-${index}`}
           type="card"
-          className={styles.rosterSkeletonRow}
+          className={styles.listSkeletonRow}
         />
       ))}
     </ul>
@@ -294,10 +289,7 @@ const TeamPlayersTab = ({
         titleAccessory={
           leagueSeasons.length > 0 ? (
             <div className={styles.playerHeaderSeasonGroup}>
-              <span
-                className={styles.playerHeaderDivider}
-                aria-hidden="true"
-              />
+              <Divider variant="vertical" />
               <div className={styles.playerSeasonSelect}>
                 <SeasonSelect
                   value={selectedSeasonId}

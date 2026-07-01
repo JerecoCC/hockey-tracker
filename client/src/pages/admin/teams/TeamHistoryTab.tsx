@@ -7,8 +7,11 @@ import LogoUpload from '@/components/LogoUpload/LogoUpload';
 import Modal from '@/components/Modal/Modal';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Section from '@/components/Section/Section';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import useTeamHistory, { type TeamIteration } from '@/hooks/useTeamHistory';
 import styles from './TeamDetails.module.scss';
+
+const HISTORY_SKELETON_ROW_COUNT = 3;
 
 interface Props {
   teamId: string;
@@ -58,6 +61,22 @@ const resolveUploadedAsset = async (
   return typeof value === 'string' ? value : null;
 };
 
+const renderHistorySkeletons = () => (
+  <ul
+    className={[styles.historyList, styles.listSkeletonList].join(' ')}
+    aria-label="Team history loading"
+  >
+    {Array.from({ length: HISTORY_SKELETON_ROW_COUNT }, (_, index) => (
+      <Skeleton
+        as="li"
+        key={`team-history-skeleton-${index}`}
+        type="card"
+        className={styles.listSkeletonRow}
+      />
+    ))}
+  </ul>
+);
+
 const TeamHistoryTab = ({
   teamId,
   teamName,
@@ -78,7 +97,6 @@ const TeamHistoryTab = ({
   const [deleteTarget, setDeleteTarget] = useState<TeamIteration | null>(null);
 
   const isEditing = editTarget !== null;
-
 
   const {
     control,
@@ -201,7 +219,7 @@ const TeamHistoryTab = ({
         }
       >
         {isLoading ? (
-          <p className={styles.tabPlaceholder}>Loading…</p>
+          renderHistorySkeletons()
         ) : iterations.length === 0 ? (
           <p className={styles.tabPlaceholder}>
             No versions recorded yet. Use &ldquo;Record Version&rdquo; to snapshot the team&apos;s

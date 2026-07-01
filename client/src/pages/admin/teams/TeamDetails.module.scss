@@ -98,6 +98,15 @@
   text-align: center;
 }
 
+.listSkeletonList {
+  pointer-events: none;
+}
+
+.listSkeletonRow {
+  min-height: 74px;
+  border-radius: $radius-md;
+}
+
 // ── Team history tab ───────────────────────────────────────────────────
 .history {
   &List {
@@ -226,13 +235,6 @@
     min-width: 0;
   }
 
-  &HeaderDivider {
-    width: 1px;
-    height: 32px;
-    background: $border;
-    flex-shrink: 0;
-  }
-
   &SeasonSelect {
     --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
@@ -274,15 +276,6 @@
     display: flex;
     flex-direction: column;
     gap: $space-md;
-  }
-
-  &SkeletonList {
-    pointer-events: none;
-  }
-
-  &SkeletonRow {
-    min-height: 74px;
-    border-radius: $radius-md;
   }
 }
 
