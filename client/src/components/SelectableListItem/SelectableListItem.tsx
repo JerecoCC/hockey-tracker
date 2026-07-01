@@ -3,6 +3,8 @@ import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Button, { type ButtonIntent } from '../Button/Button';
 import Checkbox from '../Checkbox/Checkbox';
 import Chip, { type ChipSize } from '../Chip/Chip';
+import Divider from '../Divider/Divider';
+import PlayerAvatar from '../PlayerAvatar/PlayerAvatar';
 import TeamLogo from '../TeamLogo/TeamLogo';
 import styles from './SelectableListItem.module.scss';
 
@@ -92,18 +94,30 @@ const SelectableListItem = ({
 
   return (
     <li
-      className={[styles.item, checked ? styles.checked : '', disabled ? styles.disabled : '']
+      className={[
+        styles.item,
+        checked ? styles.checked : '',
+        disabled ? styles.disabled : '',
+      ]
         .filter(Boolean)
         .join(' ')}
       aria-disabled={disabled}
       onClick={disabled ? undefined : onToggle}
     >
-      <Checkbox
-        checked={checked}
-        onChange={onToggle}
-        disabled={disabled}
-        ariaLabelledBy={labelId}
-      />
+      <span className={styles.selectionRegion}>
+        <span className={styles.checkRegion}>
+          <Checkbox
+            checked={checked}
+            onChange={onToggle}
+            disabled={disabled}
+            ariaLabelledBy={labelId}
+          />
+        </span>
+        <Divider
+          variant="vertical"
+          className={styles.divider}
+        />
+      </span>
 
       {(leadingImage || leadingImagePlaceholder) &&
         (leadingImage ? (
@@ -157,29 +171,14 @@ const SelectableListItem = ({
       )}
 
       {!hideImage && imageShape === 'circle' && (
-        <div
-          className={[
-            styles.image,
-            styles[imageShape],
-            image && !imageBackground ? styles.imageTransparent : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-          style={
-            !image && imagePrimaryColor
-              ? { background: imagePrimaryColor, color: imageTextColor ?? undefined }
-              : undefined
-          }
-        >
-          {image ? (
-            <img
-              src={image}
-              alt=""
-            />
-          ) : (
-            imagePlaceholder
-          )}
-        </div>
+        <PlayerAvatar
+          photo={image}
+          initials={imagePlaceholder ?? ''}
+          primaryColor={!image || imageBackground ? imagePrimaryColor : null}
+          textColor={imageTextColor}
+          size={48}
+          className={styles.playerAvatar}
+        />
       )}
 
       {chip && (

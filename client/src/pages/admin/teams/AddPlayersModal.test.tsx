@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
@@ -22,7 +22,7 @@ const createWrapper = () => {
   );
 };
 
-const renderModal = () => {
+const renderModal = (props: Partial<React.ComponentProps<typeof AddPlayersModal>> = {}) => {
   const Wrapper = createWrapper();
   return render(
     <Wrapper>
@@ -34,6 +34,7 @@ const renderModal = () => {
         seasonId="season-1"
         existingPlayerIds={new Set()}
         addPlayersToRoster={jest.fn()}
+        {...props}
       />
     </Wrapper>,
   );
@@ -135,6 +136,176 @@ describe('AddPlayersModal', () => {
     expect(await screen.findByText('Hilary Knight')).toBeInTheDocument();
     expect(screen.getByText('Forward')).toBeInTheDocument();
     expect(screen.queryByText('F')).not.toBeInTheDocument();
+  });
+
+  it('moves selected players to the top of the list', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'player-first',
+          first_name: 'Amanda',
+          last_name: 'Kessel',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'C',
+          shoots: null,
+          is_active: true,
+          created_at: '2026-01-01T00:00:00.000Z',
+          jersey_number: 28,
+          team_name: null,
+          team_code: null,
+          team_logo: null,
+          primary_color: null,
+          text_color: null,
+        },
+        {
+          id: 'player-second',
+          first_name: 'Blayre',
+          last_name: 'Turnbull',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'F',
+          shoots: null,
+          is_active: true,
+          created_at: '2026-01-01T00:00:00.000Z',
+          jersey_number: 40,
+          team_name: null,
+          team_code: null,
+          team_logo: null,
+          primary_color: null,
+          text_color: null,
+        },
+        {
+          id: 'player-third',
+          first_name: 'Claire',
+          last_name: 'Thompson',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'D',
+          shoots: null,
+          is_active: true,
+          created_at: '2026-01-01T00:00:00.000Z',
+          jersey_number: 42,
+          team_name: null,
+          team_code: null,
+          team_logo: null,
+          primary_color: null,
+          text_color: null,
+        },
+      ],
+    });
+
+    renderModal();
+
+    const list = await screen.findByRole('list');
+    const names = () =>
+      within(list)
+        .getAllByRole('listitem')
+        .map((item) => {
+          if (item.textContent?.includes('Amanda Kessel')) return 'Amanda Kessel';
+          if (item.textContent?.includes('Blayre Turnbull')) return 'Blayre Turnbull';
+          if (item.textContent?.includes('Claire Thompson')) return 'Claire Thompson';
+          return '';
+        });
+
+    expect(names()).toEqual(['Amanda Kessel', 'Blayre Turnbull', 'Claire Thompson']);
+
+    await userEvent.click(screen.getByText('Claire Thompson'));
+
+    expect(names()).toEqual(['Claire Thompson', 'Amanda Kessel', 'Blayre Turnbull']);
+  });
+
+  it('filters available players by section position filter', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'player-forward',
+          first_name: 'Sarah',
+          last_name: 'Nurse',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'C',
+          shoots: null,
+          is_active: true,
+          created_at: '2026-01-01T00:00:00.000Z',
+          jersey_number: 20,
+          team_name: null,
+          team_code: null,
+          team_logo: null,
+          primary_color: null,
+          text_color: null,
+        },
+        {
+          id: 'player-defense',
+          first_name: 'Erin',
+          last_name: 'Ambrose',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'D',
+          shoots: null,
+          is_active: true,
+          created_at: '2026-01-01T00:00:00.000Z',
+          jersey_number: 23,
+          team_name: null,
+          team_code: null,
+          team_logo: null,
+          primary_color: null,
+          text_color: null,
+        },
+        {
+          id: 'player-goalie',
+          first_name: 'Ann-Renee',
+          last_name: 'Desbiens',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'G',
+          shoots: null,
+          is_active: true,
+          created_at: '2026-01-01T00:00:00.000Z',
+          jersey_number: 35,
+          team_name: null,
+          team_code: null,
+          team_logo: null,
+          primary_color: null,
+          text_color: null,
+        },
+      ],
+    });
+
+    renderModal({
+      positionFilter: ['C', 'LW', 'RW', 'L', 'R', 'F'],
+      positionFilterLabel: 'Forwards',
+    });
+
+    expect(await screen.findByText('Sarah Nurse')).toBeInTheDocument();
+    expect(screen.getByText('Add Forwards to Roster')).toBeInTheDocument();
+    expect(screen.getByText('Sarah Nurse').closest('li')).toHaveClass('item');
+    expect(screen.queryByText('Erin Ambrose')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ann-Renee Desbiens')).not.toBeInTheDocument();
   });
 });
 

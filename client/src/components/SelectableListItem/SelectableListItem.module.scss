@@ -2,23 +2,49 @@
 @use 'styles/mixins' as *;
 
 .item {
+  --selectable-list-item-bg: transparent;
+  --selectable-list-item-border-color: var(--app-field-border, #{$border});
+  --selectable-list-item-hover-bg: var(
+    --app-field-bg-hover,
+    rgba(255, 255, 255, 0.04)
+  );
+  --selectable-list-item-hover-border-color: var(--app-field-border-hover, #{$text-dim});
+  --selectable-list-item-checked-bg: color-mix(
+    in srgb,
+    transparent 78%,
+    #{$accent}
+  );
+
   position: relative;
   list-style: none;
   display: flex;
   align-items: center;
   gap: $space-md;
-  padding: $space-sm $space-md;
+  box-sizing: border-box;
+  padding: $space-md;
+  border: 1px solid var(--selectable-list-item-border-color);
   border-radius: $radius-md;
+  background: var(--selectable-list-item-bg);
+  color: var(--app-text, #{$text-body});
   cursor: pointer;
+  outline: none;
   user-select: none;
-  transition: background $transition-fast;
+  transition:
+    background $transition-fast,
+    border-color $transition-base;
 
   &.checked {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--selectable-list-item-checked-bg);
+    border-color: $accent;
+  }
+
+  &:focus-within {
+    border-color: $accent;
   }
 
   &:not(.disabled):hover {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--selectable-list-item-hover-bg);
+    border-color: var(--selectable-list-item-hover-border-color);
 
     .actions {
       opacity: 1;
@@ -35,6 +61,26 @@
     opacity: 0;
     pointer-events: none;
   }
+}
+
+.selectionRegion {
+  display: inline-flex;
+  align-self: stretch;
+  align-items: center;
+  gap: $space-md;
+  flex-shrink: 0;
+}
+
+.checkRegion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.divider {
+  --divider-color: var(--app-field-border, #{$border});
+  --divider-vertical-margin-block: 0;
 }
 
 .leadingLogo {
@@ -86,6 +132,10 @@
     height: 100%;
     object-fit: cover;
   }
+}
+
+.playerAvatar {
+  flex-shrink: 0;
 }
 
 .imageTransparent {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Divider from '@/components/Divider/Divider';
@@ -21,24 +22,33 @@ import BulkTradeModal from './BulkTradeModal';
 import TeamPlayerEditModal from './TeamPlayerEditModal';
 import styles from './TeamDetails.module.scss';
 
+const FORWARD_ADD_PLAYER_POSITIONS = ['C', 'LW', 'RW', 'L', 'R', 'F'] as const;
 const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD', 'D1', 'D2']);
+const GOALIE_POSITIONS = new Set(['G']);
 const PLAYER_SECTION_SKELETON_ROW_COUNT = 3;
 
 const PLAYER_SECTIONS = [
   {
     title: 'Forwards',
-    matches: (p: TeamPlayerRecord) =>
-      p.position !== 'G' && !DEFENSE_POSITIONS.has(p.position ?? ''),
+    addPlayerPositions: FORWARD_ADD_PLAYER_POSITIONS,
+    matches: (p: TeamPlayerRecord) => {
+      const position = (p.position ?? '').toUpperCase();
+      return !GOALIE_POSITIONS.has(position) && !DEFENSE_POSITIONS.has(position);
+    },
   },
   {
     title: 'Defense',
-    matches: (p: TeamPlayerRecord) => DEFENSE_POSITIONS.has(p.position ?? ''),
+    addPlayerPositions: ['D', 'LD', 'RD'],
+    matches: (p: TeamPlayerRecord) => DEFENSE_POSITIONS.has((p.position ?? '').toUpperCase()),
   },
   {
     title: 'Goalies',
-    matches: (p: TeamPlayerRecord) => p.position === 'G',
+    addPlayerPositions: ['G'],
+    matches: (p: TeamPlayerRecord) => GOALIE_POSITIONS.has((p.position ?? '').toUpperCase()),
   },
 ];
+
+type PlayerSection = (typeof PLAYER_SECTIONS)[number];
 
 type PlayerView = 'roster' | 'prospects';
 
@@ -95,6 +105,7 @@ const TeamPlayersTab = ({
     includeProspects: true,
   });
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addModalSection, setAddModalSection] = useState<PlayerSection | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TeamPlayerRecord | null>(null);
@@ -138,6 +149,16 @@ const TeamPlayersTab = ({
     const ok = await removePlayerFromTeam(confirmRemove);
     setIsRemoving(false);
     if (ok) setConfirmRemove(null);
+  };
+
+  const openAddPlayersModal = (section: PlayerSection | null = null) => {
+    setAddModalSection(section);
+    setAddModalOpen(true);
+  };
+
+  const closeAddPlayersModal = () => {
+    setAddModalOpen(false);
+    setAddModalSection(null);
   };
 
   const renderPlayer = (p: TeamPlayerRecord) => {
@@ -275,7 +296,7 @@ const TeamPlayersTab = ({
         icon="group_add"
         size="sm"
         disabled={!selectedSeasonId}
-        onClick={() => setAddModalOpen(true)}
+        onClick={() => openAddPlayersModal()}
       >
         Add Players
       </Button>
@@ -336,7 +357,27 @@ const TeamPlayersTab = ({
           return (
             <Section
               key={section.title}
-              title={`${section.title} (${sectionPlayers.length})`}
+              title={section.title}
+              titleAccessory={
+                <Badge
+                  value={sectionPlayers.length}
+                  aria-label={`${section.title} count`}
+                />
+              }
+              action={
+                readOnly ? null : (
+                  <Button
+                    variant="outlined"
+                    intent="accent"
+                    icon="group_add"
+                    size="sm"
+                    tooltip={`Add ${section.title}`}
+                    aria-label={`Add ${section.title}`}
+                    disabled={!selectedSeasonId}
+                    onClick={() => openAddPlayersModal(section)}
+                  />
+                )
+              }
             >
               {loading ? (
                 renderPlayerSkeletons(section.title)
@@ -385,11 +426,13 @@ const TeamPlayersTab = ({
 
           <AddPlayersModal
             open={addModalOpen}
-            onClose={() => setAddModalOpen(false)}
+            onClose={closeAddPlayersModal}
             teamId={teamId}
             leagueId={leagueId}
             seasonId={selectedSeasonId}
             existingPlayerIds={existingPlayerIds}
+            positionFilter={addModalSection?.addPlayerPositions}
+            positionFilterLabel={addModalSection?.title}
             addPlayersToRoster={addPlayersToRoster}
           />
 

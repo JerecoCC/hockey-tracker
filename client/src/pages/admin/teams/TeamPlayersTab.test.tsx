@@ -6,17 +6,20 @@ import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import TeamPlayersTab from './TeamPlayersTab';
 
 const mockNavigate = jest.fn();
+const mockAddPlayersModal = jest.fn(() => null);
 
 jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
 jest.mock('@/hooks/useSeasons', () => jest.fn());
 jest.mock('@/hooks/useTeamPlayers', () => jest.fn());
 jest.mock('../games/game-details/lineups/LineupCreatePlayersModal', () => () => null);
-jest.mock('./AddPlayersModal', () => () => null);
+jest.mock('./AddPlayersModal', () => (props: any) => mockAddPlayersModal(props));
 jest.mock('./BulkTradeModal', () => () => null);
 jest.mock('./TeamPlayerEditModal', () => () => null);
 
 const mockUseSeasons = useSeasons as jest.Mock;
 const mockUseTeamPlayers = useTeamPlayers as jest.Mock;
+const latestAddPlayersModalProps = () =>
+  mockAddPlayersModal.mock.calls[mockAddPlayersModal.mock.calls.length - 1]?.[0];
 
 const players = [
   {
@@ -25,6 +28,30 @@ const players = [
     last_name: 'Matthews',
     position: 'C',
     jersey_number: 34,
+    is_prospect: false,
+    is_active: true,
+    photo: null,
+    primary_color: '#00205b',
+    text_color: '#ffffff',
+  },
+  {
+    id: 'player-2',
+    first_name: 'Morgan',
+    last_name: 'Rielly',
+    position: 'D',
+    jersey_number: 44,
+    is_prospect: false,
+    is_active: true,
+    photo: null,
+    primary_color: '#00205b',
+    text_color: '#ffffff',
+  },
+  {
+    id: 'player-3',
+    first_name: 'Joseph',
+    last_name: 'Woll',
+    position: 'G',
+    jersey_number: 60,
     is_prospect: false,
     is_active: true,
     photo: null,
@@ -81,6 +108,56 @@ describe('TeamPlayersTab', () => {
     expect(screen.queryByRole('button', { name: /view player/i })).not.toBeInTheDocument();
     expect(container.querySelector('.playerHeaderDivider')).not.toBeInTheDocument();
     expect(container.querySelector('.playerHeaderSeasonGroup .vertical')).toBeInTheDocument();
+  });
+
+  it('keeps toolbar add players and adds filtered bordered section actions', async () => {
+    const user = userEvent.setup();
+    renderTeamPlayersTab();
+
+    expect(screen.getByLabelText('Forwards count')).toHaveTextContent('1');
+    expect(screen.getByLabelText('Defense count')).toHaveTextContent('1');
+    expect(screen.getByLabelText('Goalies count')).toHaveTextContent('1');
+
+    const toolbarAddButton = screen.getByRole('button', { name: 'Add Players' });
+    const forwardsAddButton = screen.getByRole('button', { name: 'Add Forwards' });
+    const defenseAddButton = screen.getByRole('button', { name: 'Add Defense' });
+    const goaliesAddButton = screen.getByRole('button', { name: 'Add Goalies' });
+
+    await user.click(toolbarAddButton);
+    expect(latestAddPlayersModalProps()).toEqual(
+      expect.objectContaining({
+        open: true,
+        positionFilter: undefined,
+        positionFilterLabel: undefined,
+      }),
+    );
+
+    await user.click(forwardsAddButton);
+    expect(latestAddPlayersModalProps()).toEqual(
+      expect.objectContaining({
+        open: true,
+        positionFilter: ['C', 'LW', 'RW', 'L', 'R', 'F'],
+        positionFilterLabel: 'Forwards',
+      }),
+    );
+
+    await user.click(defenseAddButton);
+    expect(latestAddPlayersModalProps()).toEqual(
+      expect.objectContaining({
+        open: true,
+        positionFilter: ['D', 'LD', 'RD'],
+        positionFilterLabel: 'Defense',
+      }),
+    );
+
+    await user.click(goaliesAddButton);
+    expect(latestAddPlayersModalProps()).toEqual(
+      expect.objectContaining({
+        open: true,
+        positionFilter: ['G'],
+        positionFilterLabel: 'Goalies',
+      }),
+    );
   });
 
   it('renders a read-only user roster without admin actions and opens the user player route', async () => {
