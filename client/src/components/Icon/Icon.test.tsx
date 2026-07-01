@@ -116,4 +116,9 @@ describe('Icon', () => {
     const { container } = render(<Icon name="check_box_outline_blank" />);
     expect(container.querySelector('svg')).toBeInTheDocument();
   });
+
+  it('renders an SVG for table_rows', () => {
+    const { container } = render(<Icon name="table_rows" />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
 });

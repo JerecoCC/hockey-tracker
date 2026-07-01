@@ -5,10 +5,12 @@ import axios from 'axios';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import BreadcrumbTitleRow from '@/components/Breadcrumbs/BreadcrumbTitleRow';
 import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
+import useTeams from '@/hooks/useTeams';
 import UserGamesWatchedTeam from './UserGamesWatchedTeam';
 
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn() }));
 jest.mock('axios');
+jest.mock('@/hooks/useTeams');
 jest.mock('@/components/Select/Select', () => ({
   __esModule: true,
   default: ({ value, options, onChange }: any) => (
@@ -34,6 +36,7 @@ jest.mock('@/components/TeamLogo/TeamLogo', () => ({ code, alt }: any) => (
 
 const mockUseQuery = useQuery as jest.Mock;
 const mockAxios = axios as jest.Mocked<typeof axios>;
+const mockUseTeams = useTeams as jest.Mock;
 
 const teamHome = {
   id: 'team-home',
@@ -41,6 +44,8 @@ const teamHome = {
   place_name: 'Toronto',
   code: 'TOR',
   logo: null,
+  logo_dark: null,
+  logo_light: null,
   primary_color: '#003e7e',
   secondary_color: '#ffffff',
   text_color: '#ffffff',
@@ -52,6 +57,8 @@ const teamAway = {
   place_name: 'Boston',
   code: 'BOS',
   logo: null,
+  logo_dark: null,
+  logo_light: null,
   primary_color: '#ffb81c',
   secondary_color: '#111111',
   text_color: '#111111',
@@ -63,8 +70,24 @@ const teamOther = {
   place_name: 'New York',
   code: 'NYR',
   logo: null,
+  logo_dark: null,
+  logo_light: null,
   primary_color: '#0038a8',
   secondary_color: '#ffffff',
+  text_color: '#ffffff',
+};
+
+const teamNoWatched = {
+  id: 'team-no-watched',
+  name: 'Columbus Blue Jackets',
+  place_name: 'Columbus',
+  team_name: 'Blue Jackets',
+  code: 'CBJ',
+  logo: null,
+  logo_dark: null,
+  logo_light: null,
+  primary_color: '#002654',
+  secondary_color: '#ce1126',
   text_color: '#ffffff',
 };
 
@@ -129,9 +152,9 @@ const BreadcrumbHarness = ({ children }: { children: ReactNode }) => {
   );
 };
 
-const renderTeamPage = () =>
+const renderTeamPage = (initialEntry = '/dashboard/games-watched/tor-maple-leafs') =>
   render(
-    <MemoryRouter initialEntries={['/dashboard/games-watched/tor-maple-leafs']}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <BreadcrumbHarness>
         <Routes>
           <Route
@@ -146,6 +169,10 @@ const renderTeamPage = () =>
 describe('UserGamesWatchedTeam', () => {
   beforeEach(() => {
     mockAxios.get.mockReset();
+    mockUseTeams.mockReturnValue({
+      loading: false,
+      teams: [teamHome, teamAway, teamOther, teamNoWatched],
+    });
     mockUseQuery.mockReturnValue({
       isLoading: false,
       data: [
@@ -198,6 +225,16 @@ describe('UserGamesWatchedTeam', () => {
     expect(within(gameRows[0]).getByText('Apr 20, 2026 • 7:00 PM')).toBeInTheDocument();
     expect(within(gameRows[0]).getByText('Round 1 · Game 2')).toBeInTheDocument();
     expect(within(gameRows[1]).getByText('Feb 10, 2026 • 7:00 PM')).toBeInTheDocument();
+  });
+
+  it('keeps the team layout for valid teams with no watched games', () => {
+    renderTeamPage('/dashboard/games-watched/cbj-blue-jackets');
+
+    expect(screen.getByRole('heading', { name: 'Blue Jackets' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Blue Jackets watched games summary')).toBeInTheDocument();
+    expect(screen.getByText(/0 seen/)).toBeInTheDocument();
+    expect(screen.getByText('No watched games.')).toBeInTheDocument();
+    expect(screen.queryByText('Watched team not found.')).not.toBeInTheDocument();
   });
 
   it('filters team games by scheduled game year while showing scheduled watch dates', () => {

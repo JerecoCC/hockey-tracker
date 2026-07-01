@@ -173,6 +173,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
 
   // view toggles
   grid_view: faTableCells,
+  table_rows: faTableCells,
   view_list: faList,
   playlist_add: faLayerGroup,
   account_tree: faLayerGroup,
