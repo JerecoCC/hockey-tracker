@@ -3,8 +3,8 @@
 const path = require('path');
 const dotenv = require('dotenv');
 
-dotenv.config({ path: path.resolve(__dirname, '../../.env.local') });
-dotenv.config({ path: path.resolve(__dirname, '../.env'), override: false });
+dotenv.config({ path: path.resolve(__dirname, '../../.env.local'), quiet: true });
+dotenv.config({ path: path.resolve(__dirname, '../.env'), override: false, quiet: true });
 
 const { sql } = require('../src/db');
 const { rebuildGameStats } = require('../src/lib/gameStatsSnapshots');
@@ -21,6 +21,7 @@ const dryRun = args.has('--dry-run');
 const quiet = args.has('--quiet');
 const limit = readNumberArg('--limit');
 const concurrency = readNumberArg('--concurrency') ?? 8;
+const retries = readNumberArg('--retries') ?? 4;
 const onlyGameId = readStringArg('--game-id');
 const scheduleCache = new Map();
 
@@ -40,6 +41,35 @@ function parseToiSeconds(value) {
   const match = String(value ?? '').trim().match(/^(\d{1,3}):([0-5]\d)$/);
   if (!match) return null;
   return Number(match[1]) * 60 + Number(match[2]);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function retryDelayMs(response, attempt) {
+  const retryAfter = response.headers.get('retry-after');
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
+    const dateMs = Date.parse(retryAfter);
+    if (Number.isFinite(dateMs)) return Math.max(dateMs - Date.now(), 0);
+  }
+  return Math.min(30000, 1000 * (2 ** attempt));
+}
+
+async function fetchJsonWithRetry(url, label) {
+  let lastStatus = null;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const response = await fetch(url);
+    if (response.ok) return response.json();
+
+    lastStatus = response.status;
+    const retryable = [429, 500, 502, 503, 504].includes(response.status);
+    if (!retryable || attempt >= retries) break;
+    await sleep(retryDelayMs(response, attempt));
+  }
+  throw new Error(`${label} returned HTTP ${lastStatus}`);
 }
 
 function formatSeconds(seconds) {
@@ -166,11 +196,10 @@ function collectScheduledGames(schedule, targetDate) {
 
 async function fetchScheduleGames(date) {
   if (scheduleCache.has(date)) return scheduleCache.get(date);
-  const promise = fetch(`https://api-web.nhle.com/v1/schedule/${date}`).then(async (response) => {
-    if (!response.ok) {
-      throw new Error(`NHL schedule ${date} returned HTTP ${response.status}`);
-    }
-    const schedule = await response.json();
+  const promise = fetchJsonWithRetry(
+    `https://api-web.nhle.com/v1/schedule/${date}`,
+    `NHL schedule ${date}`,
+  ).then((schedule) => {
     return collectScheduledGames(schedule, date);
   });
   scheduleCache.set(date, promise);
@@ -216,11 +245,10 @@ function officialGoalies(boxscore) {
 }
 
 async function fetchBoxscore(gamecenterId) {
-  const response = await fetch(`https://api-web.nhle.com/v1/gamecenter/${gamecenterId}/boxscore`);
-  if (!response.ok) {
-    throw new Error(`NHL boxscore ${gamecenterId} returned HTTP ${response.status}`);
-  }
-  return response.json();
+  return fetchJsonWithRetry(
+    `https://api-web.nhle.com/v1/gamecenter/${gamecenterId}/boxscore`,
+    `NHL boxscore ${gamecenterId}`,
+  );
 }
 
 async function loadGames() {
