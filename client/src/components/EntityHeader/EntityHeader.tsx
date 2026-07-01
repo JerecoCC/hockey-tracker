@@ -97,6 +97,7 @@ const EntityHeader = ({
                     variant="outlined"
                     intent="neutral"
                     icon="edit"
+                    iconHeight={editIconOnly ? 'button' : undefined}
                     tooltip={editIconOnly ? 'Edit' : undefined}
                     aria-label={editIconOnly ? 'Edit' : undefined}
                     onClick={onEdit}
