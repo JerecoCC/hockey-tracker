@@ -12,7 +12,6 @@
 .tabList {
   position: relative;
   display: flex;
-  width: fit-content;
   gap: $space-xs;
   padding: $space-sm;
   background: var(--app-surface, #{$bg-card});
@@ -77,7 +76,7 @@
   }
 }
 
-:global(:root[data-theme='light']) {
+:global(:root[data-theme="light"]) {
   .tab {
     color: var(--app-text-muted, #{$text-dim});
 
