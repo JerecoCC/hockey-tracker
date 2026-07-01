@@ -79,11 +79,7 @@ const ActiveSeasonsBadge = ({ team }: { team: TeamDetailRecord }) => {
 const TeamInfoGrid = ({ team, groupLabel }: Props) => {
   return (
     <div className={styles.infoGrid}>
-      <div className={styles.infoBadgeRow}>
-        <LeagueBadge team={team} />
-        {groupLabel && <GroupBadge label={groupLabel} />}
-        <ActiveSeasonsBadge team={team} />
-      </div>
+      <LeagueBadge team={team} />
       <InfoItem
         label="City"
         data={team.city ?? '-'}
@@ -92,6 +88,8 @@ const TeamInfoGrid = ({ team, groupLabel }: Props) => {
         label="Home Arena"
         data={team.home_arena ?? '-'}
       />
+      {groupLabel && <GroupBadge label={groupLabel} />}
+      <ActiveSeasonsBadge team={team} />
       {team.location && (
         <InfoItem
           label="Location"
@@ -99,13 +97,15 @@ const TeamInfoGrid = ({ team, groupLabel }: Props) => {
           icon="location_on"
         />
       )}
-      <InfoItem
-        type="html"
-        label="Description"
-        data={normalizeDescription(team.description) ? team.description : null}
-        muted="No description"
-        full
-      />
+      <div className={styles.infoFullRow}>
+        <InfoItem
+          type="html"
+          label="Description"
+          data={normalizeDescription(team.description) ? team.description : null}
+          muted="No description"
+          full
+        />
+      </div>
     </div>
   );
 };

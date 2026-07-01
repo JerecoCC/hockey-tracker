@@ -49,21 +49,23 @@
 
 // ── Info grid ──────────────────────────────────────────────────────────
 .infoGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: $space-xl;
+
+  > * {
+    flex: 1 1 auto;
+    min-width: min(100%, 200px);
+    max-width: 100%;
+  }
 }
 
-// Full-width flex row inside the grid — for badge groups (League, Group, Active Seasons)
+// Full-width row for rich text inside the wrapping info layout.
 .info {
-  &BadgeRow {
-    grid-column: 1 / -1;
-    display: flex;
-    gap: $space-xl;
-
-    > * {
-      flex: 1;
-    }
+  &FullRow {
+    flex-basis: 100%;
+    min-width: 100%;
   }
 
   &Value {
