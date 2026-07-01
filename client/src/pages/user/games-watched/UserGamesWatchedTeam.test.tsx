@@ -185,6 +185,7 @@ describe('UserGamesWatchedTeam', () => {
           home_score: 4,
           away_score: 2,
           scheduled_for: '2026-04-25',
+          venue: 'Scotiabank Arena',
         }),
       ],
     });
@@ -216,12 +217,26 @@ describe('UserGamesWatchedTeam', () => {
     expect(screen.getByTestId('team-hero-left-strip')).toBeInTheDocument();
     expect(screen.getByTestId('team-hero-right-strip')).toBeInTheDocument();
     expect(screen.getByTestId('team-hero-primary-fill')).toBeInTheDocument();
+    expect(screen.getByLabelText('Toronto Maple Leafs watched games summary')).toHaveTextContent(
+      '2x',
+    );
+    expect(screen.getByLabelText('Toronto Maple Leafs watched games summary')).toHaveTextContent(
+      '2-0-0',
+    );
+    expect(screen.queryByText('W-L-OTL')).not.toBeInTheDocument();
+    expect(screen.queryByText('Seen')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('2 watched games shown')).toBeInTheDocument();
+    expect(screen.getByLabelText('2 watched games shown')).toHaveTextContent('2');
     expect(screen.getByRole('option', { name: 'All' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: '2026' })).toBeInTheDocument();
 
     const gameRows = screen.getAllByRole('listitem');
     expect(gameRows).toHaveLength(2);
-    expect(within(gameRows[0]).getByText('Scheduled watch: Apr 25, 2026')).toBeInTheDocument();
+    expect(within(gameRows[0]).getByText('Watched on Apr 25, 2026')).toBeInTheDocument();
+    expect(within(gameRows[0]).getByText('Scotiabank Arena')).toBeInTheDocument();
+    expect(gameRows[0].textContent?.indexOf('Watched on Apr 25, 2026')).toBeLessThan(
+      gameRows[0].textContent?.indexOf('Scotiabank Arena') ?? 0,
+    );
     expect(within(gameRows[0]).getByText('Apr 20, 2026 • 7:00 PM')).toBeInTheDocument();
     expect(within(gameRows[0]).getByText('Round 1 · Game 2')).toBeInTheDocument();
     expect(within(gameRows[1]).getByText('Feb 10, 2026 • 7:00 PM')).toBeInTheDocument();
@@ -232,7 +247,12 @@ describe('UserGamesWatchedTeam', () => {
 
     expect(screen.getByRole('heading', { name: 'Blue Jackets' })).toBeInTheDocument();
     expect(screen.getByLabelText('Blue Jackets watched games summary')).toBeInTheDocument();
-    expect(screen.getByText(/0 seen/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Blue Jackets watched games summary')).toHaveTextContent('0x');
+    expect(screen.getByLabelText('Blue Jackets watched games summary')).toHaveTextContent(
+      '0-0-0',
+    );
+    expect(screen.getByLabelText('0 watched games shown')).toBeInTheDocument();
+    expect(screen.getByLabelText('0 watched games shown')).toHaveTextContent('0');
     expect(screen.getByText('No watched games.')).toBeInTheDocument();
     expect(screen.queryByText('Watched team not found.')).not.toBeInTheDocument();
   });
@@ -259,10 +279,15 @@ describe('UserGamesWatchedTeam', () => {
 
     fireEvent.change(screen.getByLabelText('Year'), { target: { value: '2025' } });
 
+    expect(screen.getByLabelText('1 watched game shown')).toBeInTheDocument();
+    expect(screen.getByLabelText('1 watched game shown')).toHaveTextContent('1');
+    expect(screen.getByLabelText('Toronto Maple Leafs watched games summary')).toHaveTextContent(
+      '2x',
+    );
     const gameRows = screen.getAllByRole('listitem');
     expect(gameRows).toHaveLength(1);
     expect(within(gameRows[0]).getByText('Dec 31, 2025')).toBeInTheDocument();
-    expect(within(gameRows[0]).getByText('Scheduled watch: Jan 5, 2026')).toBeInTheDocument();
+    expect(within(gameRows[0]).getByText('Watched on Jan 5, 2026')).toBeInTheDocument();
     expect(screen.queryByText('Jan 2, 2026 â€¢ 7:00 PM')).not.toBeInTheDocument();
   });
 

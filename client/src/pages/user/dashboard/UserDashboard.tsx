@@ -206,10 +206,10 @@ const WatchedTeamItem = ({
 
   return (
     <ListItem
-      className={styles.watchTeamItem}
       image={team.logo}
       imageDark={team.logo_dark}
       imageLight={team.logo_light}
+      imageSize={34}
       eyebrow={team.place_name || undefined}
       name={teamName}
       rightContent={
