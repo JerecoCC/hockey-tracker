@@ -15,6 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
 import { type GameRecord } from '@/hooks/useGames';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
+import { buildUserWatchedTeamPath } from '@/lib/routeSlugs';
 import { getWatchedTeamSummaries, type TeamWatchSummary } from '@/lib/watchedTeams';
 import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import styles from './UserDashboard.module.scss';
@@ -190,12 +191,22 @@ const getFavoriteTeamSummaries = (
     .sort(sortWatchedTeamSummaries);
 };
 
-const WatchedTeamItem = ({ summary }: { summary: TeamWatchSummary }) => {
+const getTeamName = (team: TeamWatchSummary['team']) => team.team_name || team.name;
+
+const WatchedTeamItem = ({
+  summary,
+  onSelect,
+}: {
+  summary: TeamWatchSummary;
+  onSelect: (summary: TeamWatchSummary) => void;
+}) => {
   const { team, count } = summary;
-  const teamName = team.team_name || team.name;
+  const teamName = getTeamName(team);
+  const teamLabel = team.place_name ? `${team.place_name} ${teamName}` : teamName;
 
   return (
     <ListItem
+      className={styles.watchTeamItem}
       image={team.logo}
       imageDark={team.logo_dark}
       imageLight={team.logo_light}
@@ -212,6 +223,8 @@ const WatchedTeamItem = ({ summary }: { summary: TeamWatchSummary }) => {
       }
       primaryColor={team.primary_color}
       textColor={team.text_color}
+      onClick={() => onSelect(summary)}
+      ariaLabel={`View ${teamLabel} games watched`}
     />
   );
 };
@@ -503,11 +516,11 @@ const UserDashboard = () => {
                 variant="outlined"
                 intent="neutral"
                 size="sm"
-                icon="open_in_new"
+                icon="table_rows"
+                tooltip="View all games watched"
+                aria-label="View all games watched"
                 onClick={() => navigate('/dashboard/games-watched')}
-              >
-                View All
-              </Button>
+              />
             }
           >
             {watchedTeamsLoading ? (
@@ -520,6 +533,16 @@ const UserDashboard = () => {
                   <WatchedTeamItem
                     key={summary.team.id}
                     summary={summary}
+                    onSelect={(summary) =>
+                      navigate(
+                        buildUserWatchedTeamPath({
+                          teamCode: summary.team.code,
+                          teamName: getTeamName(summary.team),
+                          teamPlaceName: summary.team.place_name,
+                          teamId: summary.team.id,
+                        }),
+                      )
+                    }
                   />
                 ))}
               </ul>

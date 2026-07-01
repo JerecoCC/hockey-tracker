@@ -324,8 +324,16 @@ describe('UserDashboard', () => {
       ),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'View All' }));
+    fireEvent.click(screen.getByRole('button', { name: 'View all games watched' }));
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard/games-watched');
+  });
+
+  it('opens a favorite team watched-games page from the watched list', () => {
+    render(<UserDashboard />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'View Boston Bruins games watched' }));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard/games-watched/bos-bruins');
   });
 
   it('shows the admin test date field in numeric format in the day section header', () => {
