@@ -4,6 +4,7 @@
 .card {
   --sticky-hero-main-inline-padding: var(--main-inline-padding, #{$space-4xl});
   --sticky-hero-main-inline-padding-offset: var(--main-inline-padding-offset, -#{$space-4xl});
+  --sticky-hero-stuck-border: transparent;
 
   position: sticky;
   top: var(--sticky-hero-top, 52px);
@@ -27,8 +28,12 @@
 
 .stuck {
   border-radius: 0 0 $radius-lg $radius-lg !important;
-  border-color: transparent !important;
+  border-color: var(--sticky-hero-stuck-border) !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+:global(:root[data-theme='light']) .card {
+  --sticky-hero-stuck-border: var(--app-border, #{$border-light});
 }
 
 .expandOnStuck.stuck {
