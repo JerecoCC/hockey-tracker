@@ -282,6 +282,16 @@ const getPlayoffMatchupOption = ([key, label]: [string, string]): ScoreCardSelec
   };
 };
 
+const DATE_VALUE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const isWholeNumberInRange = (value: unknown, min: number, max?: number) => {
+  if (value == null || value === '') return false;
+  const num = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(num) || !Number.isInteger(num)) return false;
+  if (num < min) return false;
+  return max == null || num <= max;
+};
+
 interface ScoreCardNumberFieldProps {
   control: Control<ScoreCardFormValues>;
   name: keyof ScoreCardFormValues;
@@ -289,6 +299,7 @@ interface ScoreCardNumberFieldProps {
   min?: number;
   max?: number;
   disabled?: boolean;
+  error?: boolean;
 }
 
 const ScoreCardNumberField = ({
@@ -298,6 +309,7 @@ const ScoreCardNumberField = ({
   min,
   max,
   disabled,
+  error = false,
 }: ScoreCardNumberFieldProps) => {
   const inputId = `score-card-${name}`;
 
@@ -321,8 +333,9 @@ const ScoreCardNumberField = ({
             max={max}
             step={1}
             inputMode="numeric"
-            className={styles.formInput}
+            className={`${styles.formInput}${error ? ` ${styles.formInputError}` : ''}`}
             disabled={disabled}
+            aria-invalid={error || undefined}
             value={field.value ?? ''}
             onChange={(e) => field.onChange(e.target.value)}
           />
@@ -529,6 +542,62 @@ const ScoreImageModal = ({
     : null;
   const selectedPlayoffRound = selectedPlayoffOption?.round ?? null;
   const selectedPlayoffRoundLabel = selectedPlayoffOption?.label ?? null;
+  const formTeamsMatch = Boolean(
+    formAwayTeamId && formHomeTeamId && formAwayTeamId === formHomeTeamId,
+  );
+  const scoreCardFormValidation = useMemo(() => {
+    if (!isStandaloneForm) {
+      return {
+        isValid: true,
+        errors: {
+          league: false,
+          awayTeam: false,
+          homeTeam: false,
+          gameDate: false,
+          awayScore: false,
+          homeScore: false,
+          playoffRound: false,
+          playoffGameNum: false,
+          awayWins: false,
+          homeWins: false,
+        },
+      };
+    }
+
+    const errors = {
+      league: !formLeague,
+      awayTeam: !formAwayTeam || formTeamsMatch,
+      homeTeam: !formHomeTeam || formTeamsMatch,
+      gameDate: !DATE_VALUE_RE.test(formGameDate),
+      awayScore: !isWholeNumberInRange(numVals.awayScore, 0),
+      homeScore: !isWholeNumberInRange(numVals.homeScore, 0),
+      playoffRound: formIsPlayoff && !selectedPlayoffOption,
+      playoffGameNum: formIsPlayoff && !isWholeNumberInRange(numVals.playoffGameNum, 1, 7),
+      awayWins: formIsPlayoff && !isWholeNumberInRange(numVals.awayWins, 0, formGamesToWin),
+      homeWins: formIsPlayoff && !isWholeNumberInRange(numVals.homeWins, 0, formGamesToWin),
+    };
+
+    return {
+      isValid: !Object.values(errors).some(Boolean),
+      errors,
+    };
+  }, [
+    isStandaloneForm,
+    formLeague,
+    formAwayTeam,
+    formHomeTeam,
+    formTeamsMatch,
+    formGameDate,
+    formIsPlayoff,
+    selectedPlayoffOption,
+    numVals.awayScore,
+    numVals.homeScore,
+    numVals.playoffGameNum,
+    numVals.awayWins,
+    numVals.homeWins,
+    formGamesToWin,
+  ]);
+  const isDownloadDisabled = generating || !scoreCardFormValidation.isValid;
 
   useEffect(() => {
     if (!formIsPlayoff || formLastPeriod !== 'so') return;
@@ -842,6 +911,8 @@ const ScoreImageModal = ({
   };
 
   const handleDownload = async () => {
+    if (!scoreCardFormValidation.isValid) return;
+
     if (scoreCardRef.current) {
       setGenerating(true);
       try {
@@ -1313,7 +1384,7 @@ const ScoreImageModal = ({
               intent="accent"
               icon="download"
               onClick={handleDownload}
-              disabled={generating}
+              disabled={isDownloadDisabled}
             >
               {generating ? 'Generating…' : 'Download Image'}
             </Button>
@@ -1434,6 +1505,7 @@ const ScoreImageModal = ({
                             }
                           }}
                           searchable
+                          error={Boolean(formLeagueId) && scoreCardFormValidation.errors.league}
                         />
                       </div>
                       <div className={styles.formField}>
@@ -1459,6 +1531,7 @@ const ScoreImageModal = ({
                           onChange={setFormAwayTeamId}
                           disabled={!formLeagueId}
                           searchable
+                          error={!formControlsDisabled && scoreCardFormValidation.errors.awayTeam}
                         />
                       </div>
                       <div className={styles.formField}>
@@ -1470,6 +1543,7 @@ const ScoreImageModal = ({
                           onChange={setFormHomeTeamId}
                           disabled={!formLeagueId}
                           searchable
+                          error={!formControlsDisabled && scoreCardFormValidation.errors.homeTeam}
                         />
                       </div>
                     </div>
@@ -1489,6 +1563,7 @@ const ScoreImageModal = ({
                           placeholder="Select date"
                           disabled={formControlsDisabled}
                           ariaLabelledBy="score-card-game-date-label"
+                          error={!formControlsDisabled && scoreCardFormValidation.errors.gameDate}
                         />
                       </div>
                       <ScoreCardNumberField
@@ -1497,6 +1572,7 @@ const ScoreImageModal = ({
                         name="awayScore"
                         min={0}
                         disabled={formControlsDisabled}
+                        error={!formControlsDisabled && scoreCardFormValidation.errors.awayScore}
                       />
                       <ScoreCardNumberField
                         label="Home Score"
@@ -1504,6 +1580,7 @@ const ScoreImageModal = ({
                         name="homeScore"
                         min={0}
                         disabled={formControlsDisabled}
+                        error={!formControlsDisabled && scoreCardFormValidation.errors.homeScore}
                       />
                       <div className={styles.formField}>
                         <label className={styles.formLabel}>Last Period</label>
@@ -1537,6 +1614,7 @@ const ScoreImageModal = ({
                             options={playoffRoundOptions}
                             placeholder="Select round"
                             onChange={setFormPlayoffRound}
+                            error={scoreCardFormValidation.errors.playoffRound}
                           />
                         </div>
                         <ScoreCardNumberField
@@ -1545,6 +1623,7 @@ const ScoreImageModal = ({
                           name="playoffGameNum"
                           min={1}
                           max={7}
+                          error={scoreCardFormValidation.errors.playoffGameNum}
                         />
                         <ScoreCardNumberField
                           label="Away Wins"
@@ -1552,6 +1631,7 @@ const ScoreImageModal = ({
                           name="awayWins"
                           min={0}
                           max={formGamesToWin}
+                          error={scoreCardFormValidation.errors.awayWins}
                         />
                         <ScoreCardNumberField
                           label="Home Wins"
@@ -1559,6 +1639,7 @@ const ScoreImageModal = ({
                           name="homeWins"
                           min={0}
                           max={formGamesToWin}
+                          error={scoreCardFormValidation.errors.homeWins}
                         />
                       </GroupedFields>
                     </CheckboxAccordion>

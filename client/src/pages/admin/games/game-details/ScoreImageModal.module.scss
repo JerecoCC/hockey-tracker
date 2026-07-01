@@ -788,6 +788,10 @@
       cursor: not-allowed;
     }
 
+    &Error {
+      border-color: $danger-light;
+    }
+
     &[type="number"] {
       appearance: textfield;
     }

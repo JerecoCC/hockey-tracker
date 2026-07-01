@@ -32,8 +32,16 @@
   }
 
   &:disabled {
+    background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
+    border-color: var(--app-field-border, #{$border});
     opacity: 0.5;
     cursor: not-allowed;
+
+    .checkBox {
+      background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
+      border-color: var(--app-field-border, #{$border});
+      color: var(--app-text-muted, #{$text-dim});
+    }
   }
 }
 

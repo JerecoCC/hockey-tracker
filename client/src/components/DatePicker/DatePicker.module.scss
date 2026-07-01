@@ -37,6 +37,10 @@
       var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
     );
   }
+
+  &Error {
+    border-color: $danger-light;
+  }
 }
 
 .buttonTriggerWrap {

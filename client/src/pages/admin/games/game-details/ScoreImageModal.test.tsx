@@ -37,6 +37,7 @@ beforeAll(() => {
     configurable: true,
     get: () => true,
   });
+  Element.prototype.scrollIntoView = jest.fn();
 });
 
 beforeEach(() => {
@@ -89,6 +90,38 @@ describe('ScoreImageModal', () => {
         },
       ],
     });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        {
+          id: 'team-away',
+          league_id: 'league-1',
+          name: 'Away Bears',
+          place_name: 'Away',
+          team_name: 'Bears',
+          code: 'AWY',
+          logo: null,
+          logo_dark: null,
+          logo_light: null,
+          primary_color: '#111111',
+          secondary_color: '#222222',
+          text_color: '#ffffff',
+        },
+        {
+          id: 'team-home',
+          league_id: 'league-1',
+          name: 'Home Wolves',
+          place_name: 'Home',
+          team_name: 'Wolves',
+          code: 'HOM',
+          logo: null,
+          logo_dark: null,
+          logo_light: null,
+          primary_color: '#333333',
+          secondary_color: '#444444',
+          text_color: '#ffffff',
+        },
+      ],
+    });
 
     render(
       <ScoreImageModal
@@ -108,6 +141,8 @@ describe('ScoreImageModal', () => {
     expect(screen.getByLabelText('Home Score')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Regular' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'OT' })).toBeDisabled();
+    const downloadButton = screen.getByRole('button', { name: 'Download Image' });
+    expect(downloadButton).toBeDisabled();
 
     await user.click(screen.getByPlaceholderText('— Select league —'));
     const leagueOption = await screen.findByRole('option', { name: /Hockey League/ });
@@ -115,6 +150,18 @@ describe('ScoreImageModal', () => {
 
     const playoffToggle = screen.getByRole('checkbox', { name: 'Playoff Game' });
     expect(playoffToggle).not.toBeDisabled();
+    expect(downloadButton).toBeDisabled();
+
+    await user.click(screen.getAllByPlaceholderText('— Select team —')[0]);
+    const awayOption = await screen.findByRole('option', { name: /Away Bears/ });
+    await user.click(within(awayOption).getByRole('button'));
+    await user.click(screen.getAllByPlaceholderText('— Select team —')[1]);
+    const homeOption = await screen.findByRole('option', { name: /Home Wolves/ });
+    await user.click(within(homeOption).getByRole('button'));
+    await user.click(screen.getByRole('button', { name: 'Open calendar' }));
+    await user.click(screen.getByRole('button', { name: 'Today' }));
+
+    await waitFor(() => expect(downloadButton).not.toBeDisabled());
 
     await user.click(screen.getByRole('button', { name: 'SO' }));
 
@@ -126,7 +173,7 @@ describe('ScoreImageModal', () => {
     expect(screen.queryByRole('button', { name: 'SO' })).not.toBeInTheDocument();
     expect(screen.queryByText('Playoff Details')).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText('e.g. Quarterfinals')).not.toBeInTheDocument();
-    expect(await screen.findByText('Opening Matchup')).toBeInTheDocument();
+    expect((await screen.findAllByText('Opening Matchup')).length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Game #')).toBeInTheDocument();
     expect(screen.getByLabelText('Away Wins')).toHaveAttribute('max', '3');
     expect(screen.getByLabelText('Home Wins')).toHaveAttribute('max', '3');

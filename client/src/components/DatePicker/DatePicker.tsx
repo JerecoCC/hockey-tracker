@@ -25,6 +25,7 @@ interface Props {
   triggerWrapClassName?: string;
   triggerButtonClassName?: string;
   ariaLabelledBy?: string;
+  error?: boolean;
 }
 
 type CalView = 'day' | 'month' | 'year';
@@ -157,6 +158,7 @@ const DatePicker = (props: Props) => {
     triggerWrapClassName,
     triggerButtonClassName,
     ariaLabelledBy,
+    error = false,
   } = props;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<CalView>('day');
@@ -490,6 +492,7 @@ const DatePicker = (props: Props) => {
           usesButtonTrigger ? styles.buttonTriggerWrap : styles.trigger,
           usesButtonTrigger && triggerWrapClassName,
           disabled && styles.triggerDisabled,
+          error && !open && styles.triggerError,
         ]
           .filter(Boolean)
           .join(' ')}
