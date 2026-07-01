@@ -1,9 +1,10 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import LoginPage from './Login';
 
 jest.mock('react-router-dom', () => ({
   useNavigate: () => jest.fn(),
-  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+  Link: ({ children, to }: { children: ReactNode; to: string }) => (
     <a href={to}>{children}</a>
   ),
 }));
@@ -15,10 +16,10 @@ jest.mock('../../components/GoogleButton/GoogleButton', () => () => null);
 
 const renderLogin = () => render(<LoginPage />);
 
-describe('LoginPage – password toggle', () => {
+describe('LoginPage password toggle', () => {
   it('renders the password input with type="password" initially', () => {
     renderLogin();
-    expect(screen.getByPlaceholderText('••••••••')).toHaveAttribute('type', 'password');
+    expect(screen.getByPlaceholderText('Password')).toHaveAttribute('type', 'password');
   });
 
   it('renders the show-password toggle button', () => {
@@ -29,13 +30,13 @@ describe('LoginPage – password toggle', () => {
   it('reveals the password when the toggle is clicked', () => {
     renderLogin();
     fireEvent.click(screen.getByRole('button', { name: /show password/i }));
-    expect(screen.getByPlaceholderText('••••••••')).toHaveAttribute('type', 'text');
+    expect(screen.getByPlaceholderText('Password')).toHaveAttribute('type', 'text');
   });
 
   it('hides the password again on a second click', () => {
     renderLogin();
     fireEvent.click(screen.getByRole('button', { name: /show password/i }));
     fireEvent.click(screen.getByRole('button', { name: /hide password/i }));
-    expect(screen.getByPlaceholderText('••••••••')).toHaveAttribute('type', 'password');
+    expect(screen.getByPlaceholderText('Password')).toHaveAttribute('type', 'password');
   });
 });

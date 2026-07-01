@@ -12,36 +12,11 @@ $scoreboard-stripe-overlap: 8px;
 // Default: normal in-place card appearance.
 .scoreboard {
   &Card {
-    --scoreboard-main-inline-padding: var(--main-inline-padding, #{$space-4xl});
-    --scoreboard-main-inline-padding-offset: var(--main-inline-padding-offset, -#{$space-4xl});
-
-    position: sticky;
-    top: 52px;
-    z-index: 4;
-    width: 100%;
-    overflow: hidden;
-    margin-inline: 0;
-    margin-bottom: $space-lg;
-    transition:
-      border-color $transition-layout ease,
-      border-radius $transition-layout ease,
-      box-shadow $transition-layout ease,
-      margin-inline $transition-layout ease,
-      width $transition-layout ease;
-
-    @media (max-width: $bp-tablet) {
-      position: static;
-      top: auto;
-      z-index: auto;
-    }
+    min-width: 0;
   }
 
   &CardStuck {
-    width: calc(100% + var(--scoreboard-main-inline-padding) + var(--scoreboard-main-inline-padding));
-    margin-inline: var(--scoreboard-main-inline-padding-offset);
-    border-radius: 0 0 $radius-lg $radius-lg !important;
-    border-color: transparent !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    min-width: 0;
   }
 
   display: flex;

@@ -22,27 +22,7 @@ $hero-strip-duration: 0.42s;
 }
 
 .heroCard {
-  position: sticky;
-  top: 52px;
-  z-index: 4;
-  overflow: hidden;
-  margin-bottom: $space-lg;
-  transition:
-    border-color $transition-layout ease,
-    border-radius $transition-layout ease,
-    box-shadow $transition-layout ease;
-
-  @media (max-width: $bp-tablet) {
-    position: static;
-    top: auto;
-    z-index: auto;
-  }
-}
-
-.heroCardStuck {
-  border-radius: 0 0 $radius-lg $radius-lg !important;
-  border-color: transparent !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  min-width: 0;
 }
 
 .hero {
@@ -131,13 +111,13 @@ $hero-strip-duration: 0.42s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: $space-md;
+  gap: $space-2xl;
   max-width: min(720px, calc(100% - #{$hero-strip-width * 2} - #{$space-xl * 2}));
   padding: $space-md $space-lg;
   text-align: left;
 
   @media (max-width: 768px) {
-    gap: $space-sm;
+    gap: $space-lg;
     max-width: calc(100% - #{$space-2xl});
     text-align: center;
   }
@@ -168,12 +148,12 @@ $hero-strip-duration: 0.42s;
 .heroTeamInfo {
   display: inline-flex;
   align-items: center;
-  gap: $space-2xl;
+  gap: $space-md;
   min-width: 0;
 
   @media (max-width: 768px) {
     justify-content: center;
-    gap: $space-lg;
+    gap: $space-sm;
   }
 }
 
@@ -194,7 +174,7 @@ $hero-strip-duration: 0.42s;
   transition: color $transition-layout ease;
 }
 
-.heroRecord {
+.heroSeen {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -202,7 +182,7 @@ $hero-strip-duration: 0.42s;
   flex-shrink: 0;
 }
 
-.heroRecordValue {
+.heroSeenValue {
   color: var(--app-text-strong, #{$text-bright});
   font-size: 2.75rem;
   font-weight: 700;
@@ -222,7 +202,7 @@ $hero-strip-duration: 0.42s;
   .heroPlace,
   .heroTeamMeta,
   .heroName,
-  .heroRecordValue {
+  .heroSeenValue {
     color: var(--team-text);
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
   }
@@ -252,43 +232,11 @@ $hero-strip-duration: 0.42s;
 
 .skeletonGameItem {
   list-style: none;
-  display: flex;
-  align-items: center;
-  gap: $space-lg;
-  padding: $space-md $space-lg;
-  border: 1px solid var(--app-border, #{$border});
+}
+
+.skeletonGameCard {
+  min-height: 96px;
   border-radius: $radius-md;
-
-  @media (max-width: 720px) {
-    align-items: stretch;
-    flex-direction: column;
-  }
-}
-
-.skeletonGameMain {
-  flex: 0 0 160px;
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  min-width: 0;
-
-  @media (max-width: 720px) {
-    flex-basis: auto;
-  }
-}
-
-.skeletonTeamRows {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-}
-
-.skeletonGameMiddle {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  min-width: 0;
 }
 
 .emptyState {

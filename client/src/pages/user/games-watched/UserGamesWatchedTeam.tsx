@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -7,7 +7,8 @@ import GameListItem from '@/components/GameListItem';
 import Section from '@/components/Section/Section';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
-import Tag, { type TagIntent } from '@/components/Tag/Tag';
+import StickyHeroCard from '@/components/StickyHeroCard/StickyHeroCard';
+import { type TagIntent } from '@/components/Tag/Tag';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import type { GameRecord, GameStatus } from '@/hooks/useGames';
@@ -151,91 +152,50 @@ const teamMatchesSlug = (team: WatchedTeam | TeamRecord, teamSlug: string) =>
   getTeamSlug(team) === teamSlug ||
   getLegacyTeamSlug(team) === teamSlug;
 
-const getScrollParent = (el: HTMLElement): HTMLElement => {
-  let parent = el.parentElement;
-  while (parent) {
-    const { overflowY } = window.getComputedStyle(parent);
-    if (overflowY === 'auto' || overflowY === 'scroll') return parent;
-    parent = parent.parentElement;
-  }
-  return document.documentElement;
-};
-
 const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
   const { team, count, record } = summary;
   const teamName = getTeamName(team);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const [isStuck, setIsStuck] = useState(false);
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const isMobile = () => window.innerWidth <= 768;
-    const headerHeight = () => (isMobile() ? 88 : 52);
-    const scrollEl = getScrollParent(sentinel);
-
-    const check = () => {
-      if (isMobile()) {
-        setIsStuck(false);
-        return;
-      }
-      setIsStuck(sentinel.getBoundingClientRect().top <= headerHeight());
-    };
-
-    scrollEl.addEventListener('scroll', check, { passive: true });
-    window.addEventListener('resize', check, { passive: true });
-    check();
-
-    return () => {
-      scrollEl.removeEventListener('scroll', check);
-      window.removeEventListener('resize', check);
-    };
-  }, []);
 
   return (
-    <>
-      <div
-        ref={sentinelRef}
-        style={{ height: 0 }}
-      />
-      <Card
-        className={[styles.heroCard, isStuck ? styles.heroCardStuck : ''].filter(Boolean).join(' ')}
-        style={
-          {
-            padding: 0,
-            '--team-primary': team.primary_color,
-            '--team-secondary': team.text_color,
-            '--team-text': team.text_color,
-          } as CSSProperties
-        }
+    <StickyHeroCard
+      className={styles.heroCard}
+      stuckClassName={styles.heroCardStuck}
+      style={
+        {
+          padding: 0,
+          '--team-primary': team.primary_color,
+          '--team-secondary': team.text_color,
+          '--team-text': team.text_color,
+        } as CSSProperties
+      }
+    >
+      <section
+        className={styles.hero}
+        aria-label={`${teamName} watched games summary`}
       >
-        <section
-          className={styles.hero}
-          aria-label={`${teamName} watched games summary`}
+        <div
+          className={styles.heroPrimaryFill}
+          data-testid="team-hero-primary-fill"
+        />
+        <div
+          className={`${styles.heroStrip} ${styles.heroStripLeft}`}
+          data-testid="team-hero-left-strip"
         >
-          <div
-            className={styles.heroPrimaryFill}
-            data-testid="team-hero-primary-fill"
-          />
-          <div
-            className={`${styles.heroStrip} ${styles.heroStripLeft}`}
-            data-testid="team-hero-left-strip"
-          >
-            <span className={styles.heroStripPrimary} />
-            <span className={styles.heroStripSecondary} />
-            <span className={styles.heroStripSecondary2} />
-          </div>
-          <div
-            className={`${styles.heroStrip} ${styles.heroStripRight}`}
-            data-testid="team-hero-right-strip"
-          >
-            <span className={styles.heroStripPrimary} />
-            <span className={styles.heroStripSecondary} />
-            <span className={styles.heroStripSecondary2} />
-          </div>
+          <span className={styles.heroStripPrimary} />
+          <span className={styles.heroStripSecondary} />
+          <span className={styles.heroStripSecondary2} />
+        </div>
+        <div
+          className={`${styles.heroStrip} ${styles.heroStripRight}`}
+          data-testid="team-hero-right-strip"
+        >
+          <span className={styles.heroStripPrimary} />
+          <span className={styles.heroStripSecondary} />
+          <span className={styles.heroStripSecondary2} />
+        </div>
 
-          <div className={styles.heroContent}>
+        <div className={styles.heroContent}>
+          <div className={styles.heroTeamInfo}>
             <TeamLogo
               logo={team.logo}
               logoDark={team.logo_dark}
@@ -247,20 +207,18 @@ const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
               size={60}
               className={styles.heroLogo}
             />
-            <div className={styles.heroTeamInfo}>
-              <div className={styles.heroText}>
-                {team.place_name && <span className={styles.heroPlace}>{team.place_name}</span>}
-                <h2 className={styles.heroName}>{teamName}</h2>
-                <span className={styles.heroTeamMeta}>{formatRecord(record)}</span>
-              </div>
-              <div className={styles.heroRecord}>
-                <span className={styles.heroRecordValue}>{count}x</span>
-              </div>
+            <div className={styles.heroText}>
+              {team.place_name && <span className={styles.heroPlace}>{team.place_name}</span>}
+              <h2 className={styles.heroName}>{teamName}</h2>
+              <span className={styles.heroTeamMeta}>{formatRecord(record)}</span>
             </div>
           </div>
-        </section>
-      </Card>
-    </>
+          <div className={styles.heroSeen}>
+            <span className={styles.heroSeenValue}>{count}x</span>
+          </div>
+        </div>
+      </section>
+    </StickyHeroCard>
   );
 };
 
@@ -275,13 +233,13 @@ const UserGamesWatchedTeamSkeleton = () => (
     >
       <section className={styles.hero}>
         <div className={styles.heroContent}>
-          <Skeleton
-            type="picture"
-            width={60}
-            height={60}
-            className={styles.heroLogo}
-          />
           <div className={styles.heroTeamInfo}>
+            <Skeleton
+              type="picture"
+              width={60}
+              height={60}
+              className={styles.heroLogo}
+            />
             <div className={styles.heroText}>
               <Skeleton
                 type="subtitle"
@@ -297,6 +255,8 @@ const UserGamesWatchedTeamSkeleton = () => (
                 width={64}
               />
             </div>
+          </div>
+          <div className={styles.heroSeen}>
             <Skeleton
               type="title"
               width={76}
@@ -326,50 +286,15 @@ const UserGamesWatchedTeamSkeleton = () => (
       <ul className={styles.gameList}>
         {Array.from({ length: SKELETON_GAME_ROWS }, (_, index) => `game-skeleton-${index}`).map(
           (rowKey) => (
-          <li
-            key={rowKey}
-            className={styles.skeletonGameItem}
-          >
-            <div className={styles.skeletonGameMain}>
+            <li
+              key={rowKey}
+              className={styles.skeletonGameItem}
+            >
               <Skeleton
-                type="subtitle"
-                width={128}
+                type="card"
+                className={styles.skeletonGameCard}
               />
-              <div className={styles.skeletonTeamRows}>
-                <Skeleton type="circle" />
-                <Skeleton
-                  type="code"
-                  width={48}
-                />
-                <Skeleton
-                  type="code"
-                  width={24}
-                />
-              </div>
-              <div className={styles.skeletonTeamRows}>
-                <Skeleton type="circle" />
-                <Skeleton
-                  type="code"
-                  width={48}
-                />
-                <Skeleton
-                  type="code"
-                  width={24}
-                />
-              </div>
-            </div>
-            <div className={styles.skeletonGameMiddle}>
-              <Skeleton
-                type="subtitle"
-                width="70%"
-              />
-              <Skeleton
-                type="subtitle"
-                width="55%"
-              />
-            </div>
-            <Skeleton type="tag" />
-          </li>
+            </li>
           ),
         )}
       </ul>

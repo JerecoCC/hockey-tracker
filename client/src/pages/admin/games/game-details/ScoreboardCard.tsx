@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Tag from '@/components/Tag/Tag';
-import Card from '@/components/Card/Card';
+import StickyHeroCard from '@/components/StickyHeroCard/StickyHeroCard';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameStatus, TeamInfo } from '@/hooks/useGames';
 import { buildTeamDetailsPath } from '@/lib/routeSlugs';
@@ -95,17 +95,6 @@ const teamNameLabel = (team: TeamInfo) => team.team_name?.trim() || team.name?.t
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-// Walk up the DOM to find the nearest scrollable ancestor.
-const getScrollParent = (el: HTMLElement): HTMLElement => {
-  let p = el.parentElement;
-  while (p) {
-    const { overflowY } = getComputedStyle(p);
-    if (overflowY === 'auto' || overflowY === 'scroll') return p;
-    p = p.parentElement;
-  }
-  return document.documentElement;
-};
-
 const ScoreboardCard = ({
   game,
   isFinal,
@@ -120,44 +109,10 @@ const ScoreboardCard = ({
 }: Props) => {
   const navigate = useNavigate();
 
-  // sentinelRef: zero-height div that stays in-place at all times so we can
-  // track where the card's natural top is relative to the viewport.
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const [isStuck, setIsStuck] = useState(false);
-
-  // Detect when the sentinel's top edge passes under the PageHeader.
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const isMobile = () => window.innerWidth <= 768;
-    const headerHeight = () => (isMobile() ? 88 : 52);
-    const scrollEl = getScrollParent(sentinel);
-
-    const check = () => {
-      if (isMobile()) {
-        setIsStuck(false);
-        return;
-      }
-      const rect = sentinel.getBoundingClientRect();
-      setIsStuck(rect.top <= headerHeight());
-    };
-
-    scrollEl.addEventListener('scroll', check, { passive: true });
-    window.addEventListener('resize', check, { passive: true });
-    check(); // evaluate immediately on mount
-
-    return () => {
-      scrollEl.removeEventListener('scroll', check);
-      window.removeEventListener('resize', check);
-    };
-  }, []);
-
-  const card = (
-    <Card
-      className={[styles.scoreboardCard, isStuck ? styles.scoreboardCardStuck : '']
-        .filter(Boolean)
-        .join(' ')}
+  return (
+    <StickyHeroCard
+      className={styles.scoreboardCard}
+      stuckClassName={styles.scoreboardCardStuck}
       style={{ padding: 0 }}
     >
       <div className={styles.scoreboard}>
@@ -178,7 +133,7 @@ const ScoreboardCard = ({
                 game.away_team.text_color,
                 game.away_team.primary_color,
               ),
-            } as React.CSSProperties
+            } as CSSProperties
           }
         >
           <div className={styles.teamStripe}>
@@ -330,7 +285,7 @@ const ScoreboardCard = ({
                 game.home_team.text_color,
                 game.home_team.primary_color,
               ),
-            } as React.CSSProperties
+            } as CSSProperties
           }
         >
           <div className={`${styles.teamStripe} ${styles.teamStripeHome}`}>
@@ -401,18 +356,7 @@ const ScoreboardCard = ({
           </div>
         </div>
       </div>
-    </Card>
-  );
-
-  return (
-    <>
-      {/* Sentinel stays in the natural position at all times for scroll tracking */}
-      <div
-        ref={sentinelRef}
-        style={{ height: 0 }}
-      />
-      {card}
-    </>
+    </StickyHeroCard>
   );
 };
 

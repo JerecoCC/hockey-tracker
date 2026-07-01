@@ -1,50 +1,48 @@
-import { useState } from 'react';
-import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/context/AuthContext';
 import Button from '@/components/Button/Button';
+import Card from '@/components/Card/Card';
+import Divider from '@/components/Divider/Divider';
+import Field from '@/components/Field/Field';
 import GoogleButton from '@/components/GoogleButton/GoogleButton';
 import Icon from '@/components/Icon/Icon';
-import Card from '@/components/Card/Card';
 import styles from './Signup.module.scss';
+
+interface SignupForm {
+  name: string;
+  email: string;
+  password: string;
+  confirm: string;
+}
 
 const SignupPage = () => {
   const { signup } = useAuth();
   const navigate = useNavigate();
+  const {
+    control,
+    getValues,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm<SignupForm>({
+    defaultValues: {
+      name: '',
+      email: '',
+      password: '',
+      confirm: '',
+    },
+  });
 
-  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    if (form.password !== form.confirm) {
-      toast.error('Passwords do not match.');
-      return;
-    }
-    if (form.password.length < 6) {
-      toast.error('Password must be at least 6 characters.');
-      return;
-    }
-
-    setLoading(true);
+  const handleSignup = handleSubmit(async ({ name, email, password }) => {
     try {
-      await signup({ name: form.name, email: form.email, password: form.password });
+      await signup({ name, email, password });
       navigate('/dashboard');
     } catch (err) {
       const e = err as { response?: { data?: { error?: string } } };
       toast.error(e?.response?.data?.error || 'Signup failed. Please try again.');
-    } finally {
-      setLoading(false);
     }
-  };
+  });
 
   return (
     <div className={styles.page}>
@@ -62,94 +60,80 @@ const SignupPage = () => {
         <h2 className={styles.subtitle}>Create an account</h2>
 
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleSignup}
           className={styles.form}
         >
-          <label className={styles.label}>
-            Name
-            <input
-              className={styles.input}
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              placeholder="Wayne Gretzky"
-              required
-            />
-          </label>
+          <Field
+            control={control}
+            name="name"
+            type="text"
+            label="Name"
+            placeholder="Wayne Gretzky"
+            autoComplete="name"
+            className={styles.authInput}
+            required
+            rules={{ required: 'Name is required.' }}
+          />
 
-          <label className={styles.label}>
-            Email
-            <input
-              className={styles.input}
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="you@example.com"
-              required
-            />
-          </label>
+          <Field
+            control={control}
+            name="email"
+            type="email"
+            label="Email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            className={styles.authInput}
+            required
+            rules={{ required: 'Email is required.' }}
+          />
 
-          <label className={styles.label}>
-            Password
-            <div className={styles.inputWrapper}>
-              <input
-                className={styles.input}
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="Min. 6 characters"
-                required
-              />
-              <button
-                type="button"
-                className={styles.passwordToggle}
-                onClick={() => setShowPassword((v) => !v)}
-                tabIndex={-1}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                <Icon name={showPassword ? 'visibility_off' : 'visibility'} />
-              </button>
-            </div>
-          </label>
+          <Field
+            control={control}
+            name="password"
+            type="password"
+            label="Password"
+            placeholder="Min. 6 characters"
+            autoComplete="new-password"
+            className={styles.authInput}
+            required
+            rules={{
+              required: 'Password is required.',
+              minLength: {
+                value: 6,
+                message: 'Password must be at least 6 characters.',
+              },
+            }}
+          />
 
-          <label className={styles.label}>
-            Confirm password
-            <div className={styles.inputWrapper}>
-              <input
-                className={styles.input}
-                type={showConfirm ? 'text' : 'password'}
-                name="confirm"
-                value={form.confirm}
-                onChange={handleChange}
-                placeholder="••••••••"
-                required
-              />
-              <button
-                type="button"
-                className={styles.passwordToggle}
-                onClick={() => setShowConfirm((v) => !v)}
-                tabIndex={-1}
-                aria-label={showConfirm ? 'Hide password' : 'Show password'}
-              >
-                <Icon name={showConfirm ? 'visibility_off' : 'visibility'} />
-              </button>
-            </div>
-          </label>
+          <Field
+            control={control}
+            name="confirm"
+            type="password"
+            label="Confirm password"
+            placeholder="Confirm password"
+            autoComplete="new-password"
+            className={styles.authInput}
+            required
+            rules={{
+              required: 'Please confirm your password.',
+              validate: (value) => value === getValues('password') || 'Passwords do not match.',
+            }}
+          />
 
           <Button
             className={styles.primaryBtn}
             type="submit"
-            disabled={loading}
+            size="lg"
+            disabled={isSubmitting}
           >
-            {loading ? 'Creating account…' : 'Create account'}
+            {isSubmitting ? 'Creating account...' : 'Create account'}
           </Button>
         </form>
 
-        <div className={styles.divider}>
+        <div className={styles.dividerRow}>
+          <Divider />
           <span>or</span>
+          <Divider />
         </div>
 
         <GoogleButton label="Sign up with Google" />

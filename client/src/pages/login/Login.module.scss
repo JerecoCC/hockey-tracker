@@ -1,7 +1,6 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
-// ── Page ───────────────────────────────────────────────────────────────
 .page {
   min-height: 100vh;
   display: flex;
@@ -11,18 +10,40 @@
   padding: $space-lg;
 }
 
-// ── Auth card sizing ───────────────────────────────────────────────────
-.authCard {
-  width: 100%;
-  max-width: 420px;
+:global(:root[data-theme='light']) .page {
+  background: linear-gradient(135deg, #e8f1ff 0%, #f8fafc 48%, #dbeafe 100%);
 }
 
-// ── Headings ───────────────────────────────────────────────────────────
+.authCard {
+  --app-surface: #ffffff;
+  --app-surface-muted: #f8fafc;
+  --app-field-bg: #edf3fa;
+  --app-field-bg-hover: #e5edf7;
+  --app-field-border: #bfccd9;
+  --app-field-border-hover: #94a3b8;
+  --app-border: #cbd5e1;
+  --app-text-muted: #5b6778;
+  --app-text-subtle: #334155;
+  --app-text: #1f2937;
+  --app-text-strong: #0f172a;
+  --app-hover-bg: rgba(15, 23, 42, 0.06);
+  --filter-field-background: var(--app-field-bg);
+
+  width: 100%;
+  max-width: 420px;
+  color: var(--app-text);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+
 .title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-sm;
   margin: 0 0 $space-xs;
   font-size: $font-3xl;
   font-weight: 700;
-  color: $text-dark;
+  color: var(--app-text-strong);
   text-align: center;
 }
 
@@ -30,120 +51,41 @@
   margin: 0 0 $space-2xl;
   font-size: $font-body;
   font-weight: 400;
-  color: $text-muted;
+  color: var(--app-text-muted);
   text-align: center;
 }
 
-// ── Form ───────────────────────────────────────────────────────────────
 .form {
   display: flex;
   flex-direction: column;
   gap: $space-md;
 }
 
-.label {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  font-size: $font-base;
-  font-weight: 500;
-  color: $text-label;
+.authInput {
+  width: 100%;
 }
 
-.input {
-  padding: $space-md $space-lg;
-  border: 1.5px solid $border-light;
-  border-radius: $radius-md;
-  font-size: $font-body;
-  color: #111827;
-  outline: none;
-  transition: border-color $transition-fast;
-
-  &:focus {
-    border-color: $accent;
-    box-shadow: 0 0 0 3px rgba($accent, 0.15);
-  }
-}
-
-// ── Password wrapper ───────────────────────────────────────────────────
-.inputWrapper {
-  position: relative;
-  display: flex;
-
-  .input {
-    flex: 1;
-    padding-right: 2.75rem;
-  }
-}
-
-.passwordToggle {
-  position: absolute;
-  right: $space-md;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  color: #9ca3af;
-  font-size: $font-body;
-  transition: color $transition-fast;
-
-  &:hover {
-    color: #374151;
-  }
-}
-
-// ── Primary button ─────────────────────────────────────────────────────
 .primaryBtn {
   width: 100%;
-  padding: $space-md;
-  background: $accent;
-  color: #fff;
-  font-size: $font-body;
-  font-weight: 600;
-  border: none;
-  border-radius: $radius-md;
-  cursor: pointer;
-  transition: background $transition-fast;
+  justify-content: center;
   margin-top: $space-xs;
-
-  &:hover:not(:disabled) {
-    background: $accent-hover;
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
 }
 
-// ── Divider ────────────────────────────────────────────────────────────
-.divider {
-  display: flex;
+.dividerRow {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: $space-md;
   margin: $space-xl 0;
-  color: #9ca3af;
+  color: var(--app-text-muted);
   font-size: $font-sm;
-
-  &::before,
-  &::after {
-    content: "";
-    flex: 1;
-    height: 1px;
-    background: #e5e7eb;
-  }
 }
 
-// ── Footer ─────────────────────────────────────────────────────────────
 .footer {
   margin: $space-xl 0 0;
   text-align: center;
   font-size: $font-base;
-  color: $text-muted;
+  color: var(--app-text-muted);
 }
 
 .link {

@@ -1,39 +1,43 @@
-import { useState } from 'react';
-import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/context/AuthContext';
 import Button from '@/components/Button/Button';
+import Card from '@/components/Card/Card';
+import Divider from '@/components/Divider/Divider';
+import Field from '@/components/Field/Field';
 import GoogleButton from '@/components/GoogleButton/GoogleButton';
 import Icon from '@/components/Icon/Icon';
-import Card from '@/components/Card/Card';
 import styles from './Login.module.scss';
+
+interface LoginForm {
+  email: string;
+  password: string;
+}
 
 const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const {
+    control,
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm<LoginForm>({
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
 
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleLogin = handleSubmit(async (values) => {
     try {
-      await login(form);
+      await login(values);
       navigate('/dashboard');
     } catch (err) {
       const e = err as { response?: { data?: { error?: string } } };
       toast.error(e?.response?.data?.error || 'Login failed. Please try again.');
-    } finally {
-      setLoading(false);
     }
-  };
+  });
 
   return (
     <div className={styles.page}>
@@ -51,57 +55,47 @@ const LoginPage = () => {
         <h2 className={styles.subtitle}>Sign in to your account</h2>
 
         <form
-          onSubmit={handleSubmit}
+          onSubmit={handleLogin}
           className={styles.form}
         >
-          <label className={styles.label}>
-            Email
-            <input
-              className={styles.input}
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="you@example.com"
-              required
-            />
-          </label>
+          <Field
+            control={control}
+            name="email"
+            type="email"
+            label="Email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            className={styles.authInput}
+            required
+            rules={{ required: 'Email is required.' }}
+          />
 
-          <label className={styles.label}>
-            Password
-            <div className={styles.inputWrapper}>
-              <input
-                className={styles.input}
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                required
-              />
-              <button
-                type="button"
-                className={styles.passwordToggle}
-                onClick={() => setShowPassword((v) => !v)}
-                tabIndex={-1}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-              >
-                <Icon name={showPassword ? 'visibility_off' : 'visibility'} />
-              </button>
-            </div>
-          </label>
+          <Field
+            control={control}
+            name="password"
+            type="password"
+            label="Password"
+            placeholder="Password"
+            autoComplete="current-password"
+            className={styles.authInput}
+            required
+            rules={{ required: 'Password is required.' }}
+          />
 
           <Button
             className={styles.primaryBtn}
             type="submit"
-            disabled={loading}
+            size="lg"
+            disabled={isSubmitting}
           >
-            {loading ? 'Signing in…' : 'Sign in'}
+            {isSubmitting ? 'Signing in...' : 'Sign in'}
           </Button>
         </form>
 
-        <div className={styles.divider}>
+        <div className={styles.dividerRow}>
+          <Divider />
           <span>or</span>
+          <Divider />
         </div>
 
         <GoogleButton label="Sign in with Google" />
