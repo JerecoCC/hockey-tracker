@@ -96,6 +96,21 @@ jest.mock('@/components/Card/Card', () => ({ title, action, className, children 
     {children}
   </div>
 ));
+jest.mock(
+  '@/components/ConfirmModal/ConfirmModal',
+  () =>
+    ({ open, title, body, confirmLabel, onConfirm, onCancel }: any) =>
+      open ? (
+        <div
+          role="dialog"
+          aria-label={title}
+        >
+          <div>{body}</div>
+          <button onClick={onConfirm}>{confirmLabel}</button>
+          <button onClick={onCancel}>Cancel</button>
+        </div>
+      ) : null,
+);
 jest.mock('@/components/TitleRow/TitleRow', () => ({ left, right }: any) => (
   <div>
     {left}
@@ -251,6 +266,8 @@ beforeEach(() => {
         start_date: '2024-10-01',
         end_date: null,
         photo: null,
+        has_stats: false,
+        can_delete: true,
       },
     ],
   });
@@ -259,8 +276,11 @@ beforeEach(() => {
   mockUseStintActions.mockReturnValue({
     createStint: jest.fn(),
     updateStint: jest.fn(),
+    deleteStint: jest.fn(),
     changeJerseyNumber: jest.fn(),
+    changePlayerPhoto: jest.fn(),
     uploadStintPhoto: jest.fn(),
+    saving: false,
   });
   mockUseTeams.mockReturnValue({ teams: [] });
   mockUseSeasons.mockReturnValue({ seasons: [] });
@@ -454,6 +474,64 @@ describe('PlayerDetails info tab', () => {
 
     expect(inches).toHaveValue(1);
   });
+
+  it('lets admins delete a team history stint after confirmation', async () => {
+    const user = userEvent.setup();
+    const deleteStint = jest.fn().mockResolvedValue(true);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUseStintActions.mockReturnValue({
+      createStint: jest.fn(),
+      updateStint: jest.fn(),
+      deleteStint,
+      changeJerseyNumber: jest.fn(),
+      changePlayerPhoto: jest.fn(),
+      uploadStintPhoto: jest.fn(),
+      saving: false,
+    });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'Delete stint' }));
+    expect(screen.getByRole('dialog', { name: 'Delete Stint' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Delete Stint' }));
+
+    await waitFor(() => expect(deleteStint).toHaveBeenCalledWith('stint-1'));
+  });
+
+  it('hides the team history delete action when the stint has stats', () => {
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-1',
+          team_id: 'team-1',
+          season_id: 'season-1',
+          team: {
+            id: 'team-1',
+            name: 'Toronto Sceptres',
+            code: 'TOR',
+            logo: null,
+            primary_color: '#003e7e',
+            text_color: '#ffffff',
+          },
+          jersey_number: 19,
+          is_prospect: false,
+          position: 'C',
+          acquisition_type: 'trade',
+          start_date: '2024-10-01',
+          end_date: null,
+          photo: null,
+          has_stats: true,
+          can_delete: false,
+        },
+      ],
+    });
+
+    render(<PlayerDetails />);
+
+    expect(screen.queryByRole('button', { name: 'Delete stint' })).not.toBeInTheDocument();
+  });
 });
 
 describe('PlayerDetails awards tab', () => {
@@ -606,6 +684,8 @@ describe('collapseSameTeamStints', () => {
     start_date: startDate,
     end_date: endDate,
     photo: null,
+    has_stats: false,
+    can_delete: true,
     created_at: '2024-01-01T00:00:00Z',
   });
 

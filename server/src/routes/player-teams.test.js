@@ -210,6 +210,8 @@ describe('GET /api/admin/player-teams/history/:playerId', () => {
         start_date: '2024-10-01',
         end_date: null,
         created_at: '2024-10-01T00:00:00.000Z',
+        has_stats: false,
+        can_delete: true,
         team: {
           id: 'team-1',
           name: 'Toronto Maple Leafs',
@@ -229,6 +231,18 @@ describe('GET /api/admin/player-teams/history/:playerId', () => {
 
     expect(res.status).toBe(200);
     expect(res.body[0].acquisition_type).toBeNull();
+  });
+
+  it('marks stints with team stats as not deletable', async () => {
+    sql.mockResolvedValueOnce([{ ...STINT_ROW, has_player_stats: true, has_goalie_stats: false }]);
+
+    const res = await request(app).get('/api/admin/player-teams/history/player-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toMatchObject({
+      has_stats: true,
+      can_delete: false,
+    });
   });
 
   it('returns 500 when history lookup fails', async () => {
@@ -378,16 +392,43 @@ describe('PATCH /api/admin/player-teams/:id', () => {
 });
 
 describe('DELETE /api/admin/player-teams/:id', () => {
+  it('deletes a career stint when the player has no stats for that team', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'career-stint-1', player_id: 'player-1', team_id: 'team-1' }])
+      .mockResolvedValueOnce([{ has_player_stats: false, has_goalie_stats: false }])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app).delete('/api/admin/player-teams/career-stint-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Stint deleted');
+    expect(sql).toHaveBeenCalledTimes(3);
+  });
+
+  it('returns 409 when the player has stats for that team', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'career-stint-1', player_id: 'player-1', team_id: 'team-1' }])
+      .mockResolvedValueOnce([{ has_player_stats: true, has_goalie_stats: false }]);
+
+    const res = await request(app).delete('/api/admin/player-teams/career-stint-1');
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/has stats for this team/i);
+    expect(sql).toHaveBeenCalledTimes(2);
+  });
+
   it('removes the player-team association', async () => {
     sql
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ id: 'stint-1' }]);
+      .mockResolvedValueOnce([{ id: 'stint-1', player_id: 'player-1', team_id: 'team-1' }])
+      .mockResolvedValueOnce([{ has_player_stats: false, has_goalie_stats: false }])
+      .mockResolvedValueOnce([]);
 
     const res = await request(app).delete('/api/admin/player-teams/stint-1');
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe('Player removed from team');
-    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql).toHaveBeenCalledTimes(4);
   });
 
   it('returns 404 when the stint is not found', async () => {

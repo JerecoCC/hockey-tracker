@@ -72,6 +72,27 @@ const closeActiveCareerStints = (player_id, end_date) => sql`
   RETURNING id, team_id
 `;
 
+const playerHasStatsForTeam = async (playerId, teamId) => {
+  const rows = (await sql`
+    SELECT
+      EXISTS (
+        SELECT 1
+        FROM game_player_stats
+        WHERE player_id = ${playerId}
+          AND team_id = ${teamId}
+        LIMIT 1
+      ) AS has_player_stats,
+      EXISTS (
+        SELECT 1
+        FROM game_goalie_stints
+        WHERE goalie_id = ${playerId}
+          AND team_id = ${teamId}
+        LIMIT 1
+      ) AS has_goalie_stats
+  `) ?? [];
+  return Boolean(rows[0]?.has_player_stats || rows[0]?.has_goalie_stats);
+};
+
 const mapHistoryRow = (row) => ({
   id: row.id,
   player_id: row.player_id,
@@ -86,6 +107,8 @@ const mapHistoryRow = (row) => ({
   start_date: row.start_date,
   end_date: row.end_date,
   created_at: row.created_at,
+  has_stats: Boolean(row.has_player_stats || row.has_goalie_stats),
+  can_delete: !Boolean(row.has_player_stats || row.has_goalie_stats),
   team: {
     id: row.team_id,
     name: row.team_name,
@@ -350,7 +373,21 @@ router.get('/history/:playerId', async (req, res) => {
         ti.logo_dark AS team_logo_dark,
         ti.logo_light AS team_logo_light,
         t.primary_color,
-        t.text_color
+        t.text_color,
+        EXISTS (
+          SELECT 1
+          FROM game_player_stats gps
+          WHERE gps.player_id = pts.player_id
+            AND gps.team_id = pts.team_id
+          LIMIT 1
+        ) AS has_player_stats,
+        EXISTS (
+          SELECT 1
+          FROM game_goalie_stints ggs
+          WHERE ggs.goalie_id = pts.player_id
+            AND ggs.team_id = pts.team_id
+          LIMIT 1
+        ) AS has_goalie_stats
       FROM player_team_stints pts
       JOIN teams t ON t.id = pts.team_id
       LEFT JOIN LATERAL (
@@ -640,20 +677,41 @@ router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const stintRows = (await sql`
-      DELETE FROM player_team_stints
+      SELECT id, player_id, team_id
+      FROM player_team_stints
       WHERE id = ${id}
-      RETURNING id
     `) ?? [];
     if (stintRows.length > 0) {
+      const hasStats = await playerHasStatsForTeam(stintRows[0].player_id, stintRows[0].team_id);
+      if (hasStats) {
+        return res.status(409).json({
+          error: 'Cannot delete team stint while player has stats for this team.',
+        });
+      }
+      await sql`
+        DELETE FROM player_team_stints
+        WHERE id = ${id}
+      `;
       return res.json({ message: 'Stint deleted' });
     }
 
     const rows = await sql`
-      DELETE FROM player_teams
+      SELECT id, player_id, team_id
+      FROM player_teams
       WHERE id = ${id}
-      RETURNING id
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Stint not found' });
+
+    const hasStats = await playerHasStatsForTeam(rows[0].player_id, rows[0].team_id);
+    if (hasStats) {
+      return res.status(409).json({
+        error: 'Cannot delete team stint while player has stats for this team.',
+      });
+    }
+    await sql`
+      DELETE FROM player_teams
+      WHERE id = ${id}
+    `;
     return res.json({ message: 'Player removed from team' });
   } catch (err) {
     console.error('player-teams delete/:id error:', err);

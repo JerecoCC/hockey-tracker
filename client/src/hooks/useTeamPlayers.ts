@@ -21,6 +21,8 @@ export interface PlayerStintRecord {
   start_date: string | null;
   end_date: string | null;
   created_at: string;
+  has_stats?: boolean;
+  can_delete?: boolean;
   team: {
     id: string;
     name: string | null;
@@ -202,6 +204,27 @@ export const useStintActions = (playerId: string | null) => {
     }
   };
 
+  const deleteStint = async (stintId: string): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await axios.delete(`${API}/admin/player-teams/${stintId}`, { headers: authHeaders() });
+      toast.success('Stint deleted!');
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete stint'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const uploadStintPhoto = async (file: File): Promise<string | null> => {
     const formData = new FormData();
     formData.append('photo', file);
@@ -286,6 +309,7 @@ export const useStintActions = (playerId: string | null) => {
   return {
     createStint,
     updateStint,
+    deleteStint,
     changeJerseyNumber,
     changePlayerPhoto,
     uploadStintPhoto,

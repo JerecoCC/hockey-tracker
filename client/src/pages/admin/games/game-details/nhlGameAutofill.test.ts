@@ -845,6 +845,7 @@ describe('autofillGameFromNhlGamecenter', () => {
         exited_time: null,
         shots_against: 30,
         goals_against: 3,
+        time_on_ice: 3900,
       }),
       expect.objectContaining({
         goalie_id: 'wallstedt',
@@ -855,6 +856,7 @@ describe('autofillGameFromNhlGamecenter', () => {
         exited_time: '20:00',
         shots_against: 10,
         goals_against: 1,
+        time_on_ice: 1200,
       }),
       expect.objectContaining({
         goalie_id: 'gustavsson',
@@ -865,6 +867,7 @@ describe('autofillGameFromNhlGamecenter', () => {
         exited_time: null,
         shots_against: 20,
         goals_against: 2,
+        time_on_ice: 2700,
       }),
     ]);
   });

@@ -6,6 +6,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
 import Section from '@/components/Section/Section';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
@@ -154,6 +155,8 @@ export const collapseSameTeamStints = (stints: PlayerStintRecord[]): PlayerStint
       ...newest,
       start_date: oldest.start_date ?? newest.start_date,
       end_date: newest.end_date,
+      has_stats: group.some((stint) => stint.has_stats),
+      can_delete: group.every((stint) => stint.can_delete !== false),
     };
   });
 };
@@ -338,8 +341,15 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const { stints } = usePlayerTradeHistory(adminPlayerId);
   const { byStint: jerseyHistoryByStint } = useJerseyHistory(adminPlayerId);
   const { byTeam: photoHistoryByTeam } = usePlayerPhotoHistory(adminPlayerId);
-  const { createStint, updateStint, changeJerseyNumber, changePlayerPhoto, uploadStintPhoto } =
-    useStintActions(adminPlayerId);
+  const {
+    createStint,
+    updateStint,
+    deleteStint,
+    changeJerseyNumber,
+    changePlayerPhoto,
+    uploadStintPhoto,
+    saving: stintSaving,
+  } = useStintActions(adminPlayerId);
   const { teams } = useTeams({ mode });
   const { seasons } = useSeasons(leagueId, { mode });
   const queryClient = useQueryClient();
@@ -349,6 +359,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const [editPlayerOpen, setEditPlayerOpen] = useState(false);
   const [editPlayerInfoOpen, setEditPlayerInfoOpen] = useState(false);
   const [editingStint, setEditingStint] = useState<PlayerStintRecord | null>(null);
+  const [deletingStint, setDeletingStint] = useState<PlayerStintRecord | null>(null);
   const [creatingStint, setCreatingStint] = useState(false);
   const [changingJerseyStint, setChangingJerseyStint] = useState<PlayerStintRecord | null>(null);
   const [changingPhotoStint, setChangingPhotoStint] = useState<PlayerStintRecord | null>(null);
@@ -402,6 +413,12 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     const stint = stints[0];
     if (!stint) return false;
     return updateStint(stint.id, payload);
+  };
+
+  const handleDeleteStint = async () => {
+    if (!deletingStint) return;
+    const ok = await deleteStint(deletingStint.id);
+    if (ok) setDeletingStint(null);
   };
 
   const movePlayer = async (
@@ -1260,6 +1277,12 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                                   tooltip: 'Edit stint',
                                   onClick: () => setEditingStint(s),
                                 },
+                                s.can_delete && {
+                                  icon: 'delete',
+                                  intent: 'danger',
+                                  tooltip: 'Delete stint',
+                                  onClick: () => setDeletingStint(s),
+                                },
                               ]}
                             />
                           ))}
@@ -1351,6 +1374,27 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             onClose={() => setChangingPhotoStint(null)}
             uploadPhoto={uploadStintPhoto}
             changePlayerPhoto={changePlayerPhoto}
+          />
+
+          <ConfirmModal
+            open={!!deletingStint}
+            title="Delete Stint"
+            body={
+              deletingStint ? (
+                <>
+                  Delete the {deletingStint.team.name ?? 'selected team'} stint from this player's
+                  team history? This is only allowed when the player has no stats for that team.
+                </>
+              ) : (
+                ''
+              )
+            }
+            confirmLabel="Delete Stint"
+            confirmIcon="delete"
+            variant="danger"
+            busy={stintSaving}
+            onConfirm={handleDeleteStint}
+            onCancel={() => setDeletingStint(null)}
           />
         </>
       )}

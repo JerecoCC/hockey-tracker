@@ -100,6 +100,7 @@ interface GoalieStintPayload {
   exited_time?: string | null;
   shots_against?: number;
   goals_against?: number | null;
+  time_on_ice?: number | null;
 }
 
 interface ExistingGoalieStint extends GoalieStintPayload {
@@ -1780,6 +1781,8 @@ function buildGoalieStintPayloads(
       seenGoalieStints.set(stint.goalieId, stintIndex + 1);
       const goalieStat = statsByGoalieId.get(matchedGoalie.localId);
       const useGoalieTotals = (stintCountByGoalieId.get(stint.goalieId) ?? 0) <= 1 || stintIndex === 0;
+      const stintCount = stintCountByGoalieId.get(stint.goalieId) ?? 0;
+      const timeOnIce = stintCount <= 1 ? parseNhlToiSeconds(stint.toi) : null;
 
       return {
         goalie_id: matchedGoalie.localId,
@@ -1790,6 +1793,7 @@ function buildGoalieStintPayloads(
         exited_time: normalizeGoalieStintTime(stint.exitedTime),
         shots_against: useGoalieTotals ? goalieStat?.shots_against ?? 0 : 0,
         goals_against: useGoalieTotals ? goalieStat?.goals_against ?? null : null,
+        ...(timeOnIce == null ? {} : { time_on_ice: timeOnIce }),
       } satisfies GoalieStintPayload;
     })
     .filter((stint): stint is GoalieStintPayload => !!stint);
@@ -1887,6 +1891,7 @@ function groupExistingGoalieStints(stats: GoalieStatRecord[]) {
         exited_time: stint.exited_time,
         shots_against: stint.shots_against,
         goals_against: stint.goals_against_override,
+        time_on_ice: stint.time_on_ice,
       });
       byTeam.set(stat.team_id, rows);
     }
@@ -1916,8 +1921,16 @@ function goalieStintNeedsUpdate(existing: ExistingGoalieStint, desired: GoalieSt
     nullish(existing.exited_period) !== nullish(desired.exited_period) ||
     nullish(existing.exited_time) !== nullish(desired.exited_time) ||
     Number(existing.shots_against ?? 0) !== Number(desired.shots_against ?? 0) ||
-    nullishNumber(existing.goals_against) !== nullishNumber(desired.goals_against)
+    nullishNumber(existing.goals_against) !== nullishNumber(desired.goals_against) ||
+    ('time_on_ice' in desired &&
+      nullishNumber(existing.time_on_ice) !== nullishNumber(desired.time_on_ice))
   );
+}
+
+function parseNhlToiSeconds(value: string | null | undefined) {
+  const match = String(value ?? '').trim().match(/^(\d{1,3}):([0-5]\d)$/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
 }
 
 function normalizeGoalieStintPeriod(period: string | null | undefined) {
