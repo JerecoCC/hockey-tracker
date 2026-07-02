@@ -1,4 +1,5 @@
 import Card from '@/components/Card/Card';
+import Divider from '@/components/Divider/Divider';
 import EntityHeader from '@/components/EntityHeader/EntityHeader';
 import InfoItem from '@/components/InfoItem/InfoItem';
 import Skeleton from '@/components/Skeleton/Skeleton';
@@ -14,6 +15,8 @@ interface Props {
 interface SkeletonProps {
   className?: string;
 }
+
+const cx = (...classes: Array<string | undefined>) => classes.filter(Boolean).join(' ');
 
 export const LeagueInfoCardSkeleton = ({ className }: SkeletonProps) => (
   <Card
@@ -54,7 +57,9 @@ export const LeagueInfoCardSkeleton = ({ className }: SkeletonProps) => (
       </div>
     </div>
 
-    <div className={styles.infoGrid}>
+    <Divider />
+
+    <div className={cx(styles.infoGrid, styles.infoCardGrid)}>
       {['playoff-format', 'shootout-rounds', 'scoring-system'].map((item) => (
         <div
           key={item}
@@ -103,9 +108,12 @@ const LeagueInfoCard = ({ league, onEdit, className }: Props) => (
         { label: 'Primary', color: league.primary_color },
         { label: 'Text', color: league.text_color },
       ]}
+      showDivider={false}
     />
 
-    <div className={styles.infoGrid}>
+    <Divider />
+
+    <div className={cx(styles.infoGrid, styles.infoCardGrid)}>
       <InfoItem
         label="Playoff Series Format"
         data={`Best of ${league.best_of_playoff}`}

@@ -102,6 +102,10 @@ $league-tab-list-gap: $space-md;
   gap: $space-2xl;
 }
 
+.infoCardGrid {
+  margin-top: $space-2xl;
+}
+
 .breadcrumbSkeleton {
   width: 72px;
   height: 16px;
@@ -112,9 +116,7 @@ $league-tab-list-gap: $space-md;
     display: flex;
     align-items: center;
     gap: $space-xl;
-    margin-bottom: $space-2xl;
     padding-bottom: $space-2xl;
-    border-bottom: 1px solid $border;
 
     @media (max-width: 720px) {
       align-items: flex-start;

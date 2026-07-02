@@ -27,6 +27,7 @@ interface Props {
   swatches?: Swatch[];
   onEdit?: () => void;
   editIconOnly?: boolean;
+  showDivider?: boolean;
 }
 
 const EntityHeader = ({
@@ -43,6 +44,7 @@ const EntityHeader = ({
   swatches = [],
   onEdit,
   editIconOnly = false,
+  showDivider = true,
 }: Props) => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const themeContext = useContext(ThemeContext);
@@ -123,7 +125,7 @@ const EntityHeader = ({
         )}
       </div>
 
-      <Divider className={styles.divider} />
+      {showDivider && <Divider className={styles.divider} />}
 
       <ImagePreviewModal
         open={previewOpen}

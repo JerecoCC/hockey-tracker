@@ -514,6 +514,13 @@ describe('LeagueDetailsPage – main render', () => {
     expect(screen.getByText('No description')).toBeInTheDocument();
   });
 
+  it('uses the default divider component between league header and info grid', () => {
+    const { container } = setup({ league: mockLeague });
+    const infoGrid = container.querySelector('.infoCardGrid');
+    expect(infoGrid?.previousElementSibling).toHaveClass('divider', 'horizontal');
+    expect(infoGrid?.previousElementSibling?.className).toBe('divider horizontal');
+  });
+
   it('shows the description placeholder when description is empty', () => {
     setup({ league: { ...mockLeague, description: '' } });
     // empty string is falsy → renders the same "No description" muted placeholder
