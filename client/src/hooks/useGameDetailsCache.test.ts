@@ -90,11 +90,11 @@ const ROSTER_ENTRY: GameRosterEntry = {
 };
 
 const LINEUP_ENTRY: LineupEntry = {
-  id: 'lineup-1-F1',
+  id: 'lineup-1-G',
   game_id: 'game-1',
   team_id: 'team-1',
   player_id: 'player-1',
-  position_slot: 'F1',
+  position_slot: 'G',
   player_first_name: 'John',
   player_last_name: 'Smith',
   player_photo: null,
@@ -210,7 +210,7 @@ describe('game details mutation cache updates', () => {
     const lineupKey = ['game-lineup', 'game-1'];
     const goalieKey = ['game-goalie-stats', 'game-1'];
     const playerStatsKey = ['player-game-logs', 'player-1'];
-    const nextEntry = { ...LINEUP_ENTRY, position_slot: 'F2' as const };
+    const nextEntry = { ...LINEUP_ENTRY, player_id: 'player-2' };
     queryClient.setQueryData(lineupKey, [LINEUP_ENTRY]);
     queryClient.setQueryData(goalieKey, [GOALIE_STAT]);
     queryClient.setQueryData(playerStatsKey, []);
@@ -224,7 +224,7 @@ describe('game details mutation cache updates', () => {
     mockedAxios.get.mockClear();
 
     await act(async () => {
-      await result.current.saveTeamLineup('team-1', [{ position_slot: 'F2', player_id: 'player-1' }]);
+      await result.current.saveTeamLineup('team-1', [{ position_slot: 'G', player_id: 'player-2' }]);
     });
 
     expect(queryClient.getQueryData<LineupEntry[]>(lineupKey)).toEqual([nextEntry]);

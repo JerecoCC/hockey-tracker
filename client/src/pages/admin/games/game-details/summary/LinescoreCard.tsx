@@ -22,7 +22,7 @@ interface Props {
   linescorePeriods: LinescorePeriod[];
   attempts: ShootoutAttempt[];
   rosterReady: boolean;
-  lineupsReady: boolean;
+  startingGoaliesReady: boolean;
   /** True when the End Game button should be shown (in-progress + period/score conditions met). */
   canEndGame: boolean;
   // ── Action callbacks ──
@@ -43,7 +43,7 @@ const LinescoreCard = ({
   linescorePeriods,
   attempts,
   rosterReady,
-  lineupsReady,
+  startingGoaliesReady,
   canEndGame,
   onStartGame,
   onAutofillGame,
@@ -107,13 +107,13 @@ const LinescoreCard = ({
                 size="sm"
                 tooltip={
                   !rosterReady
-                    ? 'Set lineups for both teams first'
-                    : !lineupsReady
-                      ? 'Set starting lineups for both teams'
+                    ? 'Add game rosters for both teams first'
+                    : !startingGoaliesReady
+                      ? 'Set starting goalies for both teams'
                       : 'Start Game'
                 }
-                tooltipIntent={rosterReady && lineupsReady ? undefined : 'error'}
-                disabled={!!busy || !rosterReady || !lineupsReady}
+                tooltipIntent={rosterReady && startingGoaliesReady ? undefined : 'error'}
+                disabled={!!busy || !rosterReady || !startingGoaliesReady}
                 onClick={onStartGame}
               />
               <MoreActionsMenu

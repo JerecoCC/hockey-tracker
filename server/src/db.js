@@ -1493,122 +1493,104 @@ async function initSchema() {
     WHERE goal_type = 'penalty-shot'
   `;
 
-  // ── Game starting lineup ───────────────────────────────────────────────────
-  // One row per team per game. Each starting-line slot is a nullable FK to players.
-  // Replaces game_lineups (6 rows per team) with a single compact row per team.
-  // Slots: forward_1, forward_2, forward_3, defense_1, defense_2, goalie.
-  await sql`
-    CREATE TABLE IF NOT EXISTS game_starting_lineup (
-      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      game_id       UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
-      team_id       UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
-      forward_1_id  UUID REFERENCES players(id) ON DELETE SET NULL,
-      forward_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
-      forward_3_id  UUID REFERENCES players(id) ON DELETE SET NULL,
-      defense_1_id  UUID REFERENCES players(id) ON DELETE SET NULL,
-      defense_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
-      goalie_id     UUID REFERENCES players(id) ON DELETE SET NULL,
-      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      UNIQUE (game_id, team_id)
-    )
-  `;
-
-  // Existing databases may have the old center/wing columns. Add the generic
-  // forward columns and copy old slot values forward without dropping anything.
+  // ── Legacy starting lineup cleanup ─────────────────────────────────────────
+  // Starting goalies now live directly on games. Preserve legacy goalie slots,
+  // then remove the old six-player lineup tables entirely.
   await sql`
     DO $$
     BEGIN
       IF EXISTS (
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'game_starting_lineup'
+      ) AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'goalie_id'
       ) THEN
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns
-          WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'forward_1_id'
-        ) THEN
-          ALTER TABLE game_starting_lineup ADD COLUMN forward_1_id UUID REFERENCES players(id) ON DELETE SET NULL;
-        END IF;
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns
-          WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'forward_2_id'
-        ) THEN
-          ALTER TABLE game_starting_lineup ADD COLUMN forward_2_id UUID REFERENCES players(id) ON DELETE SET NULL;
-        END IF;
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns
-          WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'forward_3_id'
-        ) THEN
-          ALTER TABLE game_starting_lineup ADD COLUMN forward_3_id UUID REFERENCES players(id) ON DELETE SET NULL;
-        END IF;
+        UPDATE games g
+        SET home_starting_goalie_id = (
+          SELECT sl.goalie_id
+          FROM game_starting_lineup sl
+          WHERE sl.game_id = g.id
+            AND sl.team_id = g.home_team_id
+            AND sl.goalie_id IS NOT NULL
+          LIMIT 1
+        )
+        WHERE g.home_starting_goalie_id IS NULL
+          AND EXISTS (
+            SELECT 1
+            FROM game_starting_lineup sl
+            WHERE sl.game_id = g.id
+              AND sl.team_id = g.home_team_id
+              AND sl.goalie_id IS NOT NULL
+          );
 
-        IF EXISTS (
-          SELECT 1 FROM information_schema.columns
-          WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'center_id'
-        ) THEN
-          EXECUTE 'UPDATE game_starting_lineup
-            SET forward_1_id = COALESCE(forward_1_id, center_id),
-                forward_2_id = COALESCE(forward_2_id, left_wing_id),
-                forward_3_id = COALESCE(forward_3_id, right_wing_id)';
-        END IF;
+        UPDATE games g
+        SET away_starting_goalie_id = (
+          SELECT sl.goalie_id
+          FROM game_starting_lineup sl
+          WHERE sl.game_id = g.id
+            AND sl.team_id = g.away_team_id
+            AND sl.goalie_id IS NOT NULL
+          LIMIT 1
+        )
+        WHERE g.away_starting_goalie_id IS NULL
+          AND EXISTS (
+            SELECT 1
+            FROM game_starting_lineup sl
+            WHERE sl.game_id = g.id
+              AND sl.team_id = g.away_team_id
+              AND sl.goalie_id IS NOT NULL
+          );
       END IF;
-    END $$
-  `;
 
-  // One-time data migration: pivot game_lineups rows (one per slot) into
-  // game_starting_lineup rows (one per team per game), then drop the old table.
-  await sql`
-    DO $$
-    BEGIN
       IF EXISTS (
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'game_lineups'
       ) THEN
-        INSERT INTO game_starting_lineup
-          (game_id, team_id, forward_1_id, forward_2_id, forward_3_id, defense_1_id, defense_2_id, goalie_id)
-        SELECT
-          game_id,
-          team_id,
-          MAX(CASE WHEN position_slot IN ('F1', 'C')  THEN player_id::text END)::uuid,
-          MAX(CASE WHEN position_slot IN ('F2', 'LW') THEN player_id::text END)::uuid,
-          MAX(CASE WHEN position_slot IN ('F3', 'RW') THEN player_id::text END)::uuid,
-          MAX(CASE WHEN position_slot = 'D1' THEN player_id::text END)::uuid,
-          MAX(CASE WHEN position_slot = 'D2' THEN player_id::text END)::uuid,
-          MAX(CASE WHEN position_slot = 'G'  THEN player_id::text END)::uuid
-        FROM game_lineups
-        GROUP BY game_id, team_id
-        ON CONFLICT (game_id, team_id) DO NOTHING;
+        UPDATE games g
+        SET home_starting_goalie_id = (
+          SELECT gl.player_id
+          FROM game_lineups gl
+          WHERE gl.game_id = g.id
+            AND gl.team_id = g.home_team_id
+            AND gl.position_slot = 'G'
+            AND gl.player_id IS NOT NULL
+          LIMIT 1
+        )
+        WHERE g.home_starting_goalie_id IS NULL
+          AND EXISTS (
+            SELECT 1
+            FROM game_lineups gl
+            WHERE gl.game_id = g.id
+              AND gl.team_id = g.home_team_id
+              AND gl.position_slot = 'G'
+              AND gl.player_id IS NOT NULL
+          );
+
+        UPDATE games g
+        SET away_starting_goalie_id = (
+          SELECT gl.player_id
+          FROM game_lineups gl
+          WHERE gl.game_id = g.id
+            AND gl.team_id = g.away_team_id
+            AND gl.position_slot = 'G'
+            AND gl.player_id IS NOT NULL
+          LIMIT 1
+        )
+        WHERE g.away_starting_goalie_id IS NULL
+          AND EXISTS (
+            SELECT 1
+            FROM game_lineups gl
+            WHERE gl.game_id = g.id
+              AND gl.team_id = g.away_team_id
+              AND gl.position_slot = 'G'
+              AND gl.player_id IS NOT NULL
+          );
       END IF;
     END $$
   `;
-
   await sql`DROP TABLE IF EXISTS game_lineups`;
-
-  // Starting goalies now live directly on games. Backfill from the legacy
-  // lineup goalie slot without overwriting already-set game-level values.
-  await sql`
-    UPDATE games g
-    SET
-      home_starting_goalie_id = COALESCE(
-        g.home_starting_goalie_id,
-        (
-          SELECT sl.goalie_id
-          FROM game_starting_lineup sl
-          WHERE sl.game_id = g.id AND sl.team_id = g.home_team_id
-          LIMIT 1
-        )
-      ),
-      away_starting_goalie_id = COALESCE(
-        g.away_starting_goalie_id,
-        (
-          SELECT sl.goalie_id
-          FROM game_starting_lineup sl
-          WHERE sl.game_id = g.id AND sl.team_id = g.away_team_id
-          LIMIT 1
-        )
-      )
-    WHERE g.home_starting_goalie_id IS NULL
-       OR g.away_starting_goalie_id IS NULL
-  `;
+  await sql`DROP TABLE IF EXISTS game_starting_lineup`;
 
   // ── Game rosters ───────────────────────────────────────────────────────────
   // Game-day squad: which players are participating in a specific game.
@@ -1888,10 +1870,6 @@ async function initSchema() {
   await sql`
     CREATE INDEX IF NOT EXISTS game_rosters_player_game_idx
       ON game_rosters(player_id, game_id)
-  `;
-  await sql`
-    CREATE INDEX IF NOT EXISTS game_starting_lineup_team_game_idx
-      ON game_starting_lineup(team_id, game_id)
   `;
   await sql`
     CREATE INDEX IF NOT EXISTS shootout_attempts_game_order_idx

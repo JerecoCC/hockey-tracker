@@ -58,14 +58,9 @@ export const POSITION_LABEL: Record<string, string> = {
   LW: 'Left Wing',
   RW: 'Right Wing',
   F: 'Forward',
-  F1: 'Forward',
-  F2: 'Forward',
-  F3: 'Forward',
   D: 'Defense',
   LD: 'Left Defense',
   RD: 'Right Defense',
-  D1: 'Defense',
-  D2: 'Defense',
   G: 'Goalie',
 };
 

@@ -499,7 +499,7 @@ describe('autofillGameFromNhlGamecenter', () => {
     );
   });
 
-  it('saves roster report starters into forward and defense slots by position', async () => {
+  it('saves roster report starting goalies from bold goalies', async () => {
     optionalRosterReportHtml = `
       <html><body>
         <table id="GameInfo">
@@ -532,29 +532,15 @@ describe('autofillGameFromNhlGamecenter', () => {
       String(url).endsWith('/admin/games/game-1/lineup'),
     );
 
-    expect(result.summary.lineupsSet).toBe(2);
+    expect(result.summary.startingGoaliesSet).toBe(2);
     expect(lineupPuts.map(([, payload]) => payload)).toEqual([
       {
         team_id: 'car-team',
-        slots: [
-          { position_slot: 'F1', player_id: 'jarvis' },
-          { position_slot: 'F2', player_id: 'svechnikov' },
-          { position_slot: 'F3', player_id: 'hall' },
-          { position_slot: 'D1', player_id: 'orlov' },
-          { position_slot: 'D2', player_id: 'slavin' },
-          { position_slot: 'G', player_id: 'andersen' },
-        ],
+        slots: [{ position_slot: 'G', player_id: 'andersen' }],
       },
       {
         team_id: 'min-team',
-        slots: [
-          { position_slot: 'F1', player_id: 'boldy' },
-          { position_slot: 'F2', player_id: 'zuccarello' },
-          { position_slot: 'F3', player_id: 'kaprizov' },
-          { position_slot: 'D1', player_id: 'faber' },
-          { position_slot: 'D2', player_id: 'spurgeon' },
-          { position_slot: 'G', player_id: 'wallstedt' },
-        ],
+        slots: [{ position_slot: 'G', player_id: 'wallstedt' }],
       },
     ]);
   });

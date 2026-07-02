@@ -23,7 +23,7 @@ import TeamPlayerEditModal from './TeamPlayerEditModal';
 import styles from './TeamDetails.module.scss';
 
 const FORWARD_ADD_PLAYER_POSITIONS = ['C', 'LW', 'RW', 'L', 'R', 'F'] as const;
-const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD', 'D1', 'D2']);
+const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD']);
 const GOALIE_POSITIONS = new Set(['G']);
 const PLAYER_SECTION_SKELETON_ROW_COUNT = 3;
 

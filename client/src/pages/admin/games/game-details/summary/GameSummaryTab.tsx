@@ -72,7 +72,7 @@ interface Props {
   roster: GameRosterEntry[];
   lineup: LineupEntry[];
   rosterReady: boolean;
-  lineupsReady: boolean;
+  startingGoaliesReady: boolean;
   // Write callbacks
   upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<GoalieStatRecord | null>;
   switchGoalie: (data: GoalieSwitchData) => Promise<GoalieStatRecord[] | null>;
@@ -120,7 +120,7 @@ const GameSummaryTab = ({
   roster,
   lineup,
   rosterReady,
-  lineupsReady,
+  startingGoaliesReady,
   upsertGoalieStat,
   switchGoalie,
   removeGoalieStat,
@@ -644,7 +644,7 @@ const GameSummaryTab = ({
               linescorePeriods={linescorePeriods}
               attempts={attempts}
               rosterReady={rosterReady}
-              lineupsReady={lineupsReady}
+              startingGoaliesReady={startingGoaliesReady}
               canEndGame={
                 editable &&
                 isInProgress &&

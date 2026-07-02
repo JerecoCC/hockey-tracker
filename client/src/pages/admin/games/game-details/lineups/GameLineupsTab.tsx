@@ -7,7 +7,7 @@ import ListItem from '@/components/ListItem/ListItem';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import useTeamPlayers from '@/hooks/useTeamPlayers';
-import useGameLineup, { type LineupEntry, type LineupPositionSlot } from '@/hooks/useGameLineup';
+import useGameLineup, { type LineupEntry } from '@/hooks/useGameLineup';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GameRecord } from '@/hooks/useGames';
 import { POSITION_LABEL } from '../constants';
@@ -20,57 +20,6 @@ import { playerDataComplete } from '../gameUtils';
 import { scheduledDateInputValue } from '../formatUtils';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
-
-const STARTER_SLOTS: LineupPositionSlot[] = ['F1', 'F2', 'F3', 'D1', 'D2', 'G'];
-const FORWARD_SLOTS: LineupPositionSlot[] = ['F1', 'F2', 'F3'];
-const DEFENSE_SLOTS: LineupPositionSlot[] = ['D1', 'D2'];
-
-type StarterDraft = Record<LineupPositionSlot, string | null>;
-interface StarterDraftState {
-  draft: StarterDraft;
-  inheritedDraft: StarterDraft;
-  hasSavedLineup: boolean;
-}
-
-const emptyStarterDraft = (): StarterDraft => ({
-  F1: null,
-  F2: null,
-  F3: null,
-  D1: null,
-  D2: null,
-  G: null,
-});
-
-const starterSlotsForPosition = (position: string | null | undefined): LineupPositionSlot[] => {
-  if (position === 'G') return ['G'];
-  if (position === 'D' || position === 'LD' || position === 'RD') return DEFENSE_SLOTS;
-  return FORWARD_SLOTS;
-};
-
-const findQuickAddStarterSlot = (
-  player: GameRosterEntry,
-  { draft, inheritedDraft, hasSavedLineup }: StarterDraftState,
-): LineupPositionSlot | null => {
-  const allowedSlots = starterSlotsForPosition(player.position);
-  const existingSlot = allowedSlots.find((slot) => draft[slot] === player.player_id);
-  if (existingSlot) return existingSlot;
-
-  if (!hasSavedLineup) {
-    const inheritedPlayerSlot = allowedSlots.find(
-      (slot) => inheritedDraft[slot] === player.player_id,
-    );
-    if (inheritedPlayerSlot) return inheritedPlayerSlot;
-
-    const inheritedEmptySlot = allowedSlots.find((slot) => !inheritedDraft[slot]);
-    if (inheritedEmptySlot) return inheritedEmptySlot;
-
-    return allowedSlots.find((slot) => inheritedDraft[slot]) ?? null;
-  }
-
-  const emptySlot = allowedSlots.find((slot) => !draft[slot]);
-  if (emptySlot) return emptySlot;
-  return null;
-};
 
 interface Props {
   game: GameRecord;
@@ -155,22 +104,12 @@ const GameLineupsTab = ({
 
   const awayLineupMap = new Map(
     lineup
-      .filter((e) => e.team_id === game.away_team.id && !e.inherited)
+      .filter((e) => e.team_id === game.away_team.id && e.position_slot === 'G')
       .map((e) => [e.player_id, e]),
   );
   const homeLineupMap = new Map(
     lineup
-      .filter((e) => e.team_id === game.home_team.id && !e.inherited)
-      .map((e) => [e.player_id, e]),
-  );
-  const awayInheritedLineupMap = new Map(
-    lineup
-      .filter((e) => e.team_id === game.away_team.id && !!e.inherited)
-      .map((e) => [e.player_id, e]),
-  );
-  const homeInheritedLineupMap = new Map(
-    lineup
-      .filter((e) => e.team_id === game.home_team.id && !!e.inherited)
+      .filter((e) => e.team_id === game.home_team.id && e.position_slot === 'G')
       .map((e) => [e.player_id, e]),
   );
 
@@ -187,38 +126,13 @@ const GameLineupsTab = ({
     setConfirmFinalCorrection(false);
   };
 
-  const buildStarterDraft = (teamId: string) => {
-    const draft = emptyStarterDraft();
-    const inheritedDraft = emptyStarterDraft();
-    let hasSavedLineup = false;
-    lineup
-      .filter((entry) => entry.team_id === teamId)
-      .forEach((entry) => {
-        if (entry.inherited) {
-          inheritedDraft[entry.position_slot] = entry.player_id;
-          return;
-        }
-
-        draft[entry.position_slot] = entry.player_id;
-        hasSavedLineup = true;
-      });
-    return { draft, inheritedDraft, hasSavedLineup };
-  };
-
-  const handleQuickAddStarter = async (player: GameRosterEntry, teamName: string) => {
-    const starterState = buildStarterDraft(player.team_id);
-    const slot = findQuickAddStarterSlot(player, starterState);
-    if (!slot) return;
-
-    const draft = { ...starterState.draft, [slot]: player.player_id };
+  const handleSetStartingGoalie = async (player: GameRosterEntry, teamName: string) => {
+    if (player.position !== 'G') return;
     setAddingStarterPlayerId(player.player_id);
     try {
       await saveTeamLineup(
         player.team_id,
-        STARTER_SLOTS.map((positionSlot) => ({
-          position_slot: positionSlot,
-          player_id: draft[positionSlot],
-        })),
+        [{ position_slot: 'G', player_id: player.player_id }],
         teamName,
       );
     } finally {
@@ -237,7 +151,6 @@ const GameLineupsTab = ({
     textColor: string,
     rosterEntries: GameRosterEntry[],
     lineupMap: typeof awayLineupMap,
-    inheritedLineupMap: typeof awayInheritedLineupMap,
     inheritedEntries: GameRosterEntry[],
   ) => (
     <Accordion
@@ -291,11 +204,11 @@ const GameLineupsTab = ({
                     },
                   ]
                 : []),
-              ...(rosterEntries.length > 0
+              ...(rosterEntries.some((entry) => entry.position === 'G')
                 ? [
                     {
                       icon: 'set_lineup',
-                      tooltip: 'Set Starting Lineup',
+                      tooltip: 'Set Starting Goalie',
                       intent: 'accent' as const,
                       onClick: () => setLineupSetTeam(side),
                     },
@@ -327,19 +240,11 @@ const GameLineupsTab = ({
           const goalies = rosterEntries.filter((e) => e.position === 'G').sort(byJersey);
 
           const renderPlayer = (e: GameRosterEntry) => {
-            const isStarter = lineupMap.has(e.player_id);
-            const isInheritedStarter = !isStarter && inheritedLineupMap.has(e.player_id);
-            const showStarterTag =
-              isStarter ||
-              (isFinal && !finalLineupCorrectionActive && isInheritedStarter) ||
-              (isInheritedStarter &&
-                game.status !== 'scheduled' &&
-                !(isFinal && finalLineupCorrectionActive));
+            const isStartingGoalie = lineupMap.has(e.player_id);
+            const canSetStartingGoalie = e.position === 'G' && !isStartingGoalie;
             const positionPart = e.position
               ? (POSITION_LABEL[e.position] ?? e.position)
               : undefined;
-            const starterState = buildStarterDraft(e.team_id);
-            const quickAddSlot = isStarter ? null : findQuickAddStarterSlot(e, starterState);
             return (
               <ListItem
                 key={e.id}
@@ -361,24 +266,20 @@ const GameLineupsTab = ({
                 placeholder={`${e.first_name[0]}${e.last_name[0]}`}
                 href={playerHrefBuilder?.(e.team_id, e.player_id, e.first_name, e.last_name)}
                 rightContent={
-                  showStarterTag
-                    ? { type: 'tag', label: 'Starter', intent: 'accent' }
-                    : isInheritedStarter
-                      ? { type: 'tag', label: 'Last Starter', intent: 'neutral' }
-                      : undefined
+                  isStartingGoalie
+                    ? { type: 'tag', label: 'Starting Goalie', intent: 'accent' }
+                    : undefined
                 }
                 actions={
                   lineupActionsLocked
                     ? []
                     : [
-                        !isStarter && {
-                          icon: 'playlist_add',
+                        canSetStartingGoalie && {
+                          icon: 'set_lineup',
                           intent: 'accent',
-                          tooltip: quickAddSlot
-                            ? 'Add to starting lineup'
-                            : 'Matching starter slots are full',
-                          disabled: !quickAddSlot || addingStarterPlayerId !== null,
-                          onClick: () => handleQuickAddStarter(e, teamName),
+                          tooltip: 'Set as starting goalie',
+                          disabled: addingStarterPlayerId !== null,
+                          onClick: () => handleSetStartingGoalie(e, teamName),
                         },
                         {
                           icon: 'person_remove',
@@ -425,10 +326,10 @@ const GameLineupsTab = ({
                   icon={finalLineupCorrectionActive ? 'check' : 'edit'}
                   iconHeight="button"
                   tooltip={
-                    finalLineupCorrectionActive ? 'Done Correcting' : 'Correct Final Lineup'
+                    finalLineupCorrectionActive ? 'Done Correcting' : 'Correct Final Starting Goalie'
                   }
                   aria-label={
-                    finalLineupCorrectionActive ? 'Done Correcting' : 'Correct Final Lineup'
+                    finalLineupCorrectionActive ? 'Done Correcting' : 'Correct Final Starting Goalie'
                   }
                   onClick={() => {
                     if (finalLineupCorrectionActive) {
@@ -481,7 +382,6 @@ const GameLineupsTab = ({
                 game.away_team.text_color,
                 awayRoster,
                 awayLineupMap,
-                awayInheritedLineupMap,
                 awayRosterInherited,
               )}
             </div>
@@ -504,7 +404,6 @@ const GameLineupsTab = ({
                 game.home_team.text_color,
                 homeRoster,
                 homeLineupMap,
-                homeInheritedLineupMap,
                 homeRosterInherited,
               )}
             </div>
@@ -574,7 +473,7 @@ const GameLineupsTab = ({
         />
       )}
 
-      {/* ── Set Starting Lineup ── */}
+      {/* ── Set Starting Goalie ── */}
       {!lineupActionsLocked &&
         lineupSetTeam !== null &&
         (() => {
@@ -612,11 +511,11 @@ const GameLineupsTab = ({
       {canOfferFinalLineupCorrection && (
         <ConfirmModal
           open={confirmFinalCorrection}
-          title="Correct Final Lineup"
+          title="Correct Final Starting Goalie"
           body={
             <>
-              This game is final. Corrections can change player game logs and season stats. Continue
-              editing the lineup for <strong>{game.away_team.code}</strong> vs{' '}
+              This game is final. Corrections can change goalie game logs and season stats. Continue
+              editing the starting goalie for <strong>{game.away_team.code}</strong> vs{' '}
               <strong>{game.home_team.code}</strong>?
             </>
           }

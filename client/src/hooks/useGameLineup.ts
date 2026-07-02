@@ -12,7 +12,7 @@ const authHeaders = () => ({
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-export type LineupPositionSlot = 'F1' | 'F2' | 'F3' | 'D1' | 'D2' | 'G';
+export type LineupPositionSlot = 'G';
 
 export interface LineupEntry {
   id: string;
@@ -27,7 +27,6 @@ export interface LineupEntry {
   date_of_birth: string | null;
   start_date: string | null;
   acquisition_type: string | null;
-  /** True when pre-populated from the last finished game; not yet saved to this game. */
   inherited?: boolean;
 }
 
@@ -65,7 +64,7 @@ const useGameLineup = (gameId: string | undefined) => {
       }
       return true;
     } catch (err) {
-      toast.error(apiError(err, 'Failed to clear lineup'));
+        toast.error(apiError(err, 'Failed to clear starting goalie'));
       return false;
     }
   };
@@ -81,7 +80,7 @@ const useGameLineup = (gameId: string | undefined) => {
         { team_id: teamId, slots },
         { headers: authHeaders() },
       );
-      toast.success(teamName ? `${teamName} starting lineup saved` : 'Starting lineup saved');
+      toast.success(teamName ? `${teamName} starting goalie saved` : 'Starting goalie saved');
       queryClient.setQueryData<LineupEntry[]>(queryKey, (current = []) => [
         ...current.filter((entry) => entry.team_id !== teamId),
         ...teamLineup,
@@ -91,7 +90,7 @@ const useGameLineup = (gameId: string | undefined) => {
       }
       return true;
     } catch (err) {
-      toast.error(apiError(err, 'Failed to save lineup'));
+      toast.error(apiError(err, 'Failed to save starting goalie'));
       return false;
     }
   };

@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import Button from '@/components/Button/Button';
-import Divider from '@/components/Divider/Divider';
-import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
-import SearchField from '@/components/SearchField/SearchField';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import { type LineupEntry, type LineupPositionSlot } from '@/hooks/useGameLineup';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
@@ -27,23 +22,8 @@ interface Props {
   ) => Promise<boolean>;
 }
 
-type FormValues = {
-  jerseyInput: string;
-  query: string;
-};
-
-type JerseyNotice = {
-  number: number;
-  name?: string;
-};
-
-const MAX_STARTERS = 6;
-const REQUIRED_SKATERS = 5;
+const MAX_STARTERS = 1;
 const REQUIRED_GOALIES = 1;
-const SKATER_SLOTS: LineupPositionSlot[] = ['F1', 'F2', 'F3', 'D1', 'D2'];
-
-const playerFullName = (player: Pick<TeamPlayerRecord, 'first_name' | 'last_name'>) =>
-  `${player.first_name} ${player.last_name}`.trim();
 
 const isGoalie = (player: Pick<TeamPlayerRecord, 'position'>) => (player.position ?? '') === 'G';
 
@@ -60,11 +40,6 @@ const compareByRosterOrder = (a: TeamPlayerRecord, b: TeamPlayerRecord) => {
   return `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
 };
 
-const formatJerseyNotice = (label: string, notices: JerseyNotice[]) =>
-  notices.length > 0
-    ? `${label}: ${notices.map((notice) => `#${notice.number}${notice.name ? ` ${notice.name}` : ''}`).join(', ')}`
-    : null;
-
 const SetLineupModal = ({
   open,
   onClose,
@@ -75,21 +50,14 @@ const SetLineupModal = ({
   correctionMode = false,
   saveTeamLineup,
 }: Props) => {
-  const { control, watch, setValue, reset } = useForm<FormValues>({
-    defaultValues: {
-      jerseyInput: '',
-      query: '',
-    },
-  });
-  const jerseyInput = watch('jerseyInput');
-  const query = watch('query');
-
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [savedSelected, setSavedSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
-  const [jerseyNotice, setJerseyNotice] = useState<string | null>(null);
 
-  const sortedPlayers = useMemo(() => [...players].sort(compareByRosterOrder), [players]);
+  const sortedPlayers = useMemo(
+    () => players.filter(isGoalie).sort(compareByRosterOrder),
+    [players],
+  );
 
   const selectedPlayers = useMemo(
     () => sortedPlayers.filter((player) => selected.has(player.id)),
@@ -106,25 +74,19 @@ const SetLineupModal = ({
   const hasChanges = selectedKey !== savedKey;
   const selectedCount = selected.size;
   const selectedGoalieCount = selectedPlayers.filter(isGoalie).length;
-  const selectedSkaterCount = selectedCount - selectedGoalieCount;
-  const lineupError =
-    selectedCount === MAX_STARTERS && selectedGoalieCount !== REQUIRED_GOALIES
-      ? 'Select exactly one goalie for the starting lineup.'
-      : selectedCount === MAX_STARTERS && selectedSkaterCount !== REQUIRED_SKATERS
-        ? 'Select five skaters and one goalie for the starting lineup.'
-        : null;
   const canSave =
     !saving &&
     selectedCount === MAX_STARTERS &&
     selectedGoalieCount === REQUIRED_GOALIES &&
-    selectedSkaterCount === REQUIRED_SKATERS &&
     hasChanges;
 
   useEffect(() => {
     if (!open) return;
 
     const playerIds = new Set(players.map((player) => player.id));
-    const teamEntries = lineup.filter((entry) => entry.team_id === teamId);
+    const teamEntries = lineup.filter(
+      (entry) => entry.team_id === teamId && entry.position_slot === 'G',
+    );
     const savedEntries = teamEntries.filter((entry) => !entry.inherited);
     const initialEntries = savedEntries.length > 0 ? savedEntries : teamEntries;
     const initialSelected = new Set(
@@ -136,103 +98,37 @@ const SetLineupModal = ({
 
     setSelected(initialSelected);
     setSavedSelected(nextSavedSelected);
-    setJerseyNotice(null);
-    reset({ jerseyInput: '', query: '' });
-  }, [lineup, open, players, reset, teamId]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return sortedPlayers;
-    const jerseyQuery = q.replace('#', '');
-    return sortedPlayers.filter((player) => {
-      const name = playerFullName(player).toLowerCase();
-      const displayName = `${player.last_name}, ${player.first_name}`.toLowerCase();
-      const position = (player.position ?? '').toLowerCase();
-      const jersey = player.jersey_number != null ? String(player.jersey_number) : '';
-      return (
-        name.includes(q) ||
-        displayName.includes(q) ||
-        position.includes(q) ||
-        jersey.startsWith(jerseyQuery)
-      );
-    });
-  }, [query, sortedPlayers]);
+  }, [lineup, open, players, teamId]);
 
   const displayedPlayers = useMemo(
     () =>
-      [...filtered].sort((a, b) => {
+      [...sortedPlayers].sort((a, b) => {
         const aSelected = selected.has(a.id);
         const bSelected = selected.has(b.id);
         if (aSelected === bSelected) return 0;
         return aSelected ? -1 : 1;
       }),
-    [filtered, selected],
+    [selected, sortedPlayers],
   );
 
   const toggle = (playerId: string) => {
     if (saving) return;
-    setJerseyNotice(null);
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(playerId)) {
         next.delete(playerId);
-      } else if (next.size < MAX_STARTERS) {
+      } else {
+        next.clear();
         next.add(playerId);
       }
       return next;
     });
   };
 
-  const handleApplyJerseys = () => {
-    if (saving) return;
-    const nums = jerseyInput
-      .split(/[\s,]+/)
-      .map((value) => parseInt(value, 10))
-      .filter((value) => !Number.isNaN(value));
-    if (nums.length === 0) return;
-
-    const missing: JerseyNotice[] = [];
-    const alreadySelected: JerseyNotice[] = [];
-    const skippedFull: JerseyNotice[] = [];
-    const nextSelected = new Set(selected);
-
-    nums.forEach((number) => {
-      const player = sortedPlayers.find((candidate) => candidate.jersey_number === number);
-      if (!player) {
-        missing.push({ number });
-        return;
-      }
-      const notice = { number, name: playerFullName(player) };
-      if (nextSelected.has(player.id)) {
-        alreadySelected.push(notice);
-        return;
-      }
-      if (nextSelected.size >= MAX_STARTERS) {
-        skippedFull.push(notice);
-        return;
-      }
-      nextSelected.add(player.id);
-    });
-    setSelected(nextSelected);
-
-    const notices = [
-      formatJerseyNotice('Already selected', alreadySelected),
-      formatJerseyNotice('No match', missing),
-      formatJerseyNotice('Skipped after six starters', skippedFull),
-    ].filter((notice): notice is string => Boolean(notice));
-    setJerseyNotice(notices.length > 0 ? notices.join(' ') : null);
-    setValue('jerseyInput', '');
-  };
-
   const handleSave = async () => {
     if (!canSave) return;
-    const skaters = selectedPlayers.filter((player) => !isGoalie(player));
     const goalie = selectedPlayers.find(isGoalie);
     const slots: Array<{ position_slot: LineupPositionSlot; player_id: string | null }> = [
-      ...SKATER_SLOTS.map((positionSlot, index) => ({
-        position_slot: positionSlot,
-        player_id: skaters[index]?.id ?? null,
-      })),
       { position_slot: 'G', player_id: goalie?.id ?? null },
     ];
 
@@ -250,113 +146,22 @@ const SetLineupModal = ({
     if (!saving) onClose();
   };
 
-  const handleClear = () => {
-    if (saving) return;
-    setSelected(new Set());
-    setJerseyNotice(null);
-  };
-
-  const footerSummary =
-    selectedCount > 0
-      ? `${selectedCount}/${MAX_STARTERS} starter${selectedCount !== 1 ? 's' : ''} selected`
-      : 'No starters selected';
-
   return (
     <Modal
       open={open}
-      title={`${correctionMode ? 'Correct Final Lineup' : 'Set Starting Lineup'} - ${teamName}`}
+      title={`${correctionMode ? 'Correct Final Starting Goalie' : 'Set Starting Goalie'} - ${teamName}`}
       onClose={handleClose}
       size="md"
       bodyClassName={styles.rosterBody}
       busy={saving}
-      footer={
-        <div className={styles.footerActions}>
-          <span className={styles.footerSummary}>{footerSummary}</span>
-          <Button
-            variant="outlined"
-            intent="danger"
-            icon="clear_all"
-            onClick={handleClear}
-            disabled={saving || selectedCount === 0}
-            className={styles.footerClear}
-          >
-            Clear
-          </Button>
-          <Button
-            variant="outlined"
-            intent="neutral"
-            onClick={handleClose}
-            type="button"
-            disabled={saving}
-            className={styles.footerCancel}
-          >
-            Cancel
-          </Button>
-          <Button
-            intent="accent"
-            icon="set_lineup"
-            onClick={handleSave}
-            type="button"
-            disabled={!canSave || !!lineupError}
-            className={styles.footerSave}
-          >
-            {saving ? 'Saving...' : correctionMode ? 'Save Correction' : 'Save Lineup'}
-          </Button>
-        </div>
-      }
+      onConfirm={handleSave}
+      confirmLabel={saving ? 'Saving...' : correctionMode ? 'Save Correction' : 'Save'}
+      confirmIcon="set_lineup"
+      confirmDisabled={!canSave}
     >
       <div className={styles.content}>
-        <div className={styles.groupHeader}>
-          <span className={styles.slotGroupLabel}>
-            Starting players <span className={styles.required}>*</span>
-          </span>
-          <span className={styles.groupMeta}>5 skaters + 1 goalie</span>
-        </div>
-
-        <div className={styles.controls}>
-          <div className={styles.quickAddWrap}>
-            <Field
-              control={control}
-              name="jerseyInput"
-              type="text"
-              placeholder="Jersey numbers (e.g. 7 11 25)..."
-              onKeyDown={(event) => {
-                if (event.key !== 'Enter') return;
-                event.preventDefault();
-                handleApplyJerseys();
-              }}
-              disabled={saving}
-            />
-            <Button
-              size="sm"
-              variant="outlined"
-              intent="info"
-              onClick={handleApplyJerseys}
-              disabled={saving || !jerseyInput.trim() || selectedCount >= MAX_STARTERS}
-            >
-              Apply
-            </Button>
-          </div>
-          {jerseyNotice && <p className={styles.notice}>{jerseyNotice}</p>}
-          <SearchField
-            className={styles.searchWrap}
-            placeholder="Search players..."
-            value={query}
-            onChange={(value) => setValue('query', value)}
-            disabled={saving}
-            autoFocus
-          />
-        </div>
-        <Divider className={styles.searchDivider} />
-
-        {lineupError && <p className={styles.error}>{lineupError}</p>}
-
-        {filtered.length === 0 ? (
-          <p className={styles.empty}>
-            {sortedPlayers.length === 0
-              ? 'No players are in this game lineup yet.'
-              : `No players match "${query}".`}
-          </p>
+        {sortedPlayers.length === 0 ? (
+          <p className={styles.empty}>No goalies are in this game lineup yet.</p>
         ) : (
           <ul className={styles.list}>
             {displayedPlayers.map((player) => {

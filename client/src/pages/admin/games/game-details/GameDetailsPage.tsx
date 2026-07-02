@@ -272,26 +272,22 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     (e) => e.team_id === game?.home_team.id && !!e.inherited,
   );
 
-  // ── Starting lineup data ───────────────────────────────────────────────────
+  // Starting goalie data.
   const { lineup, saveTeamLineup } = useGameLineup(gameId);
 
   // Both teams must have at least one persisted (non-inherited) roster entry.
   const rosterReady = awayRoster.length > 0 && homeRoster.length > 0;
 
-  // Both teams must have all 6 starter slots covered (saved or inherited) — 3 forwards,
-  // 2 defense, and 1 goalie — AND every player in those slots must be on the current
-  // game's roster.
-  const lineupsReady = (() => {
+  // Both teams must have a starting goalie who is on the current game's roster.
+  const startingGoaliesReady = (() => {
     if (!game) return false;
-    const SLOTS = ['F1', 'F2', 'F3', 'D1', 'D2', 'G'] as const;
     const rosterIds = new Set(roster.map((e) => e.player_id));
-    const hasAll = (teamId: string) => {
-      const entries = lineup.filter((e) => e.team_id === teamId);
-      return SLOTS.every((slot) =>
-        entries.some((e) => e.position_slot === slot && rosterIds.has(e.player_id)),
+    const hasStartingGoalie = (teamId: string) =>
+      lineup.some(
+        (entry) =>
+          entry.team_id === teamId && entry.position_slot === 'G' && rosterIds.has(entry.player_id),
       );
-    };
-    return hasAll(game.away_team.id) && hasAll(game.home_team.id);
+    return hasStartingGoalie(game.away_team.id) && hasStartingGoalie(game.home_team.id);
   })();
 
   const leagueId = game?.league_id ?? leagueSlug;
@@ -656,7 +652,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                     roster={roster}
                     lineup={lineup}
                     rosterReady={rosterReady}
-                    lineupsReady={lineupsReady}
+                    startingGoaliesReady={startingGoaliesReady}
                     upsertGoalieStat={upsertGoalieStat}
                     switchGoalie={switchGoalie}
                     removeGoalieStat={removeGoalieStat}

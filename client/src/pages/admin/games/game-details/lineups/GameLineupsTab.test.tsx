@@ -126,7 +126,7 @@ const awayRoster: GameRosterEntry[] = [
     last_name: 'Smith',
     photo: null,
     jersey_number: 19,
-    position: 'F',
+    position: 'G',
     inherited: false,
   },
 ] as GameRosterEntry[];
@@ -137,8 +137,8 @@ const inheritedLineup: LineupEntry[] = [
     game_id: 'game-1',
     team_id: 'team-away',
     player_id: 'player-1',
-    position_slot: 'F1',
-    inherited: true,
+    position_slot: 'G',
+    inherited: false,
   },
 ] as LineupEntry[];
 
@@ -172,34 +172,29 @@ beforeAll(() => {
   });
 });
 
-describe('GameLineupsTab starter tags', () => {
-  it('shows Starter for inherited starters when the game is final and not in edit mode', () => {
+describe('GameLineupsTab starting goalies', () => {
+  it('shows the Starting Goalie tag for saved starting goalies', () => {
     renderTab(false);
 
-    expect(screen.getByText('Starter')).toBeInTheDocument();
-    expect(screen.getByText('Forward')).toBeInTheDocument();
-    expect(screen.queryByText('Last Starter')).not.toBeInTheDocument();
+    expect(screen.getByText('Starting Goalie')).toBeInTheDocument();
+    expect(screen.getByText('Goalie')).toBeInTheDocument();
   });
 
-  it('locks final admin lineups until correction is confirmed', () => {
-    renderTab(true);
+  it('locks final admin starting goalies until correction is confirmed', () => {
+    renderTab(true, { lineup: [] });
 
-    expect(screen.getByText('Starter')).toBeInTheDocument();
-    expect(screen.queryByText('Last Starter')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Add to starting lineup' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Set as starting goalie' })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /correct final lineup/i }));
-    expect(screen.getByText(/corrections can change player game logs/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /correct final starting goalie/i }));
+    expect(screen.getByText(/corrections can change goalie game logs/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /start correction/i }));
 
-    expect(screen.getByText('Last Starter')).toBeInTheDocument();
-    expect(screen.queryByText('Starter')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add to starting lineup' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Set as starting goalie' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Remove from lineup' })).toBeInTheDocument();
   });
 
-  it('adds a roster player to the first matching empty starting lineup slot', async () => {
+  it('sets a roster goalie as the starting goalie', async () => {
     const saveTeamLineup = jest.fn().mockResolvedValue(true);
 
     renderTab(false, {
@@ -209,25 +204,18 @@ describe('GameLineupsTab starter tags', () => {
       saveTeamLineup,
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add to starting lineup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Set as starting goalie' }));
 
     await waitFor(() =>
       expect(saveTeamLineup).toHaveBeenCalledWith(
         'team-away',
-        [
-          { position_slot: 'F1', player_id: 'player-1' },
-          { position_slot: 'F2', player_id: null },
-          { position_slot: 'F3', player_id: null },
-          { position_slot: 'D1', player_id: null },
-          { position_slot: 'D2', player_id: null },
-          { position_slot: 'G', player_id: null },
-        ],
+        [{ position_slot: 'G', player_id: 'player-1' }],
         'Away Team',
       ),
     );
   });
 
-  it('overrides an inherited starter without persisting the rest of the inherited lineup', async () => {
+  it('replaces an existing starting goalie', async () => {
     const saveTeamLineup = jest.fn().mockResolvedValue(true);
     const rosterWithReplacement = [
       awayRoster[0],
@@ -240,51 +228,38 @@ describe('GameLineupsTab starter tags', () => {
         last_name: 'Doe',
         photo: null,
         jersey_number: 20,
-        position: 'F',
+        position: 'G',
         inherited: false,
       },
     ] as GameRosterEntry[];
-    const fullInheritedForwards = [
-      { ...inheritedLineup[0], position_slot: 'F1' as const, player_id: 'player-1' },
-      { ...inheritedLineup[0], id: 'lineup-2', position_slot: 'F2' as const, player_id: 'player-3' },
-      { ...inheritedLineup[0], id: 'lineup-3', position_slot: 'F3' as const, player_id: 'player-4' },
-    ];
 
     renderTab(false, {
       game: { ...game, status: 'scheduled' },
       isFinal: false,
       awayRoster: rosterWithReplacement,
-      lineup: fullInheritedForwards,
+      lineup: inheritedLineup,
       saveTeamLineup,
     });
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Add to starting lineup' })[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Set as starting goalie' }));
 
     await waitFor(() =>
       expect(saveTeamLineup).toHaveBeenCalledWith(
         'team-away',
-        [
-          { position_slot: 'F1', player_id: 'player-2' },
-          { position_slot: 'F2', player_id: null },
-          { position_slot: 'F3', player_id: null },
-          { position_slot: 'D1', player_id: null },
-          { position_slot: 'D2', player_id: null },
-          { position_slot: 'G', player_id: null },
-        ],
+        [{ position_slot: 'G', player_id: 'player-2' }],
         'Away Team',
       ),
     );
   });
 
-  it('keeps existing saved starters when adding another starter', async () => {
+  it('does not offer starting goalie actions for skaters', () => {
     const saveTeamLineup = jest.fn().mockResolvedValue(true);
-    const rosterWithReplacement = [
-      awayRoster[0],
+    const skaterRoster = [
       {
-        id: 'entry-2',
+        id: 'entry-skater',
         game_id: 'game-1',
         team_id: 'team-away',
-        player_id: 'player-2',
+        player_id: 'player-skater',
         first_name: 'Jane',
         last_name: 'Doe',
         photo: null,
@@ -293,36 +268,16 @@ describe('GameLineupsTab starter tags', () => {
         inherited: false,
       },
     ] as GameRosterEntry[];
-    const savedLineup = [
-      {
-        ...inheritedLineup[0],
-        inherited: false,
-      },
-    ];
 
     renderTab(false, {
       game: { ...game, status: 'scheduled' },
       isFinal: false,
-      awayRoster: rosterWithReplacement,
-      lineup: savedLineup,
+      awayRoster: skaterRoster,
+      lineup: [],
       saveTeamLineup,
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add to starting lineup' }));
-
-    await waitFor(() =>
-      expect(saveTeamLineup).toHaveBeenCalledWith(
-        'team-away',
-        [
-          { position_slot: 'F1', player_id: 'player-1' },
-          { position_slot: 'F2', player_id: 'player-2' },
-          { position_slot: 'F3', player_id: null },
-          { position_slot: 'D1', player_id: null },
-          { position_slot: 'D2', player_id: null },
-          { position_slot: 'G', player_id: null },
-        ],
-        'Away Team',
-      ),
-    );
+    expect(screen.queryByRole('button', { name: 'Set as starting goalie' })).not.toBeInTheDocument();
+    expect(saveTeamLineup).not.toHaveBeenCalled();
   });
 });

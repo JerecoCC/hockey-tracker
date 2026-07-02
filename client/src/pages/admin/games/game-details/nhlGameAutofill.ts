@@ -134,7 +134,7 @@ interface FillSummary {
   periodShots: Array<{ period: string; away_shots: number; home_shots: number }>;
   goalieStats: number;
   starsSet: number;
-  lineupsSet: number;
+  startingGoaliesSet: number;
   shootoutAttempts: number;
   usedRosterReport: boolean;
 }
@@ -331,13 +331,13 @@ export async function autofillGameFromNhlGamecenter(
     message: `Roster saved (${rosterMatched.away.length + rosterMatched.home.length} players).`,
     refresh: true,
   });
-  const lineupsSet = rosterReport
-    ? await syncStartingLineups(game, rosterMatched, warnings)
+  const startingGoaliesSet = rosterReport
+    ? await syncStartingGoalies(game, rosterMatched, warnings)
     : 0;
-  if (lineupsSet > 0) {
+  if (startingGoaliesSet > 0) {
     await emitProgress({
       step: 'lineups',
-      message: 'Starting lineups saved.',
+      message: 'Starting goalies saved.',
       refresh: true,
     });
   }
@@ -591,7 +591,7 @@ export async function autofillGameFromNhlGamecenter(
       periodShots,
       goalieStats: goalieStats.length,
       starsSet: stars.length,
-      lineupsSet,
+      startingGoaliesSet,
       shootoutAttempts: shootoutAttemptsCreated,
       usedRosterReport: !!rosterReport,
     },
@@ -1603,17 +1603,17 @@ async function syncGameRoster(
   }
 }
 
-async function syncStartingLineups(
+async function syncStartingGoalies(
   game: GameRecord,
   matched: Record<TeamSide, MatchedRosterPlayer[]>,
   warnings: string[],
 ) {
   let saved = 0;
   for (const side of ['away', 'home'] as const) {
-    const slots = buildStartingLineupSlots(matched[side]);
+    const slots = buildStartingGoalieSlot(matched[side]);
     if (!slots) {
       const teamCode = side === 'away' ? game.away_team.code : game.home_team.code;
-      warnings.push(`Could not find a complete bold starting lineup for ${teamCode} in the NHL roster report.`);
+      warnings.push(`Could not find a bold starting goalie for ${teamCode} in the NHL roster report.`);
       continue;
     }
     await apiPut<unknown, { team_id: string; slots: Array<{ position_slot: LineupPositionSlot; player_id: string }> }>(
@@ -1628,35 +1628,12 @@ async function syncStartingLineups(
   return saved;
 }
 
-function isDefensePosition(position: string | null | undefined) {
-  return position === 'D' || position === 'LD' || position === 'RD';
-}
-
-function buildStartingLineupSlots(players: MatchedRosterPlayer[]) {
-  const starters = players.filter((player) => player.starter).sort(compareStartingLineupOrder);
+function buildStartingGoalieSlot(players: MatchedRosterPlayer[]) {
+  const starters = players.filter((player) => player.starter);
   const goalies = starters.filter((player) => player.position === 'G');
-  const defense = starters.filter((player) => isDefensePosition(player.position));
-  // Anything that isn't a goalie or defenseman is treated as a forward (C/L/R/F).
-  const forwards = starters.filter(
-    (player) => player.position !== 'G' && !isDefensePosition(player.position),
-  );
-  if (forwards.length !== 3 || defense.length !== 2 || goalies.length !== 1) return null;
+  if (goalies.length !== 1) return null;
 
-  return [
-    { position_slot: 'F1' as const, player_id: forwards[0].localId },
-    { position_slot: 'F2' as const, player_id: forwards[1].localId },
-    { position_slot: 'F3' as const, player_id: forwards[2].localId },
-    { position_slot: 'D1' as const, player_id: defense[0].localId },
-    { position_slot: 'D2' as const, player_id: defense[1].localId },
-    { position_slot: 'G' as const, player_id: goalies[0].localId },
-  ];
-}
-
-function compareStartingLineupOrder(a: MatchedRosterPlayer, b: MatchedRosterPlayer) {
-  const goalieOrder = Number(a.position === 'G') - Number(b.position === 'G');
-  if (goalieOrder !== 0) return goalieOrder;
-  if (a.sweaterNumber !== b.sweaterNumber) return a.sweaterNumber - b.sweaterNumber;
-  return a.name.localeCompare(b.name);
+  return [{ position_slot: 'G' as const, player_id: goalies[0].localId }];
 }
 
 function getNhlGoals(playByPlay: any, boxscore: any): NhlGoal[] {
