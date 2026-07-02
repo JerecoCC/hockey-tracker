@@ -2317,6 +2317,111 @@ router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
   }
 });
 
+router.put('/:id/awards/:seasonAwardId/nominees', async (req, res) => {
+  const { id, seasonAwardId } = req.params;
+  const { nominees } = req.body;
+
+  if (!Array.isArray(nominees)) {
+    return res.status(400).json({ error: 'nominees must be an array' });
+  }
+
+  try {
+    const awards = await sql`
+      SELECT sa.id, la.recipient_type
+      FROM season_awards sa
+      JOIN league_awards la ON la.id = sa.award_id
+      WHERE sa.id = ${seasonAwardId} AND sa.season_id = ${id}
+    `;
+    if (awards.length === 0) return res.status(404).json({ error: 'Award not found' });
+
+    const recipientType = awards[0].recipient_type;
+    const normalized = [];
+    const seenRecipientIds = new Set();
+
+    for (let index = 0; index < nominees.length; index += 1) {
+      const nominee = nominees[index] ?? {};
+      const payloadType = nominee.recipient_type ?? recipientType;
+
+      if (payloadType !== recipientType) {
+        return res.status(400).json({ error: 'recipient_type does not match award' });
+      }
+
+      const recipientId = recipientType === 'player' ? nominee.player_id : nominee.team_id;
+      if (!recipientId) {
+        return res.status(400).json({
+          error: recipientType === 'player' ? 'player_id is required' : 'team_id is required',
+        });
+      }
+      if (seenRecipientIds.has(recipientId)) {
+        return res.status(400).json({ error: 'nominees must be unique' });
+      }
+      seenRecipientIds.add(recipientId);
+
+      const votePointsValue =
+        nominee.vote_points === undefined || nominee.vote_points === null || nominee.vote_points === ''
+          ? null
+          : Number(nominee.vote_points);
+      if (votePointsValue !== null && !Number.isFinite(votePointsValue)) {
+        return res.status(400).json({ error: 'vote_points must be a number' });
+      }
+
+      normalized.push({
+        player_id: recipientType === 'player' ? nominee.player_id : null,
+        team_id: recipientType === 'team' ? nominee.team_id : null,
+        rank: index + 1,
+        vote_points: votePointsValue,
+        stat_value: nominee.stat_value ?? null,
+        notes: typeof nominee.notes === 'string' ? nominee.notes.trim() || null : null,
+      });
+    }
+
+    for (const nominee of normalized) {
+      const recipientRows =
+        recipientType === 'player'
+          ? await sql`SELECT id FROM players WHERE id = ${nominee.player_id}`
+          : await sql`SELECT id FROM teams WHERE id = ${nominee.team_id}`;
+      if (recipientRows.length === 0) {
+        return res.status(400).json({ error: 'Invalid player, team, or award' });
+      }
+    }
+
+    await sql`
+      DELETE FROM season_award_recipients sar
+      USING season_awards sa
+      WHERE sar.season_award_id = ${seasonAwardId}
+        AND sar.role = 'nominee'
+        AND sa.id = sar.season_award_id
+        AND sa.season_id = ${id}
+    `;
+
+    for (const nominee of normalized) {
+      await sql`
+        INSERT INTO season_award_recipients (
+          season_award_id, recipient_type, player_id, team_id, role, rank, vote_points, stat_value, notes
+        )
+        VALUES (
+          ${seasonAwardId},
+          ${recipientType},
+          ${nominee.player_id},
+          ${nominee.team_id},
+          'nominee',
+          ${nominee.rank},
+          ${nominee.vote_points},
+          ${nominee.stat_value},
+          ${nominee.notes}
+        )
+      `;
+    }
+
+    return res.json({ count: normalized.length });
+  } catch (err) {
+    if (err.code === '23503')
+      return res.status(400).json({ error: 'Invalid player, team, or award' });
+    console.error('season award nominees replace error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.delete('/:id/awards/:seasonAwardId/recipients/:recipientId', async (req, res) => {
   const { id, seasonAwardId, recipientId } = req.params;
   try {

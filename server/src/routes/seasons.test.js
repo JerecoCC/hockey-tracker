@@ -157,6 +157,75 @@ describe('GET /api/admin/seasons/:id/awards', () => {
 });
 
 // ---------------------------------------------------------------------------
+// PUT /api/admin/seasons/:id/awards/:seasonAwardId/nominees
+// ---------------------------------------------------------------------------
+describe('PUT /api/admin/seasons/:id/awards/:seasonAwardId/nominees', () => {
+  it('replaces nominees in submitted order and stores rank positions', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'season-award-1', recipient_type: 'player' }])
+      .mockResolvedValueOnce([{ id: 'player-2' }])
+      .mockResolvedValueOnce([{ id: 'player-1' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/awards/season-award-1/nominees')
+      .send({
+        nominees: [
+          { recipient_type: 'player', player_id: 'player-2' },
+          { recipient_type: 'player', player_id: 'player-1', stat_value: '10' },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ count: 2 });
+    expect(sql).toHaveBeenCalledTimes(6);
+    expect(sql.mock.calls[1][0].join('')).toContain('SELECT id FROM players');
+    expect(sql.mock.calls[2][0].join('')).toContain('SELECT id FROM players');
+    expect(sql.mock.calls[3][0].join('')).toContain("sar.role = 'nominee'");
+    expect(sql.mock.calls[4][0].join('')).toContain('INSERT INTO season_award_recipients');
+    expect(sql.mock.calls[4].slice(1)).toEqual([
+      'season-award-1',
+      'player',
+      'player-2',
+      null,
+      1,
+      null,
+      null,
+      null,
+    ]);
+    expect(sql.mock.calls[5].slice(1)).toEqual([
+      'season-award-1',
+      'player',
+      'player-1',
+      null,
+      2,
+      null,
+      '10',
+      null,
+    ]);
+  });
+
+  it('rejects duplicate nominee recipients before replacing rows', async () => {
+    sql.mockResolvedValueOnce([{ id: 'season-award-1', recipient_type: 'player' }]);
+
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/awards/season-award-1/nominees')
+      .send({
+        nominees: [
+          { recipient_type: 'player', player_id: 'player-1' },
+          { recipient_type: 'player', player_id: 'player-1' },
+        ],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('nominees must be unique');
+    expect(sql).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/seasons/:id/standings
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/seasons/:id/standings', () => {

@@ -1137,32 +1137,32 @@
 
   &NomineeDraftRow {
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: $space-sm;
     align-items: center;
   }
 
-  &NomineeDraftCount {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    min-height: 42px;
-    color: var(--app-text-muted, #{$text-dim});
-    font-size: $font-xs;
-    font-weight: 700;
-    line-height: 1;
+  &NomineeDraftLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   &NomineeAddRow {
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: $space-sm;
     align-items: center;
   }
 
   &NomineeAddButton {
-    grid-column: 2 / -1;
+    grid-column: 1 / -1;
     width: 100%;
   }
 

@@ -219,6 +219,26 @@ const useSeasonAwards = (seasonId: string | undefined) => {
     }
   };
 
+  const saveNominees = async (
+    seasonAwardId: string,
+    nominees: AddAwardRecipientPayload[],
+    options: AwardMutationOptions = {},
+  ): Promise<boolean> => {
+    try {
+      await axios.put(
+        `${API}/admin/seasons/${seasonId}/awards/${seasonAwardId}/nominees`,
+        { nominees },
+        { headers: authHeaders() },
+      );
+      if (!options.silent) toast.success('Nominees saved');
+      if (options.refresh !== false) refresh();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to save nominees'));
+      return false;
+    }
+  };
+
   const deleteRecipient = async (
     seasonAwardId: string,
     recipientId: string,
@@ -246,6 +266,7 @@ const useSeasonAwards = (seasonId: string | undefined) => {
     updateTrackedAwards,
     updateSeasonAward,
     addRecipient,
+    saveNominees,
     deleteRecipient,
     refresh,
   };

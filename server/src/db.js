@@ -990,6 +990,27 @@ async function initSchema() {
   await sql`ALTER TABLE season_award_recipients ADD COLUMN IF NOT EXISTS vote_points INT`;
   await sql`ALTER TABLE season_award_recipients ADD COLUMN IF NOT EXISTS stat_value TEXT`;
   await sql`ALTER TABLE season_award_recipients ADD COLUMN IF NOT EXISTS notes TEXT`;
+  await sql`
+    WITH ordered_nominees AS (
+      SELECT
+        id,
+        ROW_NUMBER() OVER (
+          PARTITION BY season_award_id
+          ORDER BY
+            rank ASC NULLS LAST,
+            vote_points DESC NULLS LAST,
+            created_at ASC,
+            id ASC
+        )::smallint AS position
+      FROM season_award_recipients
+      WHERE role = 'nominee'
+    )
+    UPDATE season_award_recipients sar
+    SET rank = ordered_nominees.position
+    FROM ordered_nominees
+    WHERE sar.id = ordered_nominees.id
+      AND sar.rank IS NULL
+  `;
 
   // Player roster stints: one row per player-team-season stint.
   // A mid-season trade is recorded by setting end_date on the current row
@@ -1348,6 +1369,8 @@ async function initSchema() {
       season_id             UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
       home_team_id          UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
       away_team_id          UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      home_starting_goalie_id UUID REFERENCES players(id) ON DELETE SET NULL,
+      away_starting_goalie_id UUID REFERENCES players(id) ON DELETE SET NULL,
       scheduled_at          TIMESTAMPTZ,
       venue                 TEXT,
       game_type             TEXT NOT NULL DEFAULT 'regular'
@@ -1387,6 +1410,8 @@ async function initSchema() {
   // Migration: actual game start / end timestamps (distinct from the pre-game scheduled_at)
   await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS time_start TIMESTAMPTZ`;
   await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS time_end   TIMESTAMPTZ`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS home_starting_goalie_id UUID REFERENCES players(id) ON DELETE SET NULL`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS away_starting_goalie_id UUID REFERENCES players(id) ON DELETE SET NULL`;
 
   // Migration: drop stored score columns — scores are always derived from the goals table at query time.
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS home_score`;
@@ -1557,6 +1582,33 @@ async function initSchema() {
   `;
 
   await sql`DROP TABLE IF EXISTS game_lineups`;
+
+  // Starting goalies now live directly on games. Backfill from the legacy
+  // lineup goalie slot without overwriting already-set game-level values.
+  await sql`
+    UPDATE games g
+    SET
+      home_starting_goalie_id = COALESCE(
+        g.home_starting_goalie_id,
+        (
+          SELECT sl.goalie_id
+          FROM game_starting_lineup sl
+          WHERE sl.game_id = g.id AND sl.team_id = g.home_team_id
+          LIMIT 1
+        )
+      ),
+      away_starting_goalie_id = COALESCE(
+        g.away_starting_goalie_id,
+        (
+          SELECT sl.goalie_id
+          FROM game_starting_lineup sl
+          WHERE sl.game_id = g.id AND sl.team_id = g.away_team_id
+          LIMIT 1
+        )
+      )
+    WHERE g.home_starting_goalie_id IS NULL
+       OR g.away_starting_goalie_id IS NULL
+  `;
 
   // ── Game rosters ───────────────────────────────────────────────────────────
   // Game-day squad: which players are participating in a specific game.

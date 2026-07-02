@@ -40,6 +40,17 @@ const skater = {
   points: 10,
 };
 
+const secondSkater = {
+  ...skater,
+  player_id: 'player-2',
+  first_name: 'Jane',
+  last_name: 'Doe',
+  jersey_number: 27,
+  goals: 2,
+  assists: 3,
+  points: 5,
+};
+
 const team = {
   id: 'team-1',
   name: 'Toronto',
@@ -102,12 +113,17 @@ const renderTab = (
   addRecipient = jest.fn(async () => true),
   playoffSeries: unknown[] = [],
   playoffsStarted = true,
+  options: {
+    saveNominees?: jest.Mock;
+    skaters?: (typeof skater)[];
+  } = {},
 ) => {
   mockUseSeasonAwards.mockReturnValue({
     awards: [award],
     loading: false,
     updateTrackedAwards: jest.fn(async () => true),
     addRecipient,
+    saveNominees: options.saveNominees ?? jest.fn(async () => true),
     deleteRecipient: jest.fn(async () => true),
     refresh: jest.fn(),
   });
@@ -132,7 +148,7 @@ const renderTab = (
         seasonName="2025-26"
         playoffsStarted={playoffsStarted}
         seasonTeams={[team]}
-        skaters={[skater]}
+        skaters={options.skaters ?? [skater]}
         goalies={[]}
         standings={[]}
       />
@@ -241,6 +257,65 @@ describe('SeasonAwardsTab', () => {
     expect(metaItems[0]).toHaveTextContent('TOR');
     expect(metaItems[1]).toHaveTextContent('#19');
     expect(metaItems[2]).toHaveTextContent('Center');
+  });
+
+  it('reorders nominee drafts locally and saves the final order once', async () => {
+    const user = userEvent.setup();
+    const saveNominees = jest.fn(async () => true);
+    renderTab(
+      makeAward({
+        uses_nominees: true,
+        recipients: [
+          {
+            ...makeWinner('nominee-1', 'player-1', 'John Smith'),
+            role: 'nominee',
+            rank: 1,
+          },
+          {
+            ...makeWinner('nominee-2', 'player-2', 'Jane Doe'),
+            role: 'nominee',
+            rank: 2,
+          },
+        ],
+      }),
+      undefined,
+      [],
+      true,
+      {
+        saveNominees,
+        skaters: [skater, secondSkater],
+      },
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Nominees' }));
+    const saveButton = screen.getByRole('button', { name: 'Save Nominees' });
+
+    expect(saveButton).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'Move nominee 1 down' }));
+
+    expect(saveNominees).not.toHaveBeenCalled();
+    expect(saveButton).toBeEnabled();
+
+    await user.click(saveButton);
+
+    expect(saveNominees).toHaveBeenCalledTimes(1);
+    expect(saveNominees).toHaveBeenCalledWith('season-award-1', [
+      {
+        recipient_type: 'player',
+        player_id: 'player-2',
+        team_id: null,
+        role: 'nominee',
+        rank: 1,
+      },
+      {
+        recipient_type: 'player',
+        player_id: 'player-1',
+        team_id: null,
+        role: 'nominee',
+        rank: 2,
+      },
+    ]);
   });
 
   it('uses the grouped team selection flow only when the award definition is flagged', () => {

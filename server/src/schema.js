@@ -327,6 +327,8 @@ const games = pgTable('games', {
   seasonId: uuid('season_id').notNull().references(() => seasons.id, { onDelete: 'cascade' }),
   homeTeamId: uuid('home_team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   awayTeamId: uuid('away_team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  homeStartingGoalieId: uuid('home_starting_goalie_id').references(() => players.id, { onDelete: 'set null' }),
+  awayStartingGoalieId: uuid('away_starting_goalie_id').references(() => players.id, { onDelete: 'set null' }),
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
   scheduledTime: text('scheduled_time'),
   venue: text('venue'),

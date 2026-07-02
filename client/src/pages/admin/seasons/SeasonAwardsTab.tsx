@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { type DragEvent, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
@@ -9,6 +9,7 @@ import Field from '@/components/Field/Field';
 import GroupedFields from '@/components/GroupedFields/GroupedFields';
 import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import Modal from '@/components/Modal/Modal';
+import ReorderableField from '@/components/ReorderableField/ReorderableField';
 import SearchField from '@/components/SearchField/SearchField';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import Select, { type SelectOption } from '@/components/Select/Select';
@@ -319,6 +320,29 @@ const createNomineeDraft = (): NomineeDraft => ({
   recipient_id: '',
 });
 
+const nomineeRank = (recipient: SeasonAwardRecipient) =>
+  recipient.rank ?? Number.MAX_SAFE_INTEGER;
+
+const sortNominees = (recipients: SeasonAwardRecipient[]) =>
+  [...recipients].sort((a, b) => nomineeRank(a) - nomineeRank(b));
+
+const reorderDrafts = <T,>(drafts: T[], fromIndex: number, toIndex: number) => {
+  if (
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= drafts.length ||
+    toIndex >= drafts.length ||
+    fromIndex === toIndex
+  ) {
+    return drafts;
+  }
+
+  const next = [...drafts];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
+};
+
 const normalizedPosition = (position: string | null | undefined) =>
   position?.trim().toUpperCase() ?? '';
 
@@ -356,7 +380,7 @@ const SeasonAwardsTab = ({
   goalies,
   standings,
 }: Props) => {
-  const { awards, loading, updateTrackedAwards, addRecipient, deleteRecipient, refresh } =
+  const { awards, loading, updateTrackedAwards, addRecipient, saveNominees, deleteRecipient, refresh } =
     useSeasonAwards(seasonId);
   const { series: playoffSeries } = usePlayoffSeries(seasonId);
   const [awardSelectionOpen, setAwardSelectionOpen] = useState(false);
@@ -370,6 +394,7 @@ const SeasonAwardsTab = ({
   const [nomineeAward, setNomineeAward] = useState<SeasonAwardRecord | null>(null);
   const [nomineeDrafts, setNomineeDrafts] = useState<NomineeDraft[]>([]);
   const [nomineesSaving, setNomineesSaving] = useState(false);
+  const [draggingNomineeDraftId, setDraggingNomineeDraftId] = useState<string | null>(null);
   const [teamSelectionAward, setTeamSelectionAward] = useState<SeasonAwardRecord | null>(null);
   const [suggestedWinnerSavingAwardId, setSuggestedWinnerSavingAwardId] = useState<string | null>(
     null,
@@ -732,8 +757,9 @@ const SeasonAwardsTab = ({
   // Drive the simple-form confirm off the selected value rather than
   // isDirty/isValid, which can lag with a Controller-backed select after reset().
   const recipientSelectedId = recipientForm.watch('recipient_id');
-  const activeRecipientNominees =
-    activeRecipientAward?.recipients.filter((recipient) => recipient.role === 'nominee') ?? [];
+  const activeRecipientNominees = activeRecipientAward
+    ? sortNominees(activeRecipientAward.recipients.filter((recipient) => recipient.role === 'nominee'))
+    : [];
   const activeRecipientWinners =
     activeRecipientAward?.recipients.filter((recipient) => recipient.role === 'winner') ?? [];
   const activeRecipientWinnerOptions = activeRecipientAward
@@ -833,19 +859,20 @@ const SeasonAwardsTab = ({
 
   const openNomineesModal = (award: SeasonAwardRecord) => {
     setNomineeAward(award);
-    const drafts = award.recipients
-      .filter((recipient) => recipient.role === 'nominee')
+    const drafts = sortNominees(award.recipients.filter((recipient) => recipient.role === 'nominee'))
       .map((recipient) => ({
         id: recipient.id,
         recipient_id: recipientValueId(recipient) ?? '',
       }));
     setNomineeDrafts(drafts.length > 0 ? drafts : [createNomineeDraft()]);
+    setDraggingNomineeDraftId(null);
   };
 
   const closeNomineesModal = () => {
     setNomineeAward(null);
     setNomineeDrafts([]);
     setNomineesSaving(false);
+    setDraggingNomineeDraftId(null);
   };
 
   const addNomineeDraft = () => {
@@ -862,6 +889,58 @@ const SeasonAwardsTab = ({
 
   const removeNomineeDraft = (draftId: string) => {
     setNomineeDrafts((drafts) => drafts.filter((draft) => draft.id !== draftId));
+  };
+
+  const moveNomineeDraft = (draftId: string, delta: number) => {
+    setNomineeDrafts((drafts) => {
+      const fromIndex = drafts.findIndex((draft) => draft.id === draftId);
+      return reorderDrafts(drafts, fromIndex, fromIndex + delta);
+    });
+  };
+
+  const moveNomineeDraftTo = (
+    draftId: string,
+    targetDraftId: string,
+    placement: 'before' | 'after',
+  ) => {
+    if (draftId === targetDraftId) return;
+
+    setNomineeDrafts((drafts) => {
+      const fromIndex = drafts.findIndex((draft) => draft.id === draftId);
+      const targetIndex = drafts.findIndex((draft) => draft.id === targetDraftId);
+      if (fromIndex < 0 || targetIndex < 0) return drafts;
+
+      let toIndex = targetIndex + (placement === 'after' ? 1 : 0);
+      if (fromIndex < toIndex) toIndex -= 1;
+      return reorderDrafts(drafts, fromIndex, toIndex);
+    });
+  };
+
+  const handleNomineeDragStart =
+    (draftId: string) => (event: DragEvent<HTMLDivElement>) => {
+      if (nomineesSaving) {
+        event.preventDefault();
+        return;
+      }
+      setDraggingNomineeDraftId(draftId);
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/season-award-nominee-id', draftId);
+    };
+
+  const handleNomineeDragOver =
+    (targetDraftId: string) => (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const draggedId =
+        draggingNomineeDraftId || event.dataTransfer.getData('text/season-award-nominee-id');
+      if (!draggedId || draggedId === targetDraftId) return;
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const placement = event.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
+      moveNomineeDraftTo(draggedId, targetDraftId, placement);
+    };
+
+  const handleNomineeDragEnd = () => {
+    setDraggingNomineeDraftId(null);
   };
 
   const openTeamSelectionModal = (award: SeasonAwardRecord) => {
@@ -981,66 +1060,44 @@ const SeasonAwardsTab = ({
     closeRecipientModal();
   };
 
-  const activeNominees =
-    activeNomineeAward?.recipients.filter((recipient) => recipient.role === 'nominee') ?? [];
-  const activeNomineeRecipientIds = activeNominees.map(recipientValueId).filter(Boolean);
-  const nomineeDraftRecipientIds = nomineeDrafts.map((draft) => draft.recipient_id).filter(Boolean);
+  const activeNominees = activeNomineeAward
+    ? sortNominees(activeNomineeAward.recipients.filter((recipient) => recipient.role === 'nominee'))
+    : [];
+  const activeNomineeRecipientIds = activeNominees
+    .map(recipientValueId)
+    .filter((id): id is string => !!id);
+  const nomineeDraftRecipientIds = nomineeDrafts
+    .map((draft) => draft.recipient_id)
+    .filter((id): id is string => !!id);
   const nomineeDraftHasDuplicates =
     new Set(nomineeDraftRecipientIds).size !== nomineeDraftRecipientIds.length;
   const nomineeDraftHasEmpty = nomineeDraftRecipientIds.length !== nomineeDrafts.length;
-  const sortedActiveNomineeIds = [...activeNomineeRecipientIds].sort().join('|');
-  const sortedDraftNomineeIds = [...nomineeDraftRecipientIds].sort().join('|');
-  const nomineeDraftHasChanges = sortedActiveNomineeIds !== sortedDraftNomineeIds;
+  const activeNomineeOrderKey = activeNomineeRecipientIds.join('|');
+  const draftNomineeOrderKey = nomineeDraftRecipientIds.join('|');
+  const nomineeDraftHasChanges = activeNomineeOrderKey !== draftNomineeOrderKey;
   const nomineeDraftCanSave =
     !nomineeDraftHasEmpty && !nomineeDraftHasDuplicates && nomineeDraftHasChanges;
 
   const submitNominees = async () => {
     if (!activeNomineeAward?.season_award_id || !nomineeDraftCanSave) return;
+    const award = activeNomineeAward;
     setNomineesSaving(true);
 
-    const desiredRecipientIds = new Set(nomineeDraftRecipientIds);
-    const nomineesToKeep = new Set<string>();
+    const nominees = nomineeDraftRecipientIds.map((recipientId, index) =>
+      withAwardStatValue(award, {
+        recipient_type: award.recipient_type,
+        player_id: award.recipient_type === 'player' ? recipientId : null,
+        team_id: award.recipient_type === 'team' ? recipientId : null,
+        role: 'nominee',
+        rank: index + 1,
+      }),
+    );
 
-    for (const recipient of activeNominees) {
-      const recipientId = recipientValueId(recipient);
-      if (recipientId && desiredRecipientIds.has(recipientId) && !nomineesToKeep.has(recipientId)) {
-        nomineesToKeep.add(recipientId);
-        desiredRecipientIds.delete(recipientId);
-        continue;
-      }
-
-      const ok = await deleteRecipient(activeNomineeAward.season_award_id, recipient.id, {
-        silent: true,
-        refresh: false,
-      });
-      if (!ok) {
-        setNomineesSaving(false);
-        return;
-      }
+    const ok = await saveNominees(award.season_award_id, nominees);
+    setNomineesSaving(false);
+    if (ok) {
+      closeNomineesModal();
     }
-
-    for (const recipientId of desiredRecipientIds) {
-      const ok = await addRecipient(
-        activeNomineeAward.season_award_id,
-        withAwardStatValue(activeNomineeAward, {
-          recipient_type: activeNomineeAward.recipient_type,
-          player_id: activeNomineeAward.recipient_type === 'player' ? recipientId : null,
-          team_id: activeNomineeAward.recipient_type === 'team' ? recipientId : null,
-          role: 'nominee',
-        }),
-        {
-          silent: true,
-          refresh: false,
-        },
-      );
-      if (!ok) {
-        setNomineesSaving(false);
-        return;
-      }
-    }
-
-    refresh();
-    closeNomineesModal();
   };
 
   const addSuggestedWinner = async (award: SeasonAwardRecord, suggestion: SuggestedRecipient) => {
@@ -1167,7 +1224,9 @@ const SeasonAwardsTab = ({
               const winnerRecipientIds = new Set(
                 winners.map(recipientValueId).filter((id): id is string => !!id),
               );
-              const nominees = award.recipients.filter((recipient) => recipient.role === 'nominee');
+              const nominees = sortNominees(
+                award.recipients.filter((recipient) => recipient.role === 'nominee'),
+              );
               const visibleNominees = nominees.filter((recipient) => {
                 const recipientId = recipientValueId(recipient);
                 return !recipientId || !winnerRecipientIds.has(recipientId);
@@ -1492,6 +1551,7 @@ const SeasonAwardsTab = ({
             <div className={styles.awardNomineeDraftList}>
               {nomineeDrafts.map((draft, index) => {
                 const labelId = `nominee-draft-${draft.id}`;
+                const isDragging = draggingNomineeDraftId === draft.id;
                 return (
                   <div
                     key={draft.id}
@@ -1499,40 +1559,55 @@ const SeasonAwardsTab = ({
                   >
                     <span
                       id={labelId}
-                      className={styles.awardNomineeDraftCount}
+                      className={styles.awardNomineeDraftLabel}
                     >
-                      {index + 1}
+                      Nominee {index + 1}
                     </span>
-                    <Select
-                      value={draft.recipient_id || null}
-                      options={nomineeOptionsForDraft(draft)}
-                      placeholder={
-                        activeNomineeAward.recipient_type === 'player'
-                          ? 'Select player'
-                          : 'Select team'
-                      }
-                      emptyMessage="No nominees available"
-                      onChange={(value) => updateNomineeDraft(draft.id, value)}
-                      searchable
-                      ariaLabelledBy={labelId}
-                    />
+                    <ReorderableField
+                      dragging={isDragging}
+                      draggable={!nomineesSaving}
+                      disabled={nomineesSaving}
+                      moveUpDisabled={index === 0}
+                      moveDownDisabled={index === nomineeDrafts.length - 1}
+                      moveUpLabel={`Move nominee ${index + 1} up`}
+                      moveDownLabel={`Move nominee ${index + 1} down`}
+                      onMoveUp={() => moveNomineeDraft(draft.id, -1)}
+                      onMoveDown={() => moveNomineeDraft(draft.id, 1)}
+                      onDragStart={handleNomineeDragStart(draft.id)}
+                      onDragOver={handleNomineeDragOver(draft.id)}
+                      onDrop={handleNomineeDragEnd}
+                      onDragEnd={handleNomineeDragEnd}
+                    >
+                      <Select
+                        value={draft.recipient_id || null}
+                        options={nomineeOptionsForDraft(draft)}
+                        placeholder={
+                          activeNomineeAward.recipient_type === 'player'
+                            ? 'Select player'
+                            : 'Select team'
+                        }
+                        emptyMessage="No nominees available"
+                        onChange={(value) => updateNomineeDraft(draft.id, value)}
+                        searchable
+                        ariaLabelledBy={labelId}
+                      />
+                    </ReorderableField>
                     <Button
                       type="button"
                       size="sm"
                       variant="outlined"
                       intent="danger"
-                      icon="cancel"
+                      icon="close"
                       iconHeight="field"
                       tooltip="Remove nominee"
                       aria-label={`Remove nominee ${index + 1}`}
-                      disabled={nomineeDrafts.length <= 1}
+                      disabled={nomineesSaving || nomineeDrafts.length <= 1}
                       onClick={() => removeNomineeDraft(draft.id)}
                     />
                   </div>
                 );
               })}
               <div className={styles.awardNomineeAddRow}>
-                <span aria-hidden="true" />
                 <Button
                   type="button"
                   size="sm"

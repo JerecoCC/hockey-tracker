@@ -877,7 +877,7 @@ describe('GET /api/admin/games/:id/lineup', () => {
 
     expect(res.status).toBe(200);
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
-    expect(queries[2]).toMatch(/pt\.season_id = g\.season_id/);
+    expect(queries[2]).toMatch(/pt\.season_id = slot\.season_id/);
     expect(queries[2]).toMatch(/p\.date_of_birth/);
     expect(queries[2]).toMatch(/player_team_stints/);
     expect(queries[2]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
@@ -930,6 +930,7 @@ describe('PUT /api/admin/games/:id/lineup', () => {
   it('joins returned lineup player metadata by the game season', async () => {
     sql
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'game-1' }])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
 
@@ -943,17 +944,18 @@ describe('PUT /api/admin/games/:id/lineup', () => {
 
     expect(res.status).toBe(200);
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
-    expect(queries[2]).toMatch(/pt\.season_id = g\.season_id/);
-    expect(queries[2]).toMatch(/p\.date_of_birth/);
-    expect(queries[2]).toMatch(/player_team_stints/);
-    expect(queries[2]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
-    expect(queries[2]).toMatch(/acquisition_type/);
+    expect(queries[3]).toMatch(/pt\.season_id = slot\.season_id/);
+    expect(queries[3]).toMatch(/p\.date_of_birth/);
+    expect(queries[3]).toMatch(/player_team_stints/);
+    expect(queries[3]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
+    expect(queries[3]).toMatch(/acquisition_type/);
     expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
   });
 
   it('syncs a final game starting goalie stint when the lineup goalie changes', async () => {
     sql
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'game-1' }])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{ id: 'lineup-G', position_slot: 'G', player_id: 'goalie-2' }]);
@@ -966,10 +968,10 @@ describe('PUT /api/admin/games/:id/lineup', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual([{ id: 'lineup-G', position_slot: 'G', player_id: 'goalie-2' }]);
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
-    expect(queries[2]).toMatch(/UPDATE game_goalie_stints st/);
-    expect(queries[2]).toMatch(/g\.status = 'final'/);
-    expect(queries[2]).toMatch(/st\.stint_ord = 1/);
-    expect(queries[2]).toMatch(/st\.entered_period = '1'/);
+    expect(queries[3]).toMatch(/UPDATE game_goalie_stints st/);
+    expect(queries[3]).toMatch(/g\.status = 'final'/);
+    expect(queries[3]).toMatch(/st\.stint_ord = 1/);
+    expect(queries[3]).toMatch(/st\.entered_period = '1'/);
     expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
   });
 
@@ -983,6 +985,7 @@ describe('PUT /api/admin/games/:id/lineup', () => {
         defense_2_id: 'defense-1',
         goalie_id: 'goalie-1',
       }])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{ id: 'lineup-previous-F1', inherited: true }]);
 
@@ -1002,6 +1005,7 @@ describe('PUT /api/admin/games/:id/lineup', () => {
     expect(res.body).toEqual([{ id: 'lineup-previous-F1', inherited: true }]);
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
     expect(queries[1]).toMatch(/DELETE FROM game_starting_lineup/);
+    expect(queries[2]).toMatch(/UPDATE games/);
     expect(queries.join(' ')).not.toMatch(/INSERT INTO game_starting_lineup/);
     expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
   });
@@ -1009,7 +1013,7 @@ describe('PUT /api/admin/games/:id/lineup', () => {
 
 describe('DELETE /api/admin/games/:id/lineup/:teamId', () => {
   it('clears a lineup and refreshes cached stats', async () => {
-    sql.mockResolvedValueOnce([{ id: 'lineup-1' }]);
+    sql.mockResolvedValueOnce([{ game_exists: true, changed: true }]);
 
     const res = await request(app).delete('/api/admin/games/game-1/lineup/team-1');
 
@@ -1018,7 +1022,7 @@ describe('DELETE /api/admin/games/:id/lineup/:teamId', () => {
   });
 
   it('returns 404 when lineup not found', async () => {
-    sql.mockResolvedValueOnce([]);
+    sql.mockResolvedValueOnce([{ game_exists: true, changed: false }]);
 
     const res = await request(app).delete('/api/admin/games/game-1/lineup/team-1');
 
