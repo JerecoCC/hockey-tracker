@@ -167,6 +167,27 @@ describe('SeasonAwardsTab', () => {
     expect(screen.getByRole('button', { name: 'Award Player' })).toBeEnabled();
   });
 
+  it('renders the winner stat for stat-based player awards', () => {
+    const { container } = renderTab(
+      makeAward({
+        selection_method: 'automatic',
+        stat_key: 'points',
+        recipients: [
+          {
+            ...makeWinner('winner-1', 'player-1', 'John Smith'),
+            stat_value: '14',
+          },
+        ],
+      }),
+    );
+
+    expect(screen.getByText('Player Points')).toBeInTheDocument();
+    expect(screen.getByText('14')).toBeInTheDocument();
+    expect(container.querySelector('.awardRecipientStatFooter')).toBeInTheDocument();
+    expect(container.querySelector('.awardRecipientStatDivider')).toBeInTheDocument();
+    expect(container.querySelector('.awardRecipientStatCard')).toHaveTextContent('Player Points14');
+  });
+
   it('renders winner cards with full positions and dot-separated player info', () => {
     renderTab(
       makeAward({
@@ -285,6 +306,28 @@ describe('SeasonAwardsTab', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Award Player' })).not.toBeInTheDocument();
+  });
+
+  it('saves the stat value when recording a suggested stat winner', async () => {
+    const user = userEvent.setup();
+    const addRecipient = jest.fn(async () => true);
+    renderTab(
+      makeAward({
+        selection_method: 'automatic',
+        stat_key: 'points',
+      }),
+      addRecipient,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Award Player' }));
+
+    expect(addRecipient).toHaveBeenCalledWith('season-award-1', {
+      recipient_type: 'player',
+      player_id: 'player-1',
+      team_id: null,
+      role: 'winner',
+      stat_value: '10',
+    });
   });
 
   it('hides the set winner action for recorded playoff champion awards', () => {

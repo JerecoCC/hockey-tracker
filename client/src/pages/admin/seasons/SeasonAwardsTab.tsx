@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
+import Divider from '@/components/Divider/Divider';
 import Section from '@/components/Section/Section';
 import Field from '@/components/Field/Field';
 import GroupedFields from '@/components/GroupedFields/GroupedFields';
@@ -14,6 +15,7 @@ import Skeleton from '@/components/Skeleton/Skeleton';
 import Tag from '@/components/Tag/Tag';
 import { usePlayoffSeries, type PlayoffSeriesRecord } from '@/hooks/useGames';
 import useSeasonAwards, {
+  type AddAwardRecipientPayload,
   type AwardRecipientType,
   type SeasonAwardRecipient,
   type SeasonAwardRecord,
@@ -115,6 +117,11 @@ interface SuggestedRecipient {
   label: string;
 }
 
+interface AwardRecipientStatDisplay {
+  label: string;
+  value: string;
+}
+
 interface WinnerChecklistOption {
   id: string;
   name: string;
@@ -179,6 +186,46 @@ const numericFieldValue = (record: object, field: string | null | undefined) => 
   const value = (record as Record<string, unknown>)[field];
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const SKATER_STAT_KEYS = new Set(['points', 'goals', 'assists']);
+const GOALIE_STAT_KEYS = new Set(['save_pct', 'gaa', 'shutouts']);
+
+const statFieldForAward = (statKey: string | null | undefined) =>
+  statKey === 'standings_points' ? 'points' : statKey;
+
+const formatAwardStatValue = (statKey: string | null | undefined, value: unknown) => {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return String(value);
+  if (statKey === 'save_pct') return parsed.toFixed(3).replace(/^0/, '');
+  if (statKey === 'gaa') return parsed.toFixed(2);
+  return Number.isInteger(parsed) ? String(parsed) : parsed.toFixed(2);
+};
+
+const statValueForSelection = (
+  award: Pick<SeasonAwardRecord, 'stat_key'>,
+  recipientType: AwardRecipientType,
+  recipientId: string | null | undefined,
+  skaters: SkaterStatRecord[],
+  goalies: GoalieStatRecord[],
+  standings: TeamStandingRecord[],
+) => {
+  const field = statFieldForAward(award.stat_key);
+  if (!field || field === 'playoff_champion' || !recipientId) return null;
+
+  if (recipientType === 'team') {
+    const team = standings.find((row) => row.team_id === recipientId);
+    return team ? numericFieldValue(team, field) : null;
+  }
+
+  const player =
+    SKATER_STAT_KEYS.has(field)
+      ? skaters.find((row) => row.player_id === recipientId)
+      : GOALIE_STAT_KEYS.has(field)
+        ? goalies.find((row) => row.player_id === recipientId)
+        : null;
+  return player ? numericFieldValue(player, field) : null;
 };
 
 const isTeamSelectionAward = (award: SeasonAwardRecord) =>
@@ -410,6 +457,45 @@ const SeasonAwardsTab = ({
     logoLight: team.logo_light,
     code: team.code,
   }));
+
+  const selectedStatValue = (
+    award: SeasonAwardRecord,
+    recipientType: AwardRecipientType,
+    recipientId: string | null | undefined,
+  ) => {
+    const value = statValueForSelection(
+      award,
+      recipientType,
+      recipientId,
+      dedupedSkaters,
+      dedupedGoalies,
+      standings,
+    );
+    return value === null ? null : String(value);
+  };
+
+  const withAwardStatValue = (
+    award: SeasonAwardRecord,
+    payload: AddAwardRecipientPayload,
+  ): AddAwardRecipientPayload => {
+    const recipientId = payload.recipient_type === 'team' ? payload.team_id : payload.player_id;
+    const statValue = selectedStatValue(award, payload.recipient_type, recipientId);
+    return statValue === null ? payload : { ...payload, stat_value: statValue };
+  };
+
+  const recipientStatDisplay = (
+    award: SeasonAwardRecord,
+    recipient: SeasonAwardRecipient,
+  ): AwardRecipientStatDisplay | null => {
+    if (!award.stat_key || award.stat_key === 'playoff_champion') return null;
+    const recipientId = recipientValueId(recipient);
+    const rawValue =
+      recipient.stat_value ??
+      selectedStatValue(award, recipient.recipient_type, recipientId);
+    const value = formatAwardStatValue(award.stat_key, rawValue);
+    const label = statLabel(award.stat_key);
+    return value && label ? { label, value } : null;
+  };
 
   const recipientValueId = (recipient: SeasonAwardRecipient) =>
     recipient.recipient_type === 'team' ? recipient.team_id : recipient.player_id;
@@ -821,12 +907,15 @@ const SeasonAwardsTab = ({
         if (!ok) return;
       }
     }
-    const ok = await addRecipient(activeRecipientAward.season_award_id, {
-      recipient_type: activeRecipientAward.recipient_type,
-      player_id: activeRecipientAward.recipient_type === 'player' ? values.recipient_id : null,
-      team_id: activeRecipientAward.recipient_type === 'team' ? values.recipient_id : null,
-      role: 'winner',
-    });
+    const ok = await addRecipient(
+      activeRecipientAward.season_award_id,
+      withAwardStatValue(activeRecipientAward, {
+        recipient_type: activeRecipientAward.recipient_type,
+        player_id: activeRecipientAward.recipient_type === 'player' ? values.recipient_id : null,
+        team_id: activeRecipientAward.recipient_type === 'team' ? values.recipient_id : null,
+        role: 'winner',
+      }),
+    );
     if (ok) closeRecipientModal();
   });
 
@@ -870,12 +959,12 @@ const SeasonAwardsTab = ({
 
       const ok = await addRecipient(
         activeRecipientAward.season_award_id,
-        {
+        withAwardStatValue(activeRecipientAward, {
           recipient_type: activeRecipientAward.recipient_type,
           player_id: activeRecipientAward.recipient_type === 'player' ? recipientId : null,
           team_id: activeRecipientAward.recipient_type === 'team' ? recipientId : null,
           role: 'winner',
-        },
+        }),
         {
           silent: true,
           refresh: false,
@@ -932,12 +1021,12 @@ const SeasonAwardsTab = ({
     for (const recipientId of desiredRecipientIds) {
       const ok = await addRecipient(
         activeNomineeAward.season_award_id,
-        {
+        withAwardStatValue(activeNomineeAward, {
           recipient_type: activeNomineeAward.recipient_type,
           player_id: activeNomineeAward.recipient_type === 'player' ? recipientId : null,
           team_id: activeNomineeAward.recipient_type === 'team' ? recipientId : null,
           role: 'nominee',
-        },
+        }),
         {
           silent: true,
           refresh: false,
@@ -978,12 +1067,15 @@ const SeasonAwardsTab = ({
     }
 
     try {
-      await addRecipient(award.season_award_id, {
-        recipient_type: suggestion.type,
-        player_id: suggestion.type === 'player' ? suggestion.id : null,
-        team_id: suggestion.type === 'team' ? suggestion.id : null,
-        role: 'winner',
-      });
+      await addRecipient(
+        award.season_award_id,
+        withAwardStatValue(award, {
+          recipient_type: suggestion.type,
+          player_id: suggestion.type === 'player' ? suggestion.id : null,
+          team_id: suggestion.type === 'team' ? suggestion.id : null,
+          role: 'winner',
+        }),
+      );
     } finally {
       setSuggestedWinnerSavingAwardId(null);
     }
@@ -1013,13 +1105,13 @@ const SeasonAwardsTab = ({
     for (const slot of TEAM_SELECTION_SLOTS) {
       const ok = await addRecipient(
         teamSelectionAward.season_award_id,
-        {
+        withAwardStatValue(teamSelectionAward, {
           recipient_type: 'player',
           player_id: values[slot.field],
           role: 'winner',
           rank: slot.rank,
           notes: slot.group,
-        },
+        }),
         {
           silent: true,
           refresh: false,
@@ -1102,6 +1194,8 @@ const SeasonAwardsTab = ({
                 !hideRecordedAutomaticAction && canAwardWinners(award, playoffsStarted);
               const rendersColumnList =
                 isGroupedAward || (!canManageNominees && award.allow_multiple_winners);
+              const getAwardRecipientStat = (recipient: SeasonAwardRecipient) =>
+                recipientStatDisplay(award, recipient);
               const awardLabel = (
                 <div className={styles.awardTitleBlock}>
                   <h4>
@@ -1193,6 +1287,7 @@ const SeasonAwardsTab = ({
                         empty="No team recorded."
                         layout="column"
                         getRecipientHref={recipientHref}
+                        getRecipientStat={getAwardRecipientStat}
                       />
                     ) : !canManageNominees && award.allow_multiple_winners ? (
                       <AwardPlayerList
@@ -1200,6 +1295,7 @@ const SeasonAwardsTab = ({
                         empty="No winners recorded."
                         layout="column"
                         getRecipientHref={recipientHref}
+                        getRecipientStat={getAwardRecipientStat}
                       />
                     ) : (
                       <>
@@ -1208,6 +1304,7 @@ const SeasonAwardsTab = ({
                           empty={winnerEmptyMessage}
                           subtitle={winnerSubtitle}
                           getRecipientHref={recipientHref}
+                          getRecipientStat={getAwardRecipientStat}
                         />
                         {canManageNominees && (
                           <AwardPlayerList
@@ -1215,6 +1312,7 @@ const SeasonAwardsTab = ({
                             empty="No nominees recorded."
                             divided
                             getRecipientHref={recipientHref}
+                            getRecipientStat={getAwardRecipientStat}
                           />
                         )}
                       </>
@@ -1511,6 +1609,7 @@ interface WinnerListProps {
   empty: string;
   subtitle?: string | null;
   getRecipientHref: (recipient: SeasonAwardRecipient) => string | undefined;
+  getRecipientStat?: (recipient: SeasonAwardRecipient) => AwardRecipientStatDisplay | null;
 }
 
 const recipientName = (recipient: SeasonAwardRecipient) =>
@@ -1537,7 +1636,29 @@ const recipientPlayerCardProps = (recipient: SeasonAwardRecipient) => ({
   position: recipient.recipient_type === 'player' ? recipient.position : null,
 });
 
-const AwardWinnerList = ({ recipients, empty, subtitle, getRecipientHref }: WinnerListProps) => {
+const AwardRecipientStatCard = ({ stat }: { stat: AwardRecipientStatDisplay }) => (
+  <div className={styles.awardRecipientStatCard}>
+    <span className={styles.awardRecipientStat}>
+      <span className={styles.awardRecipientStatLabel}>{stat.label}</span>
+      <span className={styles.awardRecipientStatValue}>{stat.value}</span>
+    </span>
+  </div>
+);
+
+const AwardRecipientStatFooter = ({ stat }: { stat: AwardRecipientStatDisplay }) => (
+  <div className={styles.awardRecipientStatFooter}>
+    <Divider className={styles.awardRecipientStatDivider} />
+    <AwardRecipientStatCard stat={stat} />
+  </div>
+);
+
+const AwardWinnerList = ({
+  recipients,
+  empty,
+  subtitle,
+  getRecipientHref,
+  getRecipientStat,
+}: WinnerListProps) => {
   const compactCards = recipients.length > 1;
 
   return (
@@ -1554,17 +1675,21 @@ const AwardWinnerList = ({ recipients, empty, subtitle, getRecipientHref }: Winn
           <span className={styles.awardEmptyMessage}>{empty}</span>
         </li>
       ) : (
-        recipients.map((recipient) => (
-          <PlayerCard
-            key={recipient.id}
-            {...recipientPlayerCardProps(recipient)}
-            as="li"
-            subtitle={recipient.recipient_type === 'team' ? subtitle : undefined}
-            href={getRecipientHref(recipient)}
-            compact={compactCards}
-            className={styles.awardWinnerCard}
-          />
-        ))
+        recipients.map((recipient) => {
+          const stat = getRecipientStat?.(recipient);
+          return (
+            <PlayerCard
+              key={recipient.id}
+              {...recipientPlayerCardProps(recipient)}
+              as="li"
+              subtitle={recipient.recipient_type === 'team' ? subtitle : undefined}
+              href={getRecipientHref(recipient)}
+              compact={compactCards || Boolean(stat)}
+              footer={stat ? <AwardRecipientStatFooter stat={stat} /> : undefined}
+              className={styles.awardWinnerCard}
+            />
+          );
+        })
       )}
     </ul>
   );
@@ -1586,12 +1711,14 @@ const AwardPlayerList = ({
   divided = false,
   layout = 'row',
   getRecipientHref,
+  getRecipientStat,
 }: {
   recipients: SeasonAwardRecipient[];
   empty?: string;
   divided?: boolean;
   layout?: 'row' | 'column';
   getRecipientHref: (recipient: SeasonAwardRecipient) => string | undefined;
+  getRecipientStat?: (recipient: SeasonAwardRecipient) => AwardRecipientStatDisplay | null;
 }) => (
   <div
     className={[
@@ -1617,6 +1744,7 @@ const AwardPlayerList = ({
       >
         {recipients.map((recipient) => {
           const href = getRecipientHref(recipient);
+          const stat = getRecipientStat?.(recipient);
           return (
             <PlayerCard
               key={recipient.id}
@@ -1624,6 +1752,7 @@ const AwardPlayerList = ({
               as="li"
               variant="list"
               href={href}
+              footer={stat ? <AwardRecipientStatCard stat={stat} /> : undefined}
               className={styles.awardPlayerListItem}
             />
           );

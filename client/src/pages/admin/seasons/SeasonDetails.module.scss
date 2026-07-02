@@ -772,6 +772,59 @@
     max-height: var(--player-card-max-height);
   }
 
+  &RecipientStatFooter {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+    width: 100%;
+    min-width: 0;
+    margin-top: $space-sm;
+  }
+
+  &RecipientStatDivider {
+    width: 100%;
+  }
+
+  &RecipientStatCard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    padding: $space-sm $space-md;
+    text-align: center;
+  }
+
+  &RecipientStat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-width: 0;
+    color: var(--app-text, #{$text-body});
+    font-variant-numeric: tabular-nums;
+  }
+
+  &RecipientStatLabel {
+    color: var(--app-text-muted, #{$text-dim});
+    font-size: $font-xs;
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 1.2;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  &RecipientStatValue {
+    color: var(--app-text-strong, #{$text-bright});
+    font-size: 1.375rem;
+    font-weight: 900;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
   &WinnerCardsMultiple &WinnerCard {
     flex: 1 1 0;
     padding: $space-sm;
@@ -890,6 +943,23 @@
     --player-card-list-min-height: var(--award-player-row-height);
 
     flex: 0 0 min(260px, 82vw);
+
+    .awardRecipientStatCard {
+      flex-shrink: 0;
+      width: auto;
+      min-width: 74px;
+      min-height: 48px;
+      margin-left: auto;
+      padding: $space-xs $space-sm;
+    }
+
+    .awardRecipientStatLabel {
+      font-size: 0.625rem;
+    }
+
+    .awardRecipientStatValue {
+      font-size: $font-base;
+    }
   }
 
   &PlayerListScrollerColumn &PlayerListItem {
