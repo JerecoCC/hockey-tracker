@@ -142,6 +142,7 @@ describe('StintEditModal', () => {
     expect(screen.getByRole('option', { name: 'Foundational Signing' })).toHaveValue(
       'foundational_signing',
     );
+    expect(screen.queryByText('Roster Status')).not.toBeInTheDocument();
     expect(screen.queryByText('Team History')).not.toBeInTheDocument();
     expect(
       Array.from((screen.getByLabelText('Team') as HTMLSelectElement).options).map(
@@ -160,6 +161,7 @@ describe('StintEditModal', () => {
         team_id: 'team-ana',
         season_id: 'season-1',
         jersey_number: 23,
+        is_prospect: false,
         position: 'RW',
         acquisition_type: 'signing',
         start_date: '2025-01-15',
@@ -167,7 +169,7 @@ describe('StintEditModal', () => {
     );
   });
 
-  it('submits prospect status when editing a stint', async () => {
+  it('submits stint edits without changing prospect status', async () => {
     const user = userEvent.setup();
     const updateStint = jest.fn().mockResolvedValue(true);
 
@@ -214,16 +216,21 @@ describe('StintEditModal', () => {
       ),
     ).toEqual(['', 'team-sjs', 'team-ana']);
 
-    await user.click(screen.getByRole('button', { name: 'Prospect' }));
+    expect(screen.queryByText('Roster Status')).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText('Jersey #'));
+    await user.type(screen.getByLabelText('Jersey #'), '45');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
+    const updatePayload = updateStint.mock.calls[0][1];
     expect(updateStint).toHaveBeenCalledWith(
       'stint-1',
       expect.objectContaining({
         team_id: 'team-sjs',
         season_id: 'season-1',
-        is_prospect: true,
+        jersey_number: 45,
       }),
     );
+    expect(updatePayload).not.toHaveProperty('is_prospect');
   });
 });

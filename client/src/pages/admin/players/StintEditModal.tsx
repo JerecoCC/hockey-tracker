@@ -1,8 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import {
   type PlayerStintRecord,
   type UpdateStintData,
@@ -45,7 +44,6 @@ interface FormValues {
   team_id: string;
   jersey_number: string;
   position: string;
-  roster_status: 'roster' | 'prospect';
   acquisition_type: string;
   start_date: string;
   end_date: string;
@@ -83,7 +81,6 @@ const StintEditModal = ({
             team_id: stint.team_id,
             jersey_number: stint.jersey_number == null ? '' : String(stint.jersey_number),
             position: stint.position ?? '',
-            roster_status: stint.is_prospect ? 'prospect' : 'roster',
             acquisition_type: stint.acquisition_type ?? '',
             start_date: stint.start_date?.slice(0, 10) ?? '',
             end_date: stint.end_date?.slice(0, 10) ?? '',
@@ -92,7 +89,6 @@ const StintEditModal = ({
             team_id: '',
             jersey_number: '',
             position: '',
-            roster_status: 'roster',
             acquisition_type: 'signing',
             start_date: '',
             end_date: '',
@@ -164,7 +160,7 @@ const StintEditModal = ({
         team_id: data.team_id,
         season_id: seasonId,
         jersey_number: jerseyNumber,
-        is_prospect: data.roster_status === 'prospect',
+        is_prospect: false,
         position: data.position || null,
         acquisition_type: data.acquisition_type || 'signing',
         start_date: data.start_date || null,
@@ -178,7 +174,6 @@ const StintEditModal = ({
         team_id: data.team_id,
         ...(seasonId ? { season_id: seasonId } : {}),
         jersey_number: jerseyNumber,
-        is_prospect: data.roster_status === 'prospect',
         position: data.position || null,
         acquisition_type: data.acquisition_type || null,
         start_date: data.start_date || null,
@@ -273,27 +268,7 @@ const StintEditModal = ({
               disabled={isSubmitting}
             />
           </div>
-          <div className={styles.segmentedField}>
-            <span className={styles.segmentedLabel}>Roster Status</span>
-            <Controller
-              control={control}
-              name="roster_status"
-              render={({ field }) => (
-                <SegmentedControl
-                  value={field.value}
-                  onChange={field.onChange}
-                  variant="field"
-                  options={[
-                    { value: 'roster', label: 'Roster' },
-                    { value: 'prospect', label: 'Prospect' },
-                  ]}
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-          </div>
         </form>
-
       </div>
     </Modal>
   );
