@@ -89,7 +89,9 @@ describe('SetLineupModal', () => {
     expect(screen.queryByPlaceholderText(/goalie jersey number/i)).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/search goalies/i)).not.toBeInTheDocument();
 
-    const rows = Array.from(container.querySelectorAll('li')).map((row) => row.textContent);
+    const rows = Array.from(container.querySelectorAll('[data-radio-list-option="true"]')).map(
+      (row) => row.textContent,
+    );
     expect(rows).toEqual([
       expect.stringContaining('Frank F'),
       expect.stringContaining('Gina G'),
@@ -123,10 +125,10 @@ describe('SetLineupModal', () => {
   it('prefills saved starters and disables save when there are no changes', () => {
     renderModal({ lineup: makeLineup(false) });
 
-    const checkedBoxes = screen
-      .getAllByRole('checkbox')
-      .filter((checkbox) => checkbox.getAttribute('aria-checked') === 'true');
-    expect(checkedBoxes).toHaveLength(1);
+    const checkedRadios = screen
+      .getAllByRole('radio')
+      .filter((radio) => radio.getAttribute('aria-checked') === 'true');
+    expect(checkedRadios).toHaveLength(1);
     expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
   });
 
@@ -138,24 +140,44 @@ describe('SetLineupModal', () => {
       saveTeamLineup,
     });
 
-    const checkedBoxes = screen
-      .getAllByRole('checkbox')
-      .filter((checkbox) => checkbox.getAttribute('aria-checked') === 'true');
-    expect(checkedBoxes).toHaveLength(1);
+    const checkedRadios = screen
+      .getAllByRole('radio')
+      .filter((radio) => radio.getAttribute('aria-checked') === 'true');
+    expect(checkedRadios).toHaveLength(1);
 
     await user.click(screen.getByRole('button', { name: /save/i }));
 
     expect(saveTeamLineup).toHaveBeenCalledTimes(1);
   });
 
-  it('moves selected players to the top of the list', async () => {
+  it('changes directly from one selected goalie to another', async () => {
+    const user = userEvent.setup();
+    const saveTeamLineup = jest.fn().mockResolvedValue(true);
+    renderModal({
+      lineup: makeLineup(false),
+      saveTeamLineup,
+    });
+
+    await user.click(screen.getByText('Gina G'));
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(saveTeamLineup).toHaveBeenCalledWith(
+      't1',
+      [{ position_slot: 'G', player_id: 'g2' }],
+      'Test Team',
+    );
+  });
+
+  it('keeps goalie order when selecting a different goalie', async () => {
     const user = userEvent.setup();
     const { container } = renderModal();
 
     await user.click(screen.getByText('Gina G'));
 
-    const rows = Array.from(container.querySelectorAll('li')).map((row) => row.textContent);
-    expect(rows[0]).toEqual(expect.stringContaining('Gina G'));
-    expect(rows[1]).toEqual(expect.stringContaining('Frank F'));
+    const rows = Array.from(container.querySelectorAll('[data-radio-list-option="true"]')).map(
+      (row) => row.textContent,
+    );
+    expect(rows[0]).toEqual(expect.stringContaining('Frank F'));
+    expect(rows[1]).toEqual(expect.stringContaining('Gina G'));
   });
 });

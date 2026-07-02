@@ -16,6 +16,8 @@ interface Props {
   size?: 'md' | 'lg' | 'xl';
   className?: string;
   bodyClassName?: string;
+  footerClassName?: string;
+  footerDividerClassName?: string;
   /** When true, clicking the backdrop overlay does not close the modal. */
   disableBackdropClose?: boolean;
 
@@ -55,6 +57,8 @@ const Modal = (props: Props) => {
     size = 'md',
     className,
     bodyClassName,
+    footerClassName,
+    footerDividerClassName,
     disableBackdropClose = false,
     onConfirm,
     confirmLabel = 'Save',
@@ -158,8 +162,10 @@ const Modal = (props: Props) => {
         </div>
         <div className={`${styles.body} ${bodyClassName ?? ''}`}>{children}</div>
         {!hideFooter && (
-          <div className={styles.footer}>
-            <Divider className={styles.footerDivider} />
+          <div className={[styles.footer, footerClassName].filter(Boolean).join(' ')}>
+            <Divider
+              className={[styles.footerDivider, footerDividerClassName].filter(Boolean).join(' ')}
+            />
             {footer ?? builtInFooter}
           </div>
         )}

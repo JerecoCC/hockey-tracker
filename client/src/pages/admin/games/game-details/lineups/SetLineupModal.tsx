@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from '@/components/Modal/Modal';
-import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
+import RadioList, { type RadioListOption } from '@/components/RadioList/RadioList';
 import { type LineupEntry, type LineupPositionSlot } from '@/hooks/useGameLineup';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -101,29 +101,37 @@ const SetLineupModal = ({
   }, [lineup, open, players, teamId]);
 
   const displayedPlayers = useMemo(
-    () =>
-      [...sortedPlayers].sort((a, b) => {
-        const aSelected = selected.has(a.id);
-        const bSelected = selected.has(b.id);
-        if (aSelected === bSelected) return 0;
-        return aSelected ? -1 : 1;
-      }),
-    [selected, sortedPlayers],
+    () => sortedPlayers,
+    [sortedPlayers],
   );
 
-  const toggle = (playerId: string) => {
+  const selectGoalie = (playerId: string) => {
     if (saving) return;
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(playerId)) {
-        next.delete(playerId);
-      } else {
-        next.clear();
-        next.add(playerId);
-      }
-      return next;
-    });
+    setSelected(new Set([playerId]));
   };
+
+  const goalieOptions = useMemo<RadioListOption[]>(
+    () =>
+      displayedPlayers.map((player) => ({
+        value: player.id,
+        image: player.photo,
+        imagePlaceholder: `${player.first_name[0] ?? ''}${player.last_name[0] ?? ''}`,
+        imageShape: 'circle',
+        imagePrimaryColor: player.primary_color,
+        imageTextColor: player.text_color,
+        chip:
+          player.jersey_number != null
+            ? {
+                label: player.jersey_number,
+                primaryColor: player.primary_color,
+                textColor: player.text_color,
+              }
+            : null,
+        subtitle: formatPlayerPosition(player.position) ?? undefined,
+        name: `${player.first_name} ${player.last_name}`,
+      })),
+    [displayedPlayers],
+  );
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -146,6 +154,8 @@ const SetLineupModal = ({
     if (!saving) onClose();
   };
 
+  const selectedValue = selectedPlayers[0]?.id ?? null;
+
   return (
     <Modal
       open={open}
@@ -153,6 +163,8 @@ const SetLineupModal = ({
       onClose={handleClose}
       size="md"
       bodyClassName={styles.rosterBody}
+      footerClassName={styles.modalFooter}
+      footerDividerClassName={styles.modalFooterDivider}
       busy={saving}
       onConfirm={handleSave}
       confirmLabel={saving ? 'Saving...' : correctionMode ? 'Save Correction' : 'Save'}
@@ -163,36 +175,14 @@ const SetLineupModal = ({
         {sortedPlayers.length === 0 ? (
           <p className={styles.empty}>No goalies are in this game lineup yet.</p>
         ) : (
-          <ul className={styles.list}>
-            {displayedPlayers.map((player) => {
-              const checked = selected.has(player.id);
-              const disabled = saving || (!checked && selectedCount >= MAX_STARTERS);
-              return (
-                <SelectableListItem
-                  key={player.id}
-                  checked={checked}
-                  onToggle={() => toggle(player.id)}
-                  image={player.photo}
-                  imagePlaceholder={`${player.first_name[0] ?? ''}${player.last_name[0] ?? ''}`}
-                  imageShape="circle"
-                  imagePrimaryColor={player.primary_color}
-                  imageTextColor={player.text_color}
-                  chip={
-                    player.jersey_number != null
-                      ? {
-                          label: player.jersey_number,
-                          primaryColor: player.primary_color,
-                          textColor: player.text_color,
-                        }
-                      : null
-                  }
-                  subtitle={formatPlayerPosition(player.position) ?? undefined}
-                  name={`${player.first_name} ${player.last_name}`}
-                  disabled={disabled}
-                />
-              );
-            })}
-          </ul>
+          <RadioList
+            value={selectedValue}
+            onChange={selectGoalie}
+            options={goalieOptions}
+            disabled={saving}
+            ariaLabel="Starting goalie"
+            className={styles.list}
+          />
         )}
       </div>
     </Modal>
