@@ -3,11 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import Divider from '@/components/Divider/Divider';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
-import SearchField from '@/components/SearchField/SearchField';
-import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
+import SelectableList from '@/components/SelectableList/SelectableList';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { type PlayerRosterInput } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -76,26 +74,18 @@ const AddPlayersModal = ({
   const titlePlayerLabel = positionFilterLabel ?? 'Players';
   const playerLabel = titlePlayerLabel.toLowerCase();
 
-  const filtered = query.trim()
-    ? available.filter((p) => {
-        const q = query.trim().toLowerCase();
-        const name = `${p.first_name} ${p.last_name}`.toLowerCase();
-        const jersey = p.jersey_number != null ? String(p.jersey_number) : '';
-        const team = `${p.team_name ?? ''} ${p.team_code ?? ''}`.toLowerCase();
-        return (
-          name.includes(q) ||
-          (p.position ?? '').toLowerCase().includes(q) ||
-          jersey.startsWith(q.replace('#', '')) ||
-          team.includes(q)
-        );
-      })
-    : available;
-  const displayedPlayers = [...filtered].sort((a, b) => {
-    const aSelected = a.id in selected;
-    const bSelected = b.id in selected;
-    if (aSelected === bSelected) return 0;
-    return aSelected ? -1 : 1;
-  });
+  const matchesPlayerSearch = (player: PlayerRecord, searchQuery: string) => {
+    const q = searchQuery.trim().toLowerCase();
+    const name = `${player.first_name} ${player.last_name}`.toLowerCase();
+    const jersey = player.jersey_number != null ? String(player.jersey_number) : '';
+    const team = `${player.team_name ?? ''} ${player.team_code ?? ''}`.toLowerCase();
+    return (
+      name.includes(q) ||
+      (player.position ?? '').toLowerCase().includes(q) ||
+      jersey.startsWith(q.replace('#', '')) ||
+      team.includes(q)
+    );
+  };
 
   const toggle = (player: PlayerRecord) => {
     if (player.id in selected) {
@@ -165,76 +155,60 @@ const AddPlayersModal = ({
         </span>
       }
     >
-      <div className={styles.controls}>
-        <SearchField
-          className={styles.searchWrap}
-          placeholder="Search players…"
-          value={query}
-          onChange={setQuery}
-          autoFocus
-        />
-      </div>
-      <Divider className={styles.searchDivider} />
-
-      {filtered.length === 0 ? (
-        <p className={styles.empty}>
-          {available.length === 0
-            ? `No unassigned ${playerLabel} are available for this league.`
-            : `No players match "${query}".`}
-        </p>
-      ) : (
-        <ul className={styles.list}>
-          {displayedPlayers.map((p) => {
-            const isChecked = p.id in selected;
-            return (
-              <SelectableListItem
-                key={p.id}
-                checked={isChecked}
-                onToggle={() => toggle(p)}
-                leadingImage={p.team_logo}
-                leadingImageDark={p.team_logo_dark}
-                leadingImageLight={p.team_logo_light}
-                leadingImagePlaceholder={p.team_code ?? undefined}
-                leadingImagePrimaryColor={p.primary_color}
-                leadingImageTextColor={p.text_color}
-                image={p.photo}
-                imagePlaceholder={`${p.first_name[0]}${p.last_name[0]}`}
-                imageShape="circle"
-                imagePrimaryColor={p.primary_color}
-                imageTextColor={p.text_color}
-                name={`${p.first_name} ${p.last_name}`}
-                subtitle={formatPlayerPosition(p.position) ?? undefined}
-                rightContent={
-                  isChecked ? (
-                    <div
-                      className={styles.jerseyWrap}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <span className={styles.jerseyLabel}>#</span>
-                      <Field
-                        control={control}
-                        name={`jerseys.${p.id}`}
-                        type="number"
-                        wrapperClassName={styles.jerseyField}
-                        className={styles.jerseyInput}
-                        aria-label={`Jersey number for ${p.first_name} ${p.last_name}`}
-                        placeholder="—"
-                        min={1}
-                        max={99}
-                        inputMode="numeric"
-                        transform={(value) => {
-                          setJersey(p.id, value);
-                          return value;
-                        }}
-                      />
-                    </div>
-                  ) : undefined
-                }
+      <SelectableList
+        items={available}
+        getItemKey={(player) => player.id}
+        isSelected={(player) => player.id in selected}
+        onToggle={toggle}
+        filterItem={matchesPlayerSearch}
+        query={query}
+        onQueryChange={setQuery}
+        searchPlaceholder="Search players..."
+        searchAutoFocus
+        emptyMessage={`No unassigned ${playerLabel} are available for this league.`}
+        noResultsMessage={(searchQuery) => `No players match "${searchQuery}".`}
+        getItemProps={(player) => ({
+          leadingImage: player.team_logo,
+          leadingImageDark: player.team_logo_dark,
+          leadingImageLight: player.team_logo_light,
+          leadingImagePlaceholder: player.team_code ?? undefined,
+          leadingImagePrimaryColor: player.primary_color,
+          leadingImageTextColor: player.text_color,
+          image: player.photo,
+          imagePlaceholder: `${player.first_name[0] ?? ''}${player.last_name[0] ?? ''}`,
+          imageShape: 'circle',
+          imagePrimaryColor: player.primary_color,
+          imageTextColor: player.text_color,
+          name: `${player.first_name} ${player.last_name}`,
+          subtitle: formatPlayerPosition(player.position) ?? undefined,
+        })}
+        getItemRightContent={(player) =>
+          player.id in selected ? (
+            <div
+              className={styles.jerseyWrap}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span className={styles.jerseyLabel}>#</span>
+              <Field
+                control={control}
+                name={`jerseys.${player.id}`}
+                type="number"
+                wrapperClassName={styles.jerseyField}
+                className={styles.jerseyInput}
+                aria-label={`Jersey number for ${player.first_name} ${player.last_name}`}
+                placeholder="-"
+                min={1}
+                max={99}
+                inputMode="numeric"
+                transform={(value) => {
+                  setJersey(player.id, value);
+                  return value;
+                }}
               />
-            );
-          })}
-        </ul>
-      )}
+            </div>
+          ) : undefined
+        }
+      />
     </Modal>
   );
 };

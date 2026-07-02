@@ -5,66 +5,6 @@
   overflow-y: hidden;
   padding-bottom: 0;
 }
-
-.controls {
-  display: flex;
-  gap: $space-md;
-  margin-bottom: 0;
-  align-items: center;
-
-  @media (max-width: $bp-tablet) {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  &Gap {
-    margin-top: $space-xl;
-  }
-}
-
-.searchWrap {
-  flex: 1;
-}
-
-.searchDivider {
-  --divider-color: var(--app-border, #{$border});
-
-  margin-top: $space-lg;
-  flex-shrink: 0;
-}
-
-.list {
-  --selectable-list-item-image-size: 48px;
-  --selectable-list-item-image-font-size: #{$font-base};
-
-  list-style: none;
-  margin: 0;
-  padding: $space-lg 0;
-  max-height: min(70vh, 680px);
-  overflow-y: auto;
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-border, #{$border}) transparent;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--app-border, #{$border});
-    border-radius: $radius-md;
-    min-height: 1.5rem;
-  }
-}
-
 .jersey {
   &Wrap {
     align-self: center;
@@ -95,12 +35,4 @@
       font-weight: 400;
     }
   }
-}
-
-.empty {
-  font-size: $font-base;
-  color: var(--app-text-muted, #{$text-dim});
-  font-style: italic;
-  text-align: center;
-  padding: $space-2xl 0;
 }

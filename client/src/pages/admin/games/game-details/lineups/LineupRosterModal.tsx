@@ -9,7 +9,7 @@ import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import Modal from '@/components/Modal/Modal';
-import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
+import SelectableList from '@/components/SelectableList/SelectableList';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -112,20 +112,18 @@ const LineupRosterModal = ({
       return `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
     });
 
-  const filtered = query.trim()
-    ? available.filter((p) => {
-        const q = query.trim().toLowerCase();
-        const name = `${p.first_name} ${p.last_name}`.toLowerCase();
-        const jersey = p.jersey_number != null ? String(p.jersey_number) : '';
-        return (
-          name.includes(q) ||
-          (p.position ?? '').toLowerCase().includes(q) ||
-          jersey.startsWith(q.replace('#', ''))
-        );
-      })
-    : available;
-
   const selectedCount = selected.size;
+
+  const matchesPlayerSearch = (player: TeamPlayerRecord, searchQuery: string) => {
+    const q = searchQuery.trim().toLowerCase();
+    const name = `${player.first_name} ${player.last_name}`.toLowerCase();
+    const jersey = player.jersey_number != null ? String(player.jersey_number) : '';
+    return (
+      name.includes(q) ||
+      (player.position ?? '').toLowerCase().includes(q) ||
+      jersey.startsWith(q.replace('#', ''))
+    );
+  };
 
   const toggle = (playerId: string) => {
     if (controlsDisabled) return;
@@ -224,6 +222,14 @@ const LineupRosterModal = ({
     onClose();
   };
 
+  const handleClear = () => {
+    if (controlsDisabled) return;
+    setSelected(new Set());
+    setPendingMissing([]);
+    setAlreadyAdded([]);
+    setProspectMatches([]);
+  };
+
   const handleSubmit = async () => {
     if (selectedCount === 0 && pendingMissing.length === 0) return;
     if (selectedCount > 0) {
@@ -242,25 +248,56 @@ const LineupRosterModal = ({
     handleClose();
   };
 
+  const footerSummary =
+    selectedCount > 0
+      ? `${selectedCount} player${selectedCount !== 1 ? 's' : ''} selected`
+      : pendingMissing.length > 0
+        ? 'Will create missing players'
+        : 'No players selected';
+
   return (
     <Modal
       open={open}
       title={`Add to ${teamName} Lineup`}
       onClose={handleClose}
       size="md"
-      onConfirm={handleSubmit}
-      confirmLabel={submitting ? 'Adding…' : 'Add to Lineup'}
-      confirmIcon="group_add"
-      confirmDisabled={submitting || (selectedCount === 0 && pendingMissing.length === 0)}
+      bodyClassName={styles.rosterBody}
       busy={submitting}
-      footerStart={
-        <span>
-          {selectedCount > 0
-            ? `${selectedCount} player${selectedCount !== 1 ? 's' : ''} selected`
-            : pendingMissing.length > 0
-              ? 'Will create missing players'
-              : 'No players selected'}
-        </span>
+      footer={
+        <div className={styles.footerActions}>
+          <span className={styles.footerSummary}>{footerSummary}</span>
+          <Button
+            variant="outlined"
+            intent="danger"
+            icon="clear_all"
+            onClick={handleClear}
+            type="button"
+            disabled={controlsDisabled || (selectedCount === 0 && pendingMissing.length === 0)}
+            className={styles.footerClear}
+          >
+            Clear
+          </Button>
+          <Button
+            variant="outlined"
+            intent="neutral"
+            onClick={handleClose}
+            type="button"
+            disabled={controlsDisabled}
+            className={styles.footerCancel}
+          >
+            Cancel
+          </Button>
+          <Button
+            intent="accent"
+            icon="group_add"
+            onClick={handleSubmit}
+            type="button"
+            disabled={controlsDisabled || (selectedCount === 0 && pendingMissing.length === 0)}
+            className={styles.footerSave}
+          >
+            {submitting ? 'Adding...' : 'Add to Lineup'}
+          </Button>
+        </div>
       }
     >
       <div className={styles.content}>
@@ -270,9 +307,12 @@ const LineupRosterModal = ({
               control={control}
               name="jerseyInput"
               type="text"
-              className={styles.quickAddField}
-              placeholder="Jersey numbers (e.g. 7 11 25)…"
-              onKeyDown={(e) => e.key === 'Enter' && handleApplyJerseys()}
+              placeholder="Jersey numbers (e.g. 7 11 25)..."
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return;
+                e.preventDefault();
+                handleApplyJerseys();
+              }}
               disabled={controlsDisabled}
               autoFocus
             />
@@ -286,7 +326,6 @@ const LineupRosterModal = ({
               Apply
             </Button>
           </div>
-          <div className={styles.controlsDivider} />
           {alreadyAdded.length > 0 && (
             <p className={styles.alreadyAddedNote}>
               <Icon
@@ -317,73 +356,72 @@ const LineupRosterModal = ({
               {pendingMissing.map((n) => `#${n}`).join(', ')} — will open Create Players on confirm.
             </p>
           )}
-          <div className={styles.searchRow}>
-            <Field
-              control={control}
-              name="query"
-              type="search"
-              className={styles.searchField}
-              placeholder="Search players…"
-              disabled={controlsDisabled}
-            />
-            <ToggleButton
-              active={showProspects}
-              onClick={() => setShowProspects((v) => !v)}
-              icon={showProspects ? 'visibility_off' : 'visibility'}
-              size="sm"
-              iconHeight="field"
-              activeTooltip="Hide prospects"
-              inactiveTooltip="Show prospects"
-              disabled={controlsDisabled || !hasProspects}
-            />
-          </div>
         </div>
 
         {loadingPlayers ? (
           <LoadingSpinner message="Loading players..." />
-        ) : filtered.length === 0 ? (
-          <p className={styles.empty}>
-            {available.length === 0
-              ? 'All team players are already in this lineup.'
-              : `No players match "${query}".`}
-          </p>
         ) : (
-          <ul className={styles.list}>
-            {filtered.map((p) => (
-              <SelectableListItem
-                key={p.id}
-                checked={selected.has(p.id)}
-                onToggle={() => toggle(p.id)}
-                imagePlaceholder={
-                  p.jersey_number != null
-                    ? String(p.jersey_number)
-                    : `${p.first_name[0]}${p.last_name[0]}`
-                }
-                imageShape="square"
-                imagePrimaryColor={p.primary_color}
-                imageTextColor={p.text_color}
-                subtitle={formatPlayerPosition(p.position) ?? undefined}
-                name={`${p.last_name}, ${p.first_name}`}
-                rightContent={p.is_prospect ? <Tag label="Prospect" /> : undefined}
-                disabled={controlsDisabled}
-                actions={[
-                  p.is_prospect
-                    ? {
-                        icon: 'north',
-                        tooltip: 'Move to roster',
-                        disabled: controlsDisabled || movingPlayerId === p.id,
-                        onClick: () => updateProspectStatus(p, false),
-                      }
-                    : {
-                        icon: 'south',
-                        tooltip: 'Move to prospects',
-                        disabled: controlsDisabled || movingPlayerId === p.id,
-                        onClick: () => updateProspectStatus(p, true),
-                      },
-                ]}
+          <SelectableList
+            items={available}
+            getItemKey={(player) => player.id}
+            isSelected={(player) => selected.has(player.id)}
+            onToggle={(player) => toggle(player.id)}
+            filterItem={matchesPlayerSearch}
+            query={query}
+            onQueryChange={(value) => setValue('query', value)}
+            searchPlaceholder="Search players..."
+            searchDisabled={controlsDisabled}
+            searchRightContent={
+              <ToggleButton
+                variant="switch"
+                active={showProspects}
+                onClick={() => setShowProspects((v) => !v)}
+                activeIcon="visibility"
+                inactiveIcon="visibility_off"
+                activeTooltip="Hide prospects"
+                inactiveTooltip="Show prospects"
+                disabled={controlsDisabled || !hasProspects}
               />
-            ))}
-          </ul>
+            }
+            emptyMessage="All team players are already in this lineup."
+            noResultsMessage={(searchQuery) => `No players match "${searchQuery}".`}
+            getItemProps={(player) => ({
+              image: player.photo,
+              imagePlaceholder: `${player.first_name[0] ?? ''}${player.last_name[0] ?? ''}`,
+              imageShape: 'circle',
+              imagePrimaryColor: player.primary_color,
+              imageTextColor: player.text_color,
+              chip:
+                player.jersey_number != null
+                  ? {
+                      label: player.jersey_number,
+                      primaryColor: player.primary_color,
+                      textColor: player.text_color,
+                    }
+                  : null,
+              subtitle: formatPlayerPosition(player.position) ?? undefined,
+              name: `${player.first_name} ${player.last_name}`.trim(),
+              disabled: controlsDisabled,
+              actions: [
+                player.is_prospect
+                  ? {
+                      icon: 'north',
+                      tooltip: 'Move to roster',
+                      disabled: controlsDisabled || movingPlayerId === player.id,
+                      onClick: () => updateProspectStatus(player, false),
+                    }
+                  : {
+                      icon: 'south',
+                      tooltip: 'Move to prospects',
+                      disabled: controlsDisabled || movingPlayerId === player.id,
+                      onClick: () => updateProspectStatus(player, true),
+                    },
+              ],
+            })}
+            getItemRightContent={(player) =>
+              player.is_prospect ? <Tag label="Prospect" /> : undefined
+            }
+          />
         )}
       </div>
     </Modal>
