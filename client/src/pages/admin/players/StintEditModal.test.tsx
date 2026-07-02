@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { SeasonRecord } from '@/hooks/useSeasons';
-import type { PlayerStintRecord } from '@/hooks/useTeamPlayers';
 import type { TeamRecord } from '@/hooks/useTeams';
 import StintEditModal from './StintEditModal';
 
@@ -131,30 +130,6 @@ describe('StintEditModal', () => {
         stint={null}
         teams={teams}
         seasons={seasons}
-        history={[
-          {
-            id: 'stint-history',
-            player_id: 'player-kyle-masters',
-            team_id: 'team-sjs',
-            season_id: 'season-1',
-            jersey_number: 44,
-            is_prospect: false,
-            photo: null,
-            position: 'C',
-            acquisition_type: 'draft',
-            start_date: '2024-10-01',
-            end_date: null,
-            created_at: '2024-10-01T00:00:00.000Z',
-            team: {
-              id: 'team-sjs',
-              name: 'San Jose Sharks',
-              code: 'SJS',
-              logo: null,
-              primary_color: '#006d75',
-              text_color: '#ffffff',
-            },
-          } as PlayerStintRecord,
-        ]}
         leagueId="league-1"
         currentTeamId="team-sjs"
         onClose={jest.fn()}
@@ -167,8 +142,7 @@ describe('StintEditModal', () => {
     expect(screen.getByRole('option', { name: 'Foundational Signing' })).toHaveValue(
       'foundational_signing',
     );
-    expect(screen.getByText('Team History')).toBeInTheDocument();
-    expect(screen.getAllByText('San Jose Sharks').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Team History')).not.toBeInTheDocument();
     expect(
       Array.from((screen.getByLabelText('Team') as HTMLSelectElement).options).map(
         (option) => option.value,
@@ -222,7 +196,7 @@ describe('StintEditModal', () => {
               primary_color: '#006d75',
               text_color: '#ffffff',
             },
-          } as PlayerStintRecord
+          }
         }
         teams={teams}
         seasons={seasons}

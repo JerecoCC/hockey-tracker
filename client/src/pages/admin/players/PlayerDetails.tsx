@@ -1352,7 +1352,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             stint={editingStint}
             teams={teams}
             seasons={seasons}
-            history={stints}
             leagueId={leagueId ?? null}
             currentTeamId={latestStint?.team_id ?? teamId ?? null}
             onClose={() => {

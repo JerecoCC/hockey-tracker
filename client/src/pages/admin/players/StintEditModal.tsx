@@ -3,13 +3,11 @@ import { Controller, useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import {
   type PlayerStintRecord,
   type UpdateStintData,
   type CreateStintData,
 } from '@/hooks/useTeamPlayers';
-import { formatPlayerPosition } from '@/lib/playerPosition';
 import { type TeamRecord } from '@/hooks/useTeams';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import styles from '../teams/MovePlayerModal.module.scss';
@@ -59,7 +57,6 @@ interface Props {
   stint: PlayerStintRecord | null;
   teams: TeamRecord[];
   seasons: SeasonRecord[];
-  history?: PlayerStintRecord[];
   leagueId?: string | null;
   currentTeamId?: string | null;
   onClose: () => void;
@@ -67,21 +64,11 @@ interface Props {
   updateStint: (stintId: string, data: UpdateStintData) => Promise<boolean>;
 }
 
-const formatDate = (d: string | null) => {
-  if (!d) return '-';
-  return new Date(d + 'T00:00:00').toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
-
 const StintEditModal = ({
   open,
   stint,
   teams,
   seasons,
-  history = [],
   leagueId,
   currentTeamId,
   onClose,
@@ -307,49 +294,6 @@ const StintEditModal = ({
           </div>
         </form>
 
-        {history.length > 0 && (
-          <div className={styles.history}>
-            <h4 className={styles.historyTitle}>Team History</h4>
-            <ul className={styles.stintList}>
-              {history.map((s) => (
-                <li
-                  key={s.id}
-                  className={styles.stintItem}
-                >
-                  <TeamLogo
-                    logo={s.team.logo}
-                    logoDark={s.team.logo_dark}
-                    logoLight={s.team.logo_light}
-                    code={s.team.code ?? '?'}
-                    alt={s.team.name ?? ''}
-                    primaryColor={s.team.primary_color}
-                    textColor={s.team.text_color}
-                    size={32}
-                    shape="square"
-                    className={styles.stintLogo}
-                  />
-                  <div className={styles.stintInfo}>
-                    <span className={styles.stintTeam}>{s.team.name ?? 'Unknown Team'}</span>
-                    {s.jersey_number != null && (
-                      <span className={styles.stintJersey}>#{s.jersey_number}</span>
-                    )}
-                    {s.position && (
-                      <span className={styles.stintJersey}>{formatPlayerPosition(s.position)}</span>
-                    )}
-                    {s.acquisition_type && (
-                      <span className={styles.stintJersey}>
-                        {ACQUISITION_TYPE_LABELS[s.acquisition_type] ?? s.acquisition_type}
-                      </span>
-                    )}
-                  </div>
-                  <span className={styles.stintDates}>
-                    {formatDate(s.start_date)} - {s.end_date ? formatDate(s.end_date) : 'Present'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
     </Modal>
   );
