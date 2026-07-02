@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
+import Card from '@/components/Card/Card';
 import Divider from '@/components/Divider/Divider';
 import Section from '@/components/Section/Section';
 import Field from '@/components/Field/Field';
@@ -1637,19 +1638,15 @@ const recipientPlayerCardProps = (recipient: SeasonAwardRecipient) => ({
 });
 
 const AwardRecipientStatCard = ({ stat }: { stat: AwardRecipientStatDisplay }) => (
-  <div className={styles.awardRecipientStatCard}>
+  <Card
+    variant="border"
+    className={styles.awardRecipientStatCard}
+  >
     <span className={styles.awardRecipientStat}>
       <span className={styles.awardRecipientStatLabel}>{stat.label}</span>
       <span className={styles.awardRecipientStatValue}>{stat.value}</span>
     </span>
-  </div>
-);
-
-const AwardRecipientStatFooter = ({ stat }: { stat: AwardRecipientStatDisplay }) => (
-  <div className={styles.awardRecipientStatFooter}>
-    <Divider className={styles.awardRecipientStatDivider} />
-    <AwardRecipientStatCard stat={stat} />
-  </div>
+  </Card>
 );
 
 const AwardWinnerList = ({
@@ -1677,15 +1674,29 @@ const AwardWinnerList = ({
       ) : (
         recipients.map((recipient) => {
           const stat = getRecipientStat?.(recipient);
-          return (
+          return stat ? (
+            <li
+              key={recipient.id}
+              className={styles.awardWinnerStatStack}
+            >
+              <PlayerCard
+                {...recipientPlayerCardProps(recipient)}
+                subtitle={recipient.recipient_type === 'team' ? subtitle : undefined}
+                href={getRecipientHref(recipient)}
+                compact
+                className={styles.awardWinnerCard}
+              />
+              <Divider className={styles.awardRecipientStatDivider} />
+              <AwardRecipientStatCard stat={stat} />
+            </li>
+          ) : (
             <PlayerCard
               key={recipient.id}
               {...recipientPlayerCardProps(recipient)}
               as="li"
               subtitle={recipient.recipient_type === 'team' ? subtitle : undefined}
               href={getRecipientHref(recipient)}
-              compact={compactCards || Boolean(stat)}
-              footer={stat ? <AwardRecipientStatFooter stat={stat} /> : undefined}
+              compact={compactCards}
               className={styles.awardWinnerCard}
             />
           );
@@ -1745,14 +1756,30 @@ const AwardPlayerList = ({
         {recipients.map((recipient) => {
           const href = getRecipientHref(recipient);
           const stat = getRecipientStat?.(recipient);
-          return (
+          return stat ? (
+            <li
+              key={recipient.id}
+              className={styles.awardPlayerListItemStack}
+            >
+              <PlayerCard
+                {...recipientPlayerCardProps(recipient)}
+                variant="list"
+                href={href}
+                className={styles.awardPlayerListItem}
+              />
+              <Divider
+                variant="vertical"
+                className={styles.awardRecipientStatListDivider}
+              />
+              <AwardRecipientStatCard stat={stat} />
+            </li>
+          ) : (
             <PlayerCard
               key={recipient.id}
               {...recipientPlayerCardProps(recipient)}
               as="li"
               variant="list"
               href={href}
-              footer={stat ? <AwardRecipientStatCard stat={stat} /> : undefined}
               className={styles.awardPlayerListItem}
             />
           );

@@ -601,6 +601,12 @@
     --award-winner-card-height: 186px;
     --award-header-height: 52px;
     --award-player-row-height: 82px;
+    --award-recipient-stat-card-height: 80px;
+    --award-winner-stat-gap: #{$space-sm};
+    --award-winner-stat-player-height: calc(
+      var(--award-winner-card-height) - var(--award-recipient-stat-card-height) -
+        #{$space-sm * 2} - 1px
+    );
     --award-scrollbar-size: 8px;
     --award-divider-gap: #{$space-sm};
     --award-content-padding: #{$space-md};
@@ -724,6 +730,22 @@
       min-height: 100%;
       max-height: none;
     }
+
+    .awardWinnerStatStack {
+      height: 100%;
+      min-height: 100%;
+      max-height: none;
+
+      .awardWinnerCard {
+        --player-card-min-height: 0;
+        --player-card-max-height: none;
+
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 0;
+        max-height: none;
+      }
+    }
   }
 
   &Recipients {
@@ -772,13 +794,25 @@
     max-height: var(--player-card-max-height);
   }
 
-  &RecipientStatFooter {
+  &WinnerStatStack {
     display: flex;
+    flex: 1 1 0;
     flex-direction: column;
-    gap: $space-sm;
-    width: 100%;
+    gap: var(--award-winner-stat-gap);
     min-width: 0;
-    margin-top: $space-sm;
+    min-height: var(--award-winner-card-height);
+    max-height: var(--award-winner-card-height);
+    list-style: none;
+
+    .awardWinnerCard {
+      --player-card-min-height: var(--award-winner-stat-player-height);
+      --player-card-max-height: var(--award-winner-stat-player-height);
+
+      flex: 1 1 auto;
+      width: 100%;
+      min-height: var(--player-card-min-height);
+      max-height: var(--player-card-max-height);
+    }
   }
 
   &RecipientStatDivider {
@@ -790,8 +824,10 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
+    flex: 0 0 auto;
     width: 100%;
-    min-height: 48px;
+    height: var(--award-recipient-stat-card-height);
+    min-height: var(--award-recipient-stat-card-height);
     padding: $space-sm $space-md;
     text-align: center;
   }
@@ -943,14 +979,31 @@
     --player-card-list-min-height: var(--award-player-row-height);
 
     flex: 0 0 min(260px, 82vw);
+  }
+
+  &PlayerListItemStack {
+    --player-card-list-min-height: var(--award-player-row-height);
+
+    display: flex;
+    align-items: stretch;
+    flex: 0 0 min(360px, 92vw);
+    gap: $space-sm;
+    min-width: 0;
+    min-height: var(--award-player-row-height);
+    list-style: none;
+
+    .awardPlayerListItem {
+      flex: 1 1 auto;
+      width: auto;
+      min-width: 0;
+    }
 
     .awardRecipientStatCard {
-      flex-shrink: 0;
-      width: auto;
-      min-width: 74px;
-      min-height: 48px;
-      margin-left: auto;
-      padding: $space-xs $space-sm;
+      flex: 0 0 112px;
+      width: 112px;
+      height: auto;
+      min-height: var(--player-card-list-min-height, 72px);
+      padding: $space-sm $space-md;
     }
 
     .awardRecipientStatLabel {
@@ -962,7 +1015,16 @@
     }
   }
 
+  &RecipientStatListDivider {
+    --divider-vertical-margin-block: #{$space-xs};
+  }
+
   &PlayerListScrollerColumn &PlayerListItem {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  &PlayerListScrollerColumn &PlayerListItemStack {
     flex: 0 0 auto;
     width: 100%;
   }

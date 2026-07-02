@@ -183,7 +183,7 @@ describe('SeasonAwardsTab', () => {
 
     expect(screen.getByText('Player Points')).toBeInTheDocument();
     expect(screen.getByText('14')).toBeInTheDocument();
-    expect(container.querySelector('.awardRecipientStatFooter')).toBeInTheDocument();
+    expect(container.querySelector('.awardWinnerStatStack')).toBeInTheDocument();
     expect(container.querySelector('.awardRecipientStatDivider')).toBeInTheDocument();
     expect(container.querySelector('.awardRecipientStatCard')).toHaveTextContent('Player Points14');
   });
