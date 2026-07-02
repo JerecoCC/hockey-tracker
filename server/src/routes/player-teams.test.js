@@ -137,6 +137,35 @@ describe('POST /api/admin/player-teams', () => {
     expect(res.body.error).toMatch(/invalid acquisition_type/i);
   });
 
+  it('accepts expansion signing as an acquisition_type', async () => {
+    sql
+      .mockResolvedValueOnce([{
+        id: 'stint-1',
+        player_id: 'player-1',
+        team_id: 'team-1',
+        season_id: 'season-1',
+        jersey_number: 16,
+        position: 'C',
+        acquisition_type: 'expansion_signing',
+        start_date: '2024-10-01',
+        end_date: null,
+      }])
+      .mockResolvedValueOnce([{ id: 'career-stint-1' }]);
+
+    const res = await request(app)
+      .post('/api/admin/player-teams')
+      .send({
+        player_id: 'player-1',
+        team_id: 'team-1',
+        season_id: 'season-1',
+        acquisition_type: 'expansion_signing',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.acquisition_type).toBe('expansion_signing');
+    expect(sql).toHaveBeenCalledTimes(2);
+  });
+
   it('creates a stint and stores the season photo when provided', async () => {
     sql
       .mockResolvedValueOnce([{
