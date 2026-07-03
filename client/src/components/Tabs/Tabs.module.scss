@@ -17,6 +17,7 @@
   background: var(--app-surface, #{$bg-card});
   border: 1px solid var(--app-border, #{$border});
   border-radius: $radius-lg;
+  width: fit-content;
 
   &Disabled {
     opacity: 0.35;

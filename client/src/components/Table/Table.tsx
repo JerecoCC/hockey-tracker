@@ -77,6 +77,9 @@ const getColSortKey = <T,>(col: Column<T>): string | undefined => {
 const alignToJustify = (align?: 'left' | 'center' | 'right') =>
   align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
 
+const classNames = (...classes: Array<string | false | undefined>) =>
+  classes.filter(Boolean).join(' ') || undefined;
+
 interface TableProps<T> {
   columns: Column<T>[];
   data: T[];
@@ -131,7 +134,10 @@ const Table = <T,>({
                 <th
                   key={colKey ?? index}
                   style={col.align ? { textAlign: col.align } : undefined}
-                  className={col.sortable ? styles.thSortable : undefined}
+                  className={classNames(
+                    col.sortable && styles.thSortable,
+                    isActive && styles.sortedColumn,
+                  )}
                 >
                   {col.sortable && handleClick ? (
                     <button
@@ -178,14 +184,20 @@ const Table = <T,>({
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   className={rowClasses || undefined}
                 >
-                  {columns.map((col, index) => (
-                    <td
-                      key={`${rowKey(row)}-${getColSortKey(col) ?? index}`}
-                      style={col.align ? { textAlign: col.align } : undefined}
-                    >
-                      {renderCell(col, row)}
-                    </td>
-                  ))}
+                  {columns.map((col, index) => {
+                    const colKey = getColSortKey(col);
+                    const isActive = col.sortable && !!colKey && colKey === activeSortKey;
+
+                    return (
+                      <td
+                        key={`${rowKey(row)}-${colKey ?? index}`}
+                        style={col.align ? { textAlign: col.align } : undefined}
+                        className={isActive ? styles.sortedColumn : undefined}
+                      >
+                        {renderCell(col, row)}
+                      </td>
+                    );
+                  })}
                 </tr>
               );
             })

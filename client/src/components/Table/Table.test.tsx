@@ -155,4 +155,26 @@ describe('Table', () => {
     expect(screen.getByText('Beta').closest('tr')).toHaveClass('highlight-row');
     expect(screen.getByText('Alpha').closest('tr')).not.toHaveClass('highlight-row');
   });
+
+  it('highlights the active sort column', () => {
+    const sortableCols: Column<Item>[] = [
+      { header: 'Name', key: 'name', sortable: true },
+      { type: 'date', header: 'Created', key: 'created', sortable: true },
+    ];
+
+    render(
+      <Table
+        columns={sortableCols}
+        data={data}
+        rowKey={(r) => r.id}
+        activeSortKey="created"
+      />,
+    );
+
+    expect(screen.getByRole('columnheader', { name: /Created/ })).toHaveClass('sortedColumn');
+    expect(screen.getByText('2024/01/15')).toHaveClass('sortedColumn');
+    expect(screen.getByText('2024/06/01')).toHaveClass('sortedColumn');
+    expect(screen.getByRole('columnheader', { name: /Name/ })).not.toHaveClass('sortedColumn');
+    expect(screen.getByText('Alpha')).not.toHaveClass('sortedColumn');
+  });
 });

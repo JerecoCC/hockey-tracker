@@ -4,6 +4,9 @@
 // ── Table wrapper ──────────────────────────────────────────────────────
 .tableWrapper {
   --table-row-hover-bg: rgba(255, 255, 255, 0.04);
+  --table-sorted-column-bg: color-mix(in srgb, #{$accent-light} 10%, transparent);
+  --table-sorted-column-hover-bg: color-mix(in srgb, #{$accent-light} 15%, transparent);
+  --table-sorted-column-header-bg: color-mix(in srgb, #{$accent-light} 14%, transparent);
 
   overflow-x: auto;
 }
@@ -22,6 +25,11 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 1px solid var(--divider-color, var(--app-border, #{$border}));
+
+    &.sortedColumn {
+      color: var(--app-text-strong, #{$text-bright});
+      background: var(--table-sorted-column-header-bg);
+    }
   }
 
   tbody {
@@ -42,6 +50,14 @@
       padding: $space-lg;
       color: var(--app-text, #{$text-body});
       vertical-align: middle;
+
+      &.sortedColumn {
+        background: var(--table-sorted-column-bg);
+      }
+    }
+
+    tr:hover td.sortedColumn {
+      background: var(--table-sorted-column-hover-bg);
     }
   }
 }
@@ -156,6 +172,21 @@
     --table-row-hover-bg: color-mix(
       in srgb,
       var(--app-accent-light, #2563eb) 8%,
+      var(--app-surface, #fff)
+    );
+    --table-sorted-column-bg: color-mix(
+      in srgb,
+      var(--app-accent-light, #2563eb) 10%,
+      var(--app-surface, #fff)
+    );
+    --table-sorted-column-hover-bg: color-mix(
+      in srgb,
+      var(--app-accent-light, #2563eb) 16%,
+      var(--app-surface, #fff)
+    );
+    --table-sorted-column-header-bg: color-mix(
+      in srgb,
+      var(--app-accent-light, #2563eb) 14%,
       var(--app-surface, #fff)
     );
 
