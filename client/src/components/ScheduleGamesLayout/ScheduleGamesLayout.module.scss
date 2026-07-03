@@ -269,17 +269,6 @@
   border-radius: $radius-md;
 }
 
-.calendarDayCount {
-  --badge-min-width: 1.5rem;
-  --badge-min-height: 1.5rem;
-  --badge-padding: 0 #{$space-xs};
-  --badge-bg: color-mix(in srgb, var(--app-surface, #{$bg-card}) 84%, transparent);
-  --badge-border-color: color-mix(in srgb, var(--app-border, #{$border}) 78%, transparent);
-  --badge-value-color: var(--app-text-muted, #{$text-dim});
-  --badge-value-font-size: #{$font-xs};
-  --badge-value-font-weight: 700;
-}
-
 .calendarDayActionButton.calendarDayActionButton {
   display: inline-flex;
   align-items: center;

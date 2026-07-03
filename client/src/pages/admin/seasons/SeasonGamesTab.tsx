@@ -1084,7 +1084,10 @@ const SeasonGamesTab = ({
                 month={calendarMonth}
                 loading={loading}
                 getDayLabelSuffix={({ dateKey }) => (
-                  <ScheduleCalendarDayCount count={calendarGamesByDate.get(dateKey)?.length ?? 0} />
+                  <ScheduleCalendarDayCount
+                    count={calendarGamesByDate.get(dateKey)?.length ?? 0}
+                    label="games"
+                  />
                 )}
                 getDayHeaderRight={({ dateKey }) => {
                   if (isEnded) return undefined;

@@ -8,7 +8,7 @@ describe('Badge', () => {
     expect(screen.getByText('12')).toHaveClass('value');
   });
 
-  it('renders the label before the value', () => {
+  it('renders the label after the value', () => {
     render(
       <Badge
         label="SA"
@@ -18,8 +18,8 @@ describe('Badge', () => {
 
     const badge = screen.getByText('SA').parentElement;
     expect(Array.from(badge?.children ?? []).map((child) => child.textContent)).toEqual([
-      'SA',
       '31',
+      'SA',
     ]);
   });
 

@@ -11,8 +11,8 @@ const Badge = ({ label, value, className, ...rest }: BadgeProps) => (
     className={[styles.badge, className].filter(Boolean).join(' ')}
     {...rest}
   >
-    {label && <span className={styles.label}>{label}</span>}
     <span className={styles.value}>{value}</span>
+    {label && <span className={styles.label}>{label}</span>}
   </span>
 );
 
