@@ -20,6 +20,7 @@ import {
   ScheduleGamesTitle,
   ScheduleWeekList,
   ScheduleWeekSummary,
+  scheduleCalendarDayActionClassName,
   scheduleCalendarDayActionButtonClassName,
   scheduleViewSegmentedControlClassName,
   useScheduleWeekSummaryStuck,
@@ -35,6 +36,7 @@ import type { SelectOption } from '@/components/Select/Select';
 import BulkCreateGamesModal from './BulkCreateGamesModal';
 import GameFormModal from './GameFormModal';
 import { autofillGameFromNhlGamecenter } from '@/pages/admin/games/game-details/nhlGameAutofill';
+import { autofillGameFromPwhlGamecenter } from '@/pages/admin/games/game-details/pwhlGameAutofill';
 import { buildGameDetailsPath } from '@/lib/routeSlugs';
 import Icon from '@/components/Icon/Icon';
 import {
@@ -163,8 +165,16 @@ const nhlScheduleKey = (
 const isNhlGame = (game: GameRecord, leagueCode: string | null | undefined) =>
   normalizeCode(game.league_code ?? leagueCode) === 'NHL';
 
+const getAutofillLeagueCode = (
+  game: GameRecord,
+  leagueCode: string | null | undefined,
+): 'NHL' | 'PWHL' | null => {
+  const code = normalizeCode(game.league_code ?? leagueCode);
+  return code === 'NHL' || code === 'PWHL' ? code : null;
+};
+
 const isDayAutofillCandidate = (game: GameRecord, leagueCode: string | null | undefined) =>
-  isNhlGame(game, leagueCode) &&
+  !!getAutofillLeagueCode(game, leagueCode) &&
   !!game.scheduled_at &&
   (game.status === 'scheduled' ||
     game.status === 'in_progress' ||
@@ -223,6 +233,19 @@ const nhlScheduleDateKeys = (game: GameRecord) => {
   if (!scheduledAt) return [];
   const easternDate = toEasternDateKey(scheduledAt);
   return Array.from(new Set([easternDate].filter((dateKey): dateKey is string => !!dateKey)));
+};
+
+const dayAutofillLeagueLabel = (
+  games: GameRecord[],
+  leagueCode: string | null | undefined,
+) => {
+  const labels = new Set(
+    games
+      .map((game) => getAutofillLeagueCode(game, leagueCode))
+      .filter((code): code is 'NHL' | 'PWHL' => !!code),
+  );
+  if (labels.size === 1) return [...labels][0];
+  return 'League';
 };
 
 const compareOptionalStringAsc = (
@@ -661,8 +684,9 @@ const SeasonGamesTab = ({
 
   const handleAutofillDay = async (dateKey: string, dayGames: GameRecord[]) => {
     const candidates = getDayAutofillCandidates(dayGames);
+    const autofillLeagueLabel = dayAutofillLeagueLabel(candidates, leagueCode);
     if (candidates.length === 0) {
-      toast.info('No scheduled NHL games to auto-fill for this day.');
+      toast.info('No scheduled NHL or PWHL games to auto-fill for this day.');
       return;
     }
 
@@ -671,9 +695,14 @@ const SeasonGamesTab = ({
     const failures: string[] = [];
     let filled = 0;
     const dayLabel = fmtDayHeading(dateKey);
-    const totalProgressSteps = candidates.length + 1;
+    const nhlCandidates = candidates.filter((game) => isNhlGame(game, leagueCode));
+    const needsScheduleLoad = nhlCandidates.length > 0;
+    const prefillProgressSteps = needsScheduleLoad ? 1 : 0;
+    const totalProgressSteps = candidates.length + prefillProgressSteps;
     const progressToastId = toast.loading(
-      `Auto-filling NHL games for ${dayLabel}: loading schedule...`,
+      needsScheduleLoad
+        ? `Auto-filling ${autofillLeagueLabel} games for ${dayLabel}: loading schedule...`
+        : `Auto-filling ${autofillLeagueLabel} games for ${dayLabel}: starting...`,
       {
         autoClose: false,
         closeButton: false,
@@ -718,40 +747,52 @@ const SeasonGamesTab = ({
     };
 
     try {
-      const scheduleDates = Array.from(
-        new Set(candidates.flatMap((game) => nhlScheduleDateKeys(game))),
-      );
-      const scheduleIndexes = await Promise.all(scheduleDates.map(fetchNhlScheduleIndex));
       const scheduleIndex = new Map<string, string>();
-      for (const index of scheduleIndexes) {
-        for (const entry of index) scheduleIndex.set(entry[0], entry[1]);
+      if (needsScheduleLoad) {
+        const scheduleDates = Array.from(
+          new Set(nhlCandidates.flatMap((game) => nhlScheduleDateKeys(game))),
+        );
+        const scheduleIndexes = await Promise.all(scheduleDates.map(fetchNhlScheduleIndex));
+        for (const index of scheduleIndexes) {
+          for (const entry of index) scheduleIndex.set(entry[0], entry[1]);
+        }
+        updateProgressToast(
+          1,
+          `Auto-filling ${autofillLeagueLabel} games for ${dayLabel}: schedule loaded. 0/${candidates.length} games processed.`,
+        );
       }
-      updateProgressToast(
-        1,
-        `Auto-filling NHL games for ${dayLabel}: schedule loaded. 0/${candidates.length} games processed.`,
-      );
 
       for (const [index, game] of candidates.entries()) {
+        const autofillCode = getAutofillLeagueCode(game, leagueCode);
         updateProgressToast(
-          index + 1,
+          prefillProgressSteps + index,
           `Auto-filling ${describeGame(game)} (${index + 1}/${candidates.length})...`,
         );
-        const scheduleKeys = nhlScheduleDateKeys(game).map((candidateDateKey) =>
-          nhlScheduleKey(candidateDateKey, game.away_team.code, game.home_team.code),
-        );
-        const nhlGameId =
-          scheduleKeys.map((scheduleKey) => scheduleIndex.get(scheduleKey)).find(Boolean) ??
-          (game.game_number ? String(game.game_number) : null);
+        const gameId = (() => {
+          if (autofillCode === 'PWHL') return game.league_game_number?.trim() || null;
+          if (autofillCode === 'NHL') {
+            const scheduleKeys = nhlScheduleDateKeys(game).map((candidateDateKey) =>
+              nhlScheduleKey(candidateDateKey, game.away_team.code, game.home_team.code),
+            );
+            return (
+              scheduleKeys.map((scheduleKey) => scheduleIndex.get(scheduleKey)).find(Boolean) ??
+              (game.game_number ? String(game.game_number) : null)
+            );
+          }
+          return null;
+        })();
 
-        if (!nhlGameId) {
-          const dateKeys = nhlScheduleDateKeys(game);
-          failures.push(
-            `${describeGame(game)}: no NHL schedule match${
-              dateKeys.length > 0 ? ` for ${dateKeys.join(' or ')}` : ''
-            }`,
-          );
+        if (!gameId) {
+          const dateKeys = autofillCode === 'NHL' ? nhlScheduleDateKeys(game) : [];
+          const missingReason =
+            autofillCode === 'PWHL'
+              ? 'no PWHL league game number set'
+              : `no NHL schedule match${
+                  dateKeys.length > 0 ? ` for ${dateKeys.join(' or ')}` : ''
+                }`;
+          failures.push(`${describeGame(game)}: ${missingReason}`);
           updateProgressToast(
-            index + 2,
+            prefillProgressSteps + index + 1,
             `Skipped ${describeGame(game)} (${index + 1}/${candidates.length}).`,
           );
           revealAutofilledGame(game.id);
@@ -759,19 +800,23 @@ const SeasonGamesTab = ({
         }
 
         try {
-          await autofillGameFromNhlGamecenter(game, nhlGameId);
+          if (autofillCode === 'PWHL') {
+            await autofillGameFromPwhlGamecenter(game, gameId);
+          } else {
+            await autofillGameFromNhlGamecenter(game, gameId);
+          }
           filled += 1;
           await refreshAutofilledGame(game.id);
           updateProgressToast(
-            index + 2,
+            prefillProgressSteps + index + 1,
             `Auto-filled ${describeGame(game)} (${index + 1}/${candidates.length}).`,
           );
         } catch (err) {
           const message = getErrorMessage(err, 'Auto-fill failed');
           failures.push(`${describeGame(game)}: ${message}`);
-          console.warn(`NHL day auto-fill skipped ${describeGame(game)}`, err);
+          console.warn(`${autofillCode ?? 'League'} day auto-fill skipped ${describeGame(game)}`, err);
           updateProgressToast(
-            index + 2,
+            prefillProgressSteps + index + 1,
             `Skipped ${describeGame(game)} (${index + 1}/${candidates.length}).`,
           );
         } finally {
@@ -782,29 +827,29 @@ const SeasonGamesTab = ({
       await queryClient.invalidateQueries({ queryKey: ['games'] });
 
       if (failures.length > 0) {
-        console.warn('NHL day auto-fill skipped games:', failures);
+        console.warn(`${autofillLeagueLabel} day auto-fill skipped games:`, failures);
       }
 
       if (failures.length === 0) {
         finishProgressToast(
           'success',
-          `Auto-filled ${filled} NHL game${filled === 1 ? '' : 's'} for ${dayLabel}.`,
+          `Auto-filled ${filled} ${autofillLeagueLabel} game${filled === 1 ? '' : 's'} for ${dayLabel}.`,
         );
       } else if (filled > 0) {
         finishProgressToast(
           'info',
-          `Auto-filled ${filled} NHL game${filled === 1 ? '' : 's'}; skipped ${failures.length}. First skipped: ${failures[0]}`,
+          `Auto-filled ${filled} ${autofillLeagueLabel} game${filled === 1 ? '' : 's'}; skipped ${failures.length}. First skipped: ${failures[0]}`,
         );
       } else {
         finishProgressToast(
           'error',
-          `No NHL games were auto-filled. First skipped: ${failures[0] ?? 'check the console for details.'}`,
+          `No ${autofillLeagueLabel} games were auto-filled. First skipped: ${failures[0] ?? 'check the console for details.'}`,
         );
       }
     } catch (err) {
       finishProgressToast(
         'error',
-        getErrorMessage(err, 'Failed to load the NHL schedule for this day.'),
+        getErrorMessage(err, `Failed to auto-fill ${autofillLeagueLabel} games for this day.`),
       );
     } finally {
       setAutofillDay(null);
@@ -814,7 +859,8 @@ const SeasonGamesTab = ({
 
   const buildDayActions = (dateKey: string, dayGames: GameRecord[]) => {
     const candidates = getDayAutofillCandidates(dayGames);
-    const showNhlAutofill = candidates.length > 0;
+    const showAutofill = candidates.length > 0;
+    const autofillLeagueLabel = dayAutofillLeagueLabel(candidates, leagueCode);
 
     return [
       {
@@ -827,10 +873,13 @@ const SeasonGamesTab = ({
         icon: 'playlist_add',
         onClick: () => setBulkDate(dateKey),
       },
-      ...(showNhlAutofill
+      ...(showAutofill
         ? [
             {
-              label: autofillDay === dateKey ? 'Auto-filling NHL Games' : 'Auto-fill NHL Games',
+              label:
+                autofillDay === dateKey
+                  ? `Auto-filling ${autofillLeagueLabel} Games`
+                  : `Auto-fill ${autofillLeagueLabel} Games`,
               icon: 'sports_hockey',
               disabled: autofillDay !== null,
               onClick: () => {
@@ -898,7 +947,7 @@ const SeasonGamesTab = ({
   const renderCalendarAutofillSkeletons = () => (
     <div
       className={styles.calendarAutofillSkeletonList}
-      aria-label="Auto-filling NHL games"
+      aria-label="Auto-filling games"
     >
       {Array.from({ length: 3 }).map((_, index) => (
         <Skeleton
@@ -1097,6 +1146,7 @@ const SeasonGamesTab = ({
                   return (
                     <MoreActionsMenu
                       variant="ghost"
+                      wrapperClassName={scheduleCalendarDayActionClassName}
                       buttonClassName={scheduleCalendarDayActionButtonClassName}
                       disabled={autofillDay === dateKey}
                       items={buildDayActions(dateKey, dayGames)}

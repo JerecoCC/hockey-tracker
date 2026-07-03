@@ -20,6 +20,8 @@ interface Props {
   size?: 'sm' | 'md';
   /** Visual style of the trigger button. Defaults to 'ghost'. */
   variant?: 'filled' | 'outlined' | 'ghost';
+  /** Extra className forwarded to the trigger wrapper. */
+  wrapperClassName?: string;
   /** Extra className forwarded to the trigger Button (e.g. to override border-radius). */
   buttonClassName?: string;
 }
@@ -37,6 +39,7 @@ const MoreActionsMenu = ({
   disabled = false,
   size = 'sm',
   variant = 'ghost',
+  wrapperClassName,
   buttonClassName,
 }: Props) => {
   const [open, setOpen] = useState(false);
@@ -144,7 +147,7 @@ const MoreActionsMenu = ({
 
   return (
     <div
-      className={styles.wrapper}
+      className={[styles.wrapper, wrapperClassName].filter(Boolean).join(' ')}
       data-size={size}
       ref={wrapperRef}
     >
