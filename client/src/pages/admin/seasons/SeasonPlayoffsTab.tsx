@@ -25,6 +25,11 @@ import {
   getRoundLabel,
   makeSlotKey,
 } from './BracketRulesModal';
+import {
+  getBracketSlotFooterLabel,
+  getBracketSlotHeaderLabel,
+} from './seasonPlayoffBracketLabels';
+import { hasRecordedRegularSeasonGame } from './seasonPlayoffEligibility';
 import styles from './SeasonPlayoffsTab.module.scss';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -924,6 +929,7 @@ const SeasonPlayoffsTab = ({
   }, [startingSeriesId, advancingSeriesId, series]);
 
   const hasRoundOneSeries = series.some((s) => s.round === 1);
+  const hasAnyRecordedRegularSeasonGame = hasRecordedRegularSeasonGame(standings);
   const playoffSettingsLocked = isEnded || playoffsStarted;
   const playoffSeriesFormatLabel =
     bestOfPlayoff != null
@@ -972,7 +978,11 @@ const SeasonPlayoffsTab = ({
     }
   };
   const canSimulateFirstRound =
-    !!bracketStructure && !!bracketRuleSetId && !playoffsStarted && !hasRoundOneSeries;
+    !!bracketStructure &&
+    !!bracketRuleSetId &&
+    !playoffsStarted &&
+    !hasRoundOneSeries &&
+    (standingsLoading || hasAnyRecordedRegularSeasonGame);
   const canSeedMatchups =
     !!bracketStructure && !!bracketRuleSetId && playoffsStarted && !hasRoundOneSeries;
   const showBracketAction = canSimulateFirstRound || canSeedMatchups;
@@ -1273,13 +1283,6 @@ const SeasonPlayoffsTab = ({
                         key={roundInfo.round}
                         className={styles.bracketRound}
                       >
-                        <p className={styles.bracketRoundLabel}>
-                          {getRoundLabel(
-                            roundInfo.round,
-                            bracketStructure.rounds.length,
-                            roundNames,
-                          )}
-                        </p>
                         <div className={styles.bracketSlots}>
                           {Array.from({ length: roundInfo.series }, (_, slotIndex) => {
                             const slotKey = `r${roundInfo.round}m${slotIndex}`;
@@ -1302,15 +1305,29 @@ const SeasonPlayoffsTab = ({
                               );
                             const canAdvanceWinner =
                               s?.status === 'complete' && hasNextRound && !winnerAlreadyAdvanced;
-                            const matchupLabel = getMatchupLabel(slotKey, matchupNames);
+                            const headerLabel = getBracketSlotHeaderLabel({
+                              slotIndex,
+                              slotKey,
+                              round: roundInfo.round,
+                              totalRounds: bracketStructure.rounds.length,
+                              roundNames,
+                              matchupNames,
+                            });
+                            const footerLabel = getBracketSlotFooterLabel({
+                              slotIndex,
+                              seriesCount: roundInfo.series,
+                              round: roundInfo.round,
+                              totalRounds: bracketStructure.rounds.length,
+                              roundNames,
+                            });
 
                             return (
                               <div
                                 key={slotKey}
                                 className={styles.bracketSlotGroup}
                               >
-                                {matchupLabel && (
-                                  <span className={styles.bracketMatchupLabel}>{matchupLabel}</span>
+                                {headerLabel && (
+                                  <span className={styles.bracketMatchupLabel}>{headerLabel}</span>
                                 )}
                                 {skeletonSlotKeys.has(slotKey) ? (
                                   <div
@@ -1355,6 +1372,9 @@ const SeasonPlayoffsTab = ({
                                     onAdvance={advanceBracket}
                                     onForceAdvance={s ? () => handleForceAdvance(s) : undefined}
                                   />
+                                )}
+                                {footerLabel && (
+                                  <span className={styles.bracketMatchupLabel}>{footerLabel}</span>
                                 )}
                               </div>
                             );

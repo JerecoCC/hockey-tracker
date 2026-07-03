@@ -5,6 +5,11 @@ import {
 } from './SeasonPlayoffsTab';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import { getMatchupLabel, getRoundLabel } from './BracketRulesModal';
+import {
+  getBracketSlotFooterLabel,
+  getBracketSlotHeaderLabel,
+} from './seasonPlayoffBracketLabels';
+import { hasRecordedRegularSeasonGame } from './seasonPlayoffEligibility';
 
 const groupTeam = (id: string): GroupTeamRecord => ({
   id,
@@ -90,5 +95,73 @@ describe('playoff bracket slot key normalization', () => {
         r3m1: 'Western Conference Final',
       }),
     ).toBe('Western Conference Final');
+  });
+
+  it('uses round labels on the first series unless that series has a matchup label', () => {
+    expect(
+      getBracketSlotHeaderLabel({
+        slotIndex: 0,
+        slotKey: 'r2m0',
+        round: 2,
+        totalRounds: 4,
+        roundNames: { 2: 'Semifinals' },
+        matchupNames: null,
+      }),
+    ).toBe('Semifinals');
+    expect(
+      getBracketSlotHeaderLabel({
+        slotIndex: 1,
+        slotKey: 'r2m1',
+        round: 2,
+        totalRounds: 4,
+        roundNames: { 2: 'Semifinals' },
+        matchupNames: null,
+      }),
+    ).toBeNull();
+    expect(
+      getBracketSlotHeaderLabel({
+        slotIndex: 0,
+        slotKey: 'r2m0',
+        round: 2,
+        totalRounds: 4,
+        roundNames: { 2: 'Semifinals' },
+        matchupNames: { r2m0: 'Eastern Semifinal' },
+      }),
+    ).toBe('Eastern Semifinal');
+  });
+
+  it('uses round labels below the last series only for rounds with more than two series', () => {
+    expect(
+      getBracketSlotFooterLabel({
+        slotIndex: 3,
+        seriesCount: 4,
+        round: 1,
+        totalRounds: 4,
+        roundNames: { 1: 'Quarterfinals' },
+      }),
+    ).toBe('Quarterfinals');
+    expect(
+      getBracketSlotFooterLabel({
+        slotIndex: 2,
+        seriesCount: 4,
+        round: 1,
+        totalRounds: 4,
+        roundNames: { 1: 'Quarterfinals' },
+      }),
+    ).toBeNull();
+    expect(
+      getBracketSlotFooterLabel({
+        slotIndex: 1,
+        seriesCount: 2,
+        round: 2,
+        totalRounds: 4,
+        roundNames: { 2: 'Semifinals' },
+      }),
+    ).toBeNull();
+  });
+
+  it('only treats standings as simulation-ready after a team has played', () => {
+    expect(hasRecordedRegularSeasonGame([{ gp: 0 }, { gp: 0 }])).toBe(false);
+    expect(hasRecordedRegularSeasonGame([{ gp: 0 }, { gp: 1 }])).toBe(true);
   });
 });

@@ -635,19 +635,6 @@ $bracket-line: color-mix(
     flex: 1;
   }
 
-  &RoundLabel {
-    font-size: $font-xs;
-    font-weight: 600;
-    color: var(--app-text-subtle, #{$text-light});
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    text-align: center;
-    padding-bottom: $space-sm;
-    border-bottom: 1px solid $theme-border;
-    margin-bottom: $space-sm;
-    flex-shrink: 0;
-  }
-
   &Slots {
     position: relative;
     display: flex;
@@ -660,7 +647,7 @@ $bracket-line: color-mix(
   &SlotGroup {
     display: flex;
     flex-direction: column;
-    gap: $space-xs;
+    gap: 0.5rem;
   }
 
   &MatchupLabel {
