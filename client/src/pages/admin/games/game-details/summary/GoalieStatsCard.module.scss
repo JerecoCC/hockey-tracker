@@ -8,87 +8,84 @@
   padding: $space-xs 0;
 }
 
-// ── Table ─────────────────────────────────────────────────────────────────────
+// ── Goalie list ────────────────────────────────────────────────────────────────
 
 .goalie {
-  // Highlight the starter row when the game had a goalie switch. Targets the
-  // reusable Table's cells generically since they carry no per-cell class.
-  &RowStarterSwitch {
-    box-shadow: inset 3px 0 0 $info;
-
-    > td {
-      border-top: 1px solid rgba($info, 0.42);
-      border-bottom: 1px solid rgba($info, 0.42);
-      background: rgba($info, 0.06);
-    }
-
-    > td:first-child {
-      border-left: 1px solid rgba($info, 0.42);
-      border-radius: $radius-sm 0 0 $radius-sm;
-    }
-
-    > td:last-child {
-      border-right: 1px solid rgba($info, 0.42);
-      border-radius: 0 $radius-sm $radius-sm 0;
-    }
+  &List {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+    list-style: none;
+    margin: 0;
+    padding: 0;
   }
 
-  &NameCell {
-    display: flex;
+  &ListItem {
     align-items: center;
-    gap: $space-sm;
-    flex: 1;
-    min-width: 0;
+  }
+
+  &RowStarterSwitch {
+    border-color: rgba($info, 0.42);
+    background: rgba($info, 0.06);
+    box-shadow: inset 3px 0 0 $info;
   }
 }
 
-// ── Shared avatar / logo styles ───────────────────────────────────────────────
+.goalieStatsStrip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(3.5rem, 1fr));
+  gap: $space-xs;
+  width: min(100%, 23rem);
+  flex-shrink: 0;
+}
 
-.goal {
-  &TeamLogo {
-    width: 36px;
-    height: 36px;
-    object-fit: contain;
-    border-radius: $radius-sm;
-    flex-shrink: 0;
-  }
+.goalieStatCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-xs;
+  min-width: 0;
+  text-align: center;
 
-  &TeamLogoPlaceholder {
-    width: 36px;
-    height: 36px;
-    border-radius: $radius-sm;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: $font-sm;
-    font-weight: 700;
-    text-transform: uppercase;
-  }
-
-  &Info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-
-  &Scorer {
-    font-size: $font-sm;
+  &Label {
+    font-size: $font-xs;
     font-weight: 600;
-    color: var(--app-text, #{$text-body});
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: var(--app-text-muted, #{$text-dim});
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    line-height: 1;
   }
 
-  &Assists {
-    font-size: $font-sm;
+  &Value,
+  &Muted {
+    font-size: $font-xl;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  &Value {
+    color: var(--app-text-strong, #{$text-bright});
+  }
+
+  &Muted {
     color: var(--app-text-muted, #{$text-dim});
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 760px) {
+  .goalieListItem {
+    flex-wrap: wrap;
+  }
+
+  .goalieStatsStrip {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+  }
+}
+
+@media (max-width: 560px) {
+  .goalieStatsStrip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
