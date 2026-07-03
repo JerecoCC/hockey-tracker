@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties, MutableRefObject, ReactNode, Ref } from 'react';
+import Badge from '@/components/Badge/Badge';
 import Divider from '@/components/Divider/Divider';
 import Section from '@/components/Section/Section';
 import Icon from '@/components/Icon/Icon';
@@ -373,16 +374,16 @@ export const ScheduleCalendarGameList = ({ children }: ScheduleGameListProps) =>
 
 interface ScheduleCalendarDayCountProps {
   count: number;
+  label?: string;
 }
 
-export const ScheduleCalendarDayCount = ({ count }: ScheduleCalendarDayCountProps) =>
+export const ScheduleCalendarDayCount = ({ count, label }: ScheduleCalendarDayCountProps) =>
   count > 0 ? (
-    <span
-      className={styles.calendarDayCount}
+    <Badge
+      value={count}
+      label={label}
       aria-label={`${count} ${count === 1 ? 'game' : 'games'}`}
-    >
-      ({count} {count === 1 ? 'Game' : 'Games'})
-    </span>
+    />
   ) : null;
 
 export const scheduleCalendarDayActionButtonClassName = styles.calendarDayActionButton;

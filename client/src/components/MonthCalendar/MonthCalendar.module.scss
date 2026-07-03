@@ -139,10 +139,22 @@
     }
   }
 
+  &Label {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-xs;
+    min-width: 0;
+  }
+
   &Number {
+    --chip-size: 1.5rem;
+    --chip-font-size: #{$font-xs};
+    --chip-padding-x: 0;
+
     color: var(--month-calendar-day-number-color);
-    font-size: $font-sm;
-    font-weight: 700;
+    border-color: color-mix(in srgb, var(--month-calendar-cell-border) 78%, transparent);
+    background: color-mix(in srgb, var(--month-calendar-cell-bg) 78%, transparent);
+    letter-spacing: 0;
     line-height: 1;
   }
 }

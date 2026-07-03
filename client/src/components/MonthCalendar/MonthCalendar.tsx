@@ -1,6 +1,7 @@
 import { forwardRef, useLayoutEffect, useRef, useState } from 'react';
 import type { HTMLAttributes, ReactNode } from 'react';
 import Accordion from '@/components/Accordion/Accordion';
+import Chip from '@/components/Chip/Chip';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import styles from './MonthCalendar.module.scss';
 
@@ -131,8 +132,13 @@ const MonthCalendarDay = ({
     <Accordion
       {...rootProps}
       label={
-        <span className={[styles.dayNumber, dayNumberClassName].filter(Boolean).join(' ')}>
-          {args.day}
+        <span className={styles.dayLabel}>
+          <Chip
+            size="small"
+            className={[styles.dayNumber, dayNumberClassName].filter(Boolean).join(' ')}
+          >
+            {String(args.day).padStart(2, '0')}
+          </Chip>
           {labelSuffix}
         </span>
       }
