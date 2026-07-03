@@ -71,6 +71,20 @@ interface PwhlGoal {
   assist2Id?: number | null;
 }
 
+interface PwhlGoalieLogRow {
+  info?: { id?: string | number | null };
+  stats?: {
+    timeOnIce?: string | null;
+    shotsAgainst?: unknown;
+    goalsAgainst?: unknown;
+    saves?: unknown;
+  };
+  periodStart?: { id?: string | number | null } | null;
+  timeStart?: string | null;
+  periodEnd?: { id?: string | number | null } | null;
+  timeEnd?: string | null;
+}
+
 interface GoalieStintPayload {
   goalie_id: string;
   team_id: string;
@@ -81,6 +95,10 @@ interface GoalieStintPayload {
   shots_against?: number;
   goals_against?: number | null;
   time_on_ice?: number | null;
+}
+
+interface ResolvedPwhlGoalieStint extends GoalieStintPayload {
+  pwhlGoalieId: number;
 }
 
 interface ExistingGoalieStint extends GoalieStintPayload {
@@ -934,10 +952,11 @@ function buildTeamGoalieStints(
   matchedByPwhlId: Map<number, MatchedPlayer & { side: TeamSide }>,
 ) {
   const teamId = side === 'away' ? game.away_team.id : game.home_team.id;
-  const logs = toArray(team?.goalieLog);
+  const goalies = toArray<PwhlGoalieLogRow>(team?.goalies);
+  const logs = toArray<PwhlGoalieLogRow>(team?.goalieLog);
   const rawStints = logs.length > 0
     ? logs
-    : toArray(team?.goalies)
+    : goalies
         .filter((goalie) => goalieActuallyPlayed(goalie))
         .map((goalie) => ({
           info: goalie.info,
@@ -949,7 +968,7 @@ function buildTeamGoalieStints(
         }));
 
   const seenGoalieStints = new Map<number, number>();
-  return rawStints.flatMap((stint) => {
+  const stints = rawStints.flatMap<ResolvedPwhlGoalieStint>((stint) => {
     const pwhlGoalieId = Number(stint?.info?.id);
     const matchedGoalie = matchedByPwhlId.get(pwhlGoalieId);
     if (!matchedGoalie) return [];
@@ -960,6 +979,7 @@ function buildTeamGoalieStints(
     seenGoalieStints.set(pwhlGoalieId, stintIndex + 1);
 
     return [{
+      pwhlGoalieId,
       goalie_id: matchedGoalie.localId,
       team_id: teamId,
       entered_period: enteredPeriod,
@@ -971,6 +991,74 @@ function buildTeamGoalieStints(
       time_on_ice: parseToiSeconds(stint?.stats?.timeOnIce),
     }];
   });
+
+  return openFinalGoalieStint(
+    collapseUnswitchedGoalieStints(stints, goalies),
+  ).map(toGoalieStintPayload);
+}
+
+function collapseUnswitchedGoalieStints(
+  stints: ResolvedPwhlGoalieStint[],
+  goalies: PwhlGoalieLogRow[],
+): ResolvedPwhlGoalieStint[] {
+  if (stints.length === 0 || new Set(stints.map((stint) => stint.goalie_id)).size > 1) {
+    return stints;
+  }
+
+  const firstStint = stints[0]!;
+  const goalieTotals = goalies.find(
+    (goalie) => Number(goalie?.info?.id) === firstStint.pwhlGoalieId,
+  )?.stats;
+
+  return [{
+    ...firstStint,
+    exited_period: null,
+    exited_time: null,
+    shots_against:
+      toOptionalNumber(goalieTotals?.shotsAgainst) ?? sumPayloadNumbers(stints, 'shots_against'),
+    goals_against:
+      toOptionalNumber(goalieTotals?.goalsAgainst) ?? sumNullablePayloadNumbers(stints, 'goals_against'),
+    time_on_ice:
+      parseToiSeconds(goalieTotals?.timeOnIce) ?? sumNullablePayloadNumbers(stints, 'time_on_ice'),
+  }];
+}
+
+function openFinalGoalieStint(stints: ResolvedPwhlGoalieStint[]): ResolvedPwhlGoalieStint[] {
+  const finalIndex = stints.length - 1;
+  return stints.map((stint, index) =>
+    index === finalIndex ? { ...stint, exited_period: null, exited_time: null } : stint,
+  );
+}
+
+function toGoalieStintPayload(stint: ResolvedPwhlGoalieStint): GoalieStintPayload {
+  return {
+    goalie_id: stint.goalie_id,
+    team_id: stint.team_id,
+    entered_period: stint.entered_period,
+    entered_time: stint.entered_time,
+    exited_period: stint.exited_period,
+    exited_time: stint.exited_time,
+    shots_against: stint.shots_against,
+    goals_against: stint.goals_against,
+    time_on_ice: stint.time_on_ice,
+  };
+}
+
+function sumPayloadNumbers(
+  stints: GoalieStintPayload[],
+  key: 'shots_against' | 'goals_against' | 'time_on_ice',
+) {
+  return stints.reduce((sum, stint) => sum + Number(stint[key] ?? 0), 0);
+}
+
+function sumNullablePayloadNumbers(
+  stints: GoalieStintPayload[],
+  key: 'goals_against' | 'time_on_ice',
+) {
+  const values = stints
+    .map((stint) => stint[key])
+    .filter((value): value is number => value != null && Number.isFinite(Number(value)));
+  return values.length > 0 ? values.reduce((sum, value) => sum + Number(value), 0) : null;
 }
 
 async function syncGoalieStints(gameId: string, desiredStints: GoalieStintPayload[]) {

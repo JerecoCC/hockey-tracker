@@ -70,6 +70,34 @@ describe('ListItem – image', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Leading image
+// ---------------------------------------------------------------------------
+describe('ListItem - leading image', () => {
+  it('uses a custom leading image size when provided', () => {
+    renderItem({
+      name: 'Leafs',
+      hideImage: true,
+      leadingImage: 'https://example.com/team-logo.png',
+      leadingImagePlaceholder: 'TOR',
+      leadingImageSize: 30,
+    });
+
+    expect(screen.getByAltText('').parentElement).toHaveStyle({ width: '30px', height: '30px' });
+  });
+
+  it('uses the custom leading image size for placeholders', () => {
+    renderItem({
+      name: 'Leafs',
+      hideImage: true,
+      leadingImagePlaceholder: 'TOR',
+      leadingImageSize: 30,
+    });
+
+    expect(screen.getByText('TOR')).toHaveStyle({ width: '30px', height: '30px' });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // hideImage
 // ---------------------------------------------------------------------------
 describe('ListItem – hideImage', () => {

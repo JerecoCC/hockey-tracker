@@ -23,6 +23,7 @@ import {
   compareGoalieStats,
   gameHasGoalieSwitch,
   goalieStatIsStarter,
+  teamHasGoalieSwitch,
 } from '../goalieStatsOrdering';
 
 const PERIOD_LABEL: Record<string, string> = {
@@ -169,6 +170,7 @@ const GoalieStatsCard = ({
     if (!stat) return [];
     const isAway = goalie.team_id === game.away_team.id;
     const team = isAway ? game.away_team : game.home_team;
+    const teamSwitchedGoalies = teamHasGoalieSwitch(goalieStats, goalie.team_id);
     const hasNoRecordedStats =
       stat.shots_against === 0 && stat.saves === 0 && stat.goals_against === 0;
     const toiSec = stat.stints.reduce(
@@ -194,7 +196,7 @@ const GoalieStatsCard = ({
             ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
             : '1.000',
         toi: toiSec > 0 ? secondsToMMSS(toiSec) : '--',
-        windows: stintLabels(stat),
+        windows: teamSwitchedGoalies ? stintLabels(stat) : [],
         isStarter: goalieStatIsStarter(stat),
         playerHref: getPlayerHref?.(
           goalie.team_id,
@@ -257,6 +259,7 @@ const GoalieStatsCard = ({
                   leadingImageDark={row.teamLogoDark}
                   leadingImageLight={row.teamLogoLight}
                   leadingImagePlaceholder={row.teamCode ?? '?'}
+                  leadingImageSize={30}
                   leadingImagePrimaryColor={row.primaryColor}
                   leadingImageTextColor={row.textColor}
                   image={row.goalie.photo}

@@ -3463,7 +3463,7 @@ router.delete('/:id/goalie-stints/:stintId', async (req, res) => {
     // collisions: shift all rows by a large offset, then renumber sequentially.
     await sql`
       UPDATE game_goalie_stints
-      SET stint_ord = stint_ord + 1000000
+      SET stint_ord = stint_ord + 10000
       WHERE game_id = ${id} AND team_id = ${teamId}
     `;
     await sql`

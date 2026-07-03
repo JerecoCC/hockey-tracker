@@ -161,6 +161,33 @@ const switchedGoalieStats = [
   },
 ] as GoalieStatsCardProps['goalieStats'];
 
+const detailedSingleGoalieStats = [
+  {
+    ...goalieStats[0],
+    stints: [
+      {
+        ...goalieStats[0].stints[0],
+        exited_period: '2',
+        exited_time: '10:00',
+        time_on_ice: 1800,
+      },
+      {
+        id: 'stint-1b',
+        stint_ord: 2,
+        entered_period: '2',
+        entered_time: '12:00',
+        exited_period: null,
+        exited_time: null,
+        shots_against: 12,
+        goals_against: 1,
+        goals_against_override: null,
+        time_on_ice: 1800,
+        saves: 11,
+      },
+    ],
+  },
+] as GoalieStatsCardProps['goalieStats'];
+
 describe('GoalieStatsCard', () => {
   it('renders goalie stats as list item stat cells with the compact stat set', () => {
     render(
@@ -211,5 +238,24 @@ describe('GoalieStatsCard', () => {
     const switchInSubtitle = screen.getByText('P2 05:30 \u2192 End of game');
     expect(switchInSubtitle).toHaveClass('subtitle');
     expect(screen.getByText('Marie-Philip Poulin')).toBeInTheDocument();
+  });
+
+  it('does not subtitle detailed stints when the team did not switch goalies', () => {
+    render(
+      <MemoryRouter>
+        <GoalieStatsCard
+          game={game}
+          awayRoster={[goalie]}
+          homeRoster={[]}
+          goalieStats={detailedSingleGoalieStats}
+          goals={[]}
+          isFinal
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Sarah Nurse')).toBeInTheDocument();
+    expect(screen.queryByText('P1 \u2192 P2 10:00')).not.toBeInTheDocument();
+    expect(screen.queryByText('P2 12:00 \u2192 End of game')).not.toBeInTheDocument();
   });
 });

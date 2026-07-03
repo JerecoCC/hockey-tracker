@@ -57,6 +57,8 @@ interface Props {
   leadingImageLight?: string | null;
   /** Text shown in the leading placeholder when no leadingImage is provided (e.g. team code). */
   leadingImagePlaceholder?: string;
+  /** Overrides the default leading image size in pixels. */
+  leadingImageSize?: number;
   /** Background color for the leading placeholder. */
   leadingImagePrimaryColor?: string | null;
   /** Text color for the leading placeholder. */
@@ -118,6 +120,7 @@ const ListItem = ({
   leadingImageDark,
   leadingImageLight,
   leadingImagePlaceholder,
+  leadingImageSize = 34,
   leadingImagePrimaryColor,
   leadingImageTextColor,
   image,
@@ -234,7 +237,7 @@ const ListItem = ({
             logoLight={leadingImageLight}
             code={leadingImagePlaceholder ?? ''}
             alt=""
-            size={34}
+            size={leadingImageSize}
             shape="square"
             primaryColor={leadingImagePrimaryColor}
             textColor={leadingImageTextColor}
@@ -246,10 +249,17 @@ const ListItem = ({
             style={
               leadingImagePrimaryColor
                 ? {
+                    width: leadingImageSize,
+                    height: leadingImageSize,
+                    fontSize: Math.round(leadingImageSize * 0.32),
                     background: leadingImagePrimaryColor,
                     color: leadingImageTextColor ?? undefined,
                   }
-                : undefined
+                : {
+                    width: leadingImageSize,
+                    height: leadingImageSize,
+                    fontSize: Math.round(leadingImageSize * 0.32),
+                  }
             }
           >
             {leadingImagePlaceholder}

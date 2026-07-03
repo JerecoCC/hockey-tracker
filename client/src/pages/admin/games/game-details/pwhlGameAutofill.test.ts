@@ -6,6 +6,12 @@ jest.mock('axios');
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
+type MockPostBody = {
+  players?: Array<Record<string, unknown>>;
+  team_id?: string;
+  [key: string]: unknown;
+};
+
 const game = {
   id: 'game-1',
   season_id: 'season-1',
@@ -187,18 +193,20 @@ const summary = {
 describe('autofillGameFromPwhlGamecenter', () => {
   let extraPlayers: Array<Record<string, unknown>>;
   let createdPlayerStore: Map<string, Record<string, unknown>>;
+  let currentSummary: typeof summary;
 
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.setItem('token', 'token');
     extraPlayers = [];
     createdPlayerStore = new Map();
+    currentSummary = summary;
 
     mockedAxios.get.mockImplementation((url, config) => {
       const u = String(url);
       if (u.endsWith('/admin/games/pwhl-api')) {
         const targetUrl = String(config?.params?.url ?? '');
-        if (targetUrl.includes('view=gameSummary')) return Promise.resolve({ data: summary });
+        if (targetUrl.includes('view=gameSummary')) return Promise.resolve({ data: currentSummary });
         if (targetUrl.includes('view=gameCenterPlayByPlay')) return Promise.resolve({ data: [] });
       }
       if (u.endsWith('/admin/games/game-1/goals')) return Promise.resolve({ data: [] });
@@ -215,10 +223,11 @@ describe('autofillGameFromPwhlGamecenter', () => {
       return Promise.reject(new Error(`Unexpected GET ${url}`));
     });
 
-    mockedAxios.post.mockImplementation((url, body: any) => {
+    mockedAxios.post.mockImplementation((url, body) => {
       const u = String(url);
+      const postBody = (body ?? {}) as MockPostBody;
       if (u.endsWith('/admin/players/bulk')) {
-        const created = (body?.players ?? []).map((row: any) => {
+        const created = (postBody.players ?? []).map((row) => {
           const id = `auto-${row.league_player_number}`;
           createdPlayerStore.set(id, row);
           return { id };
@@ -226,11 +235,12 @@ describe('autofillGameFromPwhlGamecenter', () => {
         return Promise.resolve({ data: { created } });
       }
       if (u.endsWith('/admin/player-teams/bulk')) {
-        for (const row of body?.players ?? []) {
-          const playerRecord = createdPlayerStore.get(row.player_id) ?? {};
+        for (const row of postBody.players ?? []) {
+          const playerId = String(row.player_id ?? '');
+          const playerRecord = createdPlayerStore.get(playerId) ?? {};
           extraPlayers.push({
-            id: row.player_id,
-            team_id: body.team_id,
+            id: playerId,
+            team_id: postBody.team_id,
             jersey_number: row.jersey_number,
             league_player_number: playerRecord.league_player_number,
             first_name: playerRecord.first_name,
@@ -238,11 +248,11 @@ describe('autofillGameFromPwhlGamecenter', () => {
             position: playerRecord.position,
           });
         }
-        return Promise.resolve({ data: { created: body?.players ?? [], skipped: 0 } });
+        return Promise.resolve({ data: { created: postBody.players ?? [], skipped: 0 } });
       }
       if (u.endsWith('/admin/games/game-1/roster')) return Promise.resolve({ data: [] });
       if (u.endsWith('/admin/games/game-1/goals')) {
-        return Promise.resolve({ data: { id: 'goal-1', game_id: 'game-1', ...body } });
+        return Promise.resolve({ data: { id: 'goal-1', game_id: 'game-1', ...postBody } });
       }
       if (u.endsWith('/admin/games/game-1/goalie-stints')) return Promise.resolve({ data: [] });
       return Promise.reject(new Error(`Unexpected POST ${url}`));
@@ -268,7 +278,7 @@ describe('autofillGameFromPwhlGamecenter', () => {
 
     const createdPlayers = mockedAxios.post.mock.calls
       .filter(([url]) => String(url).endsWith('/admin/players/bulk'))
-      .flatMap(([, body]) => (body as any).players);
+      .flatMap(([, body]) => ((body ?? {}) as MockPostBody).players ?? []);
     expect(createdPlayers).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ first_name: 'Kiara', last_name: 'Zanon', league_player_number: '317' }),
@@ -302,8 +312,138 @@ describe('autofillGameFromPwhlGamecenter', () => {
       .map(([, body]) => body);
     expect(goalieStints).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ goalie_id: 'auto-211', time_on_ice: 3575, shots_against: 31 }),
-        expect.objectContaining({ goalie_id: 'auto-123', time_on_ice: 3528, exited_time: '18:48' }),
+        expect.objectContaining({
+          goalie_id: 'auto-211',
+          time_on_ice: 3575,
+          shots_against: 31,
+          exited_period: null,
+          exited_time: null,
+        }),
+        expect.objectContaining({
+          goalie_id: 'auto-123',
+          time_on_ice: 3528,
+          exited_period: null,
+          exited_time: null,
+        }),
+      ]),
+    );
+  });
+
+  it('collapses split PWHL goalie log rows when a team did not switch goalies', async () => {
+    currentSummary = {
+      ...summary,
+      visitingTeam: {
+        ...summary.visitingTeam,
+        goalieLog: [
+          {
+            info: player(211, 'Raygan', 'Kirk', 1, 'G').info,
+            stats: { timeOnIce: '20:00', shotsAgainst: 9, goalsAgainst: 0, saves: 9 },
+            periodStart: { id: '1' },
+            timeStart: '0:00',
+            periodEnd: { id: '1' },
+            timeEnd: '20:00',
+          },
+          {
+            info: player(211, 'Raygan', 'Kirk', 1, 'G').info,
+            stats: { timeOnIce: '39:35', shotsAgainst: 22, goalsAgainst: 1, saves: 21 },
+            periodStart: { id: '2' },
+            timeStart: '0:00',
+            periodEnd: { id: '3' },
+            timeEnd: '19:35',
+          },
+        ],
+      },
+    };
+
+    const result = await autofillGameFromPwhlGamecenter(game, '210');
+
+    expect(result.summary.goalieStints).toBe(2);
+
+    const goalieStints = mockedAxios.post.mock.calls
+      .filter(([url]) => String(url).endsWith('/admin/games/game-1/goalie-stints'))
+      .map(([, body]) => body as Record<string, unknown>);
+    const awayStints = goalieStints.filter((stint) => stint.goalie_id === 'auto-211');
+
+    expect(awayStints).toHaveLength(1);
+    expect(awayStints[0]).toEqual(
+      expect.objectContaining({
+        time_on_ice: 3575,
+        shots_against: 31,
+        goals_against: 1,
+        entered_period: '1',
+        entered_time: null,
+        exited_period: null,
+        exited_time: null,
+      }),
+    );
+  });
+
+  it('keeps separate PWHL goalie log rows when a team switches goalies', async () => {
+    currentSummary = {
+      ...summary,
+      visitingTeam: {
+        ...summary.visitingTeam,
+        goalies: [
+          player(211, 'Raygan', 'Kirk', 1, 'G', {
+            timeOnIce: '29:35',
+            shotsAgainst: 17,
+            goalsAgainst: 1,
+            saves: 16,
+          }, 1),
+          player(212, 'Elaine', 'Chuli', 29, 'G', {
+            timeOnIce: '30:00',
+            shotsAgainst: 14,
+            goalsAgainst: 0,
+            saves: 14,
+          }),
+        ],
+        goalieLog: [
+          {
+            info: player(211, 'Raygan', 'Kirk', 1, 'G').info,
+            stats: { timeOnIce: '29:35', shotsAgainst: 17, goalsAgainst: 1, saves: 16 },
+            periodStart: { id: '1' },
+            timeStart: '0:00',
+            periodEnd: { id: '2' },
+            timeEnd: '9:35',
+          },
+          {
+            info: player(212, 'Elaine', 'Chuli', 29, 'G').info,
+            stats: { timeOnIce: '30:00', shotsAgainst: 14, goalsAgainst: 0, saves: 14 },
+            periodStart: { id: '2' },
+            timeStart: '9:35',
+            periodEnd: { id: '3' },
+            timeEnd: '20:00',
+          },
+        ],
+      },
+    };
+
+    const result = await autofillGameFromPwhlGamecenter(game, '210');
+
+    expect(result.summary.goalieStints).toBe(3);
+
+    const goalieStints = mockedAxios.post.mock.calls
+      .filter(([url]) => String(url).endsWith('/admin/games/game-1/goalie-stints'))
+      .map(([, body]) => body as Record<string, unknown>);
+
+    expect(goalieStints).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          goalie_id: 'auto-211',
+          entered_period: '1',
+          entered_time: null,
+          exited_period: '2',
+          exited_time: '9:35',
+          time_on_ice: 1775,
+        }),
+        expect.objectContaining({
+          goalie_id: 'auto-212',
+          entered_period: '2',
+          entered_time: '9:35',
+          exited_period: null,
+          exited_time: null,
+          time_on_ice: 1800,
+        }),
       ]),
     );
   });
