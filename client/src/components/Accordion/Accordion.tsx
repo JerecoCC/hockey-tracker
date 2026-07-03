@@ -4,6 +4,7 @@ import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Button from '../Button/Button';
 import type { ButtonIntent, ButtonVariant } from '../Button/Button';
 import Divider from '../Divider/Divider';
+import useCollapsePresence, { COLLAPSE_ANIMATION_MS } from '../collapsePresence';
 import styles from './Accordion.module.scss';
 
 export interface AccordionAction {
@@ -117,7 +118,16 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
     const open = controlledOpen ?? uncontrolledOpen;
     const isStatic = variant === 'static';
     const hasHoverActions = hoverActions != null && hoverActions.length > 0;
-    const bodyVisible = isStatic || open;
+    const hasBody = children != null;
+    const bodyVisible = (isStatic || open) && hasBody;
+    const {
+      panelRef: bodyShellRef,
+      shouldRender: shouldRenderBody,
+      isOpen: bodyOpen,
+      style: bodyStyle,
+      handleTransitionEnd: handleBodyTransitionEnd,
+    } =
+      useCollapsePresence(bodyVisible, COLLAPSE_ANIMATION_MS);
     const setOpen = (next: boolean) => {
       if (controlledOpen === undefined) setUncontrolledOpen(next);
       onOpenChange?.(next);
@@ -150,7 +160,7 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
         <div
           className={[
             styles.row,
-            !(bodyVisible && children != null) ? styles.rowCollapsed : '',
+            !bodyVisible ? styles.rowCollapsed : '',
             isStatic ? styles.rowStatic : '',
             !isStatic && !toggleDisabled ? styles.rowClickable : '',
             hasHoverActions ? styles.rowWithActions : '',
@@ -224,12 +234,27 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
             </ActionOverlay>
           )}
         </div>
-        {bodyVisible && children != null && (
+        {shouldRenderBody && hasBody && (
           <div
-            ref={bodyRef}
-            className={[styles.body, bodyClassName].filter(Boolean).join(' ')}
+            ref={bodyShellRef}
+            className={[
+              styles.bodyShell,
+              bodyOpen ? styles.bodyShellOpen : styles.bodyShellClosed,
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            style={bodyStyle}
+            data-accordion-body-shell
+            data-state={bodyOpen ? 'open' : 'closed'}
+            aria-hidden={!bodyVisible}
+            onTransitionEnd={handleBodyTransitionEnd}
           >
-            {children}
+            <div
+              ref={bodyRef}
+              className={[styles.body, bodyClassName].filter(Boolean).join(' ')}
+            >
+              {children}
+            </div>
           </div>
         )}
       </div>

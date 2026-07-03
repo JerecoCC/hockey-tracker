@@ -1,6 +1,7 @@
 import { useId } from 'react';
 import type { ReactNode } from 'react';
 import CheckboxField from '@/components/CheckboxField/CheckboxField';
+import useCollapsePresence from '@/components/collapsePresence';
 import styles from './CheckboxAccordion.module.scss';
 
 interface CheckboxAccordionProps {
@@ -27,6 +28,14 @@ const CheckboxAccordion = ({
   const id = useId();
   const triggerId = `checkbox-accordion-trigger-${id}`;
   const contentId = `checkbox-accordion-content-${id}`;
+  const {
+    panelRef: contentShellRef,
+    shouldRender: shouldRenderContent,
+    isOpen: contentOpen,
+    style: contentStyle,
+    handleTransitionEnd: handleContentTransitionEnd,
+  } =
+    useCollapsePresence(checked);
 
   return (
     <div className={[styles.checkboxAccordion, className].filter(Boolean).join(' ')}>
@@ -40,14 +49,27 @@ const CheckboxAccordion = ({
         ariaControls={contentId}
         ariaExpanded={checked}
       />
-      {checked && (
+      {shouldRenderContent && (
         <div
+          ref={contentShellRef}
           id={contentId}
           role="region"
           aria-labelledby={triggerId}
-          className={[styles.content, contentClassName].filter(Boolean).join(' ')}
+          className={[
+            styles.contentShell,
+            contentOpen ? styles.contentShellOpen : styles.contentShellClosed,
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          style={contentStyle}
+          data-checkbox-accordion-content-shell
+          data-state={contentOpen ? 'open' : 'closed'}
+          aria-hidden={!checked}
+          onTransitionEnd={handleContentTransitionEnd}
         >
-          {children}
+          <div className={[styles.content, contentClassName].filter(Boolean).join(' ')}>
+            {children}
+          </div>
         </div>
       )}
     </div>

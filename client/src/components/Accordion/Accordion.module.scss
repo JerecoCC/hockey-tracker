@@ -13,6 +13,8 @@
   --accordion-toggle-color: var(--accordion-header-muted);
   --accordion-toggle-hover-color: var(--accordion-header-text);
   --accordion-toggle-divider-padding-block: #{$space-sm};
+  --accordion-collapse-duration: 220ms;
+  --accordion-collapse-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   display: flex;
   flex-direction: column;
@@ -184,6 +186,46 @@
 
 // ── Collapsible body ──────────────────────────────────────────────────────────
 
+.bodyShell {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  will-change: height, opacity;
+  transition:
+    height var(--accordion-collapse-duration) var(--accordion-collapse-ease),
+    opacity var(--accordion-collapse-duration) ease,
+    visibility 0s linear var(--accordion-collapse-duration);
+}
+
+.bodyShellOpen {
+  flex: 1 1 auto;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    height var(--accordion-collapse-duration) var(--accordion-collapse-ease),
+    opacity var(--accordion-collapse-duration) ease,
+    visibility 0s linear 0s;
+}
+
+.bodyShellClosed {
+  pointer-events: none;
+}
+
 .body {
-  // Consumers style the content directly; this is just a structural wrapper.
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bodyShell {
+    transition: none;
+  }
+
+  .toggle svg {
+    transition: none;
+  }
 }
