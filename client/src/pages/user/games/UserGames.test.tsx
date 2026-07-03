@@ -1535,6 +1535,7 @@ describe('UserGames schedule views', () => {
         formatNumericDate(localDateKeyForGame(games[0]) ?? scheduledWatchDate),
       ).length,
     ).toBeGreaterThan(0);
+    expect(within(screen.getAllByLabelText('1 game')[0]).getByText('game')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'View game details' })).toHaveLength(1);
 
     await user.click(screen.getAllByRole('button', { name: 'View game details' })[0]);

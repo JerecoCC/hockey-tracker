@@ -375,15 +375,25 @@ export const ScheduleCalendarGameList = ({ children }: ScheduleGameListProps) =>
 interface ScheduleCalendarDayCountProps {
   count: number;
   label?: string;
+  showLabel?: boolean;
 }
 
-export const ScheduleCalendarDayCount = ({ count, label }: ScheduleCalendarDayCountProps) =>
-  count > 0 ? (
+const getScheduleCalendarDayCountLabel = (count: number) => (count === 1 ? 'game' : 'games');
+
+export const ScheduleCalendarDayCount = ({
+  count,
+  label,
+  showLabel = false,
+}: ScheduleCalendarDayCountProps) => {
+  const countLabel = getScheduleCalendarDayCountLabel(count);
+
+  return count > 0 ? (
     <Badge
       value={count}
-      label={label}
-      aria-label={`${count} ${count === 1 ? 'game' : 'games'}`}
+      label={label ?? (showLabel ? countLabel : undefined)}
+      aria-label={`${count} ${countLabel}`}
     />
   ) : null;
+};
 
 export const scheduleViewSegmentedControlClassName = styles.viewSegmentedControl;

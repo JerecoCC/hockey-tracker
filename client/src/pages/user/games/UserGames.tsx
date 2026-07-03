@@ -1568,9 +1568,15 @@ const UserGames = () => {
               ref={calendarGridRef}
               month={calendarMonth}
               loading={isLoading}
-              getDayLabelSuffix={({ dateKey }) => (
-                <ScheduleCalendarDayCount count={gamesByCalendarDate.get(dateKey)?.length ?? 0} />
-              )}
+              getDayHeaderRight={({ dateKey }) => {
+                const gameCount = gamesByCalendarDate.get(dateKey)?.length ?? 0;
+                return gameCount > 0 ? (
+                  <ScheduleCalendarDayCount
+                    count={gameCount}
+                    showLabel
+                  />
+                ) : undefined;
+              }}
               getDayProps={({ dateKey }) => ({
                 'data-date-key': dateKey,
                 onDragEnter: handleCalendarDragEnter(dateKey),

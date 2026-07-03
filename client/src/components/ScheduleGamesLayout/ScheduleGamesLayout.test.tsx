@@ -15,12 +15,24 @@ describe('ScheduleCalendarDayCount', () => {
     render(
       <ScheduleCalendarDayCount
         count={2}
-        label="games"
+        showLabel
       />,
     );
 
     const badge = screen.getByLabelText('2 games');
     expect(Array.from(badge.children).map((child) => child.textContent)).toEqual(['2', 'games']);
+  });
+
+  it('uses the singular label for a single game', () => {
+    render(
+      <ScheduleCalendarDayCount
+        count={1}
+        showLabel
+      />,
+    );
+
+    const badge = screen.getByLabelText('1 game');
+    expect(Array.from(badge.children).map((child) => child.textContent)).toEqual(['1', 'game']);
   });
 
   it('does not render when the count is zero', () => {

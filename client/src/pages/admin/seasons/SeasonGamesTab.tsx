@@ -914,6 +914,7 @@ const SeasonGamesTab = ({
         href={gameDetailsPath(game)}
         tooltip={`${game.away_team.name} @ ${game.home_team.name}`}
         showScore={showScore}
+        scorePresentation="plain"
         gameType={game.game_type}
         live={game.status === 'in_progress'}
         awayTeam={{
@@ -1132,21 +1133,27 @@ const SeasonGamesTab = ({
               <MonthCalendar
                 month={calendarMonth}
                 loading={loading}
-                getDayLabelSuffix={({ dateKey }) => (
-                  <ScheduleCalendarDayCount
-                    count={calendarGamesByDate.get(dateKey)?.length ?? 0}
-                    label="games"
-                  />
-                )}
                 getDayHeaderRight={({ dateKey }) => {
-                  if (isEnded) return undefined;
+                  const gameCount = calendarGamesByDate.get(dateKey)?.length ?? 0;
+                  if (isEnded && gameCount === 0) return undefined;
+
                   const dayGames = calendarGamesByDate.get(dateKey) ?? [];
                   return (
-                    <MoreActionsMenu
-                      iconSize="0.85rem"
-                      disabled={autofillDay === dateKey}
-                      items={buildDayActions(dateKey, dayGames)}
-                    />
+                    <>
+                      {gameCount > 0 && (
+                        <ScheduleCalendarDayCount
+                          count={gameCount}
+                          showLabel
+                        />
+                      )}
+                      {!isEnded && (
+                        <MoreActionsMenu
+                          iconSize="0.85rem"
+                          disabled={autofillDay === dateKey}
+                          items={buildDayActions(dateKey, dayGames)}
+                        />
+                      )}
+                    </>
                   );
                 }}
                 renderDayContent={({ dateKey }) => {
