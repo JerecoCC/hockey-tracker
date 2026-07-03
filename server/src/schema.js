@@ -226,6 +226,7 @@ const teamIterations = pgTable('team_iterations', {
 
 const players = pgTable('players', {
   id: id(),
+  leaguePlayerNumber: text('league_player_number'),
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull(),
   photo: text('photo'),
@@ -340,6 +341,7 @@ const games = pgTable('games', {
   playoffSeriesId: uuid('playoff_series_id').references(() => playoffSeries.id, { onDelete: 'set null' }),
   gameNumberInSeries: smallint('game_number_in_series'),
   gameNumber: smallint('game_number'),
+  leagueGameNumber: text('league_game_number'),
   notes: text('notes'),
   currentPeriod: text('current_period'),
   periodShots: jsonb('period_shots').notNull().default(sql`'[]'::jsonb`),

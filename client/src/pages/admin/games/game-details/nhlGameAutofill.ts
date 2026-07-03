@@ -29,6 +29,7 @@ type TeamSide = 'away' | 'home';
 
 interface TeamPlayerRecord {
   id: string;
+  league_player_number?: string | null;
   first_name: string;
   last_name: string;
   jersey_number: number | null;
@@ -45,6 +46,7 @@ interface NhlPlayer {
 
 interface MatchedPlayer extends NhlPlayer {
   localId: string;
+  localLeaguePlayerNumber?: string | null;
 }
 
 interface ReportRosterPlayer {
@@ -254,6 +256,10 @@ export async function autofillGameFromNhlGamecenter(
     fetchTeamPlayers(game.away_team.id, game.season_id, rosterDate),
     fetchTeamPlayers(game.home_team.id, game.season_id, rosterDate),
   ]);
+  const nhlPlayers = {
+    away: getNhlPlayers(boxscore, 'away'),
+    home: getNhlPlayers(boxscore, 'home'),
+  };
 
   await emitProgress({
     step: 'roster',
@@ -272,12 +278,14 @@ export async function autofillGameFromNhlGamecenter(
           game.away_team.id,
           rosterReport.players.away,
           initialAwayPlayers,
+          nhlPlayers.away,
         ).map((conflict) => ({ ...conflict, targetCode: game.away_team.code })),
         ...findCrossTeamPlayerConflicts(
           leaguePlayers,
           game.home_team.id,
           rosterReport.players.home,
           initialHomePlayers,
+          nhlPlayers.home,
         ).map((conflict) => ({ ...conflict, targetCode: game.home_team.code })),
       ];
       if (conflicts.length > 0) {
@@ -300,16 +308,11 @@ export async function autofillGameFromNhlGamecenter(
   // Auto-create any dressed roster-report players missing from the local season
   // roster so matching below doesn't fail on recent call-ups/trades.
   const awayPlayers = rosterReport
-    ? await ensureReportPlayersRostered(game, game.away_team.id, game.away_team.code, rosterReport.players.away, initialAwayPlayers, rosterDate, warnings)
+    ? await ensureReportPlayersRostered(game, game.away_team.id, game.away_team.code, rosterReport.players.away, nhlPlayers.away, initialAwayPlayers, rosterDate, warnings)
     : initialAwayPlayers;
   const homePlayers = rosterReport
-    ? await ensureReportPlayersRostered(game, game.home_team.id, game.home_team.code, rosterReport.players.home, initialHomePlayers, rosterDate, warnings)
+    ? await ensureReportPlayersRostered(game, game.home_team.id, game.home_team.code, rosterReport.players.home, nhlPlayers.home, initialHomePlayers, rosterDate, warnings)
     : initialHomePlayers;
-
-  const nhlPlayers = {
-    away: getNhlPlayers(boxscore, 'away'),
-    home: getNhlPlayers(boxscore, 'home'),
-  };
   const matched = {
     away: matchNhlPlayers(nhlPlayers.away, awayPlayers, game.away_team.code, rosterReport?.players.away),
     home: matchNhlPlayers(nhlPlayers.home, homePlayers, game.home_team.code, rosterReport?.players.home),
@@ -320,11 +323,12 @@ export async function autofillGameFromNhlGamecenter(
 
   const rosterMatched = rosterReport
     ? {
-        away: matchReportPlayers(rosterReport.players.away, awayPlayers, game.away_team.code),
-        home: matchReportPlayers(rosterReport.players.home, homePlayers, game.home_team.code),
+        away: matchReportPlayers(rosterReport.players.away, awayPlayers, game.away_team.code, nhlPlayers.away),
+        home: matchReportPlayers(rosterReport.players.home, homePlayers, game.home_team.code, nhlPlayers.home),
       }
     : matched;
 
+  await syncLeaguePlayerNumbers(matched);
   await syncGameRoster(game, rosterMatched);
   await emitProgress({
     step: 'roster',
@@ -354,6 +358,7 @@ export async function autofillGameFromNhlGamecenter(
   const gameStartIso = reportTimes.startIso ?? validIsoOrUndefined(boxscore.startTimeUTC);
 
   await apiPatch(`/admin/games/${game.id}`, {
+    league_game_number: extractLeagueGameNumber(gamecenterId),
     scheduled_at: boxscore.gameDate ?? undefined,
     scheduled_time: boxscore.startTimeUTC ? easternScheduledTime(boxscore.startTimeUTC) : undefined,
     venue: rosterReport?.venue ?? readText(boxscore.venue) ?? undefined,
@@ -796,6 +801,7 @@ function splitReportName(fullName: string): { firstName: string; lastName: strin
 
 interface LeaguePlayer {
   id: string;
+  league_player_number?: string | null;
   first_name: string;
   last_name: string;
   team_id: string | null;
@@ -839,29 +845,44 @@ function findCrossTeamPlayerConflicts(
   teamId: string,
   reportPlayers: ReportRosterPlayer[],
   localPlayers: TeamPlayerRecord[],
+  nhlPlayers: NhlPlayer[] = [],
 ): PlayerConflict[] {
   const rosteredJerseys = new Set(
     localPlayers.map((player) => player.jersey_number).filter((jersey): jersey is number => jersey != null),
   );
+  const rosteredLeaguePlayerNumbers = new Set(
+    localPlayers
+      .map((player) => player.league_player_number)
+      .filter((value): value is string => !!value),
+  );
+  const leaguePlayerNumberBySweater = new Map(
+    nhlPlayers.map((player) => [player.sweaterNumber, String(player.playerId)]),
+  );
   const missing = reportPlayers.filter(
-    (player) => Number.isFinite(player.sweaterNumber) && !rosteredJerseys.has(player.sweaterNumber),
+    (player) =>
+      Number.isFinite(player.sweaterNumber) &&
+      !rosteredJerseys.has(player.sweaterNumber) &&
+      !rosteredLeaguePlayerNumbers.has(leaguePlayerNumberBySweater.get(player.sweaterNumber) ?? ''),
   );
   if (missing.length === 0) return [];
 
   const byFullName = new Map<string, LeaguePlayer>();
   const byLastInitial = new Map<string, LeaguePlayer>();
+  const byLeaguePlayerNumber = new Map<string, LeaguePlayer>();
   for (const player of leaguePlayers) {
     if (!player.team_id || player.team_id === teamId) continue;
+    if (player.league_player_number) byLeaguePlayerNumber.set(player.league_player_number, player);
     const fullKey = normalizeNameKey(`${player.first_name} ${player.last_name}`);
     const liKey = lastNameInitialKey(player.first_name, player.last_name);
     if (!byFullName.has(fullKey)) byFullName.set(fullKey, player);
     if (!byLastInitial.has(liKey)) byLastInitial.set(liKey, player);
   }
-
   const conflicts: PlayerConflict[] = [];
   for (const reportPlayer of missing) {
     const { firstName, lastName } = splitReportName(reportPlayer.name);
+    const leaguePlayerNumber = leaguePlayerNumberBySweater.get(reportPlayer.sweaterNumber);
     const existing =
+      (leaguePlayerNumber ? byLeaguePlayerNumber.get(leaguePlayerNumber) : undefined) ??
       byFullName.get(normalizeNameKey(`${firstName} ${lastName}`)) ??
       byLastInitial.get(lastNameInitialKey(firstName, lastName));
     if (existing) conflicts.push({ reportPlayer, existing });
@@ -881,6 +902,7 @@ async function ensureReportPlayersRostered(
   teamId: string,
   teamCode: string,
   reportPlayers: ReportRosterPlayer[],
+  nhlPlayers: NhlPlayer[],
   localPlayers: TeamPlayerRecord[],
   gameDate: string | null | undefined,
   warnings: string[],
@@ -888,8 +910,20 @@ async function ensureReportPlayersRostered(
   const rosteredJerseys = new Set(
     localPlayers.map((player) => player.jersey_number).filter((jersey): jersey is number => jersey != null),
   );
+  const rosteredLeaguePlayerNumbers = new Set(
+    localPlayers
+      .map((player) => player.league_player_number)
+      .filter((value): value is string => !!value),
+  );
+  const nhlPlayerBySweater = new Map(nhlPlayers.map((player) => [player.sweaterNumber, player]));
   const missing = reportPlayers.filter(
-    (player) => Number.isFinite(player.sweaterNumber) && !rosteredJerseys.has(player.sweaterNumber),
+    (player) => {
+      if (!Number.isFinite(player.sweaterNumber) || rosteredJerseys.has(player.sweaterNumber)) {
+        return false;
+      }
+      const leaguePlayerNumber = nhlPlayerBySweater.get(player.sweaterNumber)?.playerId;
+      return !rosteredLeaguePlayerNumbers.has(leaguePlayerNumber ? String(leaguePlayerNumber) : '');
+    },
   );
   if (missing.length === 0) return localPlayers;
 
@@ -898,7 +932,13 @@ async function ensureReportPlayersRostered(
     {
       players: missing.map((player) => {
         const { firstName, lastName } = splitReportName(player.name);
-        return { first_name: firstName, last_name: lastName, position: reportPositionToLocalPosition(player.position) };
+        const nhlPlayer = nhlPlayerBySweater.get(player.sweaterNumber);
+        return {
+          first_name: firstName,
+          last_name: lastName,
+          league_player_number: nhlPlayer ? String(nhlPlayer.playerId) : null,
+          position: reportPositionToLocalPosition(player.position),
+        };
       }),
     },
   );
@@ -1001,6 +1041,7 @@ function matchNhlPlayers(
   teamCode: string,
   reportPlayers: ReportRosterPlayer[] = [],
 ): MatchedPlayer[] {
+  const localByLeagueNumber = localPlayersByLeaguePlayerNumber(localPlayers);
   const localByJersey = new Map<number, TeamPlayerRecord[]>();
   localPlayers.forEach((player) => {
     if (player.jersey_number == null) return;
@@ -1016,14 +1057,15 @@ function matchNhlPlayers(
 
   const missing: string[] = [];
   const matched = nhlPlayers.flatMap((nhlPlayer) => {
+    const leaguePlayerNumber = String(nhlPlayer.playerId);
     const rows = localByJersey.get(nhlPlayer.sweaterNumber) ?? [];
-    const local = rows[0];
+    const local = localByLeagueNumber.get(leaguePlayerNumber) ?? rows[0];
     if (!local) {
       const fullName = reportNameByJersey.get(nhlPlayer.sweaterNumber) || nhlPlayer.name;
       missing.push(`#${nhlPlayer.sweaterNumber} ${fullName || `NHL ${nhlPlayer.playerId}`}`);
       return [];
     }
-    return [{ ...nhlPlayer, localId: local.id }];
+    return [{ ...nhlPlayer, localId: local.id, localLeaguePlayerNumber: local.league_player_number ?? null }];
   });
 
   if (missing.length > 0) {
@@ -1036,11 +1078,19 @@ function matchReportPlayers(
   reportPlayers: ReportRosterPlayer[],
   localPlayers: TeamPlayerRecord[],
   teamCode: string,
+  nhlPlayers: NhlPlayer[] = [],
 ): MatchedRosterPlayer[] {
+  const localByLeagueNumber = localPlayersByLeaguePlayerNumber(localPlayers);
+  const leaguePlayerNumberBySweater = new Map(
+    nhlPlayers.map((player) => [player.sweaterNumber, String(player.playerId)]),
+  );
   const localByJersey = localPlayersByJersey(localPlayers);
   const missing: string[] = [];
   const matched = reportPlayers.flatMap((reportPlayer) => {
-    const local = (localByJersey.get(reportPlayer.sweaterNumber) ?? [])[0];
+    const leaguePlayerNumber = leaguePlayerNumberBySweater.get(reportPlayer.sweaterNumber);
+    const local =
+      (leaguePlayerNumber ? localByLeagueNumber.get(leaguePlayerNumber) : undefined) ??
+      (localByJersey.get(reportPlayer.sweaterNumber) ?? [])[0];
     if (!local) {
       missing.push(`#${reportPlayer.sweaterNumber} ${reportPlayer.name}`);
       return [];
@@ -1052,6 +1102,42 @@ function matchReportPlayers(
     throw new Error(`Missing ${teamCode} roster report player matches: ${missing.join(', ')}.`);
   }
   return matched;
+}
+
+async function syncLeaguePlayerNumbers(matched: Record<TeamSide, MatchedPlayer[]>) {
+  const players = [...matched.away, ...matched.home];
+  const conflicts = players.filter(
+    (player) =>
+      !!player.localLeaguePlayerNumber &&
+      player.localLeaguePlayerNumber !== String(player.playerId),
+  );
+  if (conflicts.length > 0) {
+    throw new Error(
+      `League player number mismatch: ${conflicts
+        .map((player) => `${player.name} is ${player.localLeaguePlayerNumber}, NHL reports ${player.playerId}`)
+        .join('; ')}.`,
+    );
+  }
+
+  const updates = players.filter(
+    (player) => !player.localLeaguePlayerNumber,
+  );
+  await Promise.all(
+    updates.map((player) =>
+      apiPatch(`/admin/players/${player.localId}`, {
+        league_player_number: String(player.playerId),
+      }),
+    ),
+  );
+}
+
+function localPlayersByLeaguePlayerNumber(localPlayers: TeamPlayerRecord[]) {
+  const localByLeagueNumber = new Map<string, TeamPlayerRecord>();
+  localPlayers.forEach((player) => {
+    if (!player.league_player_number) return;
+    localByLeagueNumber.set(player.league_player_number, player);
+  });
+  return localByLeagueNumber;
 }
 
 function localPlayersByJersey(localPlayers: TeamPlayerRecord[]) {
@@ -2150,6 +2236,10 @@ function validIsoOrUndefined(value: string | null | undefined) {
   if (!value) return undefined;
   const time = Date.parse(value);
   return Number.isFinite(time) ? new Date(time).toISOString() : undefined;
+}
+
+function extractLeagueGameNumber(gamecenterId: string) {
+  return gamecenterId.match(/(\d{4})$/)?.[1] ?? gamecenterId;
 }
 
 const REPORT_TIMEZONE_OFFSETS: Record<string, string> = {

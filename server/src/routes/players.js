@@ -26,6 +26,12 @@ const isValidDateOnly = (value) => {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 };
 
+const normalizeLeagueNumber = (value) => {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  return trimmed || null;
+};
+
 // ---------------------------------------------------------------------------
 // POST /api/admin/players/upload  – upload a player photo to Vercel Blob
 // ---------------------------------------------------------------------------
@@ -71,7 +77,7 @@ router.get('/', async (req, res) => {
 
       const players = await sql`
         SELECT
-          p.id, p.first_name, p.last_name,
+          p.id, p.league_player_number, p.first_name, p.last_name,
           COALESCE(best_player_photo(p.id, latest_pt.season_id, latest_pt.team_id), p.photo) AS photo,
           p.date_of_birth::text AS date_of_birth,
           p.birth_city, p.birth_country,
@@ -158,7 +164,7 @@ router.get('/', async (req, res) => {
         ? await sql`
             WITH roster AS (
               SELECT
-                id, first_name, last_name, photo,
+                id, league_player_number, first_name, last_name, photo,
                 date_of_birth::text AS date_of_birth,
                 birth_city, birth_country,
                 height_cm, weight_lbs, position, shoots,
@@ -168,7 +174,7 @@ router.get('/', async (req, res) => {
                 acquisition_type, start_date::text AS start_date, has_games, season_points
               FROM (
                 SELECT DISTINCT ON (p.id)
-                  p.id, p.first_name, p.last_name,
+                  p.id, p.league_player_number, p.first_name, p.last_name,
                   COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
                   p.date_of_birth,
                   p.birth_city, p.birth_country,
@@ -269,7 +275,7 @@ router.get('/', async (req, res) => {
         : await sql`
             WITH roster AS (
               SELECT
-                id, first_name, last_name, photo,
+                id, league_player_number, first_name, last_name, photo,
                 date_of_birth::text AS date_of_birth,
                 birth_city, birth_country,
                 height_cm, weight_lbs, position, shoots,
@@ -279,7 +285,7 @@ router.get('/', async (req, res) => {
                 acquisition_type, start_date::text AS start_date, has_games
               FROM (
                 SELECT DISTINCT ON (p.id)
-                  p.id, p.first_name, p.last_name,
+                  p.id, p.league_player_number, p.first_name, p.last_name,
                   COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
                   p.date_of_birth,
                   p.birth_city, p.birth_country,
@@ -366,10 +372,10 @@ router.get('/', async (req, res) => {
       const countRows = league_id && season_id
         ? await sql`
             WITH roster AS (
-              SELECT id, first_name, last_name, position, jersey_number, rookie_season_id, is_active
+              SELECT id, league_player_number, first_name, last_name, position, jersey_number, rookie_season_id, is_active
               FROM (
                 SELECT DISTINCT ON (p.id)
-                  p.id, p.first_name, p.last_name,
+                  p.id, p.league_player_number, p.first_name, p.last_name,
                   COALESCE(pt.position, p.position) AS position,
                   pt.jersey_number,
                   p.rookie_season_id,
@@ -405,10 +411,10 @@ router.get('/', async (req, res) => {
           `
         : await sql`
             WITH roster AS (
-              SELECT id, first_name, last_name, position, jersey_number, rookie_season_id, is_active
+              SELECT id, league_player_number, first_name, last_name, position, jersey_number, rookie_season_id, is_active
               FROM (
                 SELECT DISTINCT ON (p.id)
-                  p.id, p.first_name, p.last_name,
+                  p.id, p.league_player_number, p.first_name, p.last_name,
                   COALESCE(pt.position, p.position) AS position,
                   pt.jersey_number,
                   p.rookie_season_id,
@@ -455,7 +461,7 @@ router.get('/', async (req, res) => {
     const players = league_id && season_id
       ? await sql`
           SELECT
-            id, first_name, last_name, photo,
+            id, league_player_number, first_name, last_name, photo,
             date_of_birth::text AS date_of_birth,
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
@@ -465,7 +471,7 @@ router.get('/', async (req, res) => {
             acquisition_type, start_date::text AS start_date, has_games, season_points
           FROM (
             SELECT DISTINCT ON (p.id)
-              p.id, p.first_name, p.last_name,
+              p.id, p.league_player_number, p.first_name, p.last_name,
               COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country,
@@ -544,7 +550,7 @@ router.get('/', async (req, res) => {
       : league_id
       ? await sql`
           SELECT
-            id, first_name, last_name, photo,
+            id, league_player_number, first_name, last_name, photo,
             date_of_birth::text AS date_of_birth,
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
@@ -554,7 +560,7 @@ router.get('/', async (req, res) => {
             acquisition_type, start_date::text AS start_date, has_games
           FROM (
             SELECT DISTINCT ON (p.id)
-              p.id, p.first_name, p.last_name,
+              p.id, p.league_player_number, p.first_name, p.last_name,
               COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country,
@@ -618,7 +624,7 @@ router.get('/', async (req, res) => {
       : team_id && season_id
       ? await sql`
           SELECT
-            id, first_name, last_name, photo,
+            id, league_player_number, first_name, last_name, photo,
             date_of_birth::text AS date_of_birth,
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
@@ -627,7 +633,7 @@ router.get('/', async (req, res) => {
             jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
-              p.id, p.first_name, p.last_name,
+              p.id, p.league_player_number, p.first_name, p.last_name,
               COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country,
@@ -664,7 +670,7 @@ router.get('/', async (req, res) => {
       : team_id
       ? await sql`
           SELECT
-            id, first_name, last_name, photo,
+            id, league_player_number, first_name, last_name, photo,
             date_of_birth::text AS date_of_birth,
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
@@ -673,7 +679,7 @@ router.get('/', async (req, res) => {
             jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
-              p.id, p.first_name, p.last_name, COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
+              p.id, p.league_player_number, p.first_name, p.last_name, COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
@@ -705,7 +711,7 @@ router.get('/', async (req, res) => {
         `
       : await sql`
           SELECT
-            id, first_name, last_name, photo,
+            id, league_player_number, first_name, last_name, photo,
             date_of_birth::text AS date_of_birth,
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
@@ -1896,7 +1902,7 @@ router.get('/:id', async (req, res) => {
   try {
     const rows = await sql`
       SELECT
-        id, first_name, last_name, photo,
+        id, league_player_number, first_name, last_name, photo,
         date_of_birth::text AS date_of_birth,
         birth_city, birth_country,
         height_cm, weight_lbs, position, shoots,
@@ -1920,8 +1926,9 @@ router.post('/', async (req, res) => {
   const {
     first_name, last_name, position, shoots,
     date_of_birth, birth_city, birth_country,
-    height_cm, weight_lbs, rookie_season_id, is_active,
+    height_cm, weight_lbs, rookie_season_id, is_active, league_player_number,
   } = req.body;
+  const normalizedLeaguePlayerNumber = normalizeLeagueNumber(league_player_number);
 
   if (!first_name || typeof first_name !== 'string' || first_name.trim() === '') {
     return res.status(400).json({ error: 'first_name is required' });
@@ -1933,10 +1940,12 @@ router.post('/', async (req, res) => {
   try {
     const rows = await sql`
       INSERT INTO players (
+        league_player_number,
         first_name, last_name, position, shoots,
         date_of_birth, birth_city, birth_country,
         height_cm, weight_lbs, rookie_season_id, is_active
       ) VALUES (
+        ${normalizedLeaguePlayerNumber},
         ${first_name.trim()}, ${last_name.trim()},
         ${position ?? null}, ${shoots ?? null},
         ${date_of_birth ?? null}, ${birth_city?.trim() ?? null},
@@ -1946,7 +1955,7 @@ router.post('/', async (req, res) => {
         ${is_active ?? true}
       )
       RETURNING
-        id, first_name, last_name, photo,
+        id, league_player_number, first_name, last_name, photo,
         date_of_birth::text AS date_of_birth,
         birth_city, birth_country,
         height_cm, weight_lbs, position, shoots,
@@ -1985,15 +1994,17 @@ router.post('/bulk', async (req, res) => {
 
   try {
     const created = [];
-    for (const { first_name, last_name, position, shoots, rookie_season_id } of players) {
+    for (const { first_name, last_name, position, shoots, rookie_season_id, league_player_number } of players) {
+      const normalizedLeaguePlayerNumber = normalizeLeagueNumber(league_player_number);
       const rows = await sql`
-        INSERT INTO players (first_name, last_name, position, shoots, rookie_season_id, is_active)
+        INSERT INTO players (league_player_number, first_name, last_name, position, shoots, rookie_season_id, is_active)
         VALUES (
+          ${normalizedLeaguePlayerNumber},
           ${first_name.trim()}, ${last_name.trim()},
           ${position}, ${shoots ?? null}, ${rookie_season_id || null}, true
         )
         RETURNING
-          id, first_name, last_name, photo,
+          id, league_player_number, first_name, last_name, photo,
           date_of_birth::text AS date_of_birth,
           birth_city, birth_country,
           height_cm, weight_lbs, position, shoots,
@@ -2030,7 +2041,7 @@ router.patch('/:id/retire', async (req, res) => {
         SET is_active = FALSE
         WHERE id = ${id}
         RETURNING
-          id, first_name, last_name, photo,
+          id, league_player_number, first_name, last_name, photo,
           date_of_birth::text AS date_of_birth,
           birth_city, birth_country,
           height_cm, weight_lbs, position, shoots,
@@ -2102,7 +2113,7 @@ router.patch('/:id', async (req, res) => {
   const {
     first_name, last_name, position, shoots,
     date_of_birth, birth_city, birth_country,
-    height_cm, weight_lbs, rookie_season_id, is_active,
+    height_cm, weight_lbs, rookie_season_id, is_active, league_player_number,
   } = req.body;
 
   const firstNameInBody    = 'first_name'    in req.body;
@@ -2116,10 +2127,13 @@ router.patch('/:id', async (req, res) => {
   const weightInBody       = 'weight_lbs'    in req.body;
   const rookieSeasonInBody = 'rookie_season_id' in req.body;
   const isActiveInBody     = 'is_active'     in req.body;
+  const leaguePlayerNumberInBody = 'league_player_number' in req.body;
+  const normalizedLeaguePlayerNumber = normalizeLeagueNumber(league_player_number);
 
   try {
     const rows = await sql`
       UPDATE players SET
+        league_player_number = CASE WHEN ${leaguePlayerNumberInBody} THEN ${normalizedLeaguePlayerNumber} ELSE league_player_number END,
         first_name    = CASE WHEN ${firstNameInBody}    THEN ${first_name?.trim() ?? null}                    ELSE first_name    END,
         last_name     = CASE WHEN ${lastNameInBody}     THEN ${last_name?.trim() ?? null}                     ELSE last_name     END,
         position      = CASE WHEN ${positionInBody}     THEN ${position ?? null}                              ELSE position      END,
@@ -2133,7 +2147,7 @@ router.patch('/:id', async (req, res) => {
         is_active     = CASE WHEN ${isActiveInBody}     THEN ${is_active ?? true}                             ELSE is_active     END
       WHERE id = ${id}
       RETURNING
-        id, first_name, last_name, photo,
+        id, league_player_number, first_name, last_name, photo,
         date_of_birth::text AS date_of_birth,
         birth_city, birth_country,
         height_cm, weight_lbs, position, shoots,

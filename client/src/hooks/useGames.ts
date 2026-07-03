@@ -22,6 +22,7 @@ export interface UpdateGameInfoData {
   game_type?: GameType;
   playoff_round?: number | null;
   game_number_in_series?: number | null;
+  league_game_number?: string | null;
   time_start?: string | null;
   time_end?: string | null;
   shootout_first_team_id?: string | null;
@@ -107,6 +108,7 @@ export interface GameRecord {
   playoff_series_id: string | null;
   game_number_in_series: number | null;
   game_number: number | null;
+  league_game_number?: string | null;
   playoff_round: number | null;
   series_home_team_id: string | null;
   series_away_team_id: string | null;
@@ -217,6 +219,7 @@ export interface CreateGameData {
   playoff_series_id?: string | null;
   game_number_in_series?: number | null;
   game_number?: number | null;
+  league_game_number?: string | null;
   notes?: string | null;
 }
 

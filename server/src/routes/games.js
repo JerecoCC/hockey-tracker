@@ -34,6 +34,12 @@ const normalizeAdminScheduledAt = (value) => {
   return `${trimmed}T12:00:00Z`;
 };
 
+const normalizeLeagueNumber = (value) => {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  return trimmed || null;
+};
+
 // Regular-season standings order (best team first) for a season, derived from
 // final regular-season games. Used to award playoff home-ice to the higher
 // seed. Mirrors the ordering in GET /seasons/:id/standings.
@@ -434,6 +440,7 @@ router.get('/', async (req, res) => {
         playoff_series_id: gamesTable.playoffSeriesId,
         game_number_in_series: gamesTable.gameNumberInSeries,
         game_number: gamesTable.gameNumber,
+        league_game_number: gamesTable.leagueGameNumber,
         notes: gamesTable.notes,
         current_period: gamesTable.currentPeriod,
         created_at: gamesTable.createdAt,
@@ -993,7 +1000,7 @@ router.get('/:id', async (req, res) => {
         score.winner_team_id,
         score.home_score,
         score.away_score,
-        g.playoff_series_id, g.game_number_in_series, g.game_number,
+        g.playoff_series_id, g.game_number_in_series, g.game_number, g.league_game_number,
         g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         ps2.round         AS playoff_round,
@@ -1365,7 +1372,7 @@ router.post('/', async (req, res) => {
     scheduled_at = null, scheduled_time = null, venue = null,
     game_type = 'regular', status = 'scheduled',
     overtime_periods = null, shootout = false,
-    playoff_series_id = null, notes = null,
+    playoff_series_id = null, league_game_number = null, notes = null,
   } = req.body;
 
   if (!season_id || !home_team_id || !away_team_id) {
@@ -1376,6 +1383,7 @@ router.post('/', async (req, res) => {
   }
 
   const normalizedScheduledAt = normalizeAdminScheduledAt(scheduled_at);
+  const normalizedLeagueGameNumber = normalizeLeagueNumber(league_game_number);
 
   // Reject a duplicate matchup on the same calendar date. Games with a null date
   // are exempt (the date is nullable, so they can't be reliably de-duplicated).
@@ -1402,12 +1410,12 @@ router.post('/', async (req, res) => {
         season_id, home_team_id, away_team_id,
         scheduled_at, scheduled_time, venue, game_type, status,
         overtime_periods, shootout,
-        playoff_series_id, notes
+        playoff_series_id, league_game_number, notes
       ) VALUES (
         ${season_id}, ${home_team_id}, ${away_team_id},
         ${normalizedScheduledAt}, ${scheduled_time}, ${venue}, ${game_type}, ${status},
         ${overtime_periods}, ${shootout},
-        ${playoff_series_id}, ${notes}
+        ${playoff_series_id}, ${normalizedLeagueGameNumber}, ${notes}
       )
       RETURNING id
     `;
@@ -1421,7 +1429,7 @@ router.post('/', async (req, res) => {
         score.winner_team_id,
         score.home_score,
         score.away_score,
-        g.playoff_series_id, g.notes, g.current_period, g.created_at,
+        g.playoff_series_id, g.league_game_number, g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
         json_build_object(
@@ -1561,7 +1569,7 @@ router.patch('/:id', async (req, res) => {
     scheduled_at, scheduled_time, venue, game_type, status,
     time_start, time_end,
     overtime_periods, shootout,
-    playoff_series_id, playoff_round, game_number_in_series, notes,
+    playoff_series_id, playoff_round, game_number_in_series, league_game_number, notes,
     current_period,
     star_1_id, star_2_id, star_3_id,
     shootout_first_team_id,
@@ -1574,6 +1582,8 @@ router.patch('/:id', async (req, res) => {
   const normalizedScheduledAt = scheduled_at === undefined
     ? undefined
     : normalizeAdminScheduledAt(scheduled_at);
+  const leagueGameNumberInBody = 'league_game_number' in req.body;
+  const normalizedLeagueGameNumber = normalizeLeagueNumber(league_game_number);
 
   try {
     const existing = await sql`
@@ -1632,6 +1642,7 @@ router.patch('/:id', async (req, res) => {
                                 END,
         playoff_series_id     = COALESCE(${playoff_series_id     ?? null}, playoff_series_id),
         game_number_in_series = COALESCE(${game_number_in_series ?? null}::smallint, game_number_in_series),
+        league_game_number    = CASE WHEN ${leagueGameNumberInBody} THEN ${normalizedLeagueGameNumber} ELSE league_game_number END,
         notes                 = COALESCE(${notes                 ?? null}, notes),
         current_period        = COALESCE(${effectivePeriod},             current_period),
         star_1_id             = COALESCE(${star_1_id             ?? null}, star_1_id),
@@ -1884,7 +1895,7 @@ router.patch('/:id', async (req, res) => {
         score.winner_team_id,
         score.home_score,
         score.away_score,
-        g.playoff_series_id, g.game_number_in_series, g.game_number,
+        g.playoff_series_id, g.game_number_in_series, g.game_number, g.league_game_number,
         g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         ps2.round AS playoff_round,

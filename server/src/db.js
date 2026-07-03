@@ -943,6 +943,7 @@ async function initSchema() {
   await sql`
     CREATE TABLE IF NOT EXISTS players (
       id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      league_player_number TEXT,
       first_name     TEXT NOT NULL,
       last_name      TEXT NOT NULL,
       -- Generic headshot (no team branding). Team/season photos live on player_photos.
@@ -961,6 +962,8 @@ async function initSchema() {
   `;
 
   // Migrations for columns added after the table was first created
+  await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS league_player_number TEXT`;
+  await sql`CREATE INDEX IF NOT EXISTS players_league_player_number_idx ON players (league_player_number) WHERE league_player_number IS NOT NULL`;
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS rookie_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL`;
   await sql`ALTER TABLE players DROP COLUMN IF EXISTS nationality`;
@@ -1363,6 +1366,7 @@ async function initSchema() {
   // home/away_score_reg: score at end of regulation (for OT/SO detection).
   // game_number: sequential number within the regular season.
   // game_number_in_series: which game within a playoff series (1–7).
+  // league_game_number: external league-provided game number, separate from series numbering.
   await sql`
     CREATE TABLE IF NOT EXISTS games (
       id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1386,11 +1390,15 @@ async function initSchema() {
       playoff_series_id     UUID REFERENCES playoff_series(id) ON DELETE SET NULL,
       game_number_in_series SMALLINT,
       game_number           SMALLINT,
+      league_game_number    TEXT,
       notes                 TEXT,
       created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       CONSTRAINT games_different_teams CHECK (home_team_id != away_team_id)
     )
   `;
+
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS league_game_number TEXT`;
+  await sql`CREATE INDEX IF NOT EXISTS games_season_type_league_game_number_idx ON games (season_id, game_type, league_game_number) WHERE league_game_number IS NOT NULL`;
 
   // Migration: track which period is actively being played
   await sql`

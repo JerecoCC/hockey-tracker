@@ -17,6 +17,7 @@ export type PlayerShoots = 'L' | 'R';
 
 export interface PlayerRecord {
   id: string;
+  league_player_number?: string | null;
   first_name: string;
   last_name: string;
   photo: string | null;
@@ -52,6 +53,7 @@ export interface PlayerRecord {
 export interface CreatePlayerData {
   first_name: string;
   last_name: string;
+  league_player_number?: string | null;
   position?: PlayerPosition | null;
   shoots?: PlayerShoots | null;
   date_of_birth?: string | null;
@@ -67,6 +69,7 @@ export interface CreatePlayerData {
 export interface BulkPlayerInput {
   first_name: string;
   last_name: string;
+  league_player_number?: string | null;
   position: PlayerPosition;
   shoots: PlayerShoots;
   rookie_season_id?: string | null;
