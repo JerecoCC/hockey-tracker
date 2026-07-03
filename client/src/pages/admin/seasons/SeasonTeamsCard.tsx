@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
+import Divider from '@/components/Divider/Divider';
 import Section from '@/components/Section/Section';
 import ListItem from '@/components/ListItem/ListItem';
 import Select from '@/components/Select/Select';
@@ -28,105 +29,6 @@ const countGroupTeams = (group: SeasonGroupRecord, allGroups: SeasonGroupRecord[
   return teamIds.size;
 };
 
-interface GroupNodeProps {
-  group: SeasonGroupRecord;
-  allGroups: SeasonGroupRecord[];
-  leagueCode: string | null | undefined;
-  seasonId: string;
-  seasonName: string | null | undefined;
-}
-
-const GroupNode = ({ group, allGroups, leagueCode, seasonId, seasonName }: GroupNodeProps) => {
-  const children = allGroups
-    .filter((g) => g.parent_id === group.id)
-    .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
-  const roleLabel = group.role ? ROLE_LABELS[group.role] : null;
-  const isLeaf = children.length === 0;
-  const teamCount = countGroupTeams(group, allGroups);
-
-  return (
-    <li className={styles.groupItem}>
-      <Accordion
-        headerType="light"
-        className={styles.groupAccordion}
-        rowClassName={styles.groupHeader}
-        bodyClassName={styles.groupBody}
-        label={<span className={styles.groupLabel}>{group.name}</span>}
-        labelMeta={
-          <span
-            className={styles.groupTeamCount}
-            title={`${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
-          >
-            ({teamCount} {teamCount === 1 ? 'team' : 'teams'})
-          </span>
-        }
-        headerRight={
-          roleLabel ? (
-            <Tag
-              label={roleLabel}
-              intent={group.role === 'division' ? 'success' : 'accent'}
-            />
-          ) : null
-        }
-      >
-        {isLeaf && group.teams.length > 0 && (
-          <ul className={styles.groupTeamList}>
-            {group.teams.map((team) => (
-              <ListItem
-                key={team.id}
-                image={team.logo}
-                imageDark={team.logo_dark}
-                imageLight={team.logo_light}
-                eyebrow={team.place_name || ''}
-                name={team.team_name || team.name}
-                variant="plain"
-                rightContent={{ type: 'code', value: team.code }}
-                primaryColor={team.primary_color}
-                textColor={team.text_color}
-                href={buildTeamDetailsPath({
-                  leagueCode,
-                  leagueId: group.league_id,
-                  teamCode: team.code,
-                  teamId: team.id,
-                  seasonName,
-                  seasonId,
-                })}
-              />
-            ))}
-          </ul>
-        )}
-        {isLeaf && group.teams.length === 0 && (
-          <p className={styles.emptyMsg}>No teams assigned to this group.</p>
-        )}
-        {children.length > 0 && (
-          <div className={styles.groupNestedList}>
-            <ul className={styles.groupList}>
-              {children.map((child) => (
-                <GroupNode
-                  key={child.id}
-                  group={child}
-                  allGroups={allGroups}
-                  leagueCode={leagueCode}
-                  seasonId={seasonId}
-                  seasonName={seasonName}
-                />
-              ))}
-            </ul>
-          </div>
-        )}
-      </Accordion>
-    </li>
-  );
-};
-
-interface TeamListProps {
-  teams: TeamDisplayRecord[];
-  leagueCode: string | null | undefined;
-  leagueId: string;
-  seasonId: string;
-  seasonName: string | null | undefined;
-}
-
 type TeamDisplayRecord = Pick<
   SeasonTeam | GroupTeamRecord,
   | 'id'
@@ -141,15 +43,13 @@ type TeamDisplayRecord = Pick<
   | 'text_color'
 >;
 
-const alignmentGroupsToSeasonGroups = (
-  alignmentGroups: AlignmentGroupRecord[] | undefined,
-): SeasonGroupRecord[] =>
-  (alignmentGroups ?? []).map((group) => ({
-    ...group,
-    has_season_override: group.has_season_override ?? false,
-    is_inherited: group.is_inherited ?? false,
-    is_auto: group.is_auto ?? false,
-  }));
+interface TeamListProps {
+  teams: TeamDisplayRecord[];
+  leagueCode: string | null | undefined;
+  leagueId: string;
+  seasonId: string;
+  seasonName: string | null | undefined;
+}
 
 const TeamList = ({ teams, leagueCode, leagueId, seasonId, seasonName }: TeamListProps) => (
   <ul className={styles.teamList}>
@@ -180,6 +80,123 @@ const TeamList = ({ teams, leagueCode, leagueId, seasonId, seasonName }: TeamLis
     })}
   </ul>
 );
+
+interface GroupNodeProps {
+  group: SeasonGroupRecord;
+  allGroups: SeasonGroupRecord[];
+  leagueCode: string | null | undefined;
+  seasonId: string;
+  seasonName: string | null | undefined;
+  depth?: number;
+}
+
+const GroupNode = ({
+  group,
+  allGroups,
+  leagueCode,
+  seasonId,
+  seasonName,
+  depth = 0,
+}: GroupNodeProps) => {
+  const children = allGroups
+    .filter((g) => g.parent_id === group.id)
+    .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  const roleLabel = group.role ? ROLE_LABELS[group.role] : null;
+  const isLeaf = children.length === 0;
+  const teamCount = countGroupTeams(group, allGroups);
+  const groupName = roleLabel ? `${group.name} ${roleLabel}` : group.name;
+  const groupCountLabel = `(${teamCount} ${teamCount === 1 ? 'team' : 'teams'})`;
+
+  const groupBody = (
+    <>
+      {isLeaf && group.teams.length > 0 && (
+        <TeamList
+          teams={group.teams}
+          leagueCode={leagueCode}
+          leagueId={group.league_id}
+          seasonId={seasonId}
+          seasonName={seasonName}
+        />
+      )}
+      {isLeaf && group.teams.length === 0 && (
+        <p className={styles.emptyMsg}>No teams assigned to this group.</p>
+      )}
+      {children.length > 0 && (
+        <div className={styles.groupNestedList}>
+          <ul className={`${styles.groupList} ${styles.groupSubgroupList}`}>
+            {children.map((child) => (
+              <GroupNode
+                key={child.id}
+                group={child}
+                allGroups={allGroups}
+                leagueCode={leagueCode}
+                seasonId={seasonId}
+                seasonName={seasonName}
+                depth={depth + 1}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+    </>
+  );
+
+  return (
+    <li className={styles.groupItem}>
+      {depth === 0 ? (
+        <div className={styles.alignmentParentGroup}>
+          <div className={styles.alignmentParentGroupHeader}>
+            <div className={styles.alignmentParentGroupTitle}>
+              <span className={styles.alignmentParentGroupName}>
+                {groupName}
+                {' '}
+                <span className={styles.alignmentGroupNameCount}>{groupCountLabel}</span>
+              </span>
+            </div>
+            <Divider className={styles.alignmentParentGroupHeaderDivider} />
+          </div>
+          <div className={styles.alignmentParentGroupBody}>{groupBody}</div>
+        </div>
+      ) : (
+        <Accordion
+          headerType="light"
+          className={styles.groupAccordion}
+          rowClassName={styles.groupHeader}
+          bodyClassName={styles.groupBody}
+          label={<span className={styles.groupLabel}>{group.name}</span>}
+          labelMeta={
+            <span
+              className={styles.groupTeamCount}
+              title={`${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
+            >
+              {groupCountLabel}
+            </span>
+          }
+          headerRight={
+            roleLabel ? (
+              <Tag
+                label={roleLabel}
+                intent={group.role === 'division' ? 'success' : 'accent'}
+              />
+            ) : null
+          }
+        >
+          {groupBody}
+        </Accordion>
+      )}
+    </li>
+  );
+};
+
+const alignmentGroupsToSeasonGroups = (
+  alignmentGroups: AlignmentGroupRecord[] | undefined,
+): SeasonGroupRecord[] =>
+  (alignmentGroups ?? []).map((group) => ({
+    ...group,
+    has_season_override: group.has_season_override ?? false,
+    is_inherited: group.is_inherited ?? false,
+    is_auto: group.is_auto ?? false,
+  }));
 
 const SeasonTeamsSkeleton = () => (
   <ul
