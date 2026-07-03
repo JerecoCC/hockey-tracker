@@ -441,7 +441,9 @@ router.get('/', async (req, res) => {
         star_2_id: gamesTable.star2Id,
         star_3_id: gamesTable.star3Id,
         playoff_round: playoffSeries.round,
+        bracket_slot_key: playoffSeries.bracketSlotKey,
         playoff_round_names: bracketRuleSets.roundNames,
+        playoff_matchup_names: bracketRuleSets.matchupNames,
         period_scores: periodScoresJson(
           gamesTable.id,
           gamesTable.homeTeamId,
@@ -1000,7 +1002,9 @@ router.get('/:id', async (req, res) => {
         ps2.home_wins     AS series_home_wins,
         ps2.away_wins     AS series_away_wins,
         ps2.games_to_win  AS series_games_to_win,
+        ps2.bracket_slot_key AS bracket_slot_key,
         brs.round_names   AS playoff_round_names,
+        brs.matchup_names AS playoff_matchup_names,
         gs.period_scores,
         g.period_shots,
         json_build_object(
@@ -1884,7 +1888,9 @@ router.patch('/:id', async (req, res) => {
         g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         ps2.round AS playoff_round,
+        ps2.bracket_slot_key AS bracket_slot_key,
         brs.round_names AS playoff_round_names,
+        brs.matchup_names AS playoff_matchup_names,
         gs.period_scores,
         g.period_shots,
         json_build_object(

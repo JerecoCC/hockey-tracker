@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
+import FitText from '@/components/FitText/FitText';
 import Tag from '@/components/Tag/Tag';
 import StickyHeroCard from '@/components/StickyHeroCard/StickyHeroCard';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
@@ -229,9 +230,12 @@ const ScoreboardCard = ({
           )}
           <div className={styles.scoreBlock}>
             {game.playoff_round != null && (
-              <span className={styles.scoreMeta}>
+              <FitText
+                className={styles.scoreMeta}
+                minFontSize={8}
+              >
                 {getPlayoffScoreMetaLabel(game)}
-              </span>
+              </FitText>
             )}
             {isFinal ? (
               <Tag

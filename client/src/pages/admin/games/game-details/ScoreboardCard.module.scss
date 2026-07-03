@@ -418,6 +418,8 @@ $scoreboard-stripe-overlap: 8px;
     align-items: center;
     gap: $space-xs;
     flex-shrink: 0;
+    width: clamp(5rem, 18vw, 14rem);
+    min-width: 0;
   }
 
   &Number {
@@ -441,11 +443,13 @@ $scoreboard-stripe-overlap: 8px;
   }
 
   &Meta {
+    width: 100%;
     font-size: $font-xs;
     font-weight: 600;
     color: var(--app-text-muted, #{$text-dim});
     text-transform: uppercase;
     letter-spacing: 0.06em;
+    text-align: center;
   }
 
   &Date {

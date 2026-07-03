@@ -675,6 +675,8 @@
     transform: translateY(-1px);
 
     strong {
+      width: 100%;
+      min-width: 0;
       color: #f8fafc;
       font-size: 33px;
       font-weight: 950;

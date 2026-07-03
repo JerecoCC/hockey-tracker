@@ -6,16 +6,22 @@ interface PlayoffScoreMetaGame {
   game_number_in_series?: number | null;
 }
 
-export const getPlayoffScoreMetaLabel = (game: PlayoffScoreMetaGame): string | null => {
+export const getPlayoffScoreMetaBaseLabel = (game: PlayoffScoreMetaGame): string | null => {
   if (game.playoff_round == null) return null;
 
   const matchupLabel = game.bracket_slot_key
     ? game.playoff_matchup_names?.[game.bracket_slot_key]?.trim()
     : null;
-  const roundLabel =
+  return (
     matchupLabel ||
-    game.playoff_round_names?.[game.playoff_round] ||
-    `Round ${game.playoff_round}`;
+    game.playoff_round_names?.[game.playoff_round]?.trim() ||
+    `Round ${game.playoff_round}`
+  );
+};
+
+export const getPlayoffScoreMetaLabel = (game: PlayoffScoreMetaGame): string | null => {
+  const roundLabel = getPlayoffScoreMetaBaseLabel(game);
+  if (!roundLabel) return null;
 
   return game.game_number_in_series != null
     ? `${roundLabel} · Game ${game.game_number_in_series}`

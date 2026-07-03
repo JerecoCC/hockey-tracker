@@ -64,6 +64,8 @@ const GAME = {
   game_number: null, game_number_in_series: null,
   playoff_round: null,
   playoff_round_names: null,
+  playoff_matchup_names: null,
+  bracket_slot_key: null,
   playoff_series_id: null, notes: null, created_at: new Date().toISOString(),
   home_last_five: [LAST_FIVE_GAME],
   away_last_five: [],
@@ -247,6 +249,29 @@ describe('GET /api/admin/games/:id', () => {
     expect(prevMeetingsSection).toMatch(/'created_at',\s+lg\.created_at/);
     expect(prevMeetingsSection).not.toMatch(/g2\.status\s*=\s*'final'/);
     expect(prevMeetingsSection).not.toMatch(/g2\.scheduled_at\s*<\s*g\.scheduled_at/);
+  });
+
+  it('includes playoff matchup label fields for game details', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        ...GAME,
+        game_type: 'playoff',
+        playoff_round: 1,
+        bracket_slot_key: 'r1m0',
+        playoff_round_names: { 1: 'Semifinal' },
+        playoff_matchup_names: { r1m0: 'Eastern Semifinal' },
+      },
+    ]);
+
+    const res = await request(app).get('/api/admin/games/game-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.bracket_slot_key).toBe('r1m0');
+    expect(res.body.playoff_matchup_names).toEqual({ r1m0: 'Eastern Semifinal' });
+
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('ps2.bracket_slot_key AS bracket_slot_key');
+    expect(queryText).toContain('brs.matchup_names AS playoff_matchup_names');
   });
 
   it('returns 404 when game not found', async () => {

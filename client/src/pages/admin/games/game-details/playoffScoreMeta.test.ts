@@ -1,4 +1,4 @@
-import { getPlayoffScoreMetaLabel } from './playoffScoreMeta';
+import { getPlayoffScoreMetaBaseLabel, getPlayoffScoreMetaLabel } from './playoffScoreMeta';
 
 describe('getPlayoffScoreMetaLabel', () => {
   it('prefers a custom matchup label over a custom round name', () => {
@@ -33,5 +33,17 @@ describe('getPlayoffScoreMetaLabel', () => {
         game_number_in_series: 3,
       }),
     ).toBe('Opening Matchup · Game 3');
+  });
+
+  it('returns the selected label without a game suffix when requested', () => {
+    expect(
+      getPlayoffScoreMetaBaseLabel({
+        playoff_round: 3,
+        playoff_round_names: { 3: 'Finals' },
+        playoff_matchup_names: { r3m0: 'Championship Matchup' },
+        bracket_slot_key: 'r3m0',
+        game_number_in_series: 6,
+      }),
+    ).toBe('Championship Matchup');
   });
 });

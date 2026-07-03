@@ -288,7 +288,9 @@ router.get('/games', async (req, res) => {
         g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         ps.round          AS playoff_round,
+        ps.bracket_slot_key AS bracket_slot_key,
         brs.round_names   AS playoff_round_names,
+        brs.matchup_names AS playoff_matchup_names,
         gs.period_scores,
         g.period_shots,
         -- Home team (same json_build_object shape as admin query)
@@ -680,7 +682,9 @@ router.get('/games/:id', async (req, res) => {
         g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         ps.round AS playoff_round,
+        ps.bracket_slot_key AS bracket_slot_key,
         brs.round_names AS playoff_round_names,
+        brs.matchup_names AS playoff_matchup_names,
         gs.period_scores,
         g.period_shots,
         json_build_object(

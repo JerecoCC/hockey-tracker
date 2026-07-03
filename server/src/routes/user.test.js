@@ -50,6 +50,8 @@ const GAME = {
   series_away_wins_at_game: null,
   series_games_to_win: null,
   playoff_round_names: null,
+  playoff_matchup_names: null,
+  bracket_slot_key: null,
   period_scores: [],
   period_shots: [],
   home_team: { id: 'team-1', name: 'Home', code: 'HOM', logo: null, primary_color: '#111', secondary_color: '#222', text_color: '#fff' },
@@ -266,6 +268,8 @@ describe('GET /api/user/games', () => {
     expect(res.body[0].watched_by_user).toBe(false);
     expect(res.body[0].skipped_by_user).toBe(false);
     expect(res.body[0].scheduled_for).toBe('2024-10-12');
+    expect(queryText).toContain('ps.bracket_slot_key AS bracket_slot_key');
+    expect(queryText).toContain('brs.matchup_names AS playoff_matchup_names');
     expect(res.body[0]).toMatchObject({ home_score: 0, away_score: 0, winner_team_id: null });
     expect(sql.mock.calls[0].slice(1)).toContain('user-1');
     expect(queryText).toContain('user_favorite_teams');
@@ -436,6 +440,8 @@ describe('GET /api/user/games/:id', () => {
     expect(queryText).toContain('home_l5.home_last_five');
     expect(queryText).toContain('away_l5.away_last_five');
     expect(queryText).toContain('prev.previous_meetings');
+    expect(queryText).toContain('ps.bracket_slot_key AS bracket_slot_key');
+    expect(queryText).toContain('brs.matchup_names AS playoff_matchup_names');
     expect(queryText).not.toContain('NULL::int AS series_home_wins_at_game');
     expect(queryText).not.toContain("'[]'::json AS home_last_five");
   });

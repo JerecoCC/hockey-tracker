@@ -543,7 +543,7 @@ describe('ScoreImageModal', () => {
     expect(createdAnchor?.download).toBe('AWY vs HOM - 2026-03-05.png');
   });
 
-  it('uses league code, playoffs, and game year in the top title for playoff games', () => {
+  it('uses league code, playoffs, game year, and matchup label for playoff games', () => {
     render(
       <ScoreImageModal
         open
@@ -580,6 +580,8 @@ describe('ScoreImageModal', () => {
             game_number_in_series: 4,
             playoff_round: 1,
             playoff_round_names: { 1: 'Finals' },
+            playoff_matchup_names: { r1m0: 'Eastern Final' },
+            bracket_slot_key: 'r1m0',
           } as Partial<GameRecord> as GameRecord
         }
         liveAwayScore={1}
@@ -589,5 +591,7 @@ describe('ScoreImageModal', () => {
 
     expect(screen.getAllByText('HL').length).toBeGreaterThan(0);
     expect(screen.getByText('Playoffs 2026')).toBeInTheDocument();
+    expect(screen.getByText('Eastern Final')).toBeInTheDocument();
+    expect(screen.queryByText('Finals')).not.toBeInTheDocument();
   });
 });
