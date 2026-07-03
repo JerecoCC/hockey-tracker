@@ -145,6 +145,10 @@ export interface GameRecord {
   best_of_shootout: number;
   /** Custom display names for each playoff round from the season's bracket rule set (detail endpoint only). */
   playoff_round_names?: Record<string, string> | null;
+  /** Custom display names for each playoff matchup from the season's bracket rule set. */
+  playoff_matchup_names?: Record<string, string> | null;
+  /** Bracket matchup slot key for resolving custom playoff matchup names. */
+  bracket_slot_key?: string | null;
 }
 
 export interface SeriesGame {
@@ -168,6 +172,7 @@ export interface PlayoffSeriesRecord {
   round: number;
   series_letter: string | null;
   playoff_round_names?: Record<string, string> | null;
+  playoff_matchup_names?: Record<string, string> | null;
   /** Null when the team has not yet been determined (partial series shell). */
   home_team_id: string | null;
   home_team_name: string | null;

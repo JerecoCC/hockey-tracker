@@ -533,6 +533,7 @@ router.get('/playoff-series', async (req, res) => {
         ps.games_to_win, ps.home_wins, ps.away_wins,
         ps.status, ps.winner_team_id, ps.bracket_slot_key, ps.created_at,
         brs.round_names AS playoff_round_names,
+        brs.matchup_names AS playoff_matchup_names,
         ht.name AS home_team_name, ht.code AS home_team_code,
         ht.logo AS home_team_logo, ht.logo_dark AS home_team_logo_dark, ht.logo_light AS home_team_logo_light,
         th.primary_color AS home_team_primary_color,

@@ -466,6 +466,7 @@ describe('GET /api/admin/games/playoff-series', () => {
     expect(queryText).toContain('ti.latest_season_id');
     expect(queryText).toContain('ss.start_date <= s.start_date');
     expect(queryText).toContain('ls.start_date >= s.start_date');
+    expect(queryText).toContain('brs.matchup_names AS playoff_matchup_names');
   });
 });
 

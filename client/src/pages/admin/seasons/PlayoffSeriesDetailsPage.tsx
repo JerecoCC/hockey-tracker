@@ -225,6 +225,8 @@ const PlayoffSeriesDetailsPage = () => {
       scheduled_time: null,
       playoff_round: playoffSeries.round,
       playoff_round_names: playoffSeries.playoff_round_names ?? null,
+      playoff_matchup_names: playoffSeries.playoff_matchup_names ?? null,
+      bracket_slot_key: playoffSeries.bracket_slot_key ?? null,
       game_number_in_series: null,
       home_team: teamInfoFromSeries(playoffSeries, 'home'),
       away_team: teamInfoFromSeries(playoffSeries, 'away'),

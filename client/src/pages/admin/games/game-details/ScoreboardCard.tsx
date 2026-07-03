@@ -11,6 +11,7 @@ import {
   formatScheduledDate,
   formatScheduledDateLocal,
 } from './formatUtils';
+import { getPlayoffScoreMetaLabel } from './playoffScoreMeta';
 import styles from './ScoreboardCard.module.scss';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -37,6 +38,8 @@ interface ScoreboardGame {
   scheduled_time?: string | null;
   playoff_round?: number | null;
   playoff_round_names?: Record<string, string> | null;
+  playoff_matchup_names?: Record<string, string> | null;
+  bracket_slot_key?: string | null;
   game_number_in_series?: number | null;
   home_team: TeamInfo;
   away_team: TeamInfo;
@@ -227,13 +230,7 @@ const ScoreboardCard = ({
           <div className={styles.scoreBlock}>
             {game.playoff_round != null && (
               <span className={styles.scoreMeta}>
-                {(() => {
-                  const roundLabel =
-                    game.playoff_round_names?.[game.playoff_round] ?? `Round ${game.playoff_round}`;
-                  return game.game_number_in_series != null
-                    ? `${roundLabel} · Game ${game.game_number_in_series}`
-                    : roundLabel;
-                })()}
+                {getPlayoffScoreMetaLabel(game)}
               </span>
             )}
             {isFinal ? (
