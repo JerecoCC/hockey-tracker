@@ -326,11 +326,14 @@ describe('PlayerDetails info tab', () => {
     ]);
   });
 
-  it('shows the active or retired tag beside the player heading', () => {
-    const { rerender } = render(<PlayerDetails />);
+  it('shows the active or retired tag in the hero status area', () => {
+    const { container, rerender } = render(<PlayerDetails />);
 
     expect(screen.getByRole('heading', { name: 'John Smith' })).toBeInTheDocument();
-    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(container.querySelector('.heroStatus')).toHaveTextContent('Active');
+    expect(
+      within(container.querySelector('.heroTitleRow') as HTMLElement).queryByText('Active'),
+    ).not.toBeInTheDocument();
 
     mockUsePlayerDetails.mockReturnValue({
       player: {
@@ -354,8 +357,22 @@ describe('PlayerDetails info tab', () => {
 
     rerender(<PlayerDetails />);
 
-    expect(screen.getByText('Retired')).toBeInTheDocument();
+    expect(container.querySelector('.heroStatus')).toHaveTextContent('Retired');
     expect(screen.queryByText('Inactive')).not.toBeInTheDocument();
+  });
+
+  it('labels the team history tab as history and uses default list item styling', () => {
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+
+    const { container } = render(<PlayerDetails />);
+
+    expect(screen.getByText('History')).toBeInTheDocument();
+    expect(screen.queryByText('Team History')).not.toBeInTheDocument();
+    const historyList = container.querySelector('.stintList') as HTMLElement;
+    const stintItem = within(historyList).getByText('Toronto Maple Leafs').closest('li');
+    expect(stintItem).toHaveClass('item');
+    expect(stintItem).not.toHaveClass('stintItem');
+    expect(container.querySelector('.stintItem')).not.toBeInTheDocument();
   });
 
   it('moves the move player action into the more actions menu', async () => {

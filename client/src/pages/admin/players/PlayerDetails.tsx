@@ -1119,10 +1119,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           <div className={styles.heroInfo}>
             <div className={styles.heroTitleRow}>
               <h2 className={styles.heroName}>{fullName}</h2>
-              <Tag
-                label={player.is_active ? 'Active' : 'Retired'}
-                intent={player.is_active ? 'success' : 'neutral'}
-              />
             </div>
             <div className={styles.heroMeta}>
               {heroTeam?.name && (
@@ -1144,23 +1140,31 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
               {positionLabel && <span>{positionLabel}</span>}
             </div>
           </div>
-          {isAdminView && (
-            <div className={styles.heroActions}>
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="edit"
-                size="sm"
-                tooltip="Edit player"
-                onClick={() => setEditPlayerOpen(true)}
-              />
-              {playerActionItems.length > 0 && (
-                <MoreActionsMenu
-                  items={playerActionItems}
+          <div className={styles.heroRightCol}>
+            {isAdminView && (
+              <div className={styles.heroActions}>
+                <Button
+                  variant="outlined"
+                  intent="neutral"
+                  icon="edit"
+                  size="sm"
+                  tooltip="Edit player"
+                  onClick={() => setEditPlayerOpen(true)}
                 />
-              )}
+                {playerActionItems.length > 0 && (
+                  <MoreActionsMenu
+                    items={playerActionItems}
+                  />
+                )}
+              </div>
+            )}
+            <div className={styles.heroStatus}>
+              <Tag
+                label={player.is_active ? 'Active' : 'Retired'}
+                intent={player.is_active ? 'success' : 'neutral'}
+              />
             </div>
-          )}
+          </div>
         </div>
       </Card>
 
@@ -1215,10 +1219,10 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             },
             isAdminView
               ? {
-                  label: 'Team History',
+                  label: 'History',
                   content: (
                     <Section
-                      title="Team History"
+                      title="History"
                       action={
                         <Button
                           variant="filled"
@@ -1238,7 +1242,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                           {teamHistoryStints.map((s) => (
                             <ListItem
                               key={s.id}
-                              className={styles.stintItem}
                               image={s.team.logo}
                               imageDark={s.team.logo_dark}
                               imageLight={s.team.logo_light}
