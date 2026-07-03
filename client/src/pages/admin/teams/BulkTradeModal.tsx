@@ -120,8 +120,8 @@ const BulkTradeModal = ({
   return (
     <BulkCreateModal<FormValues, RowValues>
       open={open}
-      title="Trade Players"
-      size="lg"
+      title="Move Players"
+      size="md"
       onClose={onClose}
       formId="bulk-trade-form"
       confirmIcon="swap_horiz"
@@ -134,7 +134,7 @@ const BulkTradeModal = ({
       })}
       rowArrayName="players"
       createRow={() => ({ ...EMPTY_ROW })}
-      columnsTemplate="6rem 1fr"
+      columnsTemplate="4.5rem minmax(0, 1fr)"
       headerCells={[{ label: 'Jersey #' }, { label: 'Player', required: true }]}
       requiredRowFields={['player_id']}
       requiredFormFields={['to_team_id', 'trade_date']}
@@ -142,43 +142,46 @@ const BulkTradeModal = ({
       addRowDisabled={({ rowCount }) => players.length === 0 || rowCount >= players.length}
       itemLabel="player"
       getConfirmLabel={(count, isSubmitting) =>
-        isSubmitting ? 'Trading…' : `Trade ${count} Player${count !== 1 ? 's' : ''}`
+        isSubmitting ? 'Moving...' : `Move ${count} Player${count !== 1 ? 's' : ''}`
       }
       shouldConfirmRemove={(row) => !!(row.player_id || row.jersey_number)}
       getRemoveConfirmBody={() => 'Are you sure you want to remove this player from the list?'}
       renderBeforeRows={({ control, isSubmitting }) => (
         <div className={tradeStyles.form}>
-          <div className={tradeStyles.row}>
-            <Field
-              type="select"
-              label="Trade To"
-              required
-              control={control}
-              name="to_team_id"
-              options={teamOptions}
-              placeholder="Select destination team…"
-              searchable
-              rules={{ required: true }}
-              disabled={isSubmitting}
-            />
-            <Field
-              type="datepicker"
-              label="Trade Date"
-              required
-              control={control}
-              name="trade_date"
-              rules={{ required: true }}
-              disabled={isSubmitting}
-            />
-          </div>
           <Field
             type="select"
-            label="Move Type"
+            label="Move To"
+            required
             control={control}
-            name="acquisition_type"
-            options={ACQUISITION_TYPE_OPTIONS}
+            name="to_team_id"
+            options={teamOptions}
+            placeholder="Select destination team..."
+            searchable
+            rules={{ required: true }}
             disabled={isSubmitting}
           />
+          <fieldset className={tradeStyles.fieldGroup}>
+            <legend className={tradeStyles.groupLabel}>MOVEMENT</legend>
+            <div className={tradeStyles.movementRow}>
+              <Field
+                type="select"
+                label="Type"
+                control={control}
+                name="acquisition_type"
+                options={ACQUISITION_TYPE_OPTIONS}
+                disabled={isSubmitting}
+              />
+              <Field
+                type="datepicker"
+                label="Date"
+                required
+                control={control}
+                name="trade_date"
+                rules={{ required: true }}
+                disabled={isSubmitting}
+              />
+            </div>
+          </fieldset>
         </div>
       )}
       onSubmitForm={async (data) => {
@@ -190,7 +193,13 @@ const BulkTradeModal = ({
             jerseyNumber: r.jersey_number ? parseInt(r.jersey_number, 10) : null,
           }));
         if (payload.length === 0) return false;
-        return bulkTradePlayers(payload, seasonId, data.to_team_id, data.trade_date, data.acquisition_type || 'trade');
+        return bulkTradePlayers(
+          payload,
+          seasonId,
+          data.to_team_id,
+          data.trade_date,
+          data.acquisition_type || 'trade',
+        );
       }}
       renderRow={({ index, control, setValue, rows, isSubmitting, deleteButton }) => {
         const pickedIds = new Set(

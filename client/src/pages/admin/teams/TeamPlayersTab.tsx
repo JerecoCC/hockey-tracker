@@ -309,7 +309,7 @@ const TeamPlayersTab = ({
             onClick: () => setCreateModalOpen(true),
           },
           {
-            label: 'Trade Players',
+            label: 'Move Players',
             icon: 'swap_horiz',
             disabled: !selectedSeasonId || players.length === 0,
             onClick: () => setTradeModalOpen(true),

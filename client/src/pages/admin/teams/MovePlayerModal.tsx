@@ -2,15 +2,9 @@ import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import useTeams from '@/hooks/useTeams';
-import {
-  usePlayerTradeHistory,
-  type PlayerStintRecord,
-  type TeamPlayerRecord,
-} from '@/hooks/useTeamPlayers';
-import { formatPlayerPosition } from '@/lib/playerPosition';
-import { ACQUISITION_TYPE_LABELS, ACQUISITION_TYPE_OPTIONS } from '../players/StintEditModal';
+import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
+import { ACQUISITION_TYPE_OPTIONS } from '../players/StintEditModal';
 import styles from './MovePlayerModal.module.scss';
 
 const POSITION_OPTIONS = [
@@ -50,15 +44,6 @@ interface Props {
   ) => Promise<boolean>;
 }
 
-const formatDate = (d: string | null) => {
-  if (!d) return '-';
-  return new Date(d + 'T00:00:00').toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
-
 const MovePlayerModal = ({
   open,
   player,
@@ -90,8 +75,6 @@ const MovePlayerModal = ({
       logoLight: t.logo_light ?? undefined,
       code: t.code,
     }));
-
-  const { stints } = usePlayerTradeHistory(player?.id ?? null, seasonId);
 
   const {
     control,
@@ -182,6 +165,14 @@ const MovePlayerModal = ({
             <legend className={styles.groupLabel}>MOVEMENT</legend>
             <div className={styles.movementRow}>
               <Field
+                type="select"
+                label="Type"
+                control={control}
+                name="acquisition_type"
+                options={ACQUISITION_TYPE_OPTIONS}
+                disabled={isSubmitting}
+              />
+              <Field
                 type="datepicker"
                 label="Date"
                 control={control}
@@ -190,61 +181,9 @@ const MovePlayerModal = ({
                 rules={{ required: 'Move date is required' }}
                 disabled={isSubmitting}
               />
-              <Field
-                type="select"
-                label="Type"
-                control={control}
-                name="acquisition_type"
-                options={ACQUISITION_TYPE_OPTIONS}
-                disabled={isSubmitting}
-              />
             </div>
           </fieldset>
         </form>
-
-        {stints.length > 0 && (
-          <div className={styles.history}>
-            <h4 className={styles.historyTitle}>Team Moves This Season</h4>
-            <ul className={styles.stintList}>
-              {stints.map((s: PlayerStintRecord) => (
-                <li
-                  key={s.id}
-                  className={styles.stintItem}
-                >
-                  <TeamLogo
-                    logo={s.team.logo}
-                    logoDark={s.team.logo_dark}
-                    logoLight={s.team.logo_light}
-                    code={s.team.code ?? '?'}
-                    alt={s.team.name ?? ''}
-                    primaryColor={s.team.primary_color}
-                    textColor={s.team.text_color}
-                    size={32}
-                    shape="square"
-                    className={styles.stintLogo}
-                  />
-                  <div className={styles.stintInfo}>
-                    <span className={styles.stintTeam}>{s.team.name ?? 'Unknown Team'}</span>
-                    {s.jersey_number != null && (
-                      <span className={styles.stintJersey}>#{s.jersey_number}</span>
-                    )}
-                    {s.position && (
-                      <span className={styles.stintJersey}>{formatPlayerPosition(s.position)}</span>
-                    )}
-                    {s.acquisition_type && (
-                      <span className={styles.stintJersey}>
-                        {ACQUISITION_TYPE_LABELS[s.acquisition_type] ?? s.acquisition_type}
-                      </span>
-                    )}
-                  </div>
-                  <span className={styles.stintDates}>
-                    {formatDate(s.start_date)} - {s.end_date ? formatDate(s.end_date) : 'Present'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
     </Modal>
   );

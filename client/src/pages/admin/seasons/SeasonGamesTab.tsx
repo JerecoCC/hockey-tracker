@@ -50,6 +50,8 @@ const SEASON_WEEK_SUMMARY_STICKY_TOP = '52px';
 const SEASON_WEEK_SUMMARY_STICKY_TOP_PX = 52;
 const SEASON_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX = 8;
 const SEASON_WEEK_SUMMARY_SCROLL_SETTLE_MS = 180;
+const AUTOFILL_RESULT_TOAST_MS = 4000;
+const AUTOFILL_FAILURE_TOAST_MS = 12000;
 
 const getSeasonWeekSummaryActiveMarker = (summaryCard: HTMLDivElement | null): number =>
   (summaryCard?.getBoundingClientRect().bottom ?? SEASON_WEEK_SUMMARY_STICKY_TOP_PX) +
@@ -704,7 +706,7 @@ const SeasonGamesTab = ({
         render: message,
         type,
         isLoading: false,
-        autoClose: 4000,
+        autoClose: type === 'success' ? AUTOFILL_RESULT_TOAST_MS : AUTOFILL_FAILURE_TOAST_MS,
         closeButton: true,
         closeOnClick: true,
         draggable: true,

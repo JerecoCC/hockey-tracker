@@ -24,6 +24,7 @@ type FormValues = {
 };
 
 const FORM_ID = 'nhl-game-autofill-form';
+const AUTOFILL_FAILURE_TOAST_MS = 12000;
 
 const NhlGameAutofillModal = ({ open, game, onClose, onAutofillChange }: Props) => {
   const queryClient = useQueryClient();
@@ -80,11 +81,11 @@ const NhlGameAutofillModal = ({ open, game, onClose, onAutofillChange }: Props) 
         `Filled NHL game ${result.summary.gameId}: ${result.summary.goalsCreated} goals, ${result.summary.rosterPlayers} roster players.`,
       );
       if (result.warnings.length > 0) {
-        toast.error(result.warnings.join(' '));
+        toast.error(result.warnings.join(' '), { autoClose: AUTOFILL_FAILURE_TOAST_MS });
       }
     } catch (err) {
       const message = nhlAutofillApiError(err, 'Unable to auto-fill game from NHL data.');
-      toast.error(message);
+      toast.error(message, { autoClose: AUTOFILL_FAILURE_TOAST_MS });
     } finally {
       setFilling(false);
       onAutofillChange?.(null);

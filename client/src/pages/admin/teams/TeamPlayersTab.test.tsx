@@ -11,8 +11,44 @@ const mockAddPlayersModal = jest.fn(() => null);
 jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
 jest.mock('@/hooks/useSeasons', () => jest.fn());
 jest.mock('@/hooks/useTeamPlayers', () => jest.fn());
+jest.mock('@/components/MoreActionsMenu/MoreActionsMenu', () => {
+  interface MockActionItem {
+    label: string;
+    disabled?: boolean;
+    onClick?: () => void;
+  }
+
+  interface MockMoreActionsMenuProps {
+    items: MockActionItem[];
+  }
+
+  const MockMoreActionsMenu = ({ items }: MockMoreActionsMenuProps) => (
+    <div>
+      {items.map((item) => (
+        <button
+          key={item.label}
+          type="button"
+          disabled={item.disabled}
+          onClick={item.onClick}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  MockMoreActionsMenu.displayName = 'MockMoreActionsMenu';
+  return MockMoreActionsMenu;
+});
 jest.mock('../games/game-details/lineups/LineupCreatePlayersModal', () => () => null);
-jest.mock('./AddPlayersModal', () => (props: any) => mockAddPlayersModal(props));
+jest.mock('./AddPlayersModal', () => {
+  type MockAddPlayersModalProps = Record<string, unknown>;
+
+  const MockAddPlayersModal = (props: MockAddPlayersModalProps) => mockAddPlayersModal(props);
+
+  MockAddPlayersModal.displayName = 'MockAddPlayersModal';
+  return MockAddPlayersModal;
+});
 jest.mock('./BulkTradeModal', () => () => null);
 jest.mock('./TeamPlayerEditModal', () => () => null);
 
@@ -158,6 +194,13 @@ describe('TeamPlayersTab', () => {
         positionFilterLabel: 'Goalies',
       }),
     );
+  });
+
+  it('labels the bulk player movement action as move players', () => {
+    renderTeamPlayersTab();
+
+    expect(screen.getByRole('button', { name: 'Move Players' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Trade Players' })).not.toBeInTheDocument();
   });
 
   it('renders a read-only user roster without admin actions and opens the user player route', async () => {

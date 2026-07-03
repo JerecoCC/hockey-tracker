@@ -28,6 +28,10 @@
     margin-bottom: $space-xs;
   }
 
+  &RowWithIntro {
+    margin-top: $space-md;
+  }
+
   &Cell {
     font-size: $font-xs;
     font-weight: 600;

@@ -229,7 +229,9 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
           {renderBeforeRows?.(context)}
 
           <div
-            className={styles.headerRow}
+            className={[styles.headerRow, renderBeforeRows ? styles.headerRowWithIntro : '']
+              .filter(Boolean)
+              .join(' ')}
             style={{ gridTemplateColumns }}
           >
             {headerCells.map((cell, index) => (
