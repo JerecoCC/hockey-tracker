@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Button from '@/components/Button/Button';
 import ListItem from '@/components/ListItem/ListItem';
 import Section from '@/components/Section/Section';
-import Tooltip from '@/components/Tooltip/Tooltip';
+import StatItem from '@/components/StatItem/StatItem';
 import GoalieStatsEditModal from '../GoalieStatsEditModal';
 import GoalieTimeOnIceModal from '../GoalieTimeOnIceModal';
 import type { GameRecord } from '@/hooks/useGames';
@@ -339,49 +339,35 @@ const GoalieStatStrip = ({
   toi: string;
 }) => (
   <div className={styles.goalieStatsStrip}>
-    <GoalieStatCell
+    <StatItem
+      className={styles.goalieStatCell}
       label="SA"
       tooltip="Shots Against"
       value={sa}
     />
-    <GoalieStatCell
+    <StatItem
+      className={styles.goalieStatCell}
       label="SV"
       tooltip="Saves"
       value={sv}
     />
-    <GoalieStatCell
+    <StatItem
+      className={styles.goalieStatCell}
       label="GA"
       tooltip="Goals Against"
       value={ga}
     />
-    <GoalieStatCell
+    <StatItem
+      className={styles.goalieStatCell}
       label="SV%"
       tooltip="Save Percentage"
       value={svPct}
     />
-    <GoalieStatCell
+    <StatItem
+      className={styles.goalieStatCell}
       label="TOI"
       tooltip="Time on Ice"
       value={toi}
     />
-  </div>
-);
-
-const GoalieStatCell = ({
-  label,
-  tooltip,
-  value,
-}: {
-  label: string;
-  tooltip: string;
-  value: number | string;
-}) => (
-  <div className={styles.goalieStatCell}>
-    <Tooltip text={tooltip}>
-      <span className={styles.goalieStatCellLabel}>{label}</span>
-    </Tooltip>
-    <span className={value === '--' ? styles.goalieStatCellMuted : styles.goalieStatCellValue}>
-      {value}
-    </span>
   </div>
 );

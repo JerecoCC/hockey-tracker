@@ -16,6 +16,7 @@ import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
+import StatItem from '@/components/StatItem/StatItem';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
 import Tag from '@/components/Tag/Tag';
@@ -1381,7 +1382,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             body={
               deletingStint ? (
                 <>
-                  Delete the {deletingStint.team.name ?? 'selected team'} stint from this player's
+                  Delete the {deletingStint.team.name ?? 'selected team'} stint from this
+                  player&apos;s
                   team history? This is only allowed when the player has no stats for that team.
                 </>
               ) : (
@@ -1580,10 +1582,10 @@ const StatCell = ({
   tooltip: string;
   value: number | string;
 }) => (
-  <div className={styles.statCell}>
-    <Tooltip text={tooltip}>
-      <span className={styles.statCellLabel}>{label}</span>
-    </Tooltip>
-    <span className={value === '—' ? styles.statCellMuted : styles.statCellValue}>{value}</span>
-  </div>
+  <StatItem
+    className={styles.statCell}
+    label={label}
+    tooltip={tooltip}
+    value={value}
+  />
 );

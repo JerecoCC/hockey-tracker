@@ -14,6 +14,7 @@ import SearchField from '@/components/SearchField/SearchField';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
+import StatItem from '@/components/StatItem/StatItem';
 import Tag from '@/components/Tag/Tag';
 import { usePlayoffSeries, type PlayoffSeriesRecord } from '@/hooks/useGames';
 import useSeasonAwards, {
@@ -1717,10 +1718,12 @@ const AwardRecipientStatCard = ({ stat }: { stat: AwardRecipientStatDisplay }) =
     variant="border"
     className={styles.awardRecipientStatCard}
   >
-    <span className={styles.awardRecipientStat}>
-      <span className={styles.awardRecipientStatLabel}>{stat.label}</span>
-      <span className={styles.awardRecipientStatValue}>{stat.value}</span>
-    </span>
+    <StatItem
+      as="span"
+      className={styles.awardRecipientStat}
+      label={stat.label}
+      value={stat.value}
+    />
   </Card>
 );
 

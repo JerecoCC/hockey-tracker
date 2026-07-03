@@ -1,0 +1,40 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: var(--stat-item-justify, flex-start);
+  gap: var(--stat-item-gap, #{$space-xs});
+  min-width: 0;
+  color: var(--stat-item-color, var(--app-text, #{$text-body}));
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.label {
+  color: var(--stat-item-label-color, var(--app-text-muted, #{$text-dim}));
+  font-size: var(--stat-item-label-font-size, #{$font-xs});
+  font-weight: var(--stat-item-label-font-weight, 600);
+  letter-spacing: var(--stat-item-label-letter-spacing, 0.07em);
+  line-height: var(--stat-item-label-line-height, 1);
+  text-transform: uppercase;
+  white-space: var(--stat-item-label-white-space, nowrap);
+}
+
+.value,
+.muted {
+  font-size: var(--stat-item-value-font-size, #{$font-xl});
+  font-weight: var(--stat-item-value-font-weight, 700);
+  line-height: var(--stat-item-value-line-height, 1.1);
+  white-space: var(--stat-item-value-white-space, nowrap);
+}
+
+.value {
+  color: var(--stat-item-value-color, var(--app-text-strong, #{$text-bright}));
+}
+
+.muted {
+  color: var(--stat-item-muted-color, var(--app-text-muted, #{$text-dim}));
+}

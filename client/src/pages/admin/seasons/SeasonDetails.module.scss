@@ -841,32 +841,15 @@
   }
 
   &RecipientStat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    min-width: 0;
-    color: var(--app-text, #{$text-body});
-    font-variant-numeric: tabular-nums;
-  }
-
-  &RecipientStatLabel {
-    color: var(--app-text-muted, #{$text-dim});
-    font-size: $font-xs;
-    font-weight: 700;
-    letter-spacing: 0;
-    line-height: 1.2;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  &RecipientStatValue {
-    color: var(--app-text-strong, #{$text-bright});
-    font-size: 1.375rem;
-    font-weight: 900;
-    line-height: 1;
-    white-space: nowrap;
+    --stat-item-justify: center;
+    --stat-item-gap: 2px;
+    --stat-item-label-font-size: #{$font-xs};
+    --stat-item-label-font-weight: 700;
+    --stat-item-label-letter-spacing: 0;
+    --stat-item-label-line-height: 1.2;
+    --stat-item-value-font-size: 1.375rem;
+    --stat-item-value-font-weight: 900;
+    --stat-item-value-line-height: 1;
   }
 
   &WinnerCardsMultiple &WinnerCard {
@@ -1014,12 +997,9 @@
       padding: $space-sm $space-md;
     }
 
-    .awardRecipientStatLabel {
-      font-size: 0.625rem;
-    }
-
-    .awardRecipientStatValue {
-      font-size: $font-base;
+    .awardRecipientStat {
+      --stat-item-label-font-size: 0.625rem;
+      --stat-item-value-font-size: #{$font-base};
     }
   }
 

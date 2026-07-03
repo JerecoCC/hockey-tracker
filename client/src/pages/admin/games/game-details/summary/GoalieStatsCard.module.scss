@@ -40,36 +40,11 @@
 }
 
 .goalieStatCell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $space-xs;
-  min-width: 0;
-  text-align: center;
-
-  &Label {
-    font-size: $font-xs;
-    font-weight: 600;
-    color: var(--app-text-muted, #{$text-dim});
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    line-height: 1;
-  }
-
-  &Value,
-  &Muted {
-    font-size: $font-xl;
-    font-weight: 700;
-    line-height: 1.1;
-  }
-
-  &Value {
-    color: var(--app-text-strong, #{$text-bright});
-  }
-
-  &Muted {
-    color: var(--app-text-muted, #{$text-dim});
-  }
+  --stat-item-gap: #{$space-xs};
+  --stat-item-label-font-weight: 600;
+  --stat-item-label-letter-spacing: 0.07em;
+  --stat-item-value-font-size: #{$font-xl};
+  --stat-item-value-font-weight: 700;
 }
 
 @media (max-width: 760px) {

@@ -1,5 +1,6 @@
 import Icon from '@/components/Icon/Icon';
 import PlayerCard from '@/components/PlayerCard/PlayerCard';
+import StatItem from '@/components/StatItem/StatItem';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import styles from './ThreeStarsCard.module.scss';
 import { playerDataComplete } from '../gameUtils';
@@ -35,15 +36,13 @@ const formatSavePct = (saves: number | null | undefined, shotsAgainst: number | 
 const StarStats = ({ stats }: { stats: StarStat[] }) => (
   <div className={styles.starStatsGrid}>
     {stats.map((stat) => (
-      <span
+      <StatItem
         key={stat.label}
+        as="span"
         className={styles.starStatCell}
-      >
-        <span className={styles.starStatLabel}>{stat.label}</span>
-        <span className={stat.value === '—' ? styles.starStatMuted : styles.starStatValue}>
-          {stat.value}
-        </span>
-      </span>
+        label={stat.label}
+        value={stat.value}
+      />
     ))}
   </div>
 );
