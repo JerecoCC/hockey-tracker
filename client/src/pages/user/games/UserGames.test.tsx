@@ -1137,6 +1137,48 @@ describe('UserGames schedule views', () => {
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
+  it('does not allow dropping a calendar game before its scheduled date', async () => {
+    const user = userEvent.setup();
+    render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+
+    const validTargetDate = localDateString(3);
+    const invalidTargetDate = localDateString(-1);
+    const sourceCard = screen.getByText('AWY').closest('[draggable="true"]');
+    const validTargetCell = document.querySelector(`[data-date-key="${validTargetDate}"]`);
+    const invalidTargetCell = document.querySelector(`[data-date-key="${invalidTargetDate}"]`);
+    const dataTransfer = {
+      store: {} as Record<string, string>,
+      effectAllowed: 'all',
+      dropEffect: 'move',
+      setData(type: string, value: string) {
+        this.store[type] = value;
+      },
+      getData(type: string) {
+        return this.store[type] ?? '';
+      },
+    };
+
+    expect(sourceCard).not.toBeNull();
+    expect(validTargetCell).not.toBeNull();
+    expect(invalidTargetCell).not.toBeNull();
+
+    fireEvent.dragStart(sourceCard as HTMLElement, { dataTransfer });
+    fireEvent.dragOver(validTargetCell as Element, { dataTransfer });
+    expect(validTargetCell?.querySelector(`.${styles.calendarDayDropTarget}`)).not.toBeNull();
+
+    fireEvent.dragOver(invalidTargetCell as Element, { dataTransfer });
+    expect(dataTransfer.dropEffect).toBe('none');
+    expect(validTargetCell?.querySelector(`.${styles.calendarDayDropTarget}`)).toBeNull();
+    expect(invalidTargetCell?.querySelector(`.${styles.calendarDayDropTarget}`)).toBeNull();
+
+    fireEvent.drop(invalidTargetCell as Element, { dataTransfer });
+    fireEvent.dragEnd(sourceCard as HTMLElement, { dataTransfer });
+
+    expect(mockAxios.put).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
   it('clears the schedule when dragging a game back to its original date', async () => {
     const user = userEvent.setup();
     render(<UserGames />);

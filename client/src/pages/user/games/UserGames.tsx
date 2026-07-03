@@ -300,6 +300,12 @@ const isInvalidWatchScheduleDate = (
   return !!gameDateKey && watchDateKey <= gameDateKey;
 };
 
+const canDropGameOnCalendarDate = (game: GameRecord, dateKey: string, tzPref: TzPref) => {
+  const originalDateKey = getOriginalGameDateKey(game, tzPref);
+  if (originalDateKey === dateKey) return true;
+  return !isInvalidWatchScheduleDate(game, dateKey, tzPref);
+};
+
 const getScheduledWatchDateKey = (value: string | null | undefined) => {
   if (!value) return null;
   if (DATE_ONLY_RE.test(value)) return value;
@@ -1273,6 +1279,11 @@ const UserGames = () => {
   const setCalendarDropTarget = (dateKey: string, event: DragEvent<HTMLDivElement>) => {
     const draggedGame = getCalendarDraggedGame(event);
     if (!draggedGame) return null;
+    if (!canDropGameOnCalendarDate(draggedGame, dateKey, tzPref)) {
+      event.dataTransfer.dropEffect = 'none';
+      setCalendarDropDateKey(null);
+      return null;
+    }
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
     setCalendarDropDateKey((current) => (current === dateKey ? current : dateKey));
