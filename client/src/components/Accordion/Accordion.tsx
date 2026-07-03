@@ -1,10 +1,9 @@
 import { forwardRef, useState } from 'react';
-import type { HTMLAttributes, ReactNode, Ref } from 'react';
+import type { HTMLAttributes, MouseEvent, ReactNode, Ref } from 'react';
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Button from '../Button/Button';
 import type { ButtonIntent, ButtonVariant } from '../Button/Button';
 import Divider from '../Divider/Divider';
-import Icon from '../Icon/Icon';
 import styles from './Accordion.module.scss';
 
 export interface AccordionAction {
@@ -74,6 +73,20 @@ interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   children?: ReactNode;
 }
 
+const HEADER_TOGGLE_IGNORE_SELECTOR = [
+  'button',
+  'a',
+  'input',
+  'select',
+  'textarea',
+  '[role="button"]',
+  '[data-accordion-ignore-toggle]',
+  '[data-hover-actions]',
+].join(',');
+
+const shouldIgnoreHeaderToggle = (target: EventTarget | null) =>
+  target instanceof Element && target.closest(HEADER_TOGGLE_IGNORE_SELECTOR) != null;
+
 const Accordion = forwardRef<HTMLDivElement, Props>(
   (
     {
@@ -109,6 +122,17 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
       if (controlledOpen === undefined) setUncontrolledOpen(next);
       onOpenChange?.(next);
     };
+    const toggleOpen = () => {
+      if (!toggleDisabled) setOpen(!open);
+    };
+    const handleRowClick = (event: MouseEvent<HTMLDivElement>) => {
+      if (isStatic || toggleDisabled || shouldIgnoreHeaderToggle(event.target)) return;
+      toggleOpen();
+    };
+    const handleToggleClick = (event: MouseEvent<HTMLButtonElement>) => {
+      event.stopPropagation();
+      toggleOpen();
+    };
 
     return (
       <div
@@ -128,6 +152,7 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
             styles.row,
             !(bodyVisible && children != null) ? styles.rowCollapsed : '',
             isStatic ? styles.rowStatic : '',
+            !isStatic && !toggleDisabled ? styles.rowClickable : '',
             hasHoverActions ? styles.rowWithActions : '',
             isStatic && hasHoverActions && !hoverRevealActions
               ? styles.rowStaticActionsVisible
@@ -136,32 +161,37 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
           ]
             .filter(Boolean)
             .join(' ')}
+          onClick={handleRowClick}
         >
           {!isStatic && (
-            <button
-              className={[
-                styles.toggle,
-                toggleDisabled ? styles.toggleDisabled : '',
-                toggleClassName,
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              onClick={() => !toggleDisabled && setOpen(!open)}
-              aria-label={open ? 'Collapse' : 'Expand'}
-              aria-expanded={open}
-              aria-disabled={toggleDisabled}
-              tabIndex={toggleDisabled ? -1 : undefined}
-            >
-              <Icon
-                name="expand_more"
-                size="0.8rem"
-                className={open ? styles.toggleIconOpen : styles.toggleIcon}
+            <span className={styles.toggleShell}>
+              <Button
+                type="button"
+                variant="ghost"
+                intent="neutral"
+                size="sm"
+                icon="expand_more"
+                iconSize="0.8rem"
+                className={[
+                  styles.toggle,
+                  open ? styles.toggleOpen : '',
+                  toggleDisabled ? styles.toggleDisabled : '',
+                  toggleClassName,
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onClick={handleToggleClick}
+                aria-label={open ? 'Collapse' : 'Expand'}
+                aria-expanded={open}
+                aria-disabled={toggleDisabled}
+                tabIndex={toggleDisabled ? -1 : undefined}
+                disabled={toggleDisabled}
               />
               <Divider
                 variant="vertical"
                 className={styles.toggleDivider}
               />
-            </button>
+            </span>
           )}
           <div className={[styles.labelWrap, labelWrapClassName].filter(Boolean).join(' ')}>
             <div className={[styles.label, labelClassName].filter(Boolean).join(' ')}>
@@ -174,6 +204,7 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
             <ActionOverlay
               data-hover-actions
               className={styles.hoverActions}
+              onClick={(event) => event.stopPropagation()}
             >
               {hoverActions.map((action, i) => (
                 <Button

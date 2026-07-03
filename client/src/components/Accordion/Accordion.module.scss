@@ -1,5 +1,5 @@
-@use 'styles/colors' as *;
-@use 'styles/mixins' as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 // ── Root container ────────────────────────────────────────────────────────────
 
@@ -67,6 +67,10 @@
   padding-left: $space-md;
 }
 
+.rowClickable {
+  cursor: pointer;
+}
+
 // By default a static accordion shows its actions permanently (there is no
 // collapse trigger to hover over). When `hoverRevealActions` is set this class
 // is omitted, so the actions fall back to hover/focus reveal via .rowWithActions.
@@ -77,26 +81,29 @@
 
 // ── Toggle chevron ────────────────────────────────────────────────────────────
 
-.toggle {
+.toggleShell {
   position: relative;
   flex-shrink: 0;
   align-self: stretch;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: auto;
-  height: auto;
-  background: transparent;
-  border: none;
-  color: var(--accordion-toggle-color);
-  cursor: pointer;
-  padding: 0 $space-md;
-  border-radius: 0;
-  transition: color $transition-fast;
+  padding: 0 $space-sm;
+}
 
-  &:hover {
+.toggle {
+  width: 2rem;
+  height: 2rem;
+  min-width: 2rem;
+  padding: 0;
+  color: var(--accordion-toggle-color);
+  border-radius: $radius-md;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+
+  &:hover:not(:disabled) {
     color: var(--accordion-toggle-hover-color);
-    background: transparent;
   }
 
   &:focus-visible {
@@ -104,20 +111,19 @@
     outline-offset: 2px;
   }
 
-  &Disabled {
-    opacity: 0;
-    pointer-events: none;
-    cursor: default;
-  }
-
-  &Icon {
+  svg {
     transition: transform $transition-base;
     transform: rotate(-90deg);
   }
 
-  &IconOpen {
-    transition: transform $transition-base;
+  &Open svg {
     transform: rotate(0deg);
+  }
+
+  &Disabled {
+    opacity: 0;
+    pointer-events: none;
+    cursor: default;
   }
 
   &Divider {
@@ -127,10 +133,7 @@
     position: absolute;
     inset-block-start: var(--accordion-toggle-divider-padding-block);
     inset-inline-end: 0;
-    height: calc(
-      100% - var(--accordion-toggle-divider-padding-block) -
-        var(--accordion-toggle-divider-padding-block)
-    );
+    height: calc(100% - var(--accordion-toggle-divider-padding-block) - var(--accordion-toggle-divider-padding-block));
   }
 }
 
@@ -175,11 +178,7 @@
   z-index: 1;
 
   &::before {
-    background: linear-gradient(
-      to right,
-      transparent,
-      var(--accordion-actions-bg, var(--accordion-current-header-bg))
-    );
+    background: linear-gradient(to right, transparent, var(--accordion-actions-bg, var(--accordion-current-header-bg)));
   }
 }
 
