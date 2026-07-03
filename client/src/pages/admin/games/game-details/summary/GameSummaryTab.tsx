@@ -31,9 +31,10 @@ import { formatPlayerName } from '../formatUtils';
 import { sumVisiblePeriodShots } from '../shotPeriods';
 import { buildSeasonDetailsPath } from '@/lib/routeSlugs';
 import GoalieSwitchReportCard from './GoalieSwitchReportCard';
-import type { NhlAutofillProgress } from '../nhlGameAutofill';
+import type { GameAutofillProgress } from '../gameAutofillTypes';
 
 const NhlGameAutofillModal = lazy(() => import('../NhlGameAutofillModal'));
+const PwhlGameAutofillModal = lazy(() => import('../PwhlGameAutofillModal'));
 const RecordShotsModal = lazy(() => import('../RecordShotsModal'));
 const ScoreGoalModal = lazy(() => import('../ScoreGoalModal'));
 const ScoreImageModal = lazy(() => import('../ScoreImageModal'));
@@ -92,7 +93,7 @@ interface Props {
   updateGameInfo: (data: UpdateGameInfoData) => Promise<boolean>;
   updatePeriodShots: (period: string, home_shots: number, away_shots: number) => Promise<boolean>;
   deleteGame: () => Promise<boolean>;
-  onGameAutofillChange?: (progress: NhlAutofillProgress | null) => void;
+  onGameAutofillChange?: (progress: GameAutofillProgress | null) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -352,6 +353,7 @@ const GameSummaryTab = ({
   // ── Start Game modal ─────────────────────────────────────────────────────
   const [startGameModalOpen, setStartGameModalOpen] = useState(false);
   const [nhlAutofillModalOpen, setNhlAutofillModalOpen] = useState(false);
+  const [pwhlAutofillModalOpen, setPwhlAutofillModalOpen] = useState(false);
   const openStartGameModal = () => setStartGameModalOpen(true);
   const handleStartGame = async (isoTime: string) => {
     const started = await startGame(isoTime);
@@ -503,9 +505,22 @@ const GameSummaryTab = ({
   }, [busy, focusCurrentPeriodAction]);
 
   const hasStars = isFinal && !!(game.star_1_id && game.star_2_id && game.star_3_id);
-  const showNhlAdminTools = editable && game.league_code?.toUpperCase() === 'NHL';
+  const leagueCode = game.league_code?.toUpperCase();
+  const showNhlAdminTools = editable && leagueCode === 'NHL';
+  const showPwhlAdminTools = editable && leagueCode === 'PWHL';
   const showGoalieSwitchReport = showNhlAdminTools;
   const canAutofillNhlGame = showNhlAdminTools && game.status !== 'final';
+  const canAutofillPwhlGame = showPwhlAdminTools && game.status !== 'final';
+  const canAutofillGame = canAutofillNhlGame || canAutofillPwhlGame;
+  const openAutofillGame = () => {
+    if (canAutofillNhlGame) {
+      setNhlAutofillModalOpen(true);
+      return;
+    }
+    if (canAutofillPwhlGame) {
+      setPwhlAutofillModalOpen(true);
+    }
+  };
 
   // For edit-mode revert: use current_period if set (retained after endGame), else
   // fall back to the highest period that has a score recorded.
@@ -657,7 +672,7 @@ const GameSummaryTab = ({
                 (game.current_period !== PERIOD.THIRD || liveAwayScore !== liveHomeScore)
               }
               onStartGame={editable ? openStartGameModal : undefined}
-              onAutofillGame={canAutofillNhlGame ? () => setNhlAutofillModalOpen(true) : undefined}
+              onAutofillGame={canAutofillGame ? openAutofillGame : undefined}
               onReschedule={editable ? () => updateStatus('postponed') : undefined}
               onDelete={editable ? () => setConfirmDeleteOpen(true) : undefined}
               onEndGame={
@@ -845,6 +860,15 @@ const GameSummaryTab = ({
             open={nhlAutofillModalOpen}
             game={game}
             onClose={() => setNhlAutofillModalOpen(false)}
+            onAutofillChange={onGameAutofillChange}
+          />
+        )}
+
+        {canAutofillPwhlGame && pwhlAutofillModalOpen && (
+          <PwhlGameAutofillModal
+            open={pwhlAutofillModalOpen}
+            game={game}
+            onClose={() => setPwhlAutofillModalOpen(false)}
             onAutofillChange={onGameAutofillChange}
           />
         )}

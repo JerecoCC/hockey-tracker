@@ -487,28 +487,36 @@ router.get('/', async (req, res) => {
 
 
 
-router.get("/nhl-api", async (req, res) => {
+const parseExternalJsonPayload = (text) => {
+  const trimmed = text.trim();
+  const jsonpMatch = trimmed.match(/^[\w$.]+\(([\s\S]*)\);?$/);
+  if (jsonpMatch) return JSON.parse(jsonpMatch[1]);
+  if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+    return JSON.parse(trimmed.slice(1, -1));
+  }
+  return JSON.parse(trimmed);
+};
+
+const proxyExternalGameApi = (label, allowedHosts) => async (req, res) => {
   try {
     const { url } = req.query;
 
     if (!url || typeof url !== "string") {
-      return res.status(400).json({ error: "Missing NHL API URL." });
+      return res.status(400).json({ error: `Missing ${label} API URL.` });
     }
 
     const parsedUrl = new URL(url);
 
-    if (!["api-web.nhle.com", "api.nhle.com", "www.nhl.com"].includes(parsedUrl.hostname)) {
-      return res.status(400).json({ error: "Invalid NHL API host." });
+    if (!allowedHosts.includes(parsedUrl.hostname)) {
+      return res.status(400).json({ error: `Invalid ${label} API host.` });
     }
 
     const response = await fetch(parsedUrl.toString());
-
-
     const text = await response.text();
 
     if (!response.ok) {
       return res.status(response.status).json({
-        error: `NHL API returned ${response.status}.`,
+        error: `${label} API returned ${response.status}.`,
         body: text.slice(0, 500),
       });
     }
@@ -519,15 +527,18 @@ router.get("/nhl-api", async (req, res) => {
       return res.send(text);
     }
 
-    return res.json(JSON.parse(text));
+    return res.json(parseExternalJsonPayload(text));
   } catch (error) {
-    console.error("NHL proxy error:", error);
+    console.error(`${label} proxy error:`, error);
 
     return res.status(500).json({
       error: error instanceof Error ? error.message : String(error),
     });
   }
-});
+};
+
+router.get("/nhl-api", proxyExternalGameApi("NHL", ["api-web.nhle.com", "api.nhle.com", "www.nhl.com"]));
+router.get("/pwhl-api", proxyExternalGameApi("PWHL", ["lscluster.hockeytech.com"]));
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/games/playoff-series  – list series (filter by season_id)

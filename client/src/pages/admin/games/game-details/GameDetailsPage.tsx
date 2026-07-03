@@ -11,7 +11,7 @@ import useGameGoalieStats from '@/hooks/useGameGoalieStats';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import useTabState from '@/hooks/useTabState';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
-import type { NhlAutofillProgress } from './nhlGameAutofill';
+import type { GameAutofillProgress } from './gameAutofillTypes';
 import ScoreboardCard from './ScoreboardCard';
 import styles from './GameDetailsPage.module.scss';
 
@@ -175,7 +175,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const [activeTab, handleTabChange] = useTabState(
     mode === 'admin' ? 'tab:game-details' : 'tab:user-game-details',
   );
-  const [gameAutofillProgress, setGameAutofillProgress] = useState<NhlAutofillProgress | null>(
+  const [gameAutofillProgress, setGameAutofillProgress] = useState<GameAutofillProgress | null>(
     null,
   );
   const isGameAutofilling = !!gameAutofillProgress;
@@ -594,7 +594,9 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
             <div className={styles.gameAutofillStatusHeader}>
               <span className={styles.gameAutofillPulse} />
               <div className={styles.gameAutofillStatusText}>
-                <strong>Auto-filling NHL game</strong>
+                <strong>
+                  Auto-filling {gameAutofillProgress.leagueLabel ?? game.league_code ?? 'league'} game
+                </strong>
                 <span>{gameAutofillProgress.message}</span>
               </div>
             </div>

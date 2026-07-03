@@ -89,14 +89,14 @@ const LinescoreCard = ({
         <div className={styles.linescoreActions}>
           {onAutofillGame && (
             <Button
-              variant="outlined"
-              intent="info"
-              icon="sports_hockey"
-              size="sm"
-              tooltip="Auto-fill NHL game"
-              disabled={!!busy}
-              onClick={onAutofillGame}
-            />
+                variant="outlined"
+                intent="info"
+                icon="sports_hockey"
+                size="sm"
+                tooltip="Auto-fill game"
+                disabled={!!busy}
+                onClick={onAutofillGame}
+              />
           )}
           {game.status === 'scheduled' && onStartGame && onReschedule && onDelete && (
             <>

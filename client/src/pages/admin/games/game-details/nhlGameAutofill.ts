@@ -5,6 +5,7 @@ import type { GoalRecord, PostGoalData } from '@/hooks/useGameGoals';
 import type { GoalieStatRecord, UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
 import type { LineupPositionSlot } from '@/hooks/useGameLineup';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
+import type { GameAutofillProgress } from './gameAutofillTypes';
 import {
   buildGoalieStints,
   buildGoalieStintsFromToiHtml,
@@ -146,13 +147,7 @@ export interface NhlAutofillResult {
   warnings: string[];
 }
 
-export interface NhlAutofillProgress {
-  step: string;
-  message: string;
-  completed?: number;
-  total?: number;
-  refresh?: boolean;
-}
+export type NhlAutofillProgress = GameAutofillProgress;
 
 interface NhlAutofillOptions {
   onProgress?: (progress: NhlAutofillProgress) => void | Promise<void>;
