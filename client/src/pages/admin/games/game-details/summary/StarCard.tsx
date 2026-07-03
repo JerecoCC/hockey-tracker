@@ -39,7 +39,6 @@ const StarStats = ({ stats }: { stats: StarStat[] }) => (
       <StatItem
         key={stat.label}
         as="span"
-        className={styles.starStatCell}
         label={stat.label}
         value={stat.value}
       />

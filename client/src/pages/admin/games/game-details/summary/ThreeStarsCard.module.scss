@@ -48,12 +48,4 @@
     padding-top: $space-sm;
     border-top: 1px solid var(--app-border, #{$border});
   }
-
-  &StatCell {
-    --stat-item-gap: 1px;
-    --stat-item-label-font-weight: 700;
-    --stat-item-label-letter-spacing: 0.06em;
-    --stat-item-value-font-size: #{$font-base};
-    --stat-item-value-font-weight: 800;
-  }
 }

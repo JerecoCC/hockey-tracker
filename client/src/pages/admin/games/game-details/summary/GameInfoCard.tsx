@@ -42,6 +42,10 @@ const GameInfoCard = ({
     showScheduledWatchDate && game.scheduled_for
       ? formatScheduledDateLocal(game.scheduled_for, null)
       : null;
+  const leagueGameNumber =
+    !showScheduledWatchDate && game.league_game_number?.trim()
+      ? game.league_game_number.trim()
+      : null;
 
   return (
     <>
@@ -125,17 +129,26 @@ const GameInfoCard = ({
             data={game.venue ?? null}
             full
           />
-          {scheduledWatchDate && (
+          {(scheduledWatchDate || leagueGameNumber) && (
             <>
               <div
                 className={styles.infoDivider}
                 aria-hidden="true"
               />
-              <InfoItem
-                label="Scheduled Watch Date"
-                data={scheduledWatchDate}
-                full
-              />
+              {scheduledWatchDate && (
+                <InfoItem
+                  label="Scheduled Watch Date"
+                  data={scheduledWatchDate}
+                  full
+                />
+              )}
+              {leagueGameNumber && (
+                <InfoItem
+                  label="League Game Number"
+                  data={leagueGameNumber}
+                  full
+                />
+              )}
             </>
           )}
           {game.notes && (
