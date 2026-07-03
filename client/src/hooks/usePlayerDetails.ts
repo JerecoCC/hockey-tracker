@@ -13,6 +13,7 @@ type PlayerDetailsMode = 'admin' | 'user';
 
 interface PlayerDetailsOptions {
   mode?: PlayerDetailsMode;
+  seasonId?: string | null;
 }
 
 const getPlayerEndpoint = (mode: PlayerDetailsMode) =>
@@ -237,17 +238,22 @@ export const usePlayerCurrentSeasonStats = (
   options: PlayerDetailsOptions = {},
 ) => {
   const mode = options.mode ?? 'admin';
+  const seasonId = options.seasonId ?? null;
   const { data: currentSeasonStats = null, isLoading: loading } =
     useQuery<PlayerCurrentSeasonStats | null>({
       queryKey: [
         mode === 'user' ? 'user-player-latest-season-stats' : 'player-latest-season-stats',
         playerId,
+        seasonId,
       ],
       queryFn: async () => {
         try {
           const { data } = await axios.get<PlayerCurrentSeasonStats | null>(
             `${getPlayerEndpoint(mode)}/${playerId}/latest-season-stats`,
-            { headers: authHeaders() },
+            {
+              headers: authHeaders(),
+              params: { season_id: seasonId || undefined },
+            },
           );
           return data;
         } catch {

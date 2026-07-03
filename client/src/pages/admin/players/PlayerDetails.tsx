@@ -32,11 +32,12 @@ import usePlayerDetails, {
   usePlayerLastFiveGames,
   usePlayerRouteLookup,
   type PlayerCareerStatRecord,
+  type PlayerCurrentSeasonStats,
   type PlayerCurrentSeasonStatBlock,
   type PlayerLastFiveGameRecord,
 } from '@/hooks/usePlayerDetails';
 import useTeamDetails from '@/hooks/useTeamDetails';
-import useSeasons from '@/hooks/useSeasons';
+import useSeasons, { type SeasonRecord } from '@/hooks/useSeasons';
 import useTeams from '@/hooks/useTeams';
 import {
   usePlayerTradeHistory,
@@ -497,7 +498,11 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const { player, stats, loading: playerDetailsLoading } = usePlayerDetails(id, { mode });
   const loading = routeLookupLoading || playerDetailsLoading;
   const { awards: playerAwards, loading: playerAwardsLoading } = usePlayerAwards(id, { mode });
-  const { currentSeasonStats: latestSeasonStats } = usePlayerCurrentSeasonStats(id, { mode });
+  const [seasonStatsSeasonId, setSeasonStatsSeasonId] = useState<string | null>(null);
+  const {
+    currentSeasonStats: seasonStats,
+    loading: seasonStatsLoading,
+  } = usePlayerCurrentSeasonStats(id, { mode, seasonId: seasonStatsSeasonId });
   const { lastFiveGames, loading: lastFiveGamesLoading } = usePlayerLastFiveGames(id, { mode });
   const { team: teamDetails } = useTeamDetails(teamId, { mode });
   useDocumentIcon(teamDetails?.icon);
@@ -1121,6 +1126,17 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     </Section>
   );
 
+  const seasonStatsCard = (
+    <SeasonStatsSection
+      stats={seasonStats}
+      isGoalie={isGoalie}
+      seasons={gameLogSeasons}
+      selectedSeasonId={seasonStatsSeasonId ?? seasonStats?.season_id ?? null}
+      loading={seasonStatsLoading}
+      onSeasonChange={setSeasonStatsSeasonId}
+    />
+  );
+
   const recentGamesCard = (
     <Section
       title="Last 5 Games"
@@ -1353,20 +1369,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                 <div className={styles.infoSummaryGrid}>
                   {playerInfoCard}
                   {recentGamesCard}
-                  {latestSeasonStats && (
-                    <div className={styles.currentSeasonCards}>
-                      <SeasonStatCard
-                        title={`${latestSeasonStats.season_name} Regular Season`}
-                        stats={latestSeasonStats.regular}
-                        isGoalie={isGoalie}
-                      />
-                      <SeasonStatCard
-                        title={`${latestSeasonStats.season_name} Playoffs`}
-                        stats={latestSeasonStats.playoffs}
-                        isGoalie={isGoalie}
-                      />
-                    </div>
-                  )}
+                  {seasonStatsCard}
                 </div>
               ),
             },
@@ -1720,8 +1723,60 @@ const InfoCell = ({ label, value }: { label: string; value: string | null | unde
 
 export default PlayerDetailsPage;
 
-// ── Helper: current-season stat card ────────────────────────────────────────
-const SeasonStatCard = ({
+// ── Helper: selected-season stat section ────────────────────────────────────
+const SeasonStatsSection = ({
+  stats,
+  isGoalie,
+  seasons,
+  selectedSeasonId,
+  loading,
+  onSeasonChange,
+}: {
+  stats: PlayerCurrentSeasonStats | null;
+  isGoalie: boolean;
+  seasons: SeasonRecord[];
+  selectedSeasonId: string | null;
+  loading: boolean;
+  onSeasonChange: (seasonId: string) => void;
+}) => (
+  <Section
+    title="Season Stats"
+    className={styles.currentSeasonCards}
+    action={
+      !loading || stats ? (
+        <div className={styles.seasonStatsSelect}>
+          <SeasonSelect
+            value={selectedSeasonId}
+            seasons={seasons}
+            onChange={onSeasonChange}
+            placeholder="Select season..."
+          />
+        </div>
+      ) : null
+    }
+  >
+    {loading && !stats ? (
+      <p className={styles.placeholder}>Loading season stats...</p>
+    ) : !stats ? (
+      <p className={styles.placeholder}>No season stats recorded yet.</p>
+    ) : (
+      <div className={styles.seasonStatsGroups}>
+        <SeasonStatBlock
+          title="Regular Season"
+          stats={stats.regular}
+          isGoalie={isGoalie}
+        />
+        <SeasonStatBlock
+          title="Playoffs"
+          stats={stats.playoffs}
+          isGoalie={isGoalie}
+        />
+      </div>
+    )}
+  </Section>
+);
+
+const SeasonStatBlock = ({
   title,
   stats,
   isGoalie,
@@ -1736,7 +1791,8 @@ const SeasonStatCard = ({
   };
 
   return (
-    <Section title={title}>
+    <div className={styles.seasonStatsGroup}>
+      <h3 className={styles.seasonStatsGroupTitle}>{title}</h3>
       {!stats ? (
         <p className={styles.placeholder}>No games played.</p>
       ) : isGoalie ? (
@@ -1791,7 +1847,7 @@ const SeasonStatCard = ({
           />
         </div>
       )}
-    </Section>
+    </div>
   );
 };
 

@@ -993,29 +993,46 @@ router.get('/:id/awards', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req, res) => {
   const { id } = req.params;
+  const requestedSeasonId =
+    typeof req.query.season_id === 'string' && req.query.season_id.trim()
+      ? req.query.season_id.trim()
+      : null;
   try {
-    // 1. Resolve the latest season where the player actually appeared in a final game.
-    // Goalies only count as having appeared when they have an active goalie stint.
-    const playedSeasonRows = await sql`
-      WITH player_info AS (
-        SELECT position FROM players WHERE id = ${id}
-      ),
-      played_seasons AS (
-        SELECT DISTINCT season_id
-        FROM game_player_stats
-        WHERE player_id = ${id}
-      )
-      SELECT
-        s.id AS season_id,
-        s.name AS season_name,
-        (SELECT position FROM player_info) AS player_position
-      FROM played_seasons ps
-      JOIN seasons s ON s.id = ps.season_id
-      ORDER BY s.start_date DESC NULLS LAST, s.created_at DESC, s.name DESC
-      LIMIT 1
-    `;
-    if (playedSeasonRows.length === 0) return res.json(null);
-    const { season_id, season_name, player_position } = playedSeasonRows[0];
+    // 1. Resolve either the requested season or the latest season where the
+    // player actually appeared in a final game.
+    const seasonRows = requestedSeasonId
+      ? await sql`
+          WITH player_info AS (
+            SELECT position FROM players WHERE id = ${id}
+          )
+          SELECT
+            s.id AS season_id,
+            s.name AS season_name,
+            (SELECT position FROM player_info) AS player_position
+          FROM seasons s
+          WHERE s.id = ${requestedSeasonId}
+          LIMIT 1
+        `
+      : await sql`
+          WITH player_info AS (
+            SELECT position FROM players WHERE id = ${id}
+          ),
+          played_seasons AS (
+            SELECT DISTINCT season_id
+            FROM game_player_stats
+            WHERE player_id = ${id}
+          )
+          SELECT
+            s.id AS season_id,
+            s.name AS season_name,
+            (SELECT position FROM player_info) AS player_position
+          FROM played_seasons ps
+          JOIN seasons s ON s.id = ps.season_id
+          ORDER BY s.start_date DESC NULLS LAST, s.created_at DESC, s.name DESC
+          LIMIT 1
+        `;
+    if (seasonRows.length === 0) return res.json(null);
+    const { season_id, season_name, player_position } = seasonRows[0];
 
     // 2. Skater stats (GP / goals / assists) per game_type
     const skaterRows = await sql`

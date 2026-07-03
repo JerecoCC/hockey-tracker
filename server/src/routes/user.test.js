@@ -229,6 +229,33 @@ describe('GET /api/user/players/:id/latest-season-stats', () => {
     expect(res.body.regular).toMatchObject({ gp: 12, goals: 8, points: 17 });
     expect(res.body.playoffs).toBeNull();
   });
+
+  it('returns requested season stats when season_id is provided', async () => {
+    sql
+      .mockResolvedValueOnce([
+        { season_id: 'season-2', season_name: '2024-25', player_position: 'C' },
+      ])
+      .mockResolvedValueOnce([
+        {
+          game_type: 'playoff',
+          skater_gp: 3,
+          goals: 1,
+          assists: 2,
+          points: 3,
+          goalie_gp: 0,
+        },
+      ]);
+
+    const res = await request(app).get(
+      '/api/user/players/player-1/latest-season-stats?season_id=season-2',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.season_id).toBe('season-2');
+    expect(res.body.regular).toBeNull();
+    expect(res.body.playoffs).toMatchObject({ gp: 3, goals: 1, assists: 2, points: 3 });
+    expect(sql.mock.calls[0][0].join(' ')).toContain('WHERE s.id =');
+  });
 });
 
 describe('GET /api/user/players/:id', () => {

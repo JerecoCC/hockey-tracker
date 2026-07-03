@@ -297,7 +297,24 @@ beforeEach(() => {
     saving: false,
   });
   mockUseTeams.mockReturnValue({ teams: [] });
-  mockUseSeasons.mockReturnValue({ seasons: [] });
+  mockUseSeasons.mockReturnValue({
+    seasons: [
+      {
+        id: 'season-1',
+        league_id: 'league-1',
+        name: '2025-26',
+        start_date: '2025-10-01',
+        created_at: '2025-01-01T00:00:00Z',
+      },
+      {
+        id: 'season-2',
+        league_id: 'league-1',
+        name: '2023-24',
+        start_date: '2023-10-01',
+        created_at: '2023-01-01T00:00:00Z',
+      },
+    ],
+  });
 });
 
 describe('PlayerDetails info tab', () => {
@@ -311,12 +328,14 @@ describe('PlayerDetails info tab', () => {
     expect(document.title).toBe('Hockey Tracker');
   });
 
-  it('renders the titled player info card and the latest played season stat cards', () => {
+  it('renders the titled player info card and combined selected-season stats section', () => {
     const { container } = render(<PlayerDetails />);
 
     expect(screen.getByText('Player Info')).toBeInTheDocument();
-    expect(screen.getByText('2023-24 Regular Season')).toBeInTheDocument();
-    expect(screen.getByText('2023-24 Playoffs')).toBeInTheDocument();
+    expect(screen.getByText('Season Stats')).toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toHaveTextContent('2023-24');
+    expect(screen.getByText('Regular Season')).toBeInTheDocument();
+    expect(screen.getByText('Playoffs')).toBeInTheDocument();
     expect(container.querySelector('.infoSummaryGrid')).toBeInTheDocument();
     expect(container.querySelector('.playerInfoCard')).toBeInTheDocument();
     expect(container.querySelector('.currentSeasonCards')).toBeInTheDocument();

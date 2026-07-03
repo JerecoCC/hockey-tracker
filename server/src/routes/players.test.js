@@ -395,6 +395,24 @@ describe('GET /api/admin/players/:id/latest-season-stats', () => {
     expect(res.body).toBeNull();
   });
 
+  it('returns requested season stats when season_id is provided', async () => {
+    sql
+      .mockResolvedValueOnce([{ season_id: 'season-1', season_name: '2022-23', player_position: 'C' }])
+      .mockResolvedValueOnce([{ game_type: 'regular', gp: 4, goals: 2, assists: 3, points: 5 }])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app).get(
+      '/api/admin/players/player-1/latest-season-stats?season_id=season-1',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.season_id).toBe('season-1');
+    expect(res.body.season_name).toBe('2022-23');
+    expect(res.body.regular).toMatchObject({ gp: 4, goals: 2, assists: 3, points: 5 });
+    expect(res.body.playoffs).toBeNull();
+    expect(sql.mock.calls[0][0].join(' ')).toContain('WHERE s.id =');
+  });
+
   it('uses goalie stints, not roster presence, for goalie games played', async () => {
     sql
       .mockResolvedValueOnce([{ season_id: 'season-2', season_name: '2023-24', player_position: 'G' }])

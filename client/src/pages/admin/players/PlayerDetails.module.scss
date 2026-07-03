@@ -383,15 +383,46 @@
 }
 
 .currentSeasonCards {
-  display: flex;
-  flex-direction: column;
-  gap: $page-section-gap;
   grid-column: 3;
   grid-row: 1 / span 2;
 
   @media (max-width: 960px) {
     grid-column: auto;
     grid-row: auto;
+  }
+}
+
+.seasonStats {
+  &Select {
+    --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
+
+    width: 180px;
+  }
+
+  &Groups {
+    display: flex;
+    flex-direction: column;
+    gap: $space-lg;
+  }
+
+  &Group {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+
+    & + .seasonStatsGroup {
+      padding-top: $space-lg;
+      border-top: 1px solid var(--app-border, #{$border});
+    }
+  }
+
+  &GroupTitle {
+    margin: 0;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: var(--app-text-muted, #{$text-dim});
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
   }
 }
 
