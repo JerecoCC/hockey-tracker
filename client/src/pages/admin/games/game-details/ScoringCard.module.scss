@@ -25,7 +25,7 @@ $_active-period-light-border: color.mix($accent, #fff, 48%);
   --accordion-toggle-hover-color: #bfdbfe;
 }
 
-:global(:root[data-theme='light']) .periodItemActive {
+:global(:root[data-theme="light"]) .periodItemActive {
   border-color: $_active-period-light-border;
   --accordion-border-color: #{$_active-period-light-border};
   --accordion-header-bg: #{$_active-period-light-bg};
@@ -139,7 +139,7 @@ $_active-period-light-border: color.mix($accent, #fff, 48%);
   align-items: center;
   justify-content: center;
   width: fit-content;
-  padding: $space-sm;
+  padding: $space-sm $space-lg;
   line-height: 1;
   text-align: center;
 }
@@ -220,10 +220,6 @@ $_active-period-light-border: color.mix($accent, #fff, 48%);
   &::before {
     background:
       linear-gradient(to right, transparent, var(--goal-actions-bg, transparent)),
-      linear-gradient(
-        to right,
-        transparent,
-        var(--goal-actions-base-bg, var(--app-surface, #{$bg-card}))
-      );
+      linear-gradient(to right, transparent, var(--goal-actions-base-bg, var(--app-surface, #{$bg-card})));
   }
 }
