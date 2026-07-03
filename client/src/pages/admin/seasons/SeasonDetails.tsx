@@ -849,6 +849,8 @@ const SeasonDetailsPage = () => {
             content: (
               <Card>
                 <EntityHeader
+                  className={styles.seasonInfoHeader}
+                  actionsClassName={styles.seasonInfoActions}
                   logo={season.league_logo}
                   name={season.name}
                   code={season.league_code}
@@ -920,16 +922,13 @@ const SeasonDetailsPage = () => {
                           variant="outlined"
                           intent="neutral"
                           icon="edit"
-                          iconHeight="button"
+                          size="sm"
                           tooltip="Edit season"
                           aria-label="Edit season"
                           onClick={() => setShowEditModal(true)}
                         />
                         {moreItems.length > 0 && (
-                          <MoreActionsMenu
-                            variant="ghost"
-                            items={moreItems}
-                          />
+                          <MoreActionsMenu items={moreItems} />
                         )}
                       </>
                     );

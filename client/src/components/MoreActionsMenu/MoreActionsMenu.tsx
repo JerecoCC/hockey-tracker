@@ -17,7 +17,7 @@ interface Props {
   disabled?: boolean;
   /** Size of the trigger button. Defaults to 'sm'. */
   size?: 'sm' | 'md';
-  /** Visual style of the trigger button. Defaults to 'outlined'. */
+  /** Visual style of the trigger button. Defaults to 'ghost'. */
   variant?: 'filled' | 'outlined' | 'ghost';
   /** Extra className forwarded to the trigger Button (e.g. to override border-radius). */
   buttonClassName?: string;
@@ -27,7 +27,7 @@ const MoreActionsMenu = ({
   items,
   disabled = false,
   size = 'sm',
-  variant = 'outlined',
+  variant = 'ghost',
   buttonClassName,
 }: Props) => {
   const [open, setOpen] = useState(false);
@@ -47,6 +47,7 @@ const MoreActionsMenu = ({
   return (
     <div
       className={styles.wrapper}
+      data-size={size}
       ref={wrapperRef}
     >
       <Button

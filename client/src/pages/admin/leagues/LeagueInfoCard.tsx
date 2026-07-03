@@ -108,6 +108,7 @@ const LeagueInfoCard = ({ league, onEdit, className }: Props) => (
         { label: 'Primary', color: league.primary_color },
         { label: 'Text', color: league.text_color },
       ]}
+      editIconOnly
       showDivider={false}
     />
 

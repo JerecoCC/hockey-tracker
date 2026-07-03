@@ -10,6 +10,14 @@ import SeasonDetails from './SeasonDetails';
 
 const mockNavigate = jest.fn();
 const mockSeasonPlayoffsTab = jest.fn(() => null);
+const mockMoreActionsMenu = jest.fn((props: any) => (
+  <button
+    type="button"
+    aria-label="More actions"
+    className="trigger"
+    data-variant={props.variant ?? 'ghost'}
+  />
+));
 
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
@@ -29,6 +37,7 @@ jest.mock('@/components/Breadcrumbs/Breadcrumbs', () => () => <div />);
 jest.mock('@/components/Button/Button', () => (props: any) => {
   const {
     children,
+    className,
     icon,
     tooltip,
     tooltipClassName,
@@ -40,7 +49,24 @@ jest.mock('@/components/Button/Button', () => (props: any) => {
     iconHeight,
     ...buttonProps
   } = props;
-  return <button {...buttonProps}>{children ?? icon}</button>;
+  const iconOnlyClass =
+    icon && !children
+      ? iconHeight === 'button'
+        ? 'iconOnlyButton'
+        : iconHeight === 'field'
+          ? 'iconOnlyField'
+          : 'iconOnly'
+      : null;
+  const computedClassName = [className, size ?? 'md', iconOnlyClass].filter(Boolean).join(' ');
+  return (
+    <button
+      {...buttonProps}
+      className={computedClassName}
+      data-variant={variant}
+    >
+      {children ?? icon}
+    </button>
+  );
 });
 jest.mock('@/components/Card/Card', () => (props: any) => (
   <div data-testid="card">
@@ -51,7 +77,9 @@ jest.mock('@/components/Card/Card', () => (props: any) => (
 ));
 jest.mock('@/components/ConfirmModal/ConfirmModal', () => () => null);
 jest.mock('@/components/Tag/Tag', () => (props: any) => <span>{props.label}</span>);
-jest.mock('@/components/MoreActionsMenu/MoreActionsMenu', () => () => null);
+jest.mock('@/components/MoreActionsMenu/MoreActionsMenu', () => (props: any) =>
+  mockMoreActionsMenu(props),
+);
 jest.mock('@/components/SegmentedControl/SegmentedControl', () => (props: any) => (
   <div>
     {props.options.map((option: any) => (
@@ -443,6 +471,32 @@ describe('SeasonDetails standings tab', () => {
 
     await user.click(screen.getAllByRole('button', { name: 'GP' })[0]);
     expect(screen.getByText('Atlantic Four').closest('tr')).toHaveClass('standingsQualifierRow');
+  });
+});
+
+describe('SeasonDetails info tab', () => {
+  it('renders season actions at the top right with the expected icon styles', () => {
+    mockUseTabState.mockReturnValue([0, jest.fn()]);
+
+    const { container } = render(<SeasonDetails />);
+
+    expect(container.querySelector('.seasonInfoHeader')).toBeInTheDocument();
+    expect(container.querySelector('.seasonInfoActions')).toBeInTheDocument();
+
+    const editButton = screen.getByRole('button', { name: 'Edit season' });
+    expect(editButton).not.toHaveTextContent('Edit season');
+    expect(editButton).toHaveClass('sm', 'iconOnly');
+    expect(editButton).not.toHaveClass('iconOnlyButton');
+
+    expect(mockMoreActionsMenu).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: expect.any(Array),
+      }),
+    );
+    expect(mockMoreActionsMenu.mock.calls[0][0]).not.toHaveProperty('useDefaultButtonStyle');
+    const moreButton = screen.getByRole('button', { name: 'More actions' });
+    expect(moreButton).toHaveClass('trigger');
+    expect(moreButton).toHaveAttribute('data-variant', 'ghost');
   });
 });
 

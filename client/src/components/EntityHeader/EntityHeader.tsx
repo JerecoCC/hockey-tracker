@@ -22,6 +22,8 @@ interface Props {
   subtitle?: ReactNode;
   nameAccessory?: ReactNode;
   actions?: ReactNode;
+  className?: string;
+  actionsClassName?: string;
   primaryColor: string;
   textColor: string;
   swatches?: Swatch[];
@@ -39,6 +41,8 @@ const EntityHeader = ({
   subtitle,
   nameAccessory,
   actions,
+  className,
+  actionsClassName,
   primaryColor,
   textColor,
   swatches = [],
@@ -66,9 +70,30 @@ const EntityHeader = ({
     />
   );
 
+  const editButton = !onEdit ? null : editIconOnly ? (
+    <Button
+      variant="outlined"
+      intent="neutral"
+      icon="edit"
+      size="sm"
+      tooltip="Edit"
+      aria-label="Edit"
+      onClick={onEdit}
+    />
+  ) : (
+    <Button
+      variant="outlined"
+      intent="neutral"
+      icon="edit"
+      onClick={onEdit}
+    >
+      Edit
+    </Button>
+  );
+
   return (
     <>
-      <div className={styles.header}>
+      <div className={[styles.header, className].filter(Boolean).join(' ')}>
         {previewLogo ? (
           <button
             type="button"
@@ -93,20 +118,8 @@ const EntityHeader = ({
         {(onEdit || actions || swatches.length > 0) && (
           <div className={styles.rightCol}>
             {(onEdit || actions) && (
-              <div className={styles.actions}>
-                {onEdit && (
-                  <Button
-                    variant="outlined"
-                    intent="neutral"
-                    icon="edit"
-                    iconHeight={editIconOnly ? 'button' : undefined}
-                    tooltip={editIconOnly ? 'Edit' : undefined}
-                    aria-label={editIconOnly ? 'Edit' : undefined}
-                    onClick={onEdit}
-                  >
-                    {editIconOnly ? undefined : 'Edit'}
-                  </Button>
-                )}
+              <div className={[styles.actions, actionsClassName].filter(Boolean).join(' ')}>
+                {editButton}
                 {actions}
               </div>
             )}

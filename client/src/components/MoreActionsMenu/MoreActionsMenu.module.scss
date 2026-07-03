@@ -6,18 +6,33 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  height: calc((#{$font-sm} * 1.25) + (#{$space-sm} * 2) + 2px);
+
+  &[data-size='md'] {
+    height: calc((#{$font-base} * 1.25) + (#{$space-md} * 2) + 2px);
+  }
 }
 
 .trigger.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: auto;
   padding: 0;
   background: transparent;
   border: none;
   color: var(--app-text-muted, #{$text-dim});
+  line-height: 0;
+  transition: color $transition-fast;
 
   &:hover:not(:disabled),
   &:focus-visible:not(:disabled) {
     background: transparent;
-    color: var(--app-text-strong, #{$text-bright});
+    color: var(--app-text-subtle, #{$text-light});
   }
 
   svg {

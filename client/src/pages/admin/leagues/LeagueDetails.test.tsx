@@ -521,6 +521,15 @@ describe('LeagueDetailsPage – main render', () => {
     expect(infoGrid?.previousElementSibling?.className).toBe('divider horizontal');
   });
 
+  it('renders the league edit action as an icon button', () => {
+    setup({ league: mockLeague });
+    const editButton = screen.getByRole('button', { name: 'Edit' });
+    expect(editButton).not.toHaveTextContent('Edit');
+    expect(editButton).toHaveClass('sm');
+    expect(editButton).toHaveClass('iconOnly');
+    expect(editButton).not.toHaveClass('iconOnlyButton');
+  });
+
   it('shows the description placeholder when description is empty', () => {
     setup({ league: { ...mockLeague, description: '' } });
     // empty string is falsy → renders the same "No description" muted placeholder
