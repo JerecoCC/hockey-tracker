@@ -320,6 +320,7 @@ const playoffSeries = pgTable('playoff_series', {
   awayWins: smallint('away_wins').notNull().default(0),
   status: text('status').notNull().default('upcoming'),
   winnerTeamId: uuid('winner_team_id').references(() => teams.id, { onDelete: 'set null' }),
+  bracketSlotKey: text('bracket_slot_key'),
   createdAt: createdAt(),
 });
 
