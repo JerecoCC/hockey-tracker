@@ -189,51 +189,6 @@
   row-gap: $space-md;
 }
 
-// Jersey number history list shown inside ChangeJerseyModal
-.history {
-  &Section {
-    display: flex;
-    flex-direction: column;
-    gap: $space-sm;
-  }
-
-  &Label {
-    font-size: $font-sm;
-    font-weight: 600;
-    color: var(--app-text-muted, #{$text-dim});
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  &List {
-    display: flex;
-    flex-direction: column;
-    gap: $space-xs;
-  }
-
-  &Entry {
-    display: flex;
-    align-items: center;
-    gap: $space-sm;
-    font-size: $font-sm;
-    color: var(--app-text-muted, #{$text-dim});
-    padding: $space-xs $space-sm;
-    background: var(--app-surface-muted, rgba(255, 255, 255, 0.02));
-    border: 1px solid var(--app-border, #{$border});
-    border-radius: $radius-sm;
-  }
-
-  &EntryNumber {
-    font-weight: 700;
-    color: var(--app-text, #{$text-body});
-    min-width: 2.5rem;
-  }
-
-  &EntryDates {
-    flex: 1;
-  }
-}
-
 .photoInheritance {
   &Notice {
     display: flex;

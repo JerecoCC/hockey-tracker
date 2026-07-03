@@ -140,29 +140,6 @@ const ChangePhotoModal = ({
           </div>
         )}
 
-        {history.length > 0 && (
-          <>
-            <hr className={styles.divider} />
-            <div className={styles.historySection}>
-              <span className={styles.historyLabel}>History</span>
-              <div className={styles.historyList}>
-                {history.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className={styles.historyEntry}
-                  >
-                    <span className={styles.historyEntryNumber}>
-                      {entry.season_name ?? 'Season'}
-                    </span>
-                    <span className={styles.historyEntryDates}>
-                      {entry.team_name ?? stint?.team.name ?? 'Team'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
       </form>
     </Modal>
   );

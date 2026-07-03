@@ -27,7 +27,7 @@ describe('Chip', () => {
     );
 
     expect(screen.getByText('91')).toHaveStyle({
-      background: '#003e7e',
+      background: '#336598',
       borderColor: '#003e7e',
       color: '#ffffff',
     });

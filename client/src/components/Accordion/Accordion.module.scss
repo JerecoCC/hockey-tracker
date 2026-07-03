@@ -12,6 +12,7 @@
   --accordion-header-muted: var(--app-text-muted, #{$text-dim});
   --accordion-toggle-color: var(--accordion-header-muted);
   --accordion-toggle-hover-color: var(--accordion-header-text);
+  --accordion-toggle-divider-padding-block: #{$space-sm};
 
   display: flex;
   flex-direction: column;
@@ -40,9 +41,9 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: $space-sm;
+  gap: $space-md;
   min-height: 42px;
-  padding: $space-sm $space-md;
+  padding: $space-sm $space-md $space-sm 0;
   background: var(--accordion-current-header-bg);
   border-bottom: 1px solid var(--accordion-border-color);
   &.rowCollapsed {
@@ -63,6 +64,7 @@
 // Static variant — no hover highlight since there is no toggle to interact with.
 .rowStatic {
   cursor: default;
+  padding-left: $space-md;
 }
 
 // By default a static accordion shows its actions permanently (there is no
@@ -76,7 +78,9 @@
 // ── Toggle chevron ────────────────────────────────────────────────────────────
 
 .toggle {
+  position: relative;
   flex-shrink: 0;
+  align-self: stretch;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -86,7 +90,7 @@
   border: none;
   color: var(--accordion-toggle-color);
   cursor: pointer;
-  padding: 0;
+  padding: 0 $space-md;
   border-radius: 0;
   transition: color $transition-fast;
 
@@ -114,6 +118,19 @@
   &IconOpen {
     transition: transform $transition-base;
     transform: rotate(0deg);
+  }
+
+  &Divider {
+    --divider-color: var(--accordion-border-color);
+    --divider-vertical-margin-block: 0;
+
+    position: absolute;
+    inset-block-start: var(--accordion-toggle-divider-padding-block);
+    inset-inline-end: 0;
+    height: calc(
+      100% - var(--accordion-toggle-divider-padding-block) -
+        var(--accordion-toggle-divider-padding-block)
+    );
   }
 }
 
@@ -154,11 +171,15 @@
 // ── Hover-revealed action overlay (replaces ActionOverlay) ────────────────────
 
 .hoverActions {
-  background: var(--accordion-current-header-bg);
+  background: var(--accordion-actions-bg, var(--accordion-current-header-bg));
   z-index: 1;
 
   &::before {
-    background: linear-gradient(to right, transparent, var(--accordion-current-header-bg));
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--accordion-actions-bg, var(--accordion-current-header-bg))
+    );
   }
 }
 

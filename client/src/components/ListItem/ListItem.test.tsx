@@ -216,7 +216,7 @@ describe('ListItem - chip', () => {
     });
 
     expect(screen.getByText('34')).toHaveStyle({
-      background: '#003e7e',
+      background: '#336598',
       borderColor: '#003e7e',
       color: '#ffffff',
     });

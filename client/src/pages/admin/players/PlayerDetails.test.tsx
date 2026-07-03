@@ -134,7 +134,19 @@ jest.mock('./StintEditModal', () => ({
   ACQUISITION_TYPE_LABELS: { trade: 'Trade' },
 }));
 jest.mock('./ChangeJerseyModal', () => () => null);
-jest.mock('@/components/ImagePreviewModal/ImagePreviewModal', () => () => null);
+jest.mock('@/components/ImagePreviewModal/ImagePreviewModal', () => ({ open, src, alt }: any) =>
+  open ? (
+    <div
+      role="dialog"
+      aria-label="Image Preview"
+    >
+      <img
+        src={src}
+        alt={alt ?? ''}
+      />
+    </div>
+  ) : null,
+);
 
 const mockUsePlayerDetails = usePlayerDetails as jest.Mock;
 const mockUsePlayerAwards = usePlayerAwards as jest.Mock;
@@ -361,18 +373,92 @@ describe('PlayerDetails info tab', () => {
     expect(screen.queryByText('Inactive')).not.toBeInTheDocument();
   });
 
-  it('labels the team history tab as history and uses default list item styling', () => {
+  it('labels the team history tab as history and renders stint history accordions', async () => {
+    const user = userEvent.setup();
     mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUseJerseyHistory.mockReturnValue({
+      byStint: {
+        'stint-1': [
+          {
+            id: 'jersey-2',
+            player_teams_id: 'stint-1',
+            jersey_number: 91,
+            effective_from: '2025-01-05',
+          },
+        ],
+      },
+    });
+    mockUsePlayerPhotoHistory.mockReturnValue({
+      byTeam: {
+        'team-1': [
+          {
+            id: 'photo-1',
+            player_id: 'player-1',
+            team_id: 'team-1',
+            season_id: 'season-1',
+            photo: '/photo.jpg',
+            created_at: '2025-01-01T00:00:00Z',
+            season_name: '2024-25',
+            team_name: 'Toronto Maple Leafs',
+          },
+        ],
+      },
+    });
 
     const { container } = render(<PlayerDetails />);
 
     expect(screen.getByText('History')).toBeInTheDocument();
     expect(screen.queryByText('Team History')).not.toBeInTheDocument();
     const historyList = container.querySelector('.stintList') as HTMLElement;
-    const stintItem = within(historyList).getByText('Toronto Maple Leafs').closest('li');
-    expect(stintItem).toHaveClass('item');
-    expect(stintItem).not.toHaveClass('stintItem');
-    expect(container.querySelector('.stintItem')).not.toBeInTheDocument();
+    const stintAccordion = within(historyList)
+      .getByText('Toronto Maple Leafs')
+      .closest('.stintAccordion') as HTMLElement;
+    expect(stintAccordion).toBeInTheDocument();
+    expect(stintAccordion).toHaveClass('headerLight');
+    expect(stintAccordion).not.toHaveClass('item');
+    expect(stintAccordion.querySelector('.stintHeaderLabelWrap')).toBeInTheDocument();
+    expect(stintAccordion.querySelector('.stintHeaderAccordionLabel')).toBeInTheDocument();
+    expect(screen.queryByText('Jersey Numbers')).not.toBeInTheDocument();
+
+    await user.click(within(stintAccordion).getByRole('button', { name: 'Expand' }));
+
+    const sectionTitles = within(stintAccordion)
+      .getAllByText(/Season Photos|Jersey Numbers/)
+      .map((node) => node.textContent);
+    expect(sectionTitles).toEqual(['Season Photos', 'Jersey Numbers']);
+    expect(within(stintAccordion).getByText('Jersey Numbers')).toBeInTheDocument();
+    expect(within(stintAccordion).queryByText('Assumed')).not.toBeInTheDocument();
+
+    const currentJerseyItem = within(stintAccordion)
+      .getByText('Jan 5, 2025 - Present')
+      .closest('li') as HTMLElement;
+    expect(within(currentJerseyItem).getByText('91')).toHaveClass('chip');
+    expect(within(currentJerseyItem).getByText('Jan 5, 2025 - Present')).toHaveClass('name');
+    expect(within(currentJerseyItem).getByText('Current')).toHaveClass('tag', 'success');
+    expect(currentJerseyItem).toHaveClass('itemCompact');
+
+    const startingJerseyItem = within(stintAccordion)
+      .getByText('Oct 1, 2024 - Jan 4, 2025')
+      .closest('li') as HTMLElement;
+    expect(within(startingJerseyItem).getByText('19')).toHaveClass('chip');
+    expect(within(startingJerseyItem).getByText('Oct 1, 2024 - Jan 4, 2025')).toHaveClass('name');
+    expect(within(startingJerseyItem).getByText('Past')).toHaveClass('tag', 'neutral');
+    expect(startingJerseyItem).toHaveClass('itemCompact');
+
+    expect(within(stintAccordion).getByText('Season Photos')).toBeInTheDocument();
+    const photoItem = within(stintAccordion).getByRole('button', {
+      name: 'Preview 2024-25 photo',
+    });
+    expect(within(photoItem).queryByText('Season Photo')).not.toBeInTheDocument();
+    expect(within(photoItem).getByText('2024-25')).toHaveClass('name');
+    expect(within(photoItem).getByText('Current')).toHaveClass('tag', 'success');
+    expect(within(photoItem).queryByText('Toronto Maple Leafs')).not.toBeInTheDocument();
+    expect(photoItem).toHaveClass('itemCompact');
+
+    await user.click(photoItem);
+
+    expect(screen.getByRole('dialog', { name: 'Image Preview' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'John Smith' })).toHaveAttribute('src', '/photo.jpg');
   });
 
   it('moves the move player action into the more actions menu', async () => {

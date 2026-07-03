@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { mixWithWhite } from '@/lib/color';
 import styles from './Chip.module.scss';
 
 export type ChipSize = 'small' | 'medium';
@@ -19,7 +20,7 @@ const Chip = ({ children, size = 'medium', primaryColor, textColor, className }:
     style={
       primaryColor
         ? {
-            background: primaryColor,
+            background: mixWithWhite(primaryColor, 0.2),
             borderColor: primaryColor,
             color: textColor ?? undefined,
           }

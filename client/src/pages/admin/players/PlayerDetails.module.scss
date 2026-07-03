@@ -234,6 +234,134 @@
     flex-direction: column;
     gap: $space-md;
   }
+
+  &ListItem {
+    list-style: none;
+  }
+
+  &Accordion {
+    --accordion-border-color: var(--app-border, #{$border});
+    --accordion-actions-bg: var(--app-surface, #{$bg-card});
+    --accordion-toggle-divider-padding-block: #{$space-sm};
+  }
+
+  &Header {
+    box-sizing: border-box;
+    align-items: center;
+    min-height: calc(48px + #{$space-sm * 2});
+    transition: background $transition-fast;
+
+    &:hover,
+    &:focus-within {
+      --accordion-current-header-bg: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
+    }
+  }
+
+  &HeaderLabelWrap {
+    align-items: center;
+  }
+
+  &HeaderAccordionLabel {
+    display: flex;
+    align-items: center;
+  }
+
+  &HeaderLabel {
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: $space-md;
+    line-height: 1;
+  }
+
+  &HeaderInfo {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    align-self: center;
+    line-height: 1.2;
+  }
+
+  &HeaderName {
+    font-size: $font-base;
+    font-weight: 500;
+    color: var(--app-text, #{$text-body});
+    line-height: 1.2;
+    @include truncate;
+  }
+
+  &HeaderDates {
+    font-size: $font-xs;
+    color: var(--app-text-muted, #{$text-dim});
+    line-height: 1.2;
+    @include truncate;
+  }
+
+  &Body {
+    padding: $space-md;
+  }
+
+  &HistoryGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-md;
+
+    @media (max-width: 720px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &HistorySection {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+
+    & + .stintHistorySection {
+      padding-left: $space-md;
+      border-left: 1px solid var(--app-border, #{$border});
+
+      @media (max-width: 720px) {
+        padding-left: 0;
+        padding-top: $space-md;
+        border-left: none;
+        border-top: 1px solid var(--app-border, #{$border});
+      }
+    }
+  }
+
+  &HistoryTitle {
+    font-size: $font-xs;
+    font-weight: 700;
+    color: var(--app-text-muted, #{$text-dim});
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  &HistoryList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+  }
+
+  &HistoryListItem {
+    --list-item-hover-bg: var(--app-surface-subtle, rgba(255, 255, 255, 0.03));
+  }
+
+  &HistoryEmpty {
+    margin: 0;
+    padding: $space-sm;
+    border: 1px dashed var(--app-border, #{$border});
+    border-radius: $radius-sm;
+    color: var(--app-text-muted, #{$text-dim});
+    font-size: $font-sm;
+    font-style: italic;
+  }
 }
 
 // ── Current-season stats cards ────────────────────────────────────────────

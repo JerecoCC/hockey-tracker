@@ -3,6 +3,7 @@ import type { HTMLAttributes, ReactNode, Ref } from 'react';
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Button from '../Button/Button';
 import type { ButtonIntent, ButtonVariant } from '../Button/Button';
+import Divider from '../Divider/Divider';
 import Icon from '../Icon/Icon';
 import styles from './Accordion.module.scss';
 
@@ -59,6 +60,12 @@ interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   className?: string;
   /** Extra class applied to the header row. */
   rowClassName?: string;
+  /** Extra class applied to the toggle button. */
+  toggleClassName?: string;
+  /** Extra class applied to the label wrapper. */
+  labelWrapClassName?: string;
+  /** Extra class applied to the label content. */
+  labelClassName?: string;
   /** Extra class applied to the body wrapper. */
   bodyClassName?: string;
   /** Ref forwarded to the body wrapper. */
@@ -83,6 +90,9 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
       headerType = 'filled',
       className,
       rowClassName,
+      toggleClassName,
+      labelWrapClassName,
+      labelClassName,
       bodyClassName,
       bodyRef,
       children,
@@ -129,7 +139,11 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
         >
           {!isStatic && (
             <button
-              className={[styles.toggle, toggleDisabled ? styles.toggleDisabled : '']
+              className={[
+                styles.toggle,
+                toggleDisabled ? styles.toggleDisabled : '',
+                toggleClassName,
+              ]
                 .filter(Boolean)
                 .join(' ')}
               onClick={() => !toggleDisabled && setOpen(!open)}
@@ -143,10 +157,16 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
                 size="0.8rem"
                 className={open ? styles.toggleIconOpen : styles.toggleIcon}
               />
+              <Divider
+                variant="vertical"
+                className={styles.toggleDivider}
+              />
             </button>
           )}
-          <div className={styles.labelWrap}>
-            <div className={styles.label}>{label}</div>
+          <div className={[styles.labelWrap, labelWrapClassName].filter(Boolean).join(' ')}>
+            <div className={[styles.label, labelClassName].filter(Boolean).join(' ')}>
+              {label}
+            </div>
             {labelMeta != null && <div className={styles.labelMeta}>{labelMeta}</div>}
           </div>
           {headerRight != null && <div className={styles.headerRight}>{headerRight}</div>}
