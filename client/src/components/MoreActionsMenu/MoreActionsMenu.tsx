@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Button from '../Button/Button';
 import Icon from '../Icon/Icon';
 import styles from './MoreActionsMenu.module.scss';
@@ -23,6 +24,14 @@ interface Props {
   buttonClassName?: string;
 }
 
+interface MenuPosition {
+  top: number;
+  left: number;
+}
+
+const MENU_GAP = 6;
+const VIEWPORT_MARGIN = 8;
+
 const MoreActionsMenu = ({
   items,
   disabled = false,
@@ -31,12 +40,43 @@ const MoreActionsMenu = ({
   buttonClassName,
 }: Props) => {
   const [open, setOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const updateMenuPosition = useCallback(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const rect = wrapper.getBoundingClientRect();
+    const menuWidth = menuRef.current?.getBoundingClientRect().width ?? 168;
+    const menuHeight = menuRef.current?.getBoundingClientRect().height ?? 0;
+    const belowTop = rect.bottom + MENU_GAP;
+    const aboveTop = rect.top - menuHeight - MENU_GAP;
+    const wouldClipBottom =
+      menuHeight > 0 && belowTop + menuHeight > window.innerHeight - VIEWPORT_MARGIN;
+    const top = wouldClipBottom ? Math.max(VIEWPORT_MARGIN, aboveTop) : belowTop;
+    const maxLeft = window.innerWidth - menuWidth - VIEWPORT_MARGIN;
+    const preferredLeft = rect.right - menuWidth;
+
+    setMenuPosition({
+      top,
+      left: Math.max(VIEWPORT_MARGIN, Math.min(preferredLeft, maxLeft)),
+    });
+  }, []);
 
   useEffect(() => {
     if (!open) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        wrapperRef.current?.contains(target) ||
+        menuRef.current?.contains(target)
+      ) {
+        return;
+      }
+
+      if (wrapperRef.current) {
         setOpen(false);
       }
     };
@@ -44,25 +84,43 @@ const MoreActionsMenu = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
 
-  return (
-    <div
-      className={styles.wrapper}
-      data-size={size}
-      ref={wrapperRef}
-    >
-      <Button
-        variant={variant}
-        intent="neutral"
-        icon="more_vert"
-        size={size}
-        tooltip="More actions"
-        disabled={disabled}
-        className={[styles.trigger, buttonClassName].filter(Boolean).join(' ')}
-        onClick={() => setOpen((o) => !o)}
-      />
+  useLayoutEffect(() => {
+    if (!open) return;
 
-      {open && (
-        <div className={styles.menu}>
+    updateMenuPosition();
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
+    };
+  }, [open, updateMenuPosition]);
+
+  const handleTriggerClick = () => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+
+    updateMenuPosition();
+    setOpen(true);
+  };
+
+  const menu = open
+    ? createPortal(
+        <div
+          ref={menuRef}
+          className={styles.menu}
+          style={
+            menuPosition
+              ? {
+                  top: menuPosition.top,
+                  left: menuPosition.left,
+                }
+              : undefined
+          }
+        >
           {items.map((item, i) => (
             <button
               key={i}
@@ -79,8 +137,29 @@ const MoreActionsMenu = ({
               {item.label}
             </button>
           ))}
-        </div>
-      )}
+        </div>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <div
+      className={styles.wrapper}
+      data-size={size}
+      ref={wrapperRef}
+    >
+      <Button
+        variant={variant}
+        intent="neutral"
+        icon="more_vert"
+        size={size}
+        tooltip="More actions"
+        disabled={disabled}
+        className={[styles.trigger, buttonClassName].filter(Boolean).join(' ')}
+        onClick={handleTriggerClick}
+      />
+
+      {menu}
     </div>
   );
 };

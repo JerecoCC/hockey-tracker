@@ -1121,7 +1121,7 @@ const SeasonGamesTab = ({
                 !isEnded && (
                   <MoreActionsMenu
                     variant="ghost"
-                    buttonClassName={scheduleCalendarDayActionButtonClassName}
+                    size="md"
                     disabled={autofillDay === dateKey}
                     items={buildDayActions(dateKey, dayGames)}
                   />
