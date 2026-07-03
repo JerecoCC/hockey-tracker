@@ -155,6 +155,7 @@ const GameLineupsTab = ({
   ) => (
     <Accordion
       variant="static"
+      headerType="light"
       label={
         <span className={styles.accordionTeamLabel}>
           <TeamLogo

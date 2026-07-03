@@ -10,18 +10,29 @@
   gap: $space-sm;
 }
 
-// Passed as className to Accordion to tint the border AND header for the active period.
+// Passed as className to Accordion to tint the border and label for the active period.
 $_active-period-color: color.mix($accent, $bg-card, 50%);
+$_active-period-bg: color.mix($accent, $bg-card, 18%);
+$_active-period-light-bg: color.mix($accent, #fff, 18%);
+$_active-period-light-border: color.mix($accent, #fff, 48%);
 .periodItemActive {
   border-color: $_active-period-color;
-  --accordion-header-bg: #{$_active-period-color};
+  --accordion-border-color: #{$_active-period-color};
+  --accordion-header-bg: #{$_active-period-bg};
+  --accordion-header-text: #{$accent-light};
+  --accordion-header-muted: #{$accent-light};
+  --accordion-toggle-color: #{$accent-light};
+  --accordion-toggle-hover-color: #bfdbfe;
 }
 
 :global(:root[data-theme='light']) .periodItemActive {
-  --accordion-header-text: #ffffff;
-  --accordion-header-muted: #dbeafe;
-  --accordion-toggle-color: #dbeafe;
-  --accordion-toggle-hover-color: #ffffff;
+  border-color: $_active-period-light-border;
+  --accordion-border-color: #{$_active-period-light-border};
+  --accordion-header-bg: #{$_active-period-light-bg};
+  --accordion-header-text: #1e3a8a;
+  --accordion-header-muted: #2563eb;
+  --accordion-toggle-color: #2563eb;
+  --accordion-toggle-hover-color: #1d4ed8;
 }
 
 // Passed as label slot content to give the period name a fixed-width column.

@@ -320,6 +320,7 @@ const ScoringCard = ({
               key={num}
               ref={setAccordionRef ? setAccordionRef(periodId) : undefined}
               variant="static"
+              headerType="light"
               className={isActive ? styles.periodItemActive : undefined}
               label={<span className={styles.periodLabel}>{label}</span>}
               hoverActions={
@@ -434,6 +435,7 @@ const ScoringCard = ({
                     key={otPeriodId(otNum)}
                     ref={isLast && setAccordionRef ? setAccordionRef(PERIOD.OVERTIME) : undefined}
                     variant="static"
+                    headerType="light"
                     className={isThisActive ? styles.periodItemActive : undefined}
                     label={<span className={styles.periodLabel}>Overtime {otNum}</span>}
                     hoverActions={
@@ -510,6 +512,7 @@ const ScoringCard = ({
               <Accordion
                 ref={setAccordionRef ? setAccordionRef(PERIOD.OVERTIME) : undefined}
                 variant="static"
+                headerType="light"
                 className={isOTActive ? styles.periodItemActive : undefined}
                 label={<span className={styles.periodLabel}>Overtime</span>}
                 hoverActions={

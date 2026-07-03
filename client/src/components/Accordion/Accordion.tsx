@@ -151,7 +151,10 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
           </div>
           {headerRight != null && <div className={styles.headerRight}>{headerRight}</div>}
           {hasHoverActions && (
-            <ActionOverlay className={styles.hoverActions}>
+            <ActionOverlay
+              data-hover-actions
+              className={styles.hoverActions}
+            >
               {hoverActions.map((action, i) => (
                 <Button
                   key={i}

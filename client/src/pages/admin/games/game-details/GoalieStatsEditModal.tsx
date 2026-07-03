@@ -687,6 +687,7 @@ const GoalieStatsEditModal = ({
             <Accordion
               key={stat.goalie_id}
               variant="static"
+              headerType="light"
               hoverRevealActions
               className={
                 teamGoalieCount > 1 && goalieHasStarterStint
