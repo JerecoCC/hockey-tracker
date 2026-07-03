@@ -11,13 +11,10 @@
 }
 
 .trigger.trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   min-width: 0;
   min-height: 0;
   aspect-ratio: auto;
-  line-height: 1;
+  padding-inline: 0;
 }
 
 .menu {

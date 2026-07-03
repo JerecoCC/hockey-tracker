@@ -18,12 +18,10 @@ interface Props {
   disabled?: boolean;
   /** Size of the trigger button. Defaults to 'sm'. */
   size?: 'sm' | 'md';
-  /** Visual style of the trigger button. Defaults to 'ghost'. */
-  variant?: 'filled' | 'outlined' | 'ghost';
+  /** Optional trigger icon-size override for constrained header contexts. */
+  iconSize?: string;
   /** Extra className forwarded to the trigger wrapper. */
   wrapperClassName?: string;
-  /** Extra className forwarded to the trigger Button (e.g. to override border-radius). */
-  buttonClassName?: string;
 }
 
 interface MenuPosition {
@@ -38,9 +36,8 @@ const MoreActionsMenu = ({
   items,
   disabled = false,
   size = 'sm',
-  variant = 'ghost',
+  iconSize,
   wrapperClassName,
-  buttonClassName,
 }: Props) => {
   const [open, setOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
@@ -152,13 +149,14 @@ const MoreActionsMenu = ({
       ref={wrapperRef}
     >
       <Button
-        variant={variant}
+        variant="ghost"
         intent="neutral"
         icon="more_vert"
         size={size}
+        iconSize={iconSize}
         tooltip="More actions"
         disabled={disabled}
-        className={[styles.trigger, buttonClassName].filter(Boolean).join(' ')}
+        className={styles.trigger}
         onClick={handleTriggerClick}
       />
 

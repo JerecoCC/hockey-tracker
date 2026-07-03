@@ -1157,8 +1157,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
               {playerActionItems.length > 0 && (
                 <MoreActionsMenu
                   items={playerActionItems}
-                  size="sm"
-                  variant="outlined"
                 />
               )}
             </div>

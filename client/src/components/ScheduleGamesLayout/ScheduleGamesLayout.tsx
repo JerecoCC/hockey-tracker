@@ -386,6 +386,4 @@ export const ScheduleCalendarDayCount = ({ count, label }: ScheduleCalendarDayCo
     />
   ) : null;
 
-export const scheduleCalendarDayActionButtonClassName = styles.calendarDayActionButton;
-export const scheduleCalendarDayActionClassName = styles.calendarDayAction;
 export const scheduleViewSegmentedControlClassName = styles.viewSegmentedControl;

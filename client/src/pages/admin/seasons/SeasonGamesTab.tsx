@@ -20,8 +20,6 @@ import {
   ScheduleGamesTitle,
   ScheduleWeekList,
   ScheduleWeekSummary,
-  scheduleCalendarDayActionClassName,
-  scheduleCalendarDayActionButtonClassName,
   scheduleViewSegmentedControlClassName,
   useScheduleWeekSummaryStuck,
 } from '@/components/ScheduleGamesLayout/ScheduleGamesLayout';
@@ -1145,9 +1143,7 @@ const SeasonGamesTab = ({
                   const dayGames = calendarGamesByDate.get(dateKey) ?? [];
                   return (
                     <MoreActionsMenu
-                      variant="ghost"
-                      wrapperClassName={scheduleCalendarDayActionClassName}
-                      buttonClassName={scheduleCalendarDayActionButtonClassName}
+                      iconSize="0.85rem"
                       disabled={autofillDay === dateKey}
                       items={buildDayActions(dateKey, dayGames)}
                     />
@@ -1175,8 +1171,6 @@ const SeasonGamesTab = ({
               renderDayAction={(dateKey, dayGames) =>
                 !isEnded && (
                   <MoreActionsMenu
-                    variant="ghost"
-                    size="md"
                     disabled={autofillDay === dateKey}
                     items={buildDayActions(dateKey, dayGames)}
                   />
