@@ -996,9 +996,13 @@ function assertGameMatches(game: GameRecord, boxscore: any) {
 function nhlLocalDate(value: string | null | undefined) {
   if (!value) return null;
   const rawDate = value.slice(0, 10);
-  if (!value.includes('T')) return rawDate;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return rawDate;
 
-  const date = new Date(value);
+  const normalizedDateTime = value
+    .replace(/^(\d{4}-\d{2}-\d{2})\s+/, '$1T')
+    .replace(/([+-]\d{2})(\d{2})$/, '$1:$2')
+    .replace(/([+-]\d{2})$/, '$1:00');
+  const date = new Date(normalizedDateTime);
   if (Number.isNaN(date.getTime())) return rawDate;
 
   const parts = new Intl.DateTimeFormat('en-US', {

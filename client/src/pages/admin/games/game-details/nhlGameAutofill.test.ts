@@ -252,6 +252,24 @@ describe('autofillGameFromNhlGamecenter', () => {
     ).toBe(false);
   });
 
+  it('accepts Postgres timestamp strings whose Eastern date matches the NHL game date', async () => {
+    const gameFromApi = {
+      ...game,
+      scheduled_at: '2025-11-20 02:30:00+00',
+    } as GameRecord;
+
+    const result = await autofillGameFromNhlGamecenter(gameFromApi, '317');
+
+    expect(result.summary.gameId).toBe('2025020317');
+    expect(
+      mockedAxios.patch.mock.calls.some(
+        ([url, payload]) =>
+          String(url).endsWith('/admin/games/game-1') &&
+          (payload as Record<string, unknown>)?.status === 'final',
+      ),
+    ).toBe(true);
+  });
+
   it('records a shorthanded goal with the canonical "shorthanded" goal_type', async () => {
     boxscoreData = {
       ...boxscore,
