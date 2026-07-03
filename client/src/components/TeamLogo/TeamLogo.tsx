@@ -1,5 +1,6 @@
 import { useContext } from 'react';
 import { ThemeContext } from '@/context/ThemeContext';
+import FitText from '@/components/FitText/FitText';
 import styles from './TeamLogo.module.scss';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ const TeamLogo = ({
           : (primaryLogo ?? darkLogo ?? lightLogo);
   const hasLogo = Boolean(selectedLogo);
   const fontSize = Math.round(size * 0.32);
+  const minFontSize = Math.min(fontSize, Math.max(4, Math.floor(fontSize * 0.65)));
   const shapeClass = shape === 'circle' ? styles.circle : styles.square;
 
   return (
@@ -82,12 +84,14 @@ const TeamLogo = ({
           className={styles.img}
         />
       ) : (
-        <span
+        <FitText
           className={styles.code}
+          minFontSize={minFontSize}
+          maxFontSize={fontSize}
           style={{ fontSize, color: textColor ?? undefined }}
         >
           {code.slice(0, 3)}
-        </span>
+        </FitText>
       )}
     </span>
   );

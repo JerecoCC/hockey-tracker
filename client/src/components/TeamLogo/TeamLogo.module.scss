@@ -34,9 +34,11 @@
 
 // Fallback team code text — color is applied via inline style
 .code {
+  width: 100%;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0;
+  text-align: center;
   color: var(--app-text-muted, #{$text-dim}); // fallback; overridden by inline style when team color is known
   line-height: 1;
 }

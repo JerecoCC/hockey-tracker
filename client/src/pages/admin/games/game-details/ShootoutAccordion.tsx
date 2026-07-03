@@ -13,6 +13,9 @@ import scoringStyles from './ScoringCard.module.scss';
 import { playerDataComplete } from './gameUtils';
 import { PERIOD } from './constants';
 
+const playerInitials = (firstName?: string | null, lastName?: string | null) =>
+  `${firstName?.trim().charAt(0) ?? ''}${lastName?.trim().charAt(0) ?? ''}`.trim() || '?';
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -223,7 +226,7 @@ const ShootoutAccordion = ({
     const photo = (
       <PlayerAvatar
         photo={attempt.shooter_photo}
-        initials={attempt.shooter_last_name?.charAt(0) ?? '?'}
+        initials={playerInitials(attempt.shooter_first_name, attempt.shooter_last_name)}
         primaryColor={teamInfo.primary}
         textColor={teamInfo.text}
         size={48}
@@ -381,10 +384,10 @@ const ShootoutAccordion = ({
           />
           <PlayerAvatar
             photo={shootoutWinnerAttempt.shooter_photo}
-            initials={
-              `${shootoutWinnerAttempt.shooter_first_name?.charAt(0) ?? ''}${shootoutWinnerAttempt.shooter_last_name?.charAt(0) ?? ''}`.trim() ||
-              '?'
-            }
+            initials={playerInitials(
+              shootoutWinnerAttempt.shooter_first_name,
+              shootoutWinnerAttempt.shooter_last_name,
+            )}
             primaryColor={team.primary_color}
             textColor={team.text_color}
             size={48}

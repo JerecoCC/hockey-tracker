@@ -1,4 +1,5 @@
 import { mixWithWhite } from '@/lib/color';
+import FitText from '@/components/FitText/FitText';
 import styles from './PlayerAvatar.module.scss';
 
 interface Props {
@@ -21,6 +22,7 @@ const PlayerAvatar = ({
   className,
 }: Props) => {
   const fontSize = Math.round(size * 0.38);
+  const minFontSize = Math.min(fontSize, Math.max(4, Math.floor(fontSize * 0.65)));
 
   // Both photos and initials get the same 20%-white tint over the team color.
   const background = primaryColor ? mixWithWhite(primaryColor, 0.2) : undefined;
@@ -40,12 +42,14 @@ const PlayerAvatar = ({
           className={styles.img}
         />
       ) : (
-        <span
+        <FitText
           className={styles.initials}
+          minFontSize={minFontSize}
+          maxFontSize={fontSize}
           style={{ fontSize, color: textColor ?? undefined }}
         >
           {initials}
-        </span>
+        </FitText>
       )}
     </span>
   );

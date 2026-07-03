@@ -120,35 +120,24 @@ const RadioList = ({
                 />
               </span>
 
-              {(option.leadingImage || option.leadingImagePlaceholder) &&
-                (option.leadingImage ? (
-                  <TeamLogo
-                    logo={option.leadingImage}
-                    logoDark={option.leadingImageDark}
-                    logoLight={option.leadingImageLight}
-                    code={option.leadingImagePlaceholder ?? ''}
-                    alt=""
-                    size={34}
-                    shape="square"
-                    primaryColor={option.leadingImagePrimaryColor}
-                    textColor={option.leadingImageTextColor}
-                    className={selectableItemStyles.leadingLogo}
-                  />
-                ) : (
-                  <span
-                    className={selectableItemStyles.leadingLogoPlaceholder}
-                    style={
-                      option.leadingImagePrimaryColor
-                        ? {
-                            background: option.leadingImagePrimaryColor,
-                            color: option.leadingImageTextColor ?? undefined,
-                          }
-                        : undefined
-                    }
-                  >
-                    {option.leadingImagePlaceholder}
-                  </span>
-                ))}
+              {(option.leadingImage || option.leadingImagePlaceholder) && (
+                <TeamLogo
+                  logo={option.leadingImage}
+                  logoDark={option.leadingImageDark}
+                  logoLight={option.leadingImageLight}
+                  code={option.leadingImagePlaceholder ?? ''}
+                  alt=""
+                  size={option.leadingImage ? 34 : 24}
+                  shape="square"
+                  primaryColor={option.leadingImagePrimaryColor}
+                  textColor={option.leadingImageTextColor}
+                  className={
+                    option.leadingImage
+                      ? selectableItemStyles.leadingLogo
+                      : selectableItemStyles.leadingLogoPlaceholder
+                  }
+                />
+              )}
 
               {!option.hideImage && option.imageShape !== 'circle' && (
                 <TeamLogo

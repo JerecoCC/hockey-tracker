@@ -119,35 +119,20 @@ const SelectableListItem = ({
         />
       </span>
 
-      {(leadingImage || leadingImagePlaceholder) &&
-        (leadingImage ? (
-          <TeamLogo
-            logo={leadingImage}
-            logoDark={leadingImageDark}
-            logoLight={leadingImageLight}
-            code={leadingImagePlaceholder ?? ''}
-            alt=""
-            size={34}
-            shape="square"
-            primaryColor={leadingImagePrimaryColor}
-            textColor={leadingImageTextColor}
-            className={styles.leadingLogo}
-          />
-        ) : (
-          <span
-            className={styles.leadingLogoPlaceholder}
-            style={
-              leadingImagePrimaryColor
-                ? {
-                    background: leadingImagePrimaryColor,
-                    color: leadingImageTextColor ?? undefined,
-                  }
-                : undefined
-            }
-          >
-            {leadingImagePlaceholder}
-          </span>
-        ))}
+      {(leadingImage || leadingImagePlaceholder) && (
+        <TeamLogo
+          logo={leadingImage}
+          logoDark={leadingImageDark}
+          logoLight={leadingImageLight}
+          code={leadingImagePlaceholder ?? ''}
+          alt=""
+          size={leadingImage ? 34 : 24}
+          shape="square"
+          primaryColor={leadingImagePrimaryColor}
+          textColor={leadingImageTextColor}
+          className={leadingImage ? styles.leadingLogo : styles.leadingLogoPlaceholder}
+        />
+      )}
 
       {!hideImage && imageShape !== 'circle' && (
         <TeamLogo

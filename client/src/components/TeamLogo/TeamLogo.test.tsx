@@ -31,6 +31,7 @@ describe('TeamLogo wrapper clipping', () => {
 
     const wrapper = screen.getByText('TOR').parentElement as HTMLElement;
 
+    expect(screen.getByText('TOR')).toHaveClass('fitText', 'code');
     expect(wrapper.style.overflow).toBe('');
     expect(wrapper.style.borderRadius).toBe('');
     expect(wrapper).toHaveStyle({ background: '#003087' });

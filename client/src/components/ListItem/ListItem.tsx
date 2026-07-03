@@ -228,43 +228,20 @@ const ListItem = ({
       onFocus={onFocus}
     >
       {/* Leading image (e.g. team logo shown to the left of a player photo) */}
-      {!isCompact &&
-        (leadingImage || leadingImagePlaceholder) &&
-        (leadingImage ? (
-          <TeamLogo
-            logo={leadingImage}
-            logoDark={leadingImageDark}
-            logoLight={leadingImageLight}
-            code={leadingImagePlaceholder ?? ''}
-            alt=""
-            size={leadingImageSize}
-            shape="square"
-            primaryColor={leadingImagePrimaryColor}
-            textColor={leadingImageTextColor}
-            className={styles.leadingLogo}
-          />
-        ) : (
-          <span
-            className={styles.leadingLogoPlaceholder}
-            style={
-              leadingImagePrimaryColor
-                ? {
-                    width: leadingImageSize,
-                    height: leadingImageSize,
-                    fontSize: Math.round(leadingImageSize * 0.32),
-                    background: leadingImagePrimaryColor,
-                    color: leadingImageTextColor ?? undefined,
-                  }
-                : {
-                    width: leadingImageSize,
-                    height: leadingImageSize,
-                    fontSize: Math.round(leadingImageSize * 0.32),
-                  }
-            }
-          >
-            {leadingImagePlaceholder}
-          </span>
-        ))}
+      {!isCompact && (leadingImage || leadingImagePlaceholder) && (
+        <TeamLogo
+          logo={leadingImage}
+          logoDark={leadingImageDark}
+          logoLight={leadingImageLight}
+          code={leadingImagePlaceholder ?? ''}
+          alt=""
+          size={leadingImageSize}
+          shape="square"
+          primaryColor={leadingImagePrimaryColor}
+          textColor={leadingImageTextColor}
+          className={leadingImage ? styles.leadingLogo : styles.leadingLogoPlaceholder}
+        />
+      )}
 
       {/* Image or color-branded placeholder */}
       {!isCompact && !hideImage && (imageNode ?? defaultImageNode)}

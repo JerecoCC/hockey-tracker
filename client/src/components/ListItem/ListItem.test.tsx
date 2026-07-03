@@ -93,7 +93,10 @@ describe('ListItem - leading image', () => {
       leadingImageSize: 30,
     });
 
-    expect(screen.getByText('TOR')).toHaveStyle({ width: '30px', height: '30px' });
+    expect(screen.getByText('TOR').parentElement).toHaveStyle({
+      width: '30px',
+      height: '30px',
+    });
   });
 });
 
