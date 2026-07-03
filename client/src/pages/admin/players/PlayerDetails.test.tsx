@@ -118,7 +118,9 @@ jest.mock('@/components/TitleRow/TitleRow', () => ({ left, right }: any) => (
   </div>
 ));
 jest.mock('@/components/PlayerAvatar/PlayerAvatar', () => () => <span>avatar</span>);
-jest.mock('@/components/TeamLogo/TeamLogo', () => () => <span>logo</span>);
+jest.mock('@/components/TeamLogo/TeamLogo', () => ({ size }: any) => (
+  <span data-size={size}>logo</span>
+));
 jest.mock('@/components/Table/Table', () => () => <div />);
 jest.mock('@/components/Tabs/Tabs', () => ({ tabs, activeIndex = 0 }: any) => (
   <div>{tabs[activeIndex].content}</div>
@@ -376,9 +378,41 @@ describe('PlayerDetails info tab', () => {
   it('labels the team history tab as history and renders stint history accordions', async () => {
     const user = userEvent.setup();
     mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-1',
+          team_id: 'team-1',
+          season_id: 'season-1',
+          team: {
+            id: 'team-1',
+            name: 'Toronto Maple Leafs',
+            code: 'TOR',
+            logo: null,
+            primary_color: '#003e7e',
+            text_color: '#ffffff',
+          },
+          jersey_number: 91,
+          is_prospect: false,
+          position: 'C',
+          acquisition_type: 'trade',
+          start_date: '2024-10-01',
+          end_date: null,
+          photo: '/photo.jpg',
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
     mockUseJerseyHistory.mockReturnValue({
       byStint: {
         'stint-1': [
+          {
+            id: 'jersey-1',
+            player_teams_id: 'stint-1',
+            jersey_number: 19,
+            effective_from: '2024-10-01',
+          },
           {
             id: 'jersey-2',
             player_teams_id: 'stint-1',
@@ -389,6 +423,18 @@ describe('PlayerDetails info tab', () => {
       },
     });
     mockUsePlayerPhotoHistory.mockReturnValue({
+      photos: [
+        {
+          id: 'photo-1',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          season_id: 'season-1',
+          photo: '/photo.jpg',
+          created_at: '2025-01-01T00:00:00Z',
+          season_name: '2024-25',
+          team_name: 'Toronto Maple Leafs',
+        },
+      ],
       byTeam: {
         'team-1': [
           {
@@ -418,6 +464,7 @@ describe('PlayerDetails info tab', () => {
     expect(stintAccordion).not.toHaveClass('item');
     expect(stintAccordion.querySelector('.stintHeaderLabelWrap')).toBeInTheDocument();
     expect(stintAccordion.querySelector('.stintHeaderAccordionLabel')).toBeInTheDocument();
+    expect(within(stintAccordion).getByText('logo')).toHaveAttribute('data-size', '32');
     expect(screen.queryByText('Jersey Numbers')).not.toBeInTheDocument();
 
     await user.click(within(stintAccordion).getByRole('button', { name: 'Expand' }));
@@ -459,6 +506,145 @@ describe('PlayerDetails info tab', () => {
 
     expect(screen.getByRole('dialog', { name: 'Image Preview' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'John Smith' })).toHaveAttribute('src', '/photo.jpg');
+  });
+
+  it('marks only the photo and jersey number used in the hero as current', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-current',
+          team_id: 'team-2',
+          season_id: 'season-2',
+          team: {
+            id: 'team-2',
+            name: 'Colorado Avalanche',
+            code: 'COL',
+            logo: null,
+            primary_color: '#6f263d',
+            text_color: '#ffffff',
+          },
+          jersey_number: 91,
+          is_prospect: false,
+          position: 'C',
+          acquisition_type: 'trade',
+          start_date: '2026-03-06',
+          end_date: null,
+          photo: '/avs-photo.jpg',
+          has_stats: false,
+          can_delete: true,
+        },
+        {
+          id: 'stint-past',
+          team_id: 'team-1',
+          season_id: 'season-1',
+          team: {
+            id: 'team-1',
+            name: 'Calgary Flames',
+            code: 'CGY',
+            logo: null,
+            primary_color: '#c8102e',
+            text_color: '#ffd200',
+          },
+          jersey_number: 91,
+          is_prospect: false,
+          position: 'C',
+          acquisition_type: 'free_agent',
+          start_date: '2022-08-18',
+          end_date: '2026-03-06',
+          photo: '/flames-photo.jpg',
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+    mockUsePlayerPhotoHistory.mockReturnValue({
+      photos: [
+        {
+          id: 'photo-current',
+          player_id: 'player-1',
+          team_id: 'team-2',
+          season_id: 'season-2',
+          photo: '/avs-photo.jpg',
+          created_at: '2026-03-06T00:00:00Z',
+          season_name: '2025-26',
+          team_name: 'Colorado Avalanche',
+        },
+        {
+          id: 'photo-past',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          season_id: 'season-1',
+          photo: '/flames-photo.jpg',
+          created_at: '2025-10-01T00:00:00Z',
+          season_name: '2025-26',
+          team_name: 'Calgary Flames',
+        },
+      ],
+      byTeam: {
+        'team-2': [
+          {
+            id: 'photo-current',
+            player_id: 'player-1',
+            team_id: 'team-2',
+            season_id: 'season-2',
+            photo: '/avs-photo.jpg',
+            created_at: '2026-03-06T00:00:00Z',
+            season_name: '2025-26',
+            team_name: 'Colorado Avalanche',
+          },
+        ],
+        'team-1': [
+          {
+            id: 'photo-past',
+            player_id: 'player-1',
+            team_id: 'team-1',
+            season_id: 'season-1',
+            photo: '/flames-photo.jpg',
+            created_at: '2025-10-01T00:00:00Z',
+            season_name: '2025-26',
+            team_name: 'Calgary Flames',
+          },
+        ],
+      },
+    });
+
+    const { container } = render(<PlayerDetails />);
+    const historyList = container.querySelector('.stintList') as HTMLElement;
+    const currentAccordion = within(historyList)
+      .getByText('Colorado Avalanche')
+      .closest('.stintAccordion') as HTMLElement;
+    const pastAccordion = within(historyList)
+      .getByText('Calgary Flames')
+      .closest('.stintAccordion') as HTMLElement;
+
+    await user.click(within(currentAccordion).getByRole('button', { name: 'Expand' }));
+    await user.click(within(pastAccordion).getByRole('button', { name: 'Expand' }));
+
+    const currentPhotoItem = within(currentAccordion).getByRole('button', {
+      name: 'Preview 2025-26 photo',
+    });
+    expect(within(currentPhotoItem).getByText('Current')).toHaveClass('tag', 'success');
+
+    const currentJerseyItem = within(currentAccordion)
+      .getAllByText('Mar 6, 2026 - Present')
+      .map((node) => node.closest('li') as HTMLElement | null)
+      .find((node): node is HTMLElement => node?.classList.contains('itemCompact') ?? false);
+    expect(currentJerseyItem).toBeDefined();
+    expect(within(currentJerseyItem).getByText('Current')).toHaveClass('tag', 'success');
+
+    const pastPhotoItem = within(pastAccordion).getByRole('button', {
+      name: 'Preview 2025-26 photo',
+    });
+    expect(within(pastPhotoItem).getByText('Past')).toHaveClass('tag', 'neutral');
+
+    const pastJerseyItem = within(pastAccordion)
+      .getAllByText('Aug 18, 2022 - Mar 6, 2026')
+      .map((node) => node.closest('li') as HTMLElement | null)
+      .find((node): node is HTMLElement => node?.classList.contains('itemCompact') ?? false);
+    expect(pastJerseyItem).toBeDefined();
+    expect(within(pastJerseyItem).getByText('Past')).toHaveClass('tag', 'neutral');
   });
 
   it('moves the move player action into the more actions menu', async () => {

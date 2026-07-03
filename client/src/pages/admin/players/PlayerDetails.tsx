@@ -189,7 +189,10 @@ const stintHistoryKey = (stint: PlayerStintRecord) => stint.roster_player_team_i
 const buildJerseyHistoryRows = (
   stint: PlayerStintRecord,
   history: JerseyHistoryEntry[],
+  currentStintKey: string | null,
+  currentJerseyNumber: number | null,
 ) => {
+  const historyKey = stintHistoryKey(stint);
   const entries = history.map((entry) => ({
     id: entry.id,
     jerseyNumber: entry.jersey_number,
@@ -219,7 +222,11 @@ const buildJerseyHistoryRows = (
         id: entry.id,
         jerseyNumber: entry.jerseyNumber,
         dateRange: formatHistoryDateRange(entry.effectiveFrom, endDate),
-        current: idx === 0,
+        current:
+          historyKey === currentStintKey &&
+          idx === 0 &&
+          currentJerseyNumber != null &&
+          entry.jerseyNumber === currentJerseyNumber,
       };
     });
 };
@@ -251,20 +258,27 @@ const StintHistoryDetails = ({
   stint,
   jerseyHistory,
   photoHistory,
+  currentJerseyNumber,
+  currentJerseyStintKey,
+  currentPhotoHistoryId,
   initials,
   onPreviewPhoto,
 }: {
   stint: PlayerStintRecord;
   jerseyHistory: JerseyHistoryEntry[];
   photoHistory: PlayerPhotoEntry[];
+  currentJerseyNumber: number | null;
+  currentJerseyStintKey: string | null;
+  currentPhotoHistoryId: string | null;
   initials: string;
   onPreviewPhoto: (photo: string) => void;
 }) => {
-  const jerseyRows = buildJerseyHistoryRows(stint, jerseyHistory);
-  const currentPhotoId =
-    photoHistory.find((entry) => stint.photo != null && entry.photo === stint.photo)?.id ??
-    photoHistory[0]?.id ??
-    null;
+  const jerseyRows = buildJerseyHistoryRows(
+    stint,
+    jerseyHistory,
+    currentJerseyStintKey,
+    currentJerseyNumber,
+  );
 
   return (
     <div className={styles.stintHistoryGrid}>
@@ -275,7 +289,7 @@ const StintHistoryDetails = ({
         ) : (
           <ul className={styles.stintHistoryList}>
             {photoHistory.map((entry) => {
-              const current = entry.id === currentPhotoId;
+              const current = entry.id === currentPhotoHistoryId;
 
               return (
                 <ListItem
@@ -490,7 +504,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const adminPlayerId = isAdminView ? (id ?? null) : null;
   const { stints } = usePlayerTradeHistory(adminPlayerId);
   const { byStint: jerseyHistoryByStint } = useJerseyHistory(adminPlayerId);
-  const { byTeam: photoHistoryByTeam } = usePlayerPhotoHistory(adminPlayerId);
+  const { photos: photoHistoryEntries = [], byTeam: photoHistoryByTeam } =
+    usePlayerPhotoHistory(adminPlayerId);
   const {
     createStint,
     updateStint,
@@ -862,7 +877,17 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const jerseyNumber = latestStint?.jersey_number ?? player.jersey_number ?? null;
   // Use the first stint (active) photo; if that's missing, fall back to the most-recent
   // historical stint that does have a photo; then fall back to the global player photo.
-  const photo = stints.find((s) => s.photo)?.photo ?? player.photo;
+  const heroPhotoStint = stints.find((s) => s.photo);
+  const photo = heroPhotoStint?.photo ?? player.photo;
+  const currentPhotoHistoryId =
+    photo == null
+      ? null
+      : (photoHistoryEntries.find(
+          (entry) =>
+            entry.photo === photo &&
+            (heroPhotoStint == null || entry.team_id === heroPhotoStint.team_id),
+        )?.id ?? null);
+  const currentJerseyStintKey = latestStint ? stintHistoryKey(latestStint) : null;
   const avatarBg = heroTeam?.primary_color ?? undefined;
   const avatarColor = heroTeam?.text_color ?? undefined;
   const effectivePosition = latestStint?.position ?? player.position;
@@ -1444,7 +1469,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                                         code={teamCodePlaceholder(s)}
                                         primaryColor={s.team.primary_color}
                                         textColor={s.team.text_color}
-                                        size={48}
+                                        size={32}
                                         shape="square"
                                       />
                                       {s.jersey_number != null && (
@@ -1479,6 +1504,9 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                                     stint={s}
                                     jerseyHistory={jerseyHistory}
                                     photoHistory={photoHistory}
+                                    currentJerseyNumber={jerseyNumber}
+                                    currentJerseyStintKey={currentJerseyStintKey}
+                                    currentPhotoHistoryId={currentPhotoHistoryId}
                                     initials={initials}
                                     onPreviewPhoto={(src) => setPhotoPreviewSrc(src)}
                                   />
