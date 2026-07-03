@@ -6,6 +6,7 @@ import Tag from '@/components/Tag/Tag';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
+import Divider from '@/components/Divider/Divider';
 import Section from '@/components/Section/Section';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
@@ -177,7 +178,13 @@ const ScoringCard = ({
               key={goal.id}
               className={styles.goalItem}
             >
-              <span className={styles.goalTime}>{goal.period_time ?? '—'}</span>
+              <span className={styles.goalTimeGroup}>
+                <span className={styles.goalTime}>{goal.period_time ?? '—'}</span>
+                <Divider
+                  variant="vertical"
+                  className={styles.goalTimeDivider}
+                />
+              </span>
               <TeamLogo
                 logo={goal.team_logo}
                 logoDark={scoringTeam?.logo_dark}

@@ -14,23 +14,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 0;
-  min-height: 0;
-  background: transparent;
-  border: none;
-  color: var(--app-text-muted, #{$text-dim});
   line-height: 1;
-  transition: color $transition-fast;
-
-  &:hover:not(:disabled),
-  &:focus-visible:not(:disabled) {
-    background: transparent;
-    color: var(--app-text-subtle, #{$text-light});
-  }
-
-  svg {
-    font-size: 1.35rem;
-  }
 }
 
 .menu {

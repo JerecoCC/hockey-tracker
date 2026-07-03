@@ -90,33 +90,67 @@ $_active-period-light-border: color.mix($accent, #fff, 48%);
     display: flex;
     align-items: center;
     gap: $space-sm;
-    padding: $space-sm $space-md;
+    padding: $space-sm $space-md $space-sm 0;
     border-bottom: 1px solid var(--app-border, #{$border});
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
 
     &:last-child {
       border-bottom: none;
     }
 
-    &:hover .goalActions {
-      opacity: 1;
-      pointer-events: auto;
+    &:hover {
+      --goal-actions-bg: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
+      --goal-actions-base-bg: var(--app-surface, #{$bg-card});
+
+      background: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
+
+      .goalActions {
+        opacity: 1;
+        pointer-events: auto;
+      }
     }
   }
 }
 
 // Period time (e.g. "12:34")
+.goalTimeGroup {
+  display: inline-grid;
+  grid-template-columns: fit-content(100%) auto;
+  align-self: stretch;
+  align-items: center;
+  flex: 0 0 auto;
+  width: fit-content;
+  gap: 0;
+}
+
 .goalTime,
 .goalScore {
   font-size: $font-sm;
   color: var(--app-text-muted, #{$text-dim});
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
-  min-width: 2.75rem;
   flex-shrink: 0;
 }
 
+.goalTime {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: $space-sm;
+  line-height: 1;
+  text-align: center;
+}
+
 .goalScore {
+  min-width: 2.75rem;
   padding-left: $space-xs;
+}
+
+.goalTimeDivider {
+  --divider-vertical-margin-block: 0;
 }
 
 // Small square team logo / placeholder
@@ -175,5 +209,21 @@ $_active-period-light-border: color.mix($accent, #fff, 48%);
 
   &:hover {
     text-decoration: underline;
+  }
+}
+
+.goalActions {
+  background:
+    linear-gradient(var(--goal-actions-bg, transparent), var(--goal-actions-bg, transparent)),
+    var(--goal-actions-base-bg, var(--app-surface, #{$bg-card}));
+
+  &::before {
+    background:
+      linear-gradient(to right, transparent, var(--goal-actions-bg, transparent)),
+      linear-gradient(
+        to right,
+        transparent,
+        var(--goal-actions-base-bg, var(--app-surface, #{$bg-card}))
+      );
   }
 }
