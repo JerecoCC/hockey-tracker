@@ -210,6 +210,7 @@ describe('autofillGameFromNhlGamecenter', () => {
             player_id: row.player_id,
             team_id: body.team_id,
             jersey_number: row.jersey_number,
+            league_player_number: player.league_player_number,
             first_name: player.first_name,
             last_name: player.last_name,
             position: player.position,
@@ -597,8 +598,26 @@ describe('autofillGameFromNhlGamecenter', () => {
 
   it('auto-creates dressed roster-report players missing from the local roster', async () => {
     // #19 is dressed in the report but absent from the local MIN roster; it should
-    // be created (full name + mapped position) and rostered, not error out.
+    // be created (full name + mapped position + NHL player number) and rostered.
     // Mirrors the real report: <td> column headers nested inside a layout table.
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          forwards: [
+            ...boxscore.playerByGameStats.homeTeam.forwards,
+            {
+              playerId: 190019,
+              sweaterNumber: 19,
+              firstName: { default: 'Norman' },
+              lastName: { default: 'Mystery' },
+            },
+          ],
+        },
+      },
+    };
     optionalRosterReportHtml = `
       <html><body>
         <table>
@@ -627,7 +646,7 @@ describe('autofillGameFromNhlGamecenter', () => {
     );
     expect(playerCreates).toHaveLength(1);
     expect(playerCreates[0][1]).toEqual({
-      players: [{ first_name: 'Norman', last_name: 'Mystery', position: 'LW' }],
+      players: [{ first_name: 'Norman', last_name: 'Mystery', league_player_number: '190019', position: 'LW' }],
     });
 
     const rosterAdds = mockedAxios.post.mock.calls.filter(([url]) =>
@@ -642,6 +661,32 @@ describe('autofillGameFromNhlGamecenter', () => {
     expect(result.warnings).toEqual(
       expect.arrayContaining([expect.stringContaining('#19 Norman Mystery')]),
     );
+  });
+
+  it('stops before creating a roster-report player when the NHL player number is unavailable', async () => {
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>19</td><td>L</td><td>Norman Mystery</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+
+    await expect(autofillGameFromNhlGamecenter(game, '317')).rejects.toThrow(
+      'NHL player numbers were unavailable for MIN: #19 Norman Mystery',
+    );
+    expect(
+      mockedAxios.post.mock.calls.filter(([url]) => String(url).endsWith('/admin/players/bulk')),
+    ).toHaveLength(0);
   });
 
   it('stops and reports when a missing player already exists on another team', async () => {

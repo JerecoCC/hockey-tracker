@@ -927,16 +927,27 @@ async function ensureReportPlayersRostered(
   );
   if (missing.length === 0) return localPlayers;
 
+  const missingWithoutLeaguePlayerNumber = missing.filter(
+    (player) => !nhlPlayerBySweater.has(player.sweaterNumber),
+  );
+  if (missingWithoutLeaguePlayerNumber.length > 0) {
+    throw new Error(
+      `Auto-fill stopped because NHL player numbers were unavailable for ${teamCode}: ${missingWithoutLeaguePlayerNumber
+        .map((player) => `#${player.sweaterNumber} ${player.name}`)
+        .join(', ')}.`,
+    );
+  }
+
   const { created } = await apiPost<{ created: Array<{ id: string }> }, { players: Array<Record<string, unknown>> }>(
     '/admin/players/bulk',
     {
       players: missing.map((player) => {
         const { firstName, lastName } = splitReportName(player.name);
-        const nhlPlayer = nhlPlayerBySweater.get(player.sweaterNumber);
+        const nhlPlayer = nhlPlayerBySweater.get(player.sweaterNumber)!;
         return {
           first_name: firstName,
           last_name: lastName,
-          league_player_number: nhlPlayer ? String(nhlPlayer.playerId) : null,
+          league_player_number: String(nhlPlayer.playerId),
           position: reportPositionToLocalPosition(player.position),
         };
       }),
