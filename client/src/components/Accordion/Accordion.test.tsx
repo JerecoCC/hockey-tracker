@@ -1,4 +1,4 @@
-import { render, screen, waitFor, waitForElementToBeRemoved } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Accordion from './Accordion';
 
@@ -12,12 +12,7 @@ describe('Accordion', () => {
       </Accordion>,
     );
 
-    const bodyContent = screen.getByText('Regular season table');
-    expect(bodyContent).toBeInTheDocument();
-    expect(bodyContent.closest('[data-accordion-body-shell]')).toHaveAttribute(
-      'data-state',
-      'open',
-    );
+    expect(screen.getByText('Regular season table')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Collapse' })).toHaveAttribute(
       'aria-expanded',
       'true',
@@ -25,13 +20,7 @@ describe('Accordion', () => {
 
     await user.click(screen.getByText('Season Stats'));
 
-    await waitFor(() =>
-      expect(bodyContent.closest('[data-accordion-body-shell]')).toHaveAttribute(
-        'data-state',
-        'closed',
-      ),
-    );
-    await waitForElementToBeRemoved(bodyContent);
+    expect(screen.queryByText('Regular season table')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand' })).toHaveAttribute(
       'aria-expanded',
       'false',
@@ -39,7 +28,7 @@ describe('Accordion', () => {
 
     await user.click(screen.getByText('Season Stats'));
 
-    expect(await screen.findByText('Regular season table')).toBeInTheDocument();
+    expect(screen.getByText('Regular season table')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Collapse' })).toHaveAttribute(
       'aria-expanded',
       'true',

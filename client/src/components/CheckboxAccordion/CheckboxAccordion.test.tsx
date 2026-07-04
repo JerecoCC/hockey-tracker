@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { render, screen, waitFor, waitForElementToBeRemoved } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CheckboxAccordion from './CheckboxAccordion';
 
@@ -29,16 +29,13 @@ describe('CheckboxAccordion', () => {
     await user.click(checkbox);
 
     expect(checkbox).toHaveAttribute('aria-expanded', 'true');
-    const region = await screen.findByRole('region', { name: 'Playoff Game' });
-    expect(region).toBeInTheDocument();
-    await waitFor(() => expect(region).toHaveAttribute('data-state', 'open'));
+    expect(screen.getByRole('region', { name: 'Playoff Game' })).toBeInTheDocument();
     expect(screen.getByLabelText('Round')).toBeInTheDocument();
 
     await user.click(checkbox);
 
     expect(checkbox).toHaveAttribute('aria-expanded', 'false');
-    await waitFor(() => expect(region).toHaveAttribute('data-state', 'closed'));
-    await waitForElementToBeRemoved(region);
+    expect(screen.queryByRole('region', { name: 'Playoff Game' })).not.toBeInTheDocument();
   });
 
   it('does not open while disabled', async () => {

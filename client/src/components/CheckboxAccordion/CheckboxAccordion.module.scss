@@ -5,8 +5,6 @@
   --checkbox-accordion-border-color: var(--accordion-border-color, var(--app-border, #{$border}));
   --checkbox-accordion-header-bg: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
   --checkbox-accordion-header-bg-hover: var(--app-field-bg-hover, var(--filter-field-background, var(--app-field-bg, #{$bg-input})));
-  --checkbox-accordion-collapse-duration: 220ms;
-  --checkbox-accordion-collapse-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
   display: flex;
   flex-direction: column;
@@ -33,42 +31,7 @@
   }
 }
 
-.contentShell {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  overflow: hidden;
-  opacity: 0;
-  visibility: hidden;
-  will-change: height, opacity;
-  transition:
-    height var(--checkbox-accordion-collapse-duration) var(--checkbox-accordion-collapse-ease),
-    opacity var(--checkbox-accordion-collapse-duration) ease,
-    visibility 0s linear var(--checkbox-accordion-collapse-duration);
-}
-
-.contentShellOpen {
-  border-top: 1px solid var(--checkbox-accordion-border-color);
-  opacity: 1;
-  visibility: visible;
-  transition:
-    height var(--checkbox-accordion-collapse-duration) var(--checkbox-accordion-collapse-ease),
-    opacity var(--checkbox-accordion-collapse-duration) ease,
-    visibility 0s linear 0s;
-}
-
-.contentShellClosed {
-  pointer-events: none;
-}
-
 .content {
-  flex: 1 1 auto;
   min-width: 0;
-  min-height: 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .contentShell {
-    transition: none;
-  }
+  border-top: 1px solid var(--checkbox-accordion-border-color);
 }
