@@ -213,6 +213,7 @@ beforeEach(() => {
   mockUsePlayerDetails.mockReturnValue({
     player: {
       id: 'player-1',
+      league_player_number: '8478402',
       first_name: 'John',
       last_name: 'Smith',
       photo: null,
@@ -334,6 +335,11 @@ describe('PlayerDetails info tab', () => {
     const { container } = render(<PlayerDetails />);
 
     expect(screen.getByText('Player Info')).toBeInTheDocument();
+    const identityRow = container.querySelector('.infoPrimaryRow') as HTMLElement;
+    expect(within(identityRow).getByText('League Player Number')).toBeInTheDocument();
+    expect(within(identityRow).getByText('8478402')).toBeInTheDocument();
+    expect(within(identityRow).getByText('Rookie Season')).toBeInTheDocument();
+    expect(container.querySelector('.infoPrimaryDivider')).toBeInTheDocument();
     expect(screen.getByText('Season Stats')).toBeInTheDocument();
     expect(screen.getByRole('combobox')).toHaveTextContent('2023-24');
     expect(screen.getByText('Regular Season')).toBeInTheDocument();

@@ -46,6 +46,7 @@ const validateInches = (value: string) => {
 const isWholeNumberInput = (value: string) => value === '' || /^\d+$/.test(value);
 
 interface FormValues {
+  league_player_number: string;
   shoots: PlayerShoots | null;
   date_of_birth: string;
   birth_city: string;
@@ -77,6 +78,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
         ? cmToFtIn(player.height_cm)
         : { ft: null as null, inches: null as null };
     return {
+      league_player_number: player?.league_player_number ?? '',
       shoots: player?.shoots ?? null,
       date_of_birth: player?.date_of_birth ?? '',
       birth_city: player?.birth_city ?? '',
@@ -135,6 +137,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
     const hasFt = data.height_ft !== '';
     const hasIn = data.height_in !== '';
     const ok = await updatePlayer(player.id, {
+      league_player_number: data.league_player_number.trim() || null,
       shoots: data.shoots || null,
       date_of_birth: data.date_of_birth || null,
       birth_city: data.birth_city || null,
@@ -187,6 +190,29 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
         className={styles.form}
         onSubmit={onSubmit}
       >
+        <div className={seasons.length > 0 ? styles.playerInfoIdentityRow : styles.fullRow}>
+          <Field
+            label="League Player Number"
+            control={control}
+            name="league_player_number"
+            placeholder="e.g. 8478402"
+            inputMode="numeric"
+            transform={(value) => value.trim()}
+            disabled={isSubmitting}
+          />
+          {seasons.length > 0 && (
+            <Field
+              type="select"
+              label="Rookie Season"
+              control={control}
+              name="rookie_season_id"
+              options={rookieSeasonOptions}
+              placeholder="Select rookie season"
+              disabled={isSubmitting}
+            />
+          )}
+        </div>
+        <Divider className={styles.divider} />
         <div className={styles.playerInfoBirthRow}>
           <Field
             label="Birth City"
@@ -215,19 +241,6 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
             disabled={isSubmitting}
           />
         </div>
-        {seasons.length > 0 && (
-          <div className={styles.fullRow}>
-            <Field
-              type="select"
-              label="Rookie Season"
-              control={control}
-              name="rookie_season_id"
-              options={rookieSeasonOptions}
-              placeholder="Select rookie season"
-              disabled={isSubmitting}
-            />
-          </div>
-        )}
         <div className={styles.playerInfoVitalsRow}>
           <div className={styles.heightGroup}>
             <span className={styles.heightGroupLabel}>Height</span>

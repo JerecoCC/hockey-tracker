@@ -9,6 +9,7 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Chip from '@/components/Chip/Chip';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import Divider from '@/components/Divider/Divider';
 import Field from '@/components/Field/Field';
 import Section from '@/components/Section/Section';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
@@ -1513,6 +1514,19 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
         ) : null
       }
     >
+      <div className={styles.infoPrimary}>
+        <div className={styles.infoPrimaryRow}>
+          <InfoCell
+            label="League Player Number"
+            value={player.league_player_number}
+          />
+          <InfoCell
+            label="Rookie Season"
+            value={player.rookie_season_name}
+          />
+        </div>
+        <Divider className={styles.infoPrimaryDivider} />
+      </div>
       <div className={styles.infoGrid}>
         <InfoCell
           label="Date of Birth"
@@ -1525,10 +1539,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
         <InfoCell
           label="Birth Country"
           value={player.birth_country}
-        />
-        <InfoCell
-          label="Rookie Season"
-          value={player.rookie_season_name}
         />
         <InfoCell
           label="Height"

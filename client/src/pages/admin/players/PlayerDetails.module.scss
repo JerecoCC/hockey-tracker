@@ -183,6 +183,27 @@
 }
 
 .info {
+  &Primary {
+    display: flex;
+    flex-direction: column;
+    gap: $space-lg;
+    margin-bottom: $space-xl;
+  }
+
+  &PrimaryRow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-xl;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &PrimaryDivider {
+    --divider-color: var(--app-border, #{$border});
+  }
+
   &Grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

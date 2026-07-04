@@ -28,6 +28,17 @@
 }
 
 .playerInfo {
+  &IdentityRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 0.75rem;
+    row-gap: $space-md;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
   &VitalsRow {
     display: grid;
     grid-template-columns: 1fr 1fr;
