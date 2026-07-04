@@ -269,7 +269,7 @@ router.patch('/', async (req, res) => {
           let seedDate = current.effective_start;
           if (seedDate >= changeDate) {
             const [season] = await sql`
-              SELECT start_date::text AS start_date FROM seasons
+              SELECT seasons.start_date::text AS start_date FROM seasons
               JOIN player_teams ON player_teams.season_id = seasons.id
               WHERE player_teams.id = ${current.id}
             `;

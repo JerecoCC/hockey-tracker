@@ -299,6 +299,44 @@ describe('PATCH /api/admin/player-teams', () => {
     expect(sql).not.toHaveBeenCalled();
   });
 
+  it('uses the season start date when seeding backdated jersey history', async () => {
+    sql
+      .mockResolvedValueOnce([{
+        id: 'stint-1',
+        jersey_number: 43,
+        effective_start: '2025-12-01',
+      }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ start_date: '2025-10-07' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{
+        id: 'stint-1',
+        player_id: 'player-1',
+        team_id: 'team-1',
+        season_id: 'season-1',
+        jersey_number: 19,
+        is_prospect: false,
+        position: 'C',
+      }]);
+
+    const res = await request(app)
+      .patch('/api/admin/player-teams')
+      .send({
+        player_id: 'player-1',
+        team_id: 'team-1',
+        season_id: 'season-1',
+        jersey_number: 19,
+        effective_date: '2025-11-15',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.jersey_number).toBe(19);
+    expect(sql.mock.calls[2][0].join(' ')).toContain(
+      'SELECT seasons.start_date::text AS start_date FROM seasons',
+    );
+  });
+
   it('updates prospect status without creating a new stint', async () => {
     sql.mockResolvedValueOnce([{
       id: 'stint-1',
