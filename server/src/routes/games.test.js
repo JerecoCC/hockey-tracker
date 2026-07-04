@@ -319,6 +319,24 @@ describe('POST /api/admin/games', () => {
     expect(res.body.status).toBe('scheduled');
   });
 
+  it('normalizes date-only scheduled_at values as Eastern-local timestamps', async () => {
+    sql
+      .mockResolvedValueOnce([])                    // duplicate check miss
+      .mockResolvedValueOnce([{ id: 'game-1' }])     // INSERT RETURNING id
+      .mockResolvedValueOnce([GAME]);                // SELECT re-fetch
+
+    const res = await request(app).post('/api/admin/games').send({
+      season_id: 'season-1',
+      home_team_id: 'team-1',
+      away_team_id: 'team-2',
+      scheduled_at: '2026-01-17',
+    });
+
+    expect(res.status).toBe(201);
+    expect(sql.mock.calls[0][0].join(' ')).toContain("AT TIME ZONE 'America/New_York'");
+    expect(sql.mock.calls[1].slice(1)).toContain('2026-01-17 00:00:00');
+  });
+
   it('returns 409 for a duplicate matchup on the same date', async () => {
     sql.mockResolvedValueOnce([{ id: 'existing-game' }]); // duplicate check hit
     const res = await request(app).post('/api/admin/games').send({
@@ -392,6 +410,29 @@ describe('PATCH /api/admin/games/:id', () => {
       .send({ status: 'final' });
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/not found/i);
+  });
+
+  it('normalizes no-zone game timestamps as Eastern local time on update', async () => {
+    sql
+      .mockResolvedValueOnce([{
+        id: 'game-1',
+        season_id: 'season-1',
+        home_team_id: 'team-1',
+        away_team_id: 'team-2',
+        scheduled_at: null,
+        playoff_series_id: null,
+      }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([GAME]);
+
+    const res = await request(app).patch('/api/admin/games/game-1').send({
+      time_start: '2026-01-17T19:05:00',
+      time_end: '2026-01-18T02:42:00.000Z',
+    });
+
+    expect(res.status).toBe(200);
+    expect(sql.mock.calls[1].slice(1)).toContain('2026-01-17 19:05:00');
+    expect(sql.mock.calls[1].slice(1)).toContain('2026-01-18T02:42:00.000Z');
   });
 
   it('updates playoff round and game number in series when provided', async () => {

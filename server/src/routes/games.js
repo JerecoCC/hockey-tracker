@@ -22,16 +22,23 @@ const awayTeam = alias(teams, 't_away');
 
 const resultRows = (result) => (Array.isArray(result) ? result : result?.rows ?? []);
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const LOCAL_DATE_TIME_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?$/;
+const EXPLICIT_TIME_ZONE_RE = /(?:Z|[+-]\d{2}:?\d{2})$/i;
 const refreshGameStatSnapshots = (gameId) => rebuildGameStats(sql, gameId);
 
-const normalizeAdminScheduledAt = (value) => {
-  if (typeof value !== 'string') return value ?? null;
+const normalizeGameEasternTimestamp = (value) => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'string') return value;
   const trimmed = value.trim();
-  if (!DATE_ONLY_RE.test(trimmed)) return trimmed || null;
+  if (!trimmed) return null;
 
-  // Admin-entered game dates are ET calendar dates. Store a stable midday
-  // timestamp so ET formatting always lands on the selected date.
-  return `${trimmed}T12:00:00Z`;
+  if (DATE_ONLY_RE.test(trimmed)) return `${trimmed} 00:00:00`;
+  if (!EXPLICIT_TIME_ZONE_RE.test(trimmed) && LOCAL_DATE_TIME_RE.test(trimmed)) {
+    return trimmed.replace('T', ' ');
+  }
+
+  return trimmed;
 };
 
 const normalizeLeagueNumber = (value) => {
@@ -410,14 +417,14 @@ router.get('/', async (req, res) => {
     if (status) where.push(eq(gamesTable.status, status));
     if (week) {
       where.push(ormSql`
-        ${gamesTable.scheduledAt} >= ${week}::date
-        AND ${gamesTable.scheduledAt} < (${week}::date + INTERVAL '7 days')
+        (${gamesTable.scheduledAt} AT TIME ZONE 'America/New_York')::date >= ${week}::date
+        AND (${gamesTable.scheduledAt} AT TIME ZONE 'America/New_York')::date < (${week}::date + INTERVAL '7 days')
       `);
     }
     if (month) {
       where.push(ormSql`
-        ${gamesTable.scheduledAt} >= (${month} || '-01')::date
-        AND ${gamesTable.scheduledAt} < ((${month} || '-01')::date + INTERVAL '1 month')
+        (${gamesTable.scheduledAt} AT TIME ZONE 'America/New_York')::date >= (${month} || '-01')::date
+        AND (${gamesTable.scheduledAt} AT TIME ZONE 'America/New_York')::date < ((${month} || '-01')::date + INTERVAL '1 month')
       `);
     }
 
@@ -961,13 +968,8 @@ router.get('/route-lookup', async (req, res) => {
       ) home_identity ON true
       WHERE g.season_id = ${season_id}::uuid
         AND (
-          CASE
-            WHEN lower(l.code) = 'nhl' THEN (
-              (g.scheduled_at AT TIME ZONE 'America/New_York')::date = ${gameDate}::date
-              OR (g.scheduled_at AT TIME ZONE 'UTC')::date = ${gameDate}::date
-            )
-            ELSE (g.scheduled_at AT TIME ZONE 'UTC')::date = ${gameDate}::date
-          END
+          (g.scheduled_at AT TIME ZONE 'America/New_York')::date = ${gameDate}::date
+          OR (g.scheduled_at AT TIME ZONE 'UTC')::date = ${gameDate}::date
         )
         AND CONCAT(
           regexp_replace(
@@ -1393,7 +1395,7 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'home_team_id and away_team_id must be different' });
   }
 
-  const normalizedScheduledAt = normalizeAdminScheduledAt(scheduled_at);
+  const normalizedScheduledAt = normalizeGameEasternTimestamp(scheduled_at);
   const normalizedLeagueGameNumber = normalizeLeagueNumber(league_game_number);
 
   // Reject a duplicate matchup on the same calendar date. Games with a null date
@@ -1405,7 +1407,8 @@ router.post('/', async (req, res) => {
         AND home_team_id = ${home_team_id}
         AND away_team_id = ${away_team_id}
         AND scheduled_at IS NOT NULL
-        AND scheduled_at::date = ${normalizedScheduledAt}::date
+        AND (scheduled_at AT TIME ZONE 'America/New_York')::date =
+          (${normalizedScheduledAt}::timestamptz AT TIME ZONE 'America/New_York')::date
       LIMIT 1
     `;
     if (dup.length > 0) {
@@ -1592,7 +1595,13 @@ router.patch('/:id', async (req, res) => {
     : (current_period ?? null);
   const normalizedScheduledAt = scheduled_at === undefined
     ? undefined
-    : normalizeAdminScheduledAt(scheduled_at);
+    : normalizeGameEasternTimestamp(scheduled_at);
+  const normalizedTimeStart = time_start === undefined
+    ? undefined
+    : normalizeGameEasternTimestamp(time_start);
+  const normalizedTimeEnd = time_end === undefined
+    ? undefined
+    : normalizeGameEasternTimestamp(time_end);
   const leagueGameNumberInBody = 'league_game_number' in req.body;
   const normalizedLeagueGameNumber = normalizeLeagueNumber(league_game_number);
 
@@ -1617,7 +1626,8 @@ router.patch('/:id', async (req, res) => {
           AND home_team_id = ${finalHome}
           AND away_team_id = ${finalAway}
           AND scheduled_at IS NOT NULL
-          AND scheduled_at::date = ${finalScheduledAt}::date
+          AND (scheduled_at AT TIME ZONE 'America/New_York')::date =
+            (${finalScheduledAt}::timestamptz AT TIME ZONE 'America/New_York')::date
         LIMIT 1
       `;
       if (dup.length > 0) {
@@ -1659,8 +1669,8 @@ router.patch('/:id', async (req, res) => {
         star_1_id             = COALESCE(${star_1_id             ?? null}, star_1_id),
         star_2_id             = COALESCE(${star_2_id             ?? null}, star_2_id),
         star_3_id                = COALESCE(${star_3_id                ?? null}, star_3_id),
-        time_start               = COALESCE(${time_start               ?? null}, time_start),
-        time_end                 = COALESCE(${time_end                 ?? null}, time_end),
+        time_start               = COALESCE(${normalizedTimeStart      ?? null}, time_start),
+        time_end                 = COALESCE(${normalizedTimeEnd        ?? null}, time_end),
         shootout_first_team_id   = COALESCE(${shootout_first_team_id   ?? null}, shootout_first_team_id)
       WHERE id = ${id}
     `;
