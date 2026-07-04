@@ -108,6 +108,24 @@ interface ExistingGoalieStint extends GoalieStintPayload {
 
 type ShootoutAttemptPayload = Pick<ShootoutAttempt, 'team_id' | 'shooter_id' | 'scored'>;
 
+function leaguePlayerNumberLabel(value: string | number | null | undefined) {
+  return value == null || value === '' ? null : `league player number ${value}`;
+}
+
+function pwhlPlayerIdentifier(player: PwhlPlayer) {
+  return leaguePlayerNumberLabel(player.playerId) ?? `#${player.sweaterNumber} ${player.name}`;
+}
+
+function localPlayerIdentifier(
+  player: Pick<TeamPlayerRecord, 'league_player_number' | 'first_name' | 'last_name' | 'jersey_number'>,
+) {
+  const fallbackJersey = player.jersey_number == null ? '' : `#${player.jersey_number} `;
+  return (
+    leaguePlayerNumberLabel(player.league_player_number) ??
+    `${fallbackJersey}${player.first_name} ${player.last_name}`
+  );
+}
+
 interface FillSummary {
   gameId: string;
   goalsCreated: number;
@@ -198,6 +216,8 @@ export async function autofillGameFromPwhlGamecenter(
     fetchTeamPlayers(game.away_team.id, game.season_id, rosterDate),
     fetchTeamPlayers(game.home_team.id, game.season_id, rosterDate),
   ]);
+  let baseAwayPlayers = initialAwayPlayers;
+  let baseHomePlayers = initialHomePlayers;
   const pwhlPlayers = {
     away: getPwhlPlayers(summary, 'away'),
     home: getPwhlPlayers(summary, 'home'),
@@ -216,26 +236,33 @@ export async function autofillGameFromPwhlGamecenter(
         game.away_team.id,
         pwhlPlayers.away,
         initialAwayPlayers,
-      ).map((conflict) => ({ ...conflict, targetCode: game.away_team.code })),
+      ).map((conflict) => ({
+        ...conflict,
+        targetCode: game.away_team.code,
+        targetTeamId: game.away_team.id,
+      })),
       ...findCrossTeamPlayerConflicts(
         leaguePlayers,
         game.home_team.id,
         pwhlPlayers.home,
         initialHomePlayers,
-      ).map((conflict) => ({ ...conflict, targetCode: game.home_team.code })),
+      ).map((conflict) => ({
+        ...conflict,
+        targetCode: game.home_team.code,
+        targetTeamId: game.home_team.id,
+      })),
     ];
     if (conflicts.length > 0) {
-      const lines = conflicts
-        .map(
-          (conflict) =>
-            `#${conflict.externalPlayer.sweaterNumber} ${conflict.externalPlayer.name} -> ${conflict.targetCode} (currently on ${conflict.existing.team_code ?? 'another team'})`,
-        )
-        .join('\n');
-      throw new Error(
-        `Auto-fill stopped because ${conflicts.length} PWHL ${pluralize('player', conflicts.length)} already ` +
-          `${conflicts.length === 1 ? 'exists' : 'exist'} on another team. Move ` +
-          `${conflicts.length === 1 ? 'this player' : 'these players'} first, then re-run auto-fill:\n${lines}`,
+      await moveCrossTeamPlayerConflicts(
+        game,
+        conflicts,
+        null,
+        warnings,
       );
+      [baseAwayPlayers, baseHomePlayers] = await Promise.all([
+        fetchTeamPlayers(game.away_team.id, game.season_id, rosterDate),
+        fetchTeamPlayers(game.home_team.id, game.season_id, rosterDate),
+      ]);
     }
   }
 
@@ -244,7 +271,7 @@ export async function autofillGameFromPwhlGamecenter(
     game.away_team.id,
     game.away_team.code,
     pwhlPlayers.away,
-    initialAwayPlayers,
+    baseAwayPlayers,
     rosterDate,
     warnings,
   );
@@ -253,7 +280,7 @@ export async function autofillGameFromPwhlGamecenter(
     game.home_team.id,
     game.home_team.code,
     pwhlPlayers.home,
-    initialHomePlayers,
+    baseHomePlayers,
     rosterDate,
     warnings,
   );
@@ -646,6 +673,11 @@ interface PlayerConflict {
   existing: LeaguePlayer;
 }
 
+interface MovePlayerConflict extends PlayerConflict {
+  targetCode: string;
+  targetTeamId: string;
+}
+
 function findCrossTeamPlayerConflicts(
   leaguePlayers: LeaguePlayer[],
   teamId: string,
@@ -677,6 +709,49 @@ function findCrossTeamPlayerConflicts(
   });
 }
 
+async function moveCrossTeamPlayerConflicts(
+  game: GameRecord,
+  conflicts: MovePlayerConflict[],
+  moveDate: string | null | undefined,
+  warnings: string[],
+) {
+  const normalizedMoveDate = moveDate?.slice(0, 10);
+  if (!normalizedMoveDate) {
+    throw new Error(
+      'Auto-fill found cross-team PWHL player movement, but no official acquisition date was available. Record the movement date manually, then run auto-fill again.',
+    );
+  }
+
+  for (const conflict of conflicts) {
+    await apiPost<
+      unknown,
+      {
+        player_id: string;
+        season_id: string;
+        to_team_id: string;
+        trade_date: string;
+        jersey_number: number;
+        position: string;
+        acquisition_type: string | null;
+      }
+    >('/admin/player-teams/trade', {
+      player_id: conflict.existing.id,
+      season_id: game.season_id,
+      to_team_id: conflict.targetTeamId,
+      trade_date: normalizedMoveDate,
+      jersey_number: conflict.externalPlayer.sweaterNumber,
+      position: conflict.externalPlayer.position,
+      acquisition_type: null,
+    });
+  }
+
+  warnings.push(
+    `Auto-recorded ${conflicts.length} PWHL ${pluralize('player movement', conflicts.length)} from game data: ${conflicts
+      .map((conflict) => `${pwhlPlayerIdentifier(conflict.externalPlayer)} to ${conflict.targetCode}`)
+      .join(', ')}.`,
+  );
+}
+
 async function ensurePwhlPlayersRostered(
   game: GameRecord,
   teamId: string,
@@ -697,7 +772,7 @@ async function ensurePwhlPlayersRostered(
     const lines = jerseyConflicts
       .map(
         ({ player, local }) =>
-          `#${player.sweaterNumber} ${player.name} conflicts with ${local.first_name} ${local.last_name}`,
+          `${pwhlPlayerIdentifier(player)} conflicts with ${localPlayerIdentifier(local)}`,
       )
       .join('; ');
     throw new Error(`Auto-fill stopped because ${teamCode} has jersey conflicts: ${lines}.`);
@@ -732,7 +807,7 @@ async function ensurePwhlPlayersRostered(
 
   warnings.push(
     `Auto-created ${missing.length} missing ${teamCode} ${pluralize('player', missing.length)} from PWHL data: ${missing
-      .map((player) => `#${player.sweaterNumber} ${player.name}`)
+      .map((player) => pwhlPlayerIdentifier(player))
       .join(', ')}.`,
   );
 
@@ -748,7 +823,7 @@ function matchPwhlPlayers(
   const matched = externalPlayers.flatMap((externalPlayer) => {
     const local = findLocalPlayerForExternal(externalPlayer, localPlayers);
     if (!local) {
-      missing.push(`#${externalPlayer.sweaterNumber} ${externalPlayer.name}`);
+      missing.push(pwhlPlayerIdentifier(externalPlayer));
       return [];
     }
     return [{
@@ -791,7 +866,12 @@ async function syncLeaguePlayerNumbers(matched: Record<TeamSide, MatchedPlayer[]
   if (conflicts.length > 0) {
     throw new Error(
       `League player number mismatch: ${conflicts
-        .map((player) => `${player.name} is ${player.localLeaguePlayerNumber}, PWHL reports ${player.playerId}`)
+        .map(
+          (player) =>
+            `${leaguePlayerNumberLabel(player.localLeaguePlayerNumber)} conflicts with ${leaguePlayerNumberLabel(
+              player.playerId,
+            )}`,
+        )
         .join('; ')}.`,
     );
   }

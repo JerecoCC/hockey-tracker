@@ -286,6 +286,13 @@ describe('autofillGameFromPwhlGamecenter', () => {
         expect.objectContaining({ first_name: 'Maddie', last_name: 'Rooney', league_player_number: '123' }),
       ]),
     );
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('league player number 317'),
+        expect.stringContaining('league player number 20'),
+      ]),
+    );
+    expect(result.warnings.join(' ')).not.toContain('#11 Kiara Zanon');
 
     expect(mockedAxios.patch).toHaveBeenCalledWith(
       expect.stringContaining('/admin/games/game-1'),
@@ -445,6 +452,22 @@ describe('autofillGameFromPwhlGamecenter', () => {
           time_on_ice: 1800,
         }),
       ]),
+    );
+  });
+
+  it('labels PWHL jersey conflicts with league player numbers when available', async () => {
+    extraPlayers.push({
+      id: 'wrong-player',
+      team_id: 'min-team',
+      league_player_number: '999',
+      first_name: 'Wrong',
+      last_name: 'Player',
+      jersey_number: 26,
+      position: 'F',
+    });
+
+    await expect(autofillGameFromPwhlGamecenter(game, '210')).rejects.toThrow(
+      'league player number 20 conflicts with league player number 999',
     );
   });
 });
