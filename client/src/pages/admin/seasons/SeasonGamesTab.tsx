@@ -1149,27 +1149,25 @@ const SeasonGamesTab = ({
               <MonthCalendar
                 month={calendarMonth}
                 loading={loading}
-                getDayHeaderRight={({ dateKey }) => {
+                getDayLabelSuffix={({ dateKey }) => {
                   const gameCount = calendarGamesByDate.get(dateKey)?.length ?? 0;
-                  if (isEnded && gameCount === 0) return undefined;
+                  return gameCount > 0 ? (
+                    <ScheduleCalendarDayCount
+                      count={gameCount}
+                      showLabel
+                    />
+                  ) : undefined;
+                }}
+                getDayHeaderRight={({ dateKey }) => {
+                  if (isEnded) return undefined;
 
                   const dayGames = calendarGamesByDate.get(dateKey) ?? [];
                   return (
-                    <>
-                      {gameCount > 0 && (
-                        <ScheduleCalendarDayCount
-                          count={gameCount}
-                          showLabel
-                        />
-                      )}
-                      {!isEnded && (
-                        <MoreActionsMenu
-                          iconSize="0.85rem"
-                          disabled={autofillDay === dateKey}
-                          items={buildDayActions(dateKey, dayGames)}
-                        />
-                      )}
-                    </>
+                    <MoreActionsMenu
+                      iconSize="0.85rem"
+                      disabled={autofillDay === dateKey}
+                      items={buildDayActions(dateKey, dayGames)}
+                    />
                   );
                 }}
                 renderDayContent={({ dateKey }) => {
