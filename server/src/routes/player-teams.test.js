@@ -652,6 +652,40 @@ describe('GET /api/admin/player-teams/history/:playerId/jerseys', () => {
   });
 });
 
+describe('PATCH /api/admin/player-teams/history/jerseys/:id', () => {
+  it('updates a jersey history row and syncs the latest stint jersey', async () => {
+    const row = {
+      id: 'j-1',
+      player_teams_id: 'stint-1',
+      jersey_number: 72,
+      effective_from: '2026-01-25',
+    };
+    sql
+      .mockResolvedValueOnce([row])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app)
+      .patch('/api/admin/player-teams/history/jerseys/j-1')
+      .send({ jersey_number: 72, effective_from: '2026-01-25' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(row);
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql.mock.calls[0][0].join(' ')).toContain('UPDATE jersey_number_history');
+    expect(sql.mock.calls[1][0].join(' ')).toContain('UPDATE player_teams');
+  });
+
+  it('validates jersey history update payloads', async () => {
+    const res = await request(app)
+      .patch('/api/admin/player-teams/history/jerseys/j-1')
+      .send({ jersey_number: 172, effective_from: '2026-01-25' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/jersey_number/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+});
+
 describe('GET /api/admin/player-teams/history/:playerId/photos', () => {
   it('returns player photo history rows unchanged', async () => {
     const rows = [{

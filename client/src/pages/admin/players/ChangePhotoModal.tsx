@@ -18,6 +18,7 @@ interface FormValues {
 interface Props {
   open: boolean;
   stint: PlayerStintRecord | null;
+  initialSeasonId?: string | null;
   seasons: SeasonRecord[];
   history: PlayerPhotoEntry[];
   onClose: () => void;
@@ -32,6 +33,7 @@ interface Props {
 const ChangePhotoModal = ({
   open,
   stint,
+  initialSeasonId,
   seasons,
   history,
   onClose,
@@ -39,14 +41,17 @@ const ChangePhotoModal = ({
   changePlayerPhoto,
 }: Props) => {
   const formValues = useMemo<FormValues>(
-    () => ({
-      season_id: stint?.season_id ?? '',
-      photo:
-        history.find(
-          (entry) => entry.team_id === stint?.team_id && entry.season_id === stint?.season_id,
-        )?.photo ?? null,
-    }),
-    [history, stint],
+    () => {
+      const seasonId = initialSeasonId ?? stint?.season_id ?? '';
+      return {
+        season_id: seasonId,
+        photo:
+          history.find(
+            (entry) => entry.team_id === stint?.team_id && entry.season_id === seasonId,
+          )?.photo ?? null,
+      };
+    },
+    [history, initialSeasonId, stint],
   );
   const {
     control,

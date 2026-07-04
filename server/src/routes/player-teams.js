@@ -19,6 +19,15 @@ const ACQUISITION_TYPES = new Set([
 ]);
 const normalizeAcquisitionType = (value) => (value === '' || value == null ? null : value);
 const isValidAcquisitionType = (value) => value == null || ACQUISITION_TYPES.has(value);
+const isValidDateOnly = (value) => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+};
+const isValidJerseyNumber = (value) => {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 0 && number <= 99;
+};
 
 const upsertCareerStint = async ({
   player_id,
@@ -471,6 +480,55 @@ router.get('/history/:playerId/jerseys', async (req, res) => {
     return res.json(rows);
   } catch (err) {
     console.error('jersey history error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/player-teams/history/jerseys/:id
+// Updates a stored jersey_number_history row and syncs the active player_teams
+// jersey to the latest dated history entry for that stint.
+// ---------------------------------------------------------------------------
+router.patch('/history/jerseys/:id', async (req, res) => {
+  const { id } = req.params;
+  const { jersey_number, effective_from } = req.body;
+  if (!isValidJerseyNumber(jersey_number)) {
+    return res.status(400).json({ error: 'jersey_number must be an integer between 0 and 99' });
+  }
+  if (!isValidDateOnly(effective_from)) {
+    return res.status(400).json({ error: 'effective_from must be a YYYY-MM-DD date' });
+  }
+
+  try {
+    const rows = await sql`
+      UPDATE jersey_number_history
+      SET
+        jersey_number = ${Number(jersey_number)},
+        effective_from = ${effective_from}::date
+      WHERE id = ${id}
+      RETURNING id, player_teams_id, jersey_number, effective_from::text AS effective_from
+    `;
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Jersey history row not found' });
+    }
+
+    await sql`
+      WITH latest AS (
+        SELECT player_teams_id, jersey_number
+        FROM jersey_number_history
+        WHERE player_teams_id = ${rows[0].player_teams_id}
+        ORDER BY effective_from DESC, created_at DESC, id DESC
+        LIMIT 1
+      )
+      UPDATE player_teams pt
+      SET jersey_number = latest.jersey_number
+      FROM latest
+      WHERE pt.id = latest.player_teams_id
+    `;
+
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('jersey history update error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

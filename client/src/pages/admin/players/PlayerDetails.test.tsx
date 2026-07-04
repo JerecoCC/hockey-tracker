@@ -22,6 +22,8 @@ import PlayerDetails, { collapseSameTeamStints } from './PlayerDetails';
 
 const mockNavigate = jest.fn();
 const mockUsePageBreadcrumbs = jest.fn();
+const mockJerseyHistoryEditModal = jest.fn(() => null);
+const mockChangePhotoModal = jest.fn(() => null);
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 jest.mock('axios');
@@ -136,6 +138,18 @@ jest.mock('./StintEditModal', () => ({
   ACQUISITION_TYPE_LABELS: { trade: 'Trade' },
 }));
 jest.mock('./ChangeJerseyModal', () => () => null);
+jest.mock('./JerseyHistoryEditModal', () => {
+  const MockJerseyHistoryEditModal = (props: any) => mockJerseyHistoryEditModal(props);
+
+  MockJerseyHistoryEditModal.displayName = 'MockJerseyHistoryEditModal';
+  return MockJerseyHistoryEditModal;
+});
+jest.mock('./ChangePhotoModal', () => {
+  const MockChangePhotoModal = (props: any) => mockChangePhotoModal(props);
+
+  MockChangePhotoModal.displayName = 'MockChangePhotoModal';
+  return MockChangePhotoModal;
+});
 jest.mock('@/components/ImagePreviewModal/ImagePreviewModal', () => ({ open, src, alt }: any) =>
   open ? (
     <div
@@ -295,6 +309,7 @@ beforeEach(() => {
     updateStint: jest.fn(),
     deleteStint: jest.fn(),
     changeJerseyNumber: jest.fn(),
+    updateJerseyHistoryEntry: jest.fn(),
     changePlayerPhoto: jest.fn(),
     uploadStintPhoto: jest.fn(),
     saving: false,
@@ -511,6 +526,20 @@ describe('PlayerDetails info tab', () => {
     expect(within(currentJerseyItem).getByText('Current')).toHaveClass('tag', 'success');
     expect(currentJerseyItem).toHaveClass('itemCompact');
 
+    await user.click(within(currentJerseyItem).getByRole('button', { name: 'Edit jersey history' }));
+    expect(mockJerseyHistoryEditModal).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        open: true,
+        entry: expect.objectContaining({
+          id: 'jersey-2',
+          player_teams_id: 'stint-1',
+          jersey_number: 91,
+          effective_from: '2025-01-05',
+        }),
+        updateJerseyHistoryEntry: expect.any(Function),
+      }),
+    );
+
     const startingJerseyItem = within(stintAccordion)
       .getByText('Oct 1, 2024 - Jan 4, 2025')
       .closest('li') as HTMLElement;
@@ -528,6 +557,23 @@ describe('PlayerDetails info tab', () => {
     expect(within(photoItem).getByText('Current')).toHaveClass('tag', 'success');
     expect(within(photoItem).queryByText('Toronto Maple Leafs')).not.toBeInTheDocument();
     expect(photoItem).toHaveClass('itemCompact');
+
+    await user.click(within(photoItem).getByRole('button', { name: 'Change season photo' }));
+    expect(screen.queryByRole('dialog', { name: 'Image Preview' })).not.toBeInTheDocument();
+    expect(mockChangePhotoModal).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        open: true,
+        stint: expect.objectContaining({ id: 'stint-1' }),
+        initialSeasonId: 'season-1',
+        history: expect.arrayContaining([
+          expect.objectContaining({
+            id: 'photo-1',
+            season_id: 'season-1',
+            photo: '/photo.jpg',
+          }),
+        ]),
+      }),
+    );
 
     await user.click(photoItem);
 
@@ -721,6 +767,7 @@ describe('PlayerDetails info tab', () => {
       updateStint,
       deleteStint: jest.fn(),
       changeJerseyNumber,
+      updateJerseyHistoryEntry: jest.fn(),
       changePlayerPhoto: jest.fn(),
       uploadStintPhoto: jest.fn(),
       saving: false,
@@ -786,6 +833,7 @@ describe('PlayerDetails info tab', () => {
       updateStint: jest.fn(),
       deleteStint: jest.fn(),
       changeJerseyNumber,
+      updateJerseyHistoryEntry: jest.fn(),
       changePlayerPhoto: jest.fn(),
       uploadStintPhoto: jest.fn(),
       saving: false,
@@ -962,6 +1010,7 @@ describe('PlayerDetails info tab', () => {
       updateStint: jest.fn(),
       deleteStint,
       changeJerseyNumber: jest.fn(),
+      updateJerseyHistoryEntry: jest.fn(),
       changePlayerPhoto: jest.fn(),
       uploadStintPhoto: jest.fn(),
       saving: false,

@@ -187,6 +187,36 @@ describe('usePlayerTradeHistory', () => {
 });
 
 describe('useStintActions', () => {
+  it('updates a jersey history row and refreshes related player data', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+    mockedAxios.patch.mockResolvedValueOnce({});
+
+    const { result } = renderHook(() => useStintActions('player-1'), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.updateJerseyHistoryEntry('jersey-1', {
+          jersey_number: 72,
+          effective_from: '2026-01-25',
+        }),
+      ).resolves.toBe(true);
+    });
+
+    expect(mockedAxios.patch).toHaveBeenCalledWith(
+      '/api/admin/player-teams/history/jerseys/jersey-1',
+      { jersey_number: 72, effective_from: '2026-01-25' },
+      { headers: { Authorization: 'Bearer test-token' } },
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['jersey-history', 'player-1'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['player-trade-history', 'player-1'],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['players'] });
+  });
+
   it('deletes a stint and refreshes related player data', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');

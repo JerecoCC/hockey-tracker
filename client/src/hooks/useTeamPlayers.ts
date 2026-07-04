@@ -59,6 +59,11 @@ export interface CreateStintData {
   end_date?: string | null;
 }
 
+export interface UpdateJerseyHistoryEntryData {
+  jersey_number: number;
+  effective_from: string;
+}
+
 /** One row from jersey_number_history for a player's stint. */
 export interface JerseyHistoryEntry {
   id: string;
@@ -277,6 +282,33 @@ export const useStintActions = (playerId: string | null) => {
     }
   };
 
+  const updateJerseyHistoryEntry = async (
+    entryId: string,
+    data: UpdateJerseyHistoryEntryData,
+  ): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await axios.patch(`${API}/admin/player-teams/history/jerseys/${entryId}`, data, {
+        headers: authHeaders(),
+      });
+      toast.success('Jersey history updated!');
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['jersey-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update jersey history'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const changePlayerPhoto = async (
     stint: PlayerStintRecord,
     seasonId: string,
@@ -316,6 +348,7 @@ export const useStintActions = (playerId: string | null) => {
     updateStint,
     deleteStint,
     changeJerseyNumber,
+    updateJerseyHistoryEntry,
     changePlayerPhoto,
     uploadStintPhoto,
     saving,
