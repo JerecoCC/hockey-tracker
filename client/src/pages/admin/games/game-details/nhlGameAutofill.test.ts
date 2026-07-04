@@ -1153,6 +1153,52 @@ describe('autofillGameFromNhlGamecenter', () => {
     }
   });
 
+  it('allows a dressed player to share a jersey number with a prospect', async () => {
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          defense: [
+            {
+              playerId: 700004,
+              sweaterNumber: 4,
+              firstName: { default: 'Carson' },
+              lastName: { default: 'Soucy' },
+            },
+          ],
+        },
+      },
+    };
+    extraPlayers = [
+      {
+        id: 'soucy',
+        league_player_number: '700004',
+        first_name: 'Carson',
+        last_name: 'Soucy',
+        team_id: 'min-team',
+        jersey_number: 4,
+        position: 'D',
+        is_prospect: false,
+      },
+      {
+        id: 'mcward',
+        league_player_number: '700005',
+        first_name: 'Cole',
+        last_name: 'McWard',
+        team_id: 'min-team',
+        jersey_number: 4,
+        position: 'D',
+        is_prospect: true,
+      },
+    ];
+
+    await expect(autofillGameFromNhlGamecenter(game, '317')).resolves.toMatchObject({
+      summary: expect.objectContaining({ rosterPlayers: 7 }),
+    });
+  });
+
   it('sets start and end times from the club playing roster header', async () => {
     optionalRosterReportHtml = `
       <html><body>

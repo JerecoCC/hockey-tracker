@@ -40,6 +40,7 @@ interface TeamPlayerRecord {
   jersey_number: number | null;
   team_id: string;
   position: string | null;
+  is_prospect?: boolean | null;
 }
 
 interface NhlPlayer {
@@ -1162,6 +1163,7 @@ async function ensureNhlPlayersRostered(
       rosterCandidateReportPlayer(candidate),
       candidate.leaguePlayerNumber,
       localPlayers,
+      matchedLocal,
     )
       .filter((local) => local.id !== matchedLocal.id)
       .map((local) => ({ candidate, local }));
@@ -1357,11 +1359,22 @@ function findNhlJerseyConflicts(
   reportPlayer: ReportRosterPlayer,
   leaguePlayerNumber: string | null | undefined,
   localPlayers: TeamPlayerRecord[],
+  reportLocalPlayer?: TeamPlayerRecord | null,
 ) {
+  const reportPlayerRow =
+    reportLocalPlayer ??
+    (
+      leaguePlayerNumber
+        ? localPlayers.find((local) => local.league_player_number === leaguePlayerNumber)
+        : null
+    );
+
   return localPlayers.filter(
     (local) =>
       local.jersey_number === reportPlayer.sweaterNumber &&
       (!leaguePlayerNumber || local.league_player_number !== leaguePlayerNumber) &&
+      !local.is_prospect &&
+      !reportPlayerRow?.is_prospect &&
       !localPlayerMatchesName(local, reportPlayer.name),
   );
 }
