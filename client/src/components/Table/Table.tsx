@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import Icon from '../Icon/Icon';
 import TeamLogo from '../TeamLogo/TeamLogo';
 import Tooltip from '../Tooltip/Tooltip';
@@ -84,6 +84,7 @@ interface TableProps<T> {
   columns: Column<T>[];
   data: T[];
   rowKey: (row: T) => string;
+  minWidth?: CSSProperties['minWidth'];
   loading?: boolean;
   emptyMessage?: string;
   activeSortKey?: string;
@@ -97,6 +98,7 @@ const Table = <T,>({
   columns,
   data,
   rowKey,
+  minWidth,
   loading = false,
   emptyMessage = 'No results found.',
   activeSortKey,
@@ -105,6 +107,13 @@ const Table = <T,>({
   onRowClick,
   rowClassName,
 }: TableProps<T>) => {
+  const tableStyle =
+    minWidth == null
+      ? undefined
+      : ({
+          '--table-min-width': typeof minWidth === 'number' ? `${minWidth}px` : minWidth,
+        } as CSSProperties);
+
   if (loading) {
     return (
       <div className={styles.loaderWrapper}>
@@ -115,7 +124,10 @@ const Table = <T,>({
   }
 
   return (
-    <div className={styles.tableWrapper}>
+    <div
+      className={styles.tableWrapper}
+      style={tableStyle}
+    >
       <table>
         <thead>
           <tr>

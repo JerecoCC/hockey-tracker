@@ -8,6 +8,12 @@ describe('Badge', () => {
     expect(screen.getByText('12')).toHaveClass('value');
   });
 
+  it('renders text values with the default value slot', () => {
+    render(<Badge value="NHL" />);
+
+    expect(screen.getByText('NHL')).toHaveClass('value');
+  });
+
   it('renders the label after the value', () => {
     render(
       <Badge

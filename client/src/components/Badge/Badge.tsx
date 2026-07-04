@@ -1,9 +1,9 @@
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 import styles from './Badge.module.scss';
 
 export interface BadgeProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children'> {
-  label?: string;
-  value: number;
+  label?: ReactNode;
+  value: ReactNode;
 }
 
 const Badge = ({ label, value, className, ...rest }: BadgeProps) => (

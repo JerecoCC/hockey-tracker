@@ -1,4 +1,6 @@
+import Badge from '@/components/Badge/Badge';
 import Modal from '@/components/Modal/Modal';
+import Table, { type Column } from '@/components/Table/Table';
 import type { GameAutofillManualMoveReport, GameAutofillManualPlayerMove } from './gameAutofillTypes';
 import styles from './GameAutofillManualMoveReportModal.module.scss';
 
@@ -22,6 +24,46 @@ function formatPlayerMeta(move: GameAutofillManualPlayerMove) {
   ].filter(Boolean).join(' / ');
 }
 
+const columns: Column<GameAutofillManualPlayerMove>[] = [
+  {
+    type: 'custom',
+    header: 'Player',
+    render: (move) => {
+      const meta = formatPlayerMeta(move);
+
+      return (
+        <div className={styles.playerCell}>
+          <strong>{move.playerName}</strong>
+          {meta && <span>{meta}</span>}
+        </div>
+      );
+    },
+  },
+  {
+    type: 'custom',
+    header: 'League player number',
+    render: (move) => move.leaguePlayerNumber || '-',
+  },
+  {
+    type: 'custom',
+    header: 'Old team',
+    render: (move) => formatTeam(move.fromTeamCode, move.fromTeamName),
+  },
+  {
+    type: 'custom',
+    header: 'New team',
+    render: (move) => formatTeam(move.toTeamCode, move.toTeamName),
+  },
+];
+
+const getMoveRowKey = (gameId: string, move: GameAutofillManualPlayerMove) =>
+  [
+    gameId,
+    move.leaguePlayerNumber || move.playerName,
+    move.fromTeamCode || 'unassigned',
+    move.toTeamCode || 'unassigned',
+  ].join('-');
+
 const GameAutofillManualMoveReportModal = ({ open, reports, onClose }: Props) => (
   <Modal
     open={open}
@@ -41,38 +83,18 @@ const GameAutofillManualMoveReportModal = ({ open, reports, onClose }: Props) =>
             className={styles.game}
           >
             <div className={styles.gameHeader}>
-              <span className={styles.league}>{report.leagueCode}</span>
+              <Badge
+                value={report.leagueCode}
+                aria-label={report.leagueCode}
+              />
               <strong>{report.gameLabel}</strong>
             </div>
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Player</th>
-                    <th>League player number</th>
-                    <th>Old team</th>
-                    <th>New team</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {report.moves.map((move) => (
-                    <tr
-                      key={`${report.gameId}-${move.leaguePlayerNumber ?? move.playerName}-${move.toTeamCode}`}
-                    >
-                      <td>
-                        <div className={styles.playerCell}>
-                          <strong>{move.playerName}</strong>
-                          {formatPlayerMeta(move) && <span>{formatPlayerMeta(move)}</span>}
-                        </div>
-                      </td>
-                      <td>{move.leaguePlayerNumber || '-'}</td>
-                      <td>{formatTeam(move.fromTeamCode, move.fromTeamName)}</td>
-                      <td>{formatTeam(move.toTeamCode, move.toTeamName)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table
+              columns={columns}
+              data={report.moves}
+              rowKey={(move) => getMoveRowKey(report.gameId, move)}
+              minWidth={640}
+            />
           </section>
         ))}
       </div>

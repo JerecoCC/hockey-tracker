@@ -3,25 +3,30 @@
 
 // ── Table wrapper ──────────────────────────────────────────────────────
 .tableWrapper {
+  --table-min-width: 100%;
   --table-row-hover-bg: rgba(255, 255, 255, 0.04);
   --table-sorted-column-bg: color-mix(in srgb, #{$accent-light} 10%, transparent);
   --table-sorted-column-hover-bg: color-mix(in srgb, #{$accent-light} 15%, transparent);
   --table-sorted-column-header-bg: color-mix(in srgb, #{$accent-light} 14%, transparent);
 
   overflow-x: auto;
+  border: 1px solid var(--app-border, #{$border});
+  border-radius: $radius-md;
 }
 
 // ── Table ──────────────────────────────────────────────────────────────
 .tableWrapper table {
   width: 100%;
+  min-width: var(--table-min-width);
   border-collapse: collapse;
   font-size: $font-base;
 
   thead th {
     text-align: left;
-    padding: $space-md $space-lg;
+    padding: $space-sm $space-md;
     color: var(--app-text-muted, #{$text-dim});
-    font-weight: 600;
+    font-size: $font-xs;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 1px solid var(--divider-color, var(--app-border, #{$border}));
@@ -34,11 +39,15 @@
 
   tbody {
     tr {
-      border-bottom: 1px solid $bg-card;
+      border-bottom: 1px solid var(--app-border, #{$border});
       transition: background $transition-fast;
 
       &:hover {
         background: var(--table-row-hover-bg);
+      }
+
+      &:last-child {
+        border-bottom: 0;
       }
 
       &.clickableRow {
@@ -47,7 +56,7 @@
     }
 
     td {
-      padding: $space-lg;
+      padding: $space-sm $space-md;
       color: var(--app-text, #{$text-body});
       vertical-align: middle;
 
@@ -111,7 +120,7 @@
     align-items: center;
     gap: $space-xs;
     width: 100%;
-    padding: $space-md $space-lg;
+    padding: $space-sm $space-md;
     background: none;
     border: none;
     cursor: pointer;
@@ -193,7 +202,7 @@
     table {
       tbody {
         tr {
-          border-bottom: none;
+          border-bottom-color: var(--app-border, #{$border});
         }
       }
     }
