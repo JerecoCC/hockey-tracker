@@ -700,6 +700,7 @@ const CalendarGameCard = ({
     <CalendarGameListItem
       className={[
         styles.calendarGameLeagueTint,
+        !game.watched_by_user ? styles.calendarGameUnwatched : '',
         game.skipped_by_user ? styles.calendarGameSkipped : '',
       ]
         .filter(Boolean)
