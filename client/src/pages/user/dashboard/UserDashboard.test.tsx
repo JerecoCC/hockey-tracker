@@ -356,6 +356,7 @@ describe('UserDashboard', () => {
 
   it('marks a dashboard game as watched', async () => {
     mockAxios.post.mockResolvedValueOnce({ data: {} });
+    mockDashboardQueries({ todayGames: [makeGame({ status: 'final' })] });
 
     render(<UserDashboard />);
     fireEvent.click(screen.getByLabelText('Mark as watched'));
@@ -375,6 +376,16 @@ describe('UserDashboard', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
       queryKey: ['user-dashboard-watched-games'],
     });
+  });
+
+  it('hides the watch action for non-final dashboard games', () => {
+    mockDashboardQueries({ todayGames: [makeGame({ status: 'scheduled' })] });
+
+    render(<UserDashboard />);
+
+    expect(screen.queryByLabelText('Mark as watched')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Schedule watch')).toBeInTheDocument();
+    expect(screen.getByLabelText('Skip game')).toBeInTheDocument();
   });
 
   it('prevents scheduling a watch on or before the local game date', async () => {

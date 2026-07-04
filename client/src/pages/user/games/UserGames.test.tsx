@@ -604,6 +604,37 @@ describe('UserGames schedule views', () => {
       }),
     );
   });
+
+  it('hides the watch action for non-final user games', () => {
+    const scheduledGame = {
+      ...games[0],
+      status: 'scheduled',
+      scheduled_for: null,
+    };
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+      if (queryKey[0] === 'user-games') return { data: [scheduledGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    const gameCard = screen.getAllByText('AWY')[0].closest(`.${gameCardStyles.card}`);
+    expect(gameCard).not.toBeNull();
+    expect(
+      within(gameCard as HTMLElement).queryByRole('button', { name: 'Mark as watched' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(gameCard as HTMLElement).getByRole('button', { name: 'Schedule watch' }),
+    ).toBeInTheDocument();
+    expect(
+      within(gameCard as HTMLElement).getByRole('button', { name: 'Skip game' }),
+    ).toBeInTheDocument();
+  });
+
   it('shows a scheduled watch game original date in the user timezone', async () => {
     const user = userEvent.setup();
     const originalEtDate = localDateString(1);

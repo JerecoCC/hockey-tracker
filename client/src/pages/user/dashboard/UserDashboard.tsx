@@ -166,6 +166,8 @@ const getScoreCardGame = (game: GameRecord): GameRecord => ({
   series_away_wins: game.series_away_wins_at_game ?? null,
 });
 
+const canMarkGameWatched = (game: GameRecord) => game.status === 'final';
+
 const sortWatchedTeamSummaries = (a: TeamWatchSummary, b: TeamWatchSummary) => {
   if (b.count !== a.count) return b.count - a.count;
   return (a.team.team_name || a.team.name).localeCompare(b.team.team_name || b.team.name);
@@ -333,8 +335,13 @@ const UserDashboard = () => {
     }
   };
 
-  const markGameWatched = async (gameId: string) => {
+  const markGameWatched = async (game: GameRecord) => {
+    const gameId = game.id;
     if (actionGameId === gameId) return;
+    if (!canMarkGameWatched(game)) {
+      toast.error('Only final games can be marked as watched');
+      return;
+    }
     setActionGameId(gameId);
     try {
       await axios.post(
@@ -478,6 +485,7 @@ const UserDashboard = () => {
                 {todayGames.map((game) => {
                   const watched = !!game.watched_by_user;
                   const skipped = !!game.skipped_by_user;
+                  const canMarkWatched = canMarkGameWatched(game);
                   const busy = actionGameId === game.id;
                   return (
                     <GameCard
@@ -491,10 +499,11 @@ const UserDashboard = () => {
                           watched={watched}
                           skipped={skipped}
                           scheduled={!!game.scheduled_for}
+                          canMarkWatched={canMarkWatched}
                           busy={busy}
                           onView={() => navigate(`/games/${game.id}`)}
                           onDownloadScoreCard={() => setScoreCardTarget(getScoreCardGame(game))}
-                          onMarkWatched={() => markGameWatched(game.id)}
+                          onMarkWatched={() => markGameWatched(game)}
                           onUnwatch={() => unwatchGame(game.id)}
                           onUndoSkip={() => unwatchGame(game.id)}
                           onSchedule={() => openScheduleModal(game)}

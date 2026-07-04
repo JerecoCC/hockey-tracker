@@ -517,6 +517,7 @@ const SCHEDULE_TOAST_DATE_FMT = new Intl.DateTimeFormat('en-US', {
 const getGameActionLabel = (game: GameRecord) => `${game.away_team.code} @ ${game.home_team.code}`;
 const formatScheduleToastDate = (dateKey: string) =>
   SCHEDULE_TOAST_DATE_FMT.format(dateKeyToDate(dateKey));
+const canMarkGameWatched = (game: GameRecord) => game.status === 'final';
 
 // ── Playoff series markers ───────────────────────────────────────────────────
 
@@ -667,6 +668,7 @@ const CalendarGameCard = ({
   dragging?: boolean;
   busy: boolean;
 }) => {
+  const canMarkWatched = canMarkGameWatched(game);
   const showRecordedScore = shouldShowWatchedScore(game);
   const showMissingScore = !!game.watched_by_user && !showRecordedScore;
   const showScore = showRecordedScore || showMissingScore;
@@ -758,6 +760,7 @@ const CalendarGameCard = ({
           watched={!!game.watched_by_user}
           skipped={!!game.skipped_by_user}
           scheduled={!!game.scheduled_for}
+          canMarkWatched={canMarkWatched}
           busy={busy}
           onView={onOpen}
           onDownloadScoreCard={onDownloadScoreCard}
@@ -1149,6 +1152,10 @@ const UserGames = () => {
   const markGameWatched = async (game: GameRecord) => {
     const gameId = game.id;
     if (actionGameId === gameId) return;
+    if (!canMarkGameWatched(game)) {
+      toast.error('Only final games can be marked as watched');
+      return;
+    }
     setActionGameId(gameId);
     try {
       await axios.post(`${API}/user/watched-games/${gameId}`, {}, { headers: authHeaders() });
@@ -1370,6 +1377,7 @@ const UserGames = () => {
     const watched = !!game.watched_by_user;
     const skipped = !!game.skipped_by_user;
     const canOpen = watched || skipped;
+    const canMarkWatched = canMarkGameWatched(game);
     const busy = actionGameId === game.id;
 
     return (
@@ -1385,6 +1393,7 @@ const UserGames = () => {
             watched={watched}
             skipped={skipped}
             scheduled={!!game.scheduled_for}
+            canMarkWatched={canMarkWatched}
             busy={busy}
             onView={() => openGame(game)}
             onDownloadScoreCard={() => openScoreCardModal(game)}

@@ -6,6 +6,7 @@ interface UserGameActionsProps {
   watched: boolean;
   skipped: boolean;
   scheduled: boolean;
+  canMarkWatched?: boolean;
   busy: boolean;
   onView: () => MaybePromise;
   onDownloadScoreCard: () => MaybePromise;
@@ -24,6 +25,7 @@ const UserGameActions = ({
   watched,
   skipped,
   scheduled,
+  canMarkWatched = true,
   busy,
   onView,
   onDownloadScoreCard,
@@ -122,7 +124,7 @@ const UserGameActions = ({
         }}
       />
     )}
-    {!watched && !skipped && (
+    {!watched && !skipped && canMarkWatched && (
       <Button
         type="button"
         variant="outlined"

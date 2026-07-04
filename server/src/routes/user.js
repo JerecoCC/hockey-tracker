@@ -78,8 +78,11 @@ router.post('/watched-games/:gameId', async (req, res) => {
       ? req.body.watched_on
       : null;
   try {
-    const game = await sql`SELECT id FROM games WHERE id = ${gameId}`;
+    const game = await sql`SELECT id, status FROM games WHERE id = ${gameId}`;
     if (game.length === 0) return res.status(404).json({ error: 'Game not found' });
+    if (game[0].status !== 'final') {
+      return res.status(400).json({ error: 'Only final games can be marked as watched' });
+    }
 
     const [saved] = await sql`
       INSERT INTO user_watched_games (user_id, game_id, watched_at, watched_on, scheduled_for)
@@ -573,7 +576,7 @@ router.get('/games', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/user/games/route-lookup
-// Resolves /games/<MM-DD-YYYY>/<away-code>-vs-<home-code> to one visible game id.
+// Resolves /games/<MM-DD-YYYY>/<away-code>-vs-<home-code> to one favorite-team game id.
 // The route date is the Eastern game date, independent of the user's UI timezone.
 // ---------------------------------------------------------------------------
 router.get('/games/route-lookup', async (req, res) => {
@@ -593,6 +596,8 @@ router.get('/games/route-lookup', async (req, res) => {
     const rows = await sql`
       SELECT g.id AS game_id
       FROM games g
+      JOIN seasons s ON s.id = g.season_id
+      JOIN leagues l ON l.id = s.league_id
       LEFT JOIN LATERAL (
         SELECT code
         FROM team_iterations
@@ -607,17 +612,9 @@ router.get('/games/route-lookup', async (req, res) => {
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) home_identity ON true
-      LEFT JOIN user_watched_games uwg
-        ON uwg.user_id = ${userId}
-       AND uwg.game_id = g.id
       WHERE (
           (g.scheduled_at AT TIME ZONE 'America/New_York')::date = ${gameDate}::date
-          OR (
-            g.scheduled_time IS NOT NULL
-            AND g.scheduled_time <> '00:00'
-            AND (g.scheduled_at AT TIME ZONE 'UTC')::time = TIME '00:00:00'
-            AND (g.scheduled_at AT TIME ZONE 'UTC')::date = ${gameDate}::date
-          )
+          OR (g.scheduled_at AT TIME ZONE 'UTC')::date = ${gameDate}::date
         )
         AND CONCAT(
           regexp_replace(
@@ -640,7 +637,6 @@ router.get('/games/route-lookup', async (req, res) => {
           WHERE uft.user_id = ${userId}
             AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
         )
-        AND uwg.skipped_at IS NULL
       ORDER BY g.scheduled_at DESC NULLS LAST, g.created_at DESC, g.id DESC
       LIMIT 1
     `;
@@ -655,7 +651,7 @@ router.get('/games/route-lookup', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/user/games/:id  - read-only game detail for authenticated users
-// Scoped to games involving the user's favourite teams and not skipped.
+// Scoped to games involving the user's favourite teams.
 // ---------------------------------------------------------------------------
 router.get('/games/:id', async (req, res) => {
   const userId = req.user.id;
@@ -712,6 +708,7 @@ router.get('/games/:id', async (req, res) => {
         COALESCE(s.best_of_shootout, l.best_of_shootout) AS best_of_shootout,
         COALESCE(uwg.watched_on, uwg.watched_at::date) AS watched_on,
         uwg.scheduled_for,
+        (uwg.skipped_at IS NOT NULL) AS skipped_by_user,
         (uwg.game_id IS NOT NULL AND (uwg.watched_on IS NOT NULL OR uwg.watched_at IS NOT NULL)) AS watched_by_user,
         home_l5.home_last_five,
         away_l5.away_last_five,
@@ -1079,7 +1076,6 @@ router.get('/games/:id', async (req, res) => {
           WHERE uft.user_id = ${userId}
             AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
         )
-        AND uwg.skipped_at IS NULL
       LIMIT 1
     `;
 

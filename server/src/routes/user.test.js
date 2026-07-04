@@ -410,7 +410,7 @@ describe('GET /api/user/games', () => {
 });
 
 describe('GET /api/user/games/route-lookup', () => {
-  it('resolves a visible slug game route to a game id', async () => {
+  it('resolves a favorite-team slug game route to a game id', async () => {
     sql.mockResolvedValueOnce([{ game_id: 'game-1' }]);
 
     const res = await request(app)
@@ -422,11 +422,14 @@ describe('GET /api/user/games/route-lookup', () => {
     expect(sql.mock.calls[0].slice(1)).toContain('user-1');
     expect(sql.mock.calls[0].slice(1)).toContain('2024-10-10');
     expect(sql.mock.calls[0].slice(1)).toContain('awy-vs-hom');
+    expect(queryText).toContain('JOIN seasons');
+    expect(queryText).toContain('JOIN leagues');
+    expect(queryText).not.toContain("lower(l.code) = 'nhl'");
     expect(queryText).toContain("AT TIME ZONE 'America/New_York'");
     expect(queryText).toContain("AT TIME ZONE 'UTC'");
-    expect(queryText).toContain("g.scheduled_time <> '00:00'");
+    expect(queryText).not.toContain("g.scheduled_time <> '00:00'");
     expect(queryText).toContain('user_favorite_teams');
-    expect(queryText).toContain('uwg.skipped_at IS NULL');
+    expect(queryText).not.toContain('uwg.skipped_at IS NULL');
   });
 
   it('rejects invalid route lookup dates', async () => {
@@ -438,7 +441,7 @@ describe('GET /api/user/games/route-lookup', () => {
     expect(sql).not.toHaveBeenCalled();
   });
 
-  it('returns 404 when no visible game matches the slug route', async () => {
+  it('returns 404 when no favorite-team game matches the slug route', async () => {
     sql.mockResolvedValueOnce([]);
 
     const res = await request(app)
@@ -450,7 +453,7 @@ describe('GET /api/user/games/route-lookup', () => {
 });
 
 describe('GET /api/user/games/:id', () => {
-  it('returns a single visible game for the authenticated user', async () => {
+  it('returns a single favorite-team game for the authenticated user', async () => {
     sql.mockResolvedValueOnce([GAME]);
 
     const res = await request(app).get('/api/user/games/game-1');
@@ -462,7 +465,8 @@ describe('GET /api/user/games/:id', () => {
     expect(sql.mock.calls[0].slice(1)).toContain('user-1');
     expect(sql.mock.calls[0].slice(1)).toContain('game-1');
     expect(queryText).toContain('user_favorite_teams');
-    expect(queryText).toContain('uwg.skipped_at IS NULL');
+    expect(queryText).toContain('(uwg.skipped_at IS NOT NULL) AS skipped_by_user');
+    expect(queryText).not.toContain('uwg.skipped_at IS NULL');
     expect(queryText).toContain('series_progress.series_home_wins_at_game');
     expect(queryText).toContain('home_l5.home_last_five');
     expect(queryText).toContain('away_l5.away_last_five');
@@ -486,7 +490,7 @@ describe('GET /api/user/games/:id', () => {
 describe('POST /api/user/watched-games/:gameId', () => {
   it('marks a game as watched for the authenticated user', async () => {
     sql
-      .mockResolvedValueOnce([{ id: 'game-1' }])
+      .mockResolvedValueOnce([{ id: 'game-1', status: 'final' }])
       .mockResolvedValueOnce([{ watched_on: '2024-10-15', scheduled_for: null }]);
 
     const res = await request(app).post('/api/user/watched-games/game-1');
@@ -502,7 +506,7 @@ describe('POST /api/user/watched-games/:gameId', () => {
 
   it('keeps a scheduled watch date when a delayed game is marked watched', async () => {
     sql
-      .mockResolvedValueOnce([{ id: 'game-1' }])
+      .mockResolvedValueOnce([{ id: 'game-1', status: 'final' }])
       .mockResolvedValueOnce([{ watched_on: '2024-10-12', scheduled_for: '2024-10-12' }]);
 
     const res = await request(app).post('/api/user/watched-games/game-1');
@@ -523,6 +527,16 @@ describe('POST /api/user/watched-games/:gameId', () => {
 
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/game not found/i);
+  });
+
+  it('rejects marking non-final games as watched', async () => {
+    sql.mockResolvedValueOnce([{ id: 'game-1', status: 'scheduled' }]);
+
+    const res = await request(app).post('/api/user/watched-games/game-1');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/only final games/i);
+    expect(sql).toHaveBeenCalledTimes(1);
   });
 });
 
