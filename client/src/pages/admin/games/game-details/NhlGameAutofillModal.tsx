@@ -98,7 +98,7 @@ const NhlGameAutofillModal = ({
       if (isManualPlayerMovementRequiredError(err)) {
         onManualMoveReport?.(err.report);
         toast.error(
-          'Auto-fill needs manual player movements before it can continue. Review the report modal.',
+          'Auto-fill needs manual player updates before it can continue. Review the report modal.',
           { autoClose: AUTOFILL_FAILURE_TOAST_MS },
         );
         return;

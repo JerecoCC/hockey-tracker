@@ -127,16 +127,6 @@ function gameLabel(game: GameRecord) {
   return date ? `${date} ${matchup}` : matchup;
 }
 
-function localPlayerIdentifier(
-  player: Pick<TeamPlayerRecord, 'league_player_number' | 'first_name' | 'last_name' | 'jersey_number'>,
-) {
-  const fallbackJersey = player.jersey_number == null ? '' : `#${player.jersey_number} `;
-  return (
-    leaguePlayerNumberLabel(player.league_player_number) ??
-    `${fallbackJersey}${player.first_name} ${player.last_name}`
-  );
-}
-
 interface FillSummary {
   gameId: string;
   goalsCreated: number;
@@ -682,6 +672,7 @@ function pwhlPlayerFromRow(row: any, group: PwhlPlayer['group']): PwhlPlayer | n
 interface PlayerConflict {
   externalPlayer: PwhlPlayer;
   existing: LeaguePlayer;
+  jerseyConflicts?: TeamPlayerRecord[];
 }
 
 interface MovePlayerConflict extends PlayerConflict {
@@ -716,7 +707,13 @@ function findCrossTeamPlayerConflicts(
       byLeaguePlayerNumber.get(leagueNumber) ??
       byFullName.get(normalizeNameKey(externalPlayer.name)) ??
       byLastInitial.get(lastNameInitialKey(externalPlayer.firstName, externalPlayer.lastName));
-    return existing ? [{ externalPlayer, existing }] : [];
+    return existing
+      ? [{
+          externalPlayer,
+          existing,
+          jerseyConflicts: findPwhlJerseyConflicts(externalPlayer, localPlayers),
+        }]
+      : [];
   });
 }
 
@@ -785,7 +782,55 @@ function buildManualMoveReport(
             ? game.home_team.name
             : null,
     })),
+    jerseyChanges: conflicts.flatMap((conflict) =>
+      buildPwhlJerseyChangeRows(
+        conflict.targetCode,
+        conflict.targetTeamId === game.away_team.id
+          ? game.away_team.name
+          : conflict.targetTeamId === game.home_team.id
+            ? game.home_team.name
+            : null,
+        conflict.externalPlayer,
+        conflict.jerseyConflicts ?? [],
+      ),
+    ),
   };
+}
+
+function buildManualJerseyChangeReport(
+  game: GameRecord,
+  teamCode: string,
+  teamName: string | null | undefined,
+  conflicts: Array<{ player: PwhlPlayer; local: TeamPlayerRecord }>,
+): GameAutofillManualMoveReport {
+  return {
+    leagueCode: 'PWHL',
+    gameId: game.id,
+    gameLabel: gameLabel(game),
+    gameDate: (game.scheduled_at ?? '').slice(0, 10) || null,
+    moves: [],
+    jerseyChanges: conflicts.flatMap(({ player, local }) =>
+      buildPwhlJerseyChangeRows(teamCode, teamName, player, [local]),
+    ),
+  };
+}
+
+function buildPwhlJerseyChangeRows(
+  teamCode: string,
+  teamName: string | null | undefined,
+  conflictingPlayer: PwhlPlayer,
+  localPlayers: TeamPlayerRecord[],
+) {
+  return localPlayers.map((local) => ({
+    playerName: `${local.first_name} ${local.last_name}`.trim(),
+    leaguePlayerNumber: local.league_player_number ?? null,
+    teamCode,
+    teamName: teamName ?? null,
+    currentJerseyNumber: local.jersey_number,
+    conflictingJerseyNumber: conflictingPlayer.sweaterNumber,
+    conflictingPlayerName: conflictingPlayer.name,
+    conflictingLeaguePlayerNumber: String(conflictingPlayer.playerId),
+  }));
 }
 
 async function ensurePwhlPlayersRostered(
@@ -799,19 +844,18 @@ async function ensurePwhlPlayersRostered(
 ): Promise<TeamPlayerRecord[]> {
   const jerseyConflicts = externalPlayers.flatMap((player) => {
     if (findLocalPlayerByLeagueNumber(player, localPlayers)) return [];
-    const rows = localPlayers.filter((local) => local.jersey_number === player.sweaterNumber);
-    if (rows.length === 0) return [];
-    if (rows.some((local) => !local.league_player_number && playerNamesMatch(local, player))) return [];
-    return rows.map((local) => ({ player, local }));
+    return findPwhlJerseyConflicts(player, localPlayers).map((local) => ({ player, local }));
   });
   if (jerseyConflicts.length > 0) {
-    const lines = jerseyConflicts
-      .map(
-        ({ player, local }) =>
-          `${pwhlPlayerIdentifier(player)} conflicts with ${localPlayerIdentifier(local)}`,
-      )
-      .join('; ');
-    throw new Error(`Auto-fill stopped because ${teamCode} has jersey conflicts: ${lines}.`);
+    const teamName =
+      teamId === game.away_team.id
+        ? game.away_team.name
+        : teamId === game.home_team.id
+          ? game.home_team.name
+          : null;
+    throw new ManualPlayerMovementRequiredError(
+      buildManualJerseyChangeReport(game, teamCode, teamName, jerseyConflicts),
+    );
   }
 
   const missing = externalPlayers.filter((player) => !findLocalPlayerForExternal(player, localPlayers));
@@ -890,6 +934,15 @@ function findLocalPlayerForExternal(player: PwhlPlayer, localPlayers: TeamPlayer
 function findLocalPlayerByLeagueNumber(player: PwhlPlayer, localPlayers: TeamPlayerRecord[]) {
   const leaguePlayerNumber = String(player.playerId);
   return localPlayers.find((local) => local.league_player_number === leaguePlayerNumber);
+}
+
+function findPwhlJerseyConflicts(player: PwhlPlayer, localPlayers: TeamPlayerRecord[]) {
+  return localPlayers.filter(
+    (local) =>
+      local.jersey_number === player.sweaterNumber &&
+      local.league_player_number !== String(player.playerId) &&
+      !(!local.league_player_number && playerNamesMatch(local, player)),
+  );
 }
 
 async function syncLeaguePlayerNumbers(matched: Record<TeamSide, MatchedPlayer[]>) {

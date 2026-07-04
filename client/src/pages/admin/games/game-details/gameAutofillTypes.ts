@@ -18,12 +18,25 @@ export interface GameAutofillManualPlayerMove {
   toTeamName?: string | null;
 }
 
+export interface GameAutofillManualJerseyChange {
+  playerName: string;
+  leaguePlayerNumber?: string | null;
+  teamCode: string;
+  teamName?: string | null;
+  currentJerseyNumber?: number | null;
+  conflictingJerseyNumber?: number | null;
+  conflictingPlayerName?: string | null;
+  conflictingLeaguePlayerNumber?: string | null;
+  note?: string | null;
+}
+
 export interface GameAutofillManualMoveReport {
   leagueCode: string;
   gameId: string;
   gameLabel: string;
   gameDate?: string | null;
   moves: GameAutofillManualPlayerMove[];
+  jerseyChanges?: GameAutofillManualJerseyChange[];
 }
 
 export class ManualPlayerMovementRequiredError extends Error {
@@ -31,8 +44,10 @@ export class ManualPlayerMovementRequiredError extends Error {
 
   constructor(report: GameAutofillManualMoveReport) {
     const moveCount = report.moves.length;
+    const jerseyChangeCount = report.jerseyChanges?.length ?? 0;
+    const updateCount = moveCount + jerseyChangeCount;
     super(
-      `Manual player movement required for ${report.gameLabel}: ${moveCount} ${moveCount === 1 ? 'player' : 'players'} need to be moved before this game can be auto-filled.`,
+      `Manual player update required for ${report.gameLabel}: ${updateCount} ${updateCount === 1 ? 'player' : 'players'} need to be updated before this game can be auto-filled.`,
     );
     this.name = 'ManualPlayerMovementRequiredError';
     this.report = report;
@@ -54,6 +69,10 @@ export function isManualPlayerMovementRequiredError(
     typeof candidate.report?.leagueCode === 'string' &&
     typeof candidate.report?.gameId === 'string' &&
     typeof candidate.report?.gameLabel === 'string' &&
-    Array.isArray(candidate.report?.moves)
+    Array.isArray(candidate.report?.moves) &&
+    (
+      candidate.report?.jerseyChanges == null ||
+      Array.isArray(candidate.report.jerseyChanges)
+    )
   );
 }

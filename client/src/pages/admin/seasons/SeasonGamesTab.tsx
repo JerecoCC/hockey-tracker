@@ -822,7 +822,7 @@ const SeasonGamesTab = ({
           const manualMoveError = isManualPlayerMovementRequiredError(err) ? err : null;
           if (manualMoveError) manualMoveReportsForRun.push(manualMoveError.report);
           const message = manualMoveError
-            ? 'manual player movement required'
+            ? 'manual player update required'
             : getErrorMessage(err, 'Auto-fill failed');
           failures.push(`${describeGame(game)}: ${message}`);
           console.warn(`${autofillCode ?? 'League'} day auto-fill skipped ${describeGame(game)}`, err);

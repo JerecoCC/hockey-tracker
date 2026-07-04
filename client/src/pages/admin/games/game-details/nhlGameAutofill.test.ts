@@ -932,6 +932,83 @@ describe('autofillGameFromNhlGamecenter', () => {
     ).toHaveLength(0);
   });
 
+  it('includes jersey changes when a manual move player takes an occupied local number', async () => {
+    const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          defense: [
+            {
+              playerId: 700007,
+              sweaterNumber: 7,
+              name: { default: 'N. Mystery' },
+            },
+          ],
+        },
+      },
+    };
+    leagueRosterPlayers = [
+      {
+        id: 'mystery-existing',
+        league_player_number: '700007',
+        first_name: 'Nicholas',
+        last_name: 'Mystery',
+        team_id: 'car-team',
+        team_code: 'CAR',
+      },
+    ];
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>7</td><td>D</td><td>Nick Mystery</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+
+    try {
+      await autofillGameFromNhlGamecenter(gameWithLeague, '317');
+      throw new Error('Expected NHL autofill to require manual player updates');
+    } catch (err) {
+      expect(isManualPlayerMovementRequiredError(err)).toBe(true);
+      if (!isManualPlayerMovementRequiredError(err)) throw err;
+      expect(err.report).toMatchObject({
+        leagueCode: 'NHL',
+        gameId: 'game-1',
+        moves: [
+          expect.objectContaining({
+            playerName: 'Nick Mystery',
+            leaguePlayerNumber: '700007',
+            jerseyNumber: 7,
+            fromTeamCode: 'CAR',
+            toTeamCode: 'MIN',
+          }),
+        ],
+        jerseyChanges: [
+          expect.objectContaining({
+            playerName: 'Brock Faber',
+            teamCode: 'MIN',
+            currentJerseyNumber: 7,
+            conflictingJerseyNumber: 7,
+            conflictingPlayerName: 'Nick Mystery',
+            conflictingLeaguePlayerNumber: '700007',
+          }),
+        ],
+      });
+    }
+  });
+
   it('sets start and end times from the club playing roster header', async () => {
     optionalRosterReportHtml = `
       <html><body>

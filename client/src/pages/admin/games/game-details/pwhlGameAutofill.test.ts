@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { autofillGameFromPwhlGamecenter } from './pwhlGameAutofill';
+import { isManualPlayerMovementRequiredError } from './gameAutofillTypes';
 import type { GameRecord } from '@/hooks/useGames';
 
 jest.mock('axios');
@@ -455,7 +456,7 @@ describe('autofillGameFromPwhlGamecenter', () => {
     );
   });
 
-  it('labels PWHL jersey conflicts with league player numbers when available', async () => {
+  it('reports PWHL jersey conflicts with league player numbers when available', async () => {
     extraPlayers.push({
       id: 'wrong-player',
       team_id: 'min-team',
@@ -466,8 +467,28 @@ describe('autofillGameFromPwhlGamecenter', () => {
       position: 'F',
     });
 
-    await expect(autofillGameFromPwhlGamecenter(game, '210')).rejects.toThrow(
-      'league player number 20 conflicts with league player number 999',
-    );
+    try {
+      await autofillGameFromPwhlGamecenter(game, '210');
+      throw new Error('Expected PWHL autofill to require manual jersey updates');
+    } catch (err) {
+      expect(isManualPlayerMovementRequiredError(err)).toBe(true);
+      if (!isManualPlayerMovementRequiredError(err)) throw err;
+      expect(err.report).toMatchObject({
+        leagueCode: 'PWHL',
+        gameId: 'game-1',
+        moves: [],
+        jerseyChanges: [
+          expect.objectContaining({
+            playerName: 'Wrong Player',
+            leaguePlayerNumber: '999',
+            teamCode: 'MIN',
+            currentJerseyNumber: 26,
+            conflictingJerseyNumber: 26,
+            conflictingPlayerName: 'Kendall Coyne Schofield',
+            conflictingLeaguePlayerNumber: '20',
+          }),
+        ],
+      });
+    }
   });
 });

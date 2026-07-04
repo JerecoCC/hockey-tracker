@@ -21,7 +21,7 @@
 .game {
   display: flex;
   flex-direction: column;
-  gap: $space-sm;
+  gap: $space-md;
 }
 
 .gameHeader {
@@ -33,6 +33,19 @@
   strong {
     min-width: 0;
     overflow-wrap: anywhere;
+  }
+}
+
+.reportSection {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+
+  h4 {
+    margin: 0;
+    color: var(--app-text, #{$text-body});
+    font-size: $font-sm;
+    font-weight: 700;
   }
 }
 

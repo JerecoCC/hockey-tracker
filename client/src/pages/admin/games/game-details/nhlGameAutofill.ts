@@ -888,6 +888,7 @@ interface PlayerConflict {
   reportPlayer: ReportRosterPlayer;
   existing: LeaguePlayer;
   leaguePlayerNumber?: string;
+  jerseyConflicts?: TeamPlayerRecord[];
 }
 
 interface MovePlayerConflict extends PlayerConflict {
@@ -958,7 +959,14 @@ function findCrossTeamPlayerConflicts(
       (leaguePlayerNumber ? byLeaguePlayerNumber.get(leaguePlayerNumber) : undefined) ??
       byFullName.get(normalizeNameKey(`${firstName} ${lastName}`)) ??
       byLastInitial.get(lastNameInitialKey(firstName, lastName));
-    if (existing) conflicts.push({ reportPlayer, existing, leaguePlayerNumber });
+    if (existing) {
+      conflicts.push({
+        reportPlayer,
+        existing,
+        leaguePlayerNumber,
+        jerseyConflicts: findNhlJerseyConflicts(reportPlayer, leaguePlayerNumber, localPlayers),
+      });
+    }
   }
   return conflicts;
 }
@@ -1034,7 +1042,63 @@ function buildManualMoveReport(
             ? game.home_team.name
             : null,
     })),
+    jerseyChanges: conflicts.flatMap((conflict) =>
+      buildNhlJerseyChangeRows(
+        conflict.targetCode,
+        conflict.targetTeamId === game.away_team.id
+          ? game.away_team.name
+          : conflict.targetTeamId === game.home_team.id
+            ? game.home_team.name
+            : null,
+        conflict.reportPlayer,
+        conflict.leaguePlayerNumber ?? conflict.existing.league_player_number ?? null,
+        conflict.jerseyConflicts ?? [],
+      ),
+    ),
   };
+}
+
+function buildManualJerseyChangeReport(
+  game: GameRecord,
+  teamCode: string,
+  teamName: string | null | undefined,
+  conflicts: Array<{ candidate: RosterCandidate; local: TeamPlayerRecord }>,
+): GameAutofillManualMoveReport {
+  return {
+    leagueCode: 'NHL',
+    gameId: game.id,
+    gameLabel: gameLabel(game),
+    gameDate: (game.scheduled_at ?? '').slice(0, 10) || null,
+    moves: [],
+    jerseyChanges: conflicts.flatMap(({ candidate, local }) =>
+      buildNhlJerseyChangeRows(
+        teamCode,
+        teamName,
+        rosterCandidateReportPlayer(candidate),
+        candidate.leaguePlayerNumber,
+        [local],
+      ),
+    ),
+  };
+}
+
+function buildNhlJerseyChangeRows(
+  teamCode: string,
+  teamName: string | null | undefined,
+  conflictingPlayer: ReportRosterPlayer,
+  conflictingLeaguePlayerNumber: string | null | undefined,
+  localPlayers: TeamPlayerRecord[],
+) {
+  return localPlayers.map((local) => ({
+    playerName: `${local.first_name} ${local.last_name}`.trim(),
+    leaguePlayerNumber: local.league_player_number ?? null,
+    teamCode,
+    teamName: teamName ?? null,
+    currentJerseyNumber: local.jersey_number,
+    conflictingJerseyNumber: conflictingPlayer.sweaterNumber,
+    conflictingPlayerName: reportPlayerDisplayName(conflictingPlayer),
+    conflictingLeaguePlayerNumber: conflictingLeaguePlayerNumber ?? null,
+  }));
 }
 
 /**
@@ -1062,6 +1126,28 @@ async function ensureNhlPlayersRostered(
   const missing = candidates.filter(
     (candidate) => !hasLocalRosterCandidateMatch(candidate, localByLeagueNumber, localByJersey),
   );
+  const jerseyConflicts = candidates.flatMap((candidate) => {
+    const matchedLocal = localByLeagueNumber.get(candidate.leaguePlayerNumber);
+    if (!matchedLocal) return [];
+    return findNhlJerseyConflicts(
+      rosterCandidateReportPlayer(candidate),
+      candidate.leaguePlayerNumber,
+      localPlayers,
+    )
+      .filter((local) => local.id !== matchedLocal.id)
+      .map((local) => ({ candidate, local }));
+  });
+  if (jerseyConflicts.length > 0) {
+    const teamName =
+      teamId === game.away_team.id
+        ? game.away_team.name
+        : teamId === game.home_team.id
+          ? game.home_team.name
+          : null;
+    throw new ManualPlayerMovementRequiredError(
+      buildManualJerseyChangeReport(game, teamCode, teamName, jerseyConflicts),
+    );
+  }
   const missingWithoutLeaguePlayerNumber = reportPlayers.filter(
     (player) =>
       Number.isFinite(player.sweaterNumber) &&
@@ -1210,6 +1296,19 @@ function hasLocalRosterCandidateMatch(
     (player) =>
       localPlayerMatchesName(player, candidate.name) ||
       (!!candidate.nhlName && localPlayerMatchesName(player, candidate.nhlName)),
+  );
+}
+
+function findNhlJerseyConflicts(
+  reportPlayer: ReportRosterPlayer,
+  leaguePlayerNumber: string | null | undefined,
+  localPlayers: TeamPlayerRecord[],
+) {
+  return localPlayers.filter(
+    (local) =>
+      local.jersey_number === reportPlayer.sweaterNumber &&
+      (!leaguePlayerNumber || local.league_player_number !== leaguePlayerNumber) &&
+      !localPlayerMatchesName(local, reportPlayer.name),
   );
 }
 
