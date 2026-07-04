@@ -4,10 +4,15 @@
 // ── Table wrapper ──────────────────────────────────────────────────────
 .tableWrapper {
   --table-min-width: 100%;
+  --table-header-bg: var(--app-surface-subtle, #{rgba(#fff, 0.03)});
   --table-row-hover-bg: rgba(255, 255, 255, 0.04);
   --table-sorted-column-bg: color-mix(in srgb, #{$accent-light} 10%, transparent);
   --table-sorted-column-hover-bg: color-mix(in srgb, #{$accent-light} 15%, transparent);
-  --table-sorted-column-header-bg: color-mix(in srgb, #{$accent-light} 14%, transparent);
+  --table-sorted-column-header-bg: color-mix(
+    in srgb,
+    #{$accent-light} 14%,
+    var(--table-header-bg)
+  );
 
   overflow-x: auto;
   border: 1px solid var(--app-border, #{$border});
@@ -29,6 +34,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    background: var(--table-header-bg);
     border-bottom: 1px solid var(--divider-color, var(--app-border, #{$border}));
 
     &.sortedColumn {
