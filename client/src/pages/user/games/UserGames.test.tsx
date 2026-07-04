@@ -1107,10 +1107,9 @@ describe('UserGames schedule views', () => {
 
     fireEvent.dragStart(sourceCard as HTMLElement, { dataTransfer });
     fireEvent.dragOver(targetCell as Element, { dataTransfer });
-    expect(targetCell).not.toHaveClass(styles.calendarDayDropTarget);
-    expect(targetCell?.querySelector(`.${styles.calendarDayDropTarget}`)).not.toBeNull();
+    expect(targetCell).toHaveClass(styles.calendarDayDropTarget);
     fireEvent.drop(targetCell as Element, { dataTransfer });
-    expect(targetCell?.querySelector(`.${styles.calendarDayDropTarget}`)).toBeNull();
+    expect(targetCell).not.toHaveClass(styles.calendarDayDropTarget);
     fireEvent.dragEnd(sourceCard as HTMLElement, { dataTransfer });
 
     await waitFor(() =>
@@ -1165,12 +1164,12 @@ describe('UserGames schedule views', () => {
 
     fireEvent.dragStart(sourceCard as HTMLElement, { dataTransfer });
     fireEvent.dragOver(validTargetCell as Element, { dataTransfer });
-    expect(validTargetCell?.querySelector(`.${styles.calendarDayDropTarget}`)).not.toBeNull();
+    expect(validTargetCell).toHaveClass(styles.calendarDayDropTarget);
 
     fireEvent.dragOver(invalidTargetCell as Element, { dataTransfer });
     expect(dataTransfer.dropEffect).toBe('none');
-    expect(validTargetCell?.querySelector(`.${styles.calendarDayDropTarget}`)).toBeNull();
-    expect(invalidTargetCell?.querySelector(`.${styles.calendarDayDropTarget}`)).toBeNull();
+    expect(validTargetCell).not.toHaveClass(styles.calendarDayDropTarget);
+    expect(invalidTargetCell).not.toHaveClass(styles.calendarDayDropTarget);
 
     fireEvent.drop(invalidTargetCell as Element, { dataTransfer });
     fireEvent.dragEnd(sourceCard as HTMLElement, { dataTransfer });

@@ -1585,7 +1585,7 @@ const UserGames = () => {
                 onDragLeave: handleCalendarDragLeave(dateKey),
                 onDrop: handleCalendarDrop(dateKey),
               })}
-              getDayBodyClassName={({ dateKey }) =>
+              getDayClassName={({ dateKey }) =>
                 calendarDropDateKey === dateKey ? styles.calendarDayDropTarget : undefined
               }
               renderDayContent={({ dateKey }) => {
