@@ -393,7 +393,17 @@ describe('POST /api/admin/games', () => {
 describe('PATCH /api/admin/games/:id', () => {
   it('updates a game and returns the updated record', async () => {
     sql
-      .mockResolvedValueOnce([{ id: 'game-1', playoff_series_id: null }]) // existence check
+      .mockResolvedValueOnce([{
+        id: 'game-1',
+        season_id: 'season-1',
+        home_team_id: 'team-1',
+        away_team_id: 'team-2',
+        scheduled_at: null,
+        playoff_series_id: null,
+        star_1_id: 'player-1',
+        star_2_id: 'player-2',
+        star_3_id: 'player-3',
+      }]) // existence check
       .mockResolvedValueOnce([])                             // UPDATE
       .mockResolvedValueOnce([{ playoff_series_id: null, home_team_id: 'team-1', away_team_id: 'team-2' }]) // final-status follow-up
       .mockResolvedValueOnce([{ ...GAME, status: 'final', home_score: 3, away_score: 2 }]); // re-fetch
@@ -402,6 +412,27 @@ describe('PATCH /api/admin/games/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('final');
     expect(res.body.home_score).toBe(3);
+  });
+
+  it('requires all three stars before finalizing a game', async () => {
+    sql.mockResolvedValueOnce([{
+      id: 'game-1',
+      season_id: 'season-1',
+      home_team_id: 'team-1',
+      away_team_id: 'team-2',
+      scheduled_at: null,
+      playoff_series_id: null,
+      star_1_id: 'player-1',
+      star_2_id: 'player-2',
+      star_3_id: null,
+    }]);
+
+    const res = await request(app).patch('/api/admin/games/game-1')
+      .send({ status: 'final' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/three stars/i);
+    expect(sql).toHaveBeenCalledTimes(1);
   });
 
   it('returns 404 when game not found', async () => {

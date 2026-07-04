@@ -1604,13 +1604,36 @@ router.patch('/:id', async (req, res) => {
     : normalizeGameEasternTimestamp(time_end);
   const leagueGameNumberInBody = 'league_game_number' in req.body;
   const normalizedLeagueGameNumber = normalizeLeagueNumber(league_game_number);
+  const hasStarId = (value) => value != null && String(value).trim() !== '';
 
   try {
     const existing = await sql`
-      SELECT id, season_id, home_team_id, away_team_id, scheduled_at, playoff_series_id
+      SELECT
+        id,
+        season_id,
+        home_team_id,
+        away_team_id,
+        scheduled_at,
+        playoff_series_id,
+        star_1_id,
+        star_2_id,
+        star_3_id
       FROM games WHERE id = ${id}
     `;
     if (existing.length === 0) return res.status(404).json({ error: 'Game not found' });
+
+    if (status === 'final') {
+      const finalStarIds = [
+        star_1_id ?? existing[0].star_1_id,
+        star_2_id ?? existing[0].star_2_id,
+        star_3_id ?? existing[0].star_3_id,
+      ];
+      if (!finalStarIds.every(hasStarId)) {
+        return res.status(400).json({
+          error: 'All three stars are required before a game can be finalized.',
+        });
+      }
+    }
 
     // Reject editing a game into a duplicate matchup on the same calendar date.
     // Games with a null date are exempt (the date is nullable).
