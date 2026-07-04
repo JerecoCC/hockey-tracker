@@ -15,6 +15,7 @@ import Skeleton from '@/components/Skeleton/Skeleton';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
+import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playerSearch';
 import { buildPlayerDetailsPath, buildUserPlayerDetailsPath } from '@/lib/routeSlugs';
 import LineupCreatePlayersModal from '../games/game-details/lineups/LineupCreatePlayersModal';
 import AddPlayersModal from './AddPlayersModal';
@@ -116,15 +117,14 @@ const TeamPlayersTab = ({
   const existingPlayerIds = new Set(allTeamPlayers.map((p) => p.id));
   const rosterPlayerCount = rosterPlayers.length;
   const rosterGoalieCount = rosterPlayers.filter((p) => p.position === 'G').length;
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizePlayerSearchText(query);
   const filteredPlayers = normalizedQuery
     ? players.filter((p) => {
-        const name = `${p.first_name} ${p.last_name}`.toLowerCase();
-        const pos = (p.position ?? '').toLowerCase();
+        const name = `${p.first_name} ${p.last_name}`;
         const jersey = p.jersey_number != null ? String(p.jersey_number) : '';
         return (
-          name.includes(normalizedQuery) ||
-          pos.includes(normalizedQuery) ||
+          playerSearchTextIncludes(name, normalizedQuery) ||
+          playerSearchTextIncludes(p.position, normalizedQuery) ||
           jersey.startsWith(normalizedQuery.replace('#', ''))
         );
       })

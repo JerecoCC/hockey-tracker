@@ -32,6 +32,14 @@ const normalizeLeagueNumber = (value) => {
   return trimmed || null;
 };
 
+const normalizePlayerSearchAlias = (value) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/ks/g, 'x')
+    .trim();
+
 // ---------------------------------------------------------------------------
 // POST /api/admin/players/upload  – upload a player photo to Vercel Blob
 // ---------------------------------------------------------------------------
@@ -68,6 +76,7 @@ router.get('/', async (req, res) => {
   const offset = (page - 1) * pageSize;
   const search = String(req.query.search ?? '').trim();
   const searchPattern = `%${search.toLowerCase()}%`;
+  const searchAliasPattern = `%${normalizePlayerSearchAlias(search)}%`;
   const jerseyPattern = `${search.replace('#', '')}%`;
   try {
     if (unassignedOnly) {
@@ -262,6 +271,7 @@ router.get('/', async (req, res) => {
             WHERE (
               ${search} = ''
               OR LOWER(first_name || ' ' || last_name) LIKE ${searchPattern}
+              OR LOWER(REPLACE(first_name || ' ' || last_name, 'ks', 'x')) LIKE ${searchAliasPattern}
               OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
               OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
             )
@@ -359,6 +369,7 @@ router.get('/', async (req, res) => {
             WHERE (
               ${search} = ''
               OR LOWER(first_name || ' ' || last_name) LIKE ${searchPattern}
+              OR LOWER(REPLACE(first_name || ' ' || last_name, 'ks', 'x')) LIKE ${searchAliasPattern}
               OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
               OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
             )
@@ -403,6 +414,7 @@ router.get('/', async (req, res) => {
             WHERE (
               ${search} = ''
               OR LOWER(first_name || ' ' || last_name) LIKE ${searchPattern}
+              OR LOWER(REPLACE(first_name || ' ' || last_name, 'ks', 'x')) LIKE ${searchAliasPattern}
               OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
               OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
             )
@@ -444,6 +456,7 @@ router.get('/', async (req, res) => {
             WHERE (
               ${search} = ''
               OR LOWER(first_name || ' ' || last_name) LIKE ${searchPattern}
+              OR LOWER(REPLACE(first_name || ' ' || last_name, 'ks', 'x')) LIKE ${searchAliasPattern}
               OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
               OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
             )

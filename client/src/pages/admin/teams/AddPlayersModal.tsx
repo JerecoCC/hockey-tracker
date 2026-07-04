@@ -9,6 +9,7 @@ import SelectableList from '@/components/SelectableList/SelectableList';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { type PlayerRosterInput } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
+import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playerSearch';
 import styles from './AddPlayersModal.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -75,15 +76,15 @@ const AddPlayersModal = ({
   const playerLabel = titlePlayerLabel.toLowerCase();
 
   const matchesPlayerSearch = (player: PlayerRecord, searchQuery: string) => {
-    const q = searchQuery.trim().toLowerCase();
-    const name = `${player.first_name} ${player.last_name}`.toLowerCase();
+    const q = normalizePlayerSearchText(searchQuery);
+    const name = `${player.first_name} ${player.last_name}`;
     const jersey = player.jersey_number != null ? String(player.jersey_number) : '';
-    const team = `${player.team_name ?? ''} ${player.team_code ?? ''}`.toLowerCase();
+    const team = `${player.team_name ?? ''} ${player.team_code ?? ''}`;
     return (
-      name.includes(q) ||
-      (player.position ?? '').toLowerCase().includes(q) ||
+      playerSearchTextIncludes(name, q) ||
+      playerSearchTextIncludes(player.position, q) ||
       jersey.startsWith(q.replace('#', '')) ||
-      team.includes(q)
+      playerSearchTextIncludes(team, q)
     );
   };
 

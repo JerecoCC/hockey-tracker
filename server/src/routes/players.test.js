@@ -130,6 +130,22 @@ describe('GET /api/admin/players', () => {
     expectLatestStintStartBeforeOpenTieBreaker(queryText);
   });
 
+  it('normalizes Maksim and Maxim player name aliases in paginated search', async () => {
+    sql
+      .mockResolvedValueOnce([PLAYER_WITH_ROSTER])
+      .mockResolvedValueOnce([{ total: 1 }]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&season_id=season-1&page=1&page_size=20&search=maksim');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+    const rowCall = sql.mock.calls[0];
+    const rowQueryText = rowCall[0].join(' ');
+    expect(rowQueryText).toContain("REPLACE(first_name || ' ' || last_name, 'ks', 'x')");
+    expect(rowCall).toContain('%maxim%');
+  });
+
   it('orders season league player rows by latest stint before open-ended fallback', async () => {
     sql.mockResolvedValueOnce([PLAYER_WITH_ROSTER]);
 

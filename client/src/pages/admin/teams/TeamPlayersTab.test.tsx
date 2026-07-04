@@ -66,6 +66,10 @@ const players = [
     jersey_number: 34,
     is_prospect: false,
     is_active: true,
+    created_at: '2024-01-01T00:00:00Z',
+    player_team_id: 'player-team-1',
+    team_id: 'team-1',
+    team_name: 'Toronto Maple Leafs',
     photo: null,
     primary_color: '#00205b',
     text_color: '#ffffff',
@@ -78,6 +82,10 @@ const players = [
     jersey_number: 44,
     is_prospect: false,
     is_active: true,
+    created_at: '2024-01-01T00:00:00Z',
+    player_team_id: 'player-team-2',
+    team_id: 'team-1',
+    team_name: 'Toronto Maple Leafs',
     photo: null,
     primary_color: '#00205b',
     text_color: '#ffffff',
@@ -90,6 +98,10 @@ const players = [
     jersey_number: 60,
     is_prospect: false,
     is_active: true,
+    created_at: '2024-01-01T00:00:00Z',
+    player_team_id: 'player-team-3',
+    team_id: 'team-1',
+    team_name: 'Toronto Maple Leafs',
     photo: null,
     primary_color: '#00205b',
     text_color: '#ffffff',
@@ -201,6 +213,52 @@ describe('TeamPlayersTab', () => {
 
     expect(screen.getByRole('button', { name: 'Move Players' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Trade Players' })).not.toBeInTheDocument();
+  });
+
+  it('finds players by alternate Maksim and Maxim transliterations', async () => {
+    const user = userEvent.setup();
+    const islandersPlayers = [
+      {
+        id: 'player-nyi-1',
+        first_name: 'Maxim',
+        last_name: 'Tsyplakov',
+        position: 'RW',
+        jersey_number: 7,
+        is_prospect: false,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        player_team_id: 'player-team-nyi-1',
+        team_id: 'team-1',
+        team_name: 'New York Islanders',
+        photo: null,
+        primary_color: '#00205b',
+        text_color: '#ffffff',
+      },
+      {
+        id: 'player-nyi-2',
+        first_name: 'Anders',
+        last_name: 'Lee',
+        position: 'LW',
+        jersey_number: 27,
+        is_prospect: false,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        player_team_id: 'player-team-nyi-2',
+        team_id: 'team-1',
+        team_name: 'New York Islanders',
+        photo: null,
+        primary_color: '#00205b',
+        text_color: '#ffffff',
+      },
+    ] as TeamPlayerRecord[];
+    mockUseTeamPlayers.mockReturnValue({ ...teamPlayersState, players: islandersPlayers });
+
+    renderTeamPlayersTab({ teamName: 'New York Islanders', teamCode: 'NYI' });
+
+    await user.type(screen.getByPlaceholderText('Search players...'), 'Maksim');
+
+    expect(screen.getByRole('button', { name: 'Open Maxim Tsyplakov' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open Anders Lee' })).not.toBeInTheDocument();
   });
 
   it('renders a read-only user roster without admin actions and opens the user player route', async () => {

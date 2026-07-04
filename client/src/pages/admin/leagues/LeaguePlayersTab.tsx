@@ -15,6 +15,7 @@ import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { missingPlayerDataIndicator } from '@/lib/playerDataStatus';
 import { formatPlayerPosition } from '@/lib/playerPosition';
+import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playerSearch';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
@@ -280,12 +281,13 @@ const LeaguePlayersTab = ({ className }: Props) => {
               `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`),
             )}
             filterFn={(p, q) => {
-              const query = q.toLowerCase();
-              const name = `${p.first_name} ${p.last_name}`.toLowerCase();
-              const pos = (p.position ?? '').toLowerCase();
+              const query = normalizePlayerSearchText(q);
+              const name = `${p.first_name} ${p.last_name}`;
               const jersey = p.jersey_number != null ? String(p.jersey_number) : '';
               return (
-                name.includes(query) || pos.includes(query) || jersey.startsWith(q.replace('#', ''))
+                playerSearchTextIncludes(name, query) ||
+                playerSearchTextIncludes(p.position, query) ||
+                jersey.startsWith(query.replace('#', ''))
               );
             }}
             renderItems={(filtered) => {
