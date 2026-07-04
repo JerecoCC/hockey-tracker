@@ -160,6 +160,10 @@ interface NhlAutofillOptions {
 
 type ShootoutAttemptPayload = Pick<ShootoutAttempt, 'team_id' | 'shooter_id' | 'scored'>;
 
+interface PlayerTeamBulkResult {
+  skipped?: number;
+}
+
 function leaguePlayerNumberLabel(value: string | number | null | undefined) {
   return value == null || value === '' ? null : `league player number ${value}`;
 }
@@ -828,6 +832,8 @@ interface LeaguePlayer {
   team_id: string | null;
   team_code: string | null;
   team_name?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 /** All players rostered in this game's league for the season, with their team. */
@@ -845,6 +851,31 @@ async function fetchLeaguePlayers(game: GameRecord): Promise<LeaguePlayer[]> {
     },
   );
   return Array.isArray(data) ? data : (data.players ?? []);
+}
+
+function leaguePlayerTimelineDate(player: LeaguePlayer) {
+  return player.start_date?.slice(0, 10) ?? player.end_date?.slice(0, 10) ?? '';
+}
+
+function laterLeaguePlayerRow(current: LeaguePlayer, next: LeaguePlayer) {
+  const currentDate = leaguePlayerTimelineDate(current);
+  const nextDate = leaguePlayerTimelineDate(next);
+  if (nextDate !== currentDate) return nextDate > currentDate ? next : current;
+
+  const currentOpen = !current.end_date;
+  const nextOpen = !next.end_date;
+  if (nextOpen !== currentOpen) return nextOpen ? next : current;
+
+  return next;
+}
+
+function setLatestLeaguePlayerRow(
+  map: Map<string, LeaguePlayer>,
+  key: string,
+  player: LeaguePlayer,
+) {
+  const current = map.get(key);
+  map.set(key, current ? laterLeaguePlayerRow(current, player) : player);
 }
 
 /** Last-name + first-initial key — catches "Nick Paul" vs "Nicholas Paul". */
@@ -938,11 +969,13 @@ function findCrossTeamPlayerConflicts(
   const byLeaguePlayerNumber = new Map<string, LeaguePlayer>();
   for (const player of leaguePlayers) {
     if (!player.team_id || player.team_id === teamId) continue;
-    if (player.league_player_number) byLeaguePlayerNumber.set(player.league_player_number, player);
+    if (player.league_player_number) {
+      setLatestLeaguePlayerRow(byLeaguePlayerNumber, player.league_player_number, player);
+    }
     const fullKey = normalizeNameKey(`${player.first_name} ${player.last_name}`);
     const liKey = lastNameInitialKey(player.first_name, player.last_name);
-    if (!byFullName.has(fullKey)) byFullName.set(fullKey, player);
-    if (!byLastInitial.has(liKey)) byLastInitial.set(liKey, player);
+    setLatestLeaguePlayerRow(byFullName, fullKey, player);
+    setLatestLeaguePlayerRow(byLastInitial, liKey, player);
   }
   const conflicts: PlayerConflict[] = [];
   for (const reportPlayer of missing) {
@@ -1168,11 +1201,12 @@ async function ensureNhlPlayersRostered(
 
   if (missing.length === 0) return localPlayers;
 
-  const leaguePlayerByNumber = new Map(
-    leaguePlayers
-      .filter((player) => !!player.league_player_number)
-      .map((player) => [player.league_player_number!, player]),
-  );
+  const leaguePlayerByNumber = new Map<string, LeaguePlayer>();
+  leaguePlayers
+    .filter((player) => !!player.league_player_number)
+    .forEach((player) =>
+      setLatestLeaguePlayerRow(leaguePlayerByNumber, player.league_player_number!, player),
+    );
 
   const crossTeamConflicts = missing.flatMap((candidate): MovePlayerConflict[] => {
     const existing = leaguePlayerByNumber.get(candidate.leaguePlayerNumber);
@@ -1226,15 +1260,39 @@ async function ensureNhlPlayersRostered(
       jersey_number: toCreate[index].sweaterNumber,
     })),
   ];
+  let rosterAddResult: PlayerTeamBulkResult | null = null;
   if (playersToRoster.length > 0) {
-    await apiPost<
-      unknown,
+    rosterAddResult = await apiPost<
+      PlayerTeamBulkResult,
       { team_id: string; season_id: string; players: Array<{ player_id: string; jersey_number: number }> }
     >('/admin/player-teams/bulk', {
       team_id: teamId,
       season_id: game.season_id,
       players: playersToRoster,
     });
+  }
+
+  const refreshedPlayers = await fetchTeamPlayers(teamId, game.season_id, gameDate);
+  const refreshedByLeagueNumber = localPlayersByLeaguePlayerNumber(refreshedPlayers);
+  const refreshedByJersey = localPlayersByJersey(refreshedPlayers);
+  const unresolved = missing.filter(
+    (candidate) => !hasLocalRosterCandidateMatch(candidate, refreshedByLeagueNumber, refreshedByJersey),
+  );
+  if (unresolved.length > 0) {
+    const gameDateLabel = gameDate?.slice(0, 10);
+    const skippedHint = rosterAddResult?.skipped
+      ? ` The roster API skipped ${rosterAddResult.skipped} requested ${pluralize(
+          'add',
+          rosterAddResult.skipped,
+        )}, usually because a player already has an active season roster row.`
+      : '';
+    throw new Error(
+      `Auto-fill could not add ${teamCode} season roster ${pluralize('player', unresolved.length)}: ${unresolved
+        .map(rosterCandidateIdentifier)
+        .join(', ')}.${skippedHint} Check the player's team/roster dates${
+        gameDateLabel ? ` for ${gameDateLabel}` : ''
+      }, then run auto-fill again.`,
+    );
   }
 
   if (toCreate.length > 0) {
@@ -1252,7 +1310,7 @@ async function ensureNhlPlayersRostered(
     );
   }
 
-  return fetchTeamPlayers(teamId, game.season_id, gameDate);
+  return refreshedPlayers;
 }
 
 function buildRosterCandidates(reportPlayers: ReportRosterPlayer[], nhlPlayers: NhlPlayer[]): RosterCandidate[] {

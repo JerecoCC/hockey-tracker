@@ -436,8 +436,9 @@ router.get('/history/:playerId', async (req, res) => {
           OR roster.id IS NOT NULL
         )
       ORDER BY
-        pts.end_date DESC NULLS FIRST,
         COALESCE(pts.start_date, pts.created_at::date) DESC,
+        CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
+        pts.end_date DESC NULLS LAST,
         pts.created_at DESC
     `;
     return res.json(rows.map(mapHistoryRow));
@@ -565,6 +566,7 @@ router.patch('/:id', async (req, res) => {
   const acquisitionInBody = 'acquisition_type' in req.body;
   const startDateInBody = 'start_date'    in req.body;
   const endDateInBody   = 'end_date'      in req.body;
+  const rosterSeasonId = seasonInBody ? season_id : null;
   if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
 
   try {
@@ -590,9 +592,13 @@ router.patch('/:id', async (req, res) => {
         FROM player_teams
         WHERE player_id = ${stintRows[0].player_id}
           AND team_id = ${stintRows[0].team_id}
+          AND (${rosterSeasonId}::uuid IS NULL OR season_id = ${rosterSeasonId}::uuid)
         ORDER BY end_date DESC NULLS FIRST, created_at DESC
         LIMIT 1
       `) ?? [];
+      if (!roster && (jerseyInBody || prospectInBody)) {
+        return res.status(404).json({ error: 'Season roster record not found for this stint' });
+      }
       if (roster && (jerseyInBody || prospectInBody || positionInBody)) {
         [roster] = (await sql`
           UPDATE player_teams

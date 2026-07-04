@@ -41,6 +41,13 @@ const PLAYER_WITH_ROSTER = {
   has_games: true,
 };
 
+const expectLatestStintStartBeforeOpenTieBreaker = (queryText) => {
+  const latestStartIndex = queryText.indexOf('COALESCE(pt.start_date');
+  const openTieBreakerIndex = queryText.indexOf('CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END');
+  expect(latestStartIndex).toBeGreaterThanOrEqual(0);
+  expect(openTieBreakerIndex).toBeGreaterThan(latestStartIndex);
+};
+
 afterEach(() => jest.clearAllMocks());
 
 // ---------------------------------------------------------------------------
@@ -74,6 +81,7 @@ describe('GET /api/admin/players', () => {
     expect(queryText).toContain('AS has_games');
     expect(queryText).toContain('FROM game_rosters gr');
     expect(queryText).toContain('JOIN seasons rs');
+    expectLatestStintStartBeforeOpenTieBreaker(queryText);
   });
 
   it('returns unassigned players for a league', async () => {
@@ -119,6 +127,18 @@ describe('GET /api/admin/players', () => {
     expect(queryText).toContain("sg.goal_type != 'own'");
     expect(queryText).toContain('FROM game_rosters gr');
     expect(queryText).toContain('rg.season_id');
+    expectLatestStintStartBeforeOpenTieBreaker(queryText);
+  });
+
+  it('orders season league player rows by latest stint before open-ended fallback', async () => {
+    sql.mockResolvedValueOnce([PLAYER_WITH_ROSTER]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&season_id=season-1&include_prospects=true');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(1);
+    expectLatestStintStartBeforeOpenTieBreaker(sql.mock.calls[0][0].join(' '));
   });
 
   it('applies rookie and active filters to paginated league player rows and counts', async () => {

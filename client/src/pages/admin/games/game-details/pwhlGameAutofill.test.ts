@@ -194,6 +194,7 @@ const summary = {
 describe('autofillGameFromPwhlGamecenter', () => {
   let extraPlayers: Array<Record<string, unknown>>;
   let createdPlayerStore: Map<string, Record<string, unknown>>;
+  let leagueRosterPlayers: Array<Record<string, unknown>>;
   let currentSummary: typeof summary;
 
   beforeEach(() => {
@@ -201,6 +202,7 @@ describe('autofillGameFromPwhlGamecenter', () => {
     localStorage.setItem('token', 'token');
     extraPlayers = [];
     createdPlayerStore = new Map();
+    leagueRosterPlayers = [];
     currentSummary = summary;
 
     mockedAxios.get.mockImplementation((url, config) => {
@@ -215,7 +217,7 @@ describe('autofillGameFromPwhlGamecenter', () => {
       if (u.endsWith('/admin/games/game-1/roster')) return Promise.resolve({ data: [] });
       if (u.endsWith('/admin/players')) {
         if (config?.params?.league_id && !config?.params?.team_id) {
-          return Promise.resolve({ data: [] });
+          return Promise.resolve({ data: leagueRosterPlayers });
         }
         return Promise.resolve({
           data: extraPlayers.filter((row) => row.team_id === config?.params?.team_id),
@@ -454,6 +456,54 @@ describe('autofillGameFromPwhlGamecenter', () => {
         }),
       ]),
     );
+  });
+
+  it('reports manual PWHL moves from the latest dated league-player row', async () => {
+    leagueRosterPlayers = [
+      {
+        id: 'kendall-coyne-schofield',
+        league_player_number: '20',
+        first_name: 'Kendall',
+        last_name: 'Coyne Schofield',
+        team_id: 'ott-team',
+        team_code: 'OTT',
+        team_name: 'Ottawa Charge',
+        start_date: '2025-06-01',
+        end_date: '2025-12-01',
+      },
+      {
+        id: 'kendall-coyne-schofield',
+        league_player_number: '20',
+        first_name: 'Kendall',
+        last_name: 'Coyne Schofield',
+        team_id: 'bos-team',
+        team_code: 'BOS',
+        team_name: 'Boston Fleet',
+        start_date: '2024-10-01',
+        end_date: null,
+      },
+    ];
+
+    try {
+      await autofillGameFromPwhlGamecenter(game, '210');
+      throw new Error('Expected PWHL autofill to require manual player movement');
+    } catch (err) {
+      expect(isManualPlayerMovementRequiredError(err)).toBe(true);
+      if (!isManualPlayerMovementRequiredError(err)) throw err;
+      expect(err.report).toMatchObject({
+        leagueCode: 'PWHL',
+        gameId: 'game-1',
+        moves: [
+          expect.objectContaining({
+            playerName: 'Kendall Coyne Schofield',
+            leaguePlayerNumber: '20',
+            fromTeamCode: 'OTT',
+            fromTeamName: 'Ottawa Charge',
+            toTeamCode: 'MIN',
+          }),
+        ],
+      });
+    }
   });
 
   it('reports PWHL jersey conflicts with league player numbers when available', async () => {

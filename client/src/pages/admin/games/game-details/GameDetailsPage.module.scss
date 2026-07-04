@@ -1134,7 +1134,7 @@
   --goalie-stats-editor-chip-bg: #f8fafc;
   --goalie-stats-editor-chip-border: #dbe3ee;
   --goalie-stats-editor-chip-text: #64748b;
-  --goalie-stats-editor-stint-bg: #ffffff;
+  --goalie-stats-editor-stint-bg: var(--app-surface, #f8fafc);
 }
 
 .goalieStatsEditorHead,

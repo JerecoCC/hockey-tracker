@@ -45,6 +45,8 @@ interface LeaguePlayer {
   team_id: string | null;
   team_code: string | null;
   team_name?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 interface PwhlPlayer {
@@ -615,6 +617,31 @@ async function fetchLeaguePlayers(game: GameRecord): Promise<LeaguePlayer[]> {
   return Array.isArray(data) ? data : (data.players ?? []);
 }
 
+function leaguePlayerTimelineDate(player: LeaguePlayer) {
+  return player.start_date?.slice(0, 10) ?? player.end_date?.slice(0, 10) ?? '';
+}
+
+function laterLeaguePlayerRow(current: LeaguePlayer, next: LeaguePlayer) {
+  const currentDate = leaguePlayerTimelineDate(current);
+  const nextDate = leaguePlayerTimelineDate(next);
+  if (nextDate !== currentDate) return nextDate > currentDate ? next : current;
+
+  const currentOpen = !current.end_date;
+  const nextOpen = !next.end_date;
+  if (nextOpen !== currentOpen) return nextOpen ? next : current;
+
+  return next;
+}
+
+function setLatestLeaguePlayerRow(
+  map: Map<string, LeaguePlayer>,
+  key: string,
+  player: LeaguePlayer,
+) {
+  const current = map.get(key);
+  map.set(key, current ? laterLeaguePlayerRow(current, player) : player);
+}
+
 function assertGameMatches(game: GameRecord, summary: any) {
   const pwhlDate = gameDateOnly(summary);
   const localDates = localDateCandidates(game.scheduled_at);
@@ -687,11 +714,13 @@ function findCrossTeamPlayerConflicts(
   const byLastInitial = new Map<string, LeaguePlayer>();
   for (const player of leaguePlayers) {
     if (!player.team_id || player.team_id === teamId) continue;
-    if (player.league_player_number) byLeaguePlayerNumber.set(player.league_player_number, player);
+    if (player.league_player_number) {
+      setLatestLeaguePlayerRow(byLeaguePlayerNumber, player.league_player_number, player);
+    }
     const fullKey = normalizeNameKey(`${player.first_name} ${player.last_name}`);
     const liKey = lastNameInitialKey(player.first_name, player.last_name);
-    if (!byFullName.has(fullKey)) byFullName.set(fullKey, player);
-    if (!byLastInitial.has(liKey)) byLastInitial.set(liKey, player);
+    setLatestLeaguePlayerRow(byFullName, fullKey, player);
+    setLatestLeaguePlayerRow(byLastInitial, liKey, player);
   }
 
   return missing.flatMap((externalPlayer) => {

@@ -213,7 +213,7 @@
 }
 
 :global(:root[data-theme='light']) .gameActions {
-  --calendar-game-actions-bg: rgba(255, 255, 255, 0.94);
+  --calendar-game-actions-bg: color-mix(in srgb, var(--app-surface, #f8fafc) 94%, transparent);
 }
 
 // ── Schedule modal ────────────────────────────────────────────────────

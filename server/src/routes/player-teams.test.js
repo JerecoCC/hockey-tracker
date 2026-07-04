@@ -251,6 +251,11 @@ describe('GET /api/admin/player-teams/history/:playerId', () => {
         },
       },
     ]);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText.indexOf('COALESCE(pts.start_date')).toBeGreaterThanOrEqual(0);
+    expect(queryText.indexOf('CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END')).toBeGreaterThan(
+      queryText.indexOf('COALESCE(pts.start_date'),
+    );
   });
 
   it('returns null acquisition_type when the stint has no acquisition type', async () => {
@@ -479,6 +484,77 @@ describe('PATCH /api/admin/player-teams/:id', () => {
       photo: 'https://example.com/new-player.png',
     });
     expect(sql).toHaveBeenCalledTimes(4);
+  });
+
+  it('updates the submitted season roster when editing a career stint jersey number', async () => {
+    sql
+      .mockResolvedValueOnce([{
+        id: 'career-stint-1',
+        player_id: 'player-1',
+        team_id: 'team-1',
+        position: 'C',
+        acquisition_type: 'trade',
+        start_date: '2024-10-01',
+        end_date: null,
+      }])
+      .mockResolvedValueOnce([{
+        id: 'roster-season-2',
+        team_id: 'team-1',
+        season_id: 'season-2',
+        jersey_number: 16,
+        is_prospect: false,
+        position: 'C',
+      }])
+      .mockResolvedValueOnce([{
+        id: 'roster-season-2',
+        team_id: 'team-1',
+        season_id: 'season-2',
+        jersey_number: 88,
+        is_prospect: false,
+        position: 'C',
+      }]);
+
+    const res = await request(app)
+      .patch('/api/admin/player-teams/career-stint-1')
+      .send({
+        season_id: 'season-2',
+        jersey_number: 88,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: 'career-stint-1',
+      roster_player_team_id: 'roster-season-2',
+      season_id: 'season-2',
+      jersey_number: 88,
+    });
+    expect(sql.mock.calls[1].slice(1)).toEqual(expect.arrayContaining(['season-2']));
+    expect(sql).toHaveBeenCalledTimes(3);
+  });
+
+  it('does not report a saved jersey number when no season roster exists for a career stint', async () => {
+    sql
+      .mockResolvedValueOnce([{
+        id: 'career-stint-1',
+        player_id: 'player-1',
+        team_id: 'team-1',
+        position: 'C',
+        acquisition_type: 'trade',
+        start_date: '2024-10-01',
+        end_date: null,
+      }])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app)
+      .patch('/api/admin/player-teams/career-stint-1')
+      .send({
+        season_id: 'season-2',
+        jersey_number: 88,
+      });
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/season roster record/i);
+    expect(sql).toHaveBeenCalledTimes(2);
   });
 
   it('updates prospect status on a specific stint row', async () => {

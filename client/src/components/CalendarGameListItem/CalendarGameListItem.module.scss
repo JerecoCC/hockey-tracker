@@ -187,7 +187,7 @@
   --calendar-game-card-drag-dot: color-mix(
     in srgb,
     var(--calendar-game-card-hover-border) 42%,
-    #fff
+    var(--app-surface, #f8fafc)
   );
   --calendar-game-score-bg: var(--app-surface-muted, #f8fafc);
   --calendar-game-score-border: var(--app-field-border, #bfccd9);

@@ -104,7 +104,7 @@
     var(--app-accent-light, #2563eb) 46%,
     var(--app-border, #cbd5e1)
   );
-  --game-card-actions-bg: rgba(255, 255, 255, 0.94);
+  --game-card-actions-bg: color-mix(in srgb, var(--app-surface, #f8fafc) 94%, transparent);
   --game-card-league-bg-base: var(--app-surface, #fff);
   --game-card-league-border-base: var(--app-border, #cbd5e1);
   --game-card-league-meta-base: var(--app-text-strong, #0f172a);

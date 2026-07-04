@@ -4,7 +4,7 @@ import Card from '../Card/Card';
 import styles from './Section.module.scss';
 
 interface SectionProps extends Omit<ComponentPropsWithoutRef<'div'>, 'title'> {
-  /** Visual theme of the underlying Card. 'filled' = card bg + border. 'border' = transparent bg + border. 'light' = white bg + shadow. */
+  /** Visual theme of the underlying Card. 'filled' = card bg + border. 'border' = transparent bg + border. 'light' = soft light bg + shadow. */
   variant?: 'filled' | 'border' | 'light';
   /** Section title at the start of the header row. Accepts a string or any ReactNode. */
   title?: ReactNode;

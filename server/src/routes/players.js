@@ -250,8 +250,9 @@ router.get('/', async (req, res) => {
                 ) cs ON TRUE
                 ORDER BY
                   p.id,
+                  COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
                   CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
-                  COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+                  COALESCE(pt.end_date, pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
                   pt.created_at DESC,
                   pt.id DESC
               ) sub
@@ -345,8 +346,9 @@ router.get('/', async (req, res) => {
                 ) cs ON TRUE
                 ORDER BY
                   p.id,
+                  COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
                   CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
-                  COALESCE(pt.end_date, pt.start_date, pt.created_at::date, s.start_date) DESC NULLS LAST,
+                  COALESCE(pt.end_date, pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
                   s.start_date DESC NULLS LAST,
                   pt.created_at DESC,
                   pt.id DESC
@@ -389,6 +391,7 @@ router.get('/', async (req, res) => {
                                     AND t.league_id   = ${league_id}
                 ORDER BY
                   p.id,
+                  COALESCE(pt.start_date, pt.created_at::date) DESC NULLS LAST,
                   CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
                   COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
                   pt.created_at DESC,
@@ -428,8 +431,9 @@ router.get('/', async (req, res) => {
                 JOIN seasons      s  ON s.id          = pt.season_id
                 ORDER BY
                   p.id,
+                  COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
                   CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
-                  COALESCE(pt.end_date, pt.start_date, pt.created_at::date, s.start_date) DESC NULLS LAST,
+                  COALESCE(pt.end_date, pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
                   s.start_date DESC NULLS LAST,
                   pt.created_at DESC,
                   pt.id DESC
@@ -540,8 +544,9 @@ router.get('/', async (req, res) => {
             ) ti ON TRUE
             ORDER BY
               p.id,
+              COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
               CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
-              COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+              COALESCE(pt.end_date, pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
               pt.created_at DESC,
               pt.id DESC
           ) sub
@@ -613,8 +618,9 @@ router.get('/', async (req, res) => {
             ) ti ON TRUE
             ORDER BY
               p.id,
+              COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
               CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
-              COALESCE(pt.end_date, pt.start_date, pt.created_at::date, s.start_date) DESC NULLS LAST,
+              COALESCE(pt.end_date, pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
               s.start_date DESC NULLS LAST,
               pt.created_at DESC,
               pt.id DESC

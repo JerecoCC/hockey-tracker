@@ -3,7 +3,7 @@ import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from 'react';
 import styles from './Card.module.scss';
 
 interface CardProps extends ComponentPropsWithoutRef<'div'> {
-  /** Visual theme. 'filled' = card bg + border. 'border' = transparent bg + border. 'light' = white bg + shadow. */
+  /** Visual theme. 'filled' = card bg + border. 'border' = transparent bg + border. 'light' = soft light bg + shadow. */
   variant?: 'filled' | 'border' | 'light';
   /** Extra CSS class for layout/sizing concerns (max-width, grid column, margin, etc.). */
   className?: string;

@@ -136,6 +136,7 @@ let existingGoalieStatsData: unknown[];
 // so the post-creation roster re-fetch can return them.
 let extraPlayers: Array<Record<string, unknown>>;
 let createdPlayerStore: Map<string, Record<string, unknown>>;
+let skippedRosterPlayerIds: Set<string>;
 // League-wide roster returned for the cross-team duplicate check (league_id lookup).
 let leagueRosterPlayers: Array<Record<string, unknown>>;
 
@@ -153,6 +154,7 @@ describe('autofillGameFromNhlGamecenter', () => {
     existingGoalieStatsData = [];
     extraPlayers = [];
     createdPlayerStore = new Map();
+    skippedRosterPlayerIds = new Set();
     leagueRosterPlayers = [];
     mockedAxios.get.mockImplementation((url, config) => {
       if (String(url).endsWith('/admin/games/nhl-api')) {
@@ -203,7 +205,12 @@ describe('autofillGameFromNhlGamecenter', () => {
         return Promise.resolve({ data: { created } });
       }
       if (u.endsWith('/admin/player-teams/bulk')) {
+        let skipped = 0;
         for (const row of body?.players ?? []) {
+          if (skippedRosterPlayerIds.has(row.player_id)) {
+            skipped += 1;
+            continue;
+          }
           const player =
             createdPlayerStore.get(row.player_id) ??
             leagueRosterPlayers.find((leaguePlayer) => leaguePlayer.id === row.player_id) ??
@@ -224,7 +231,7 @@ describe('autofillGameFromNhlGamecenter', () => {
             is_prospect: false,
           });
         }
-        return Promise.resolve({ data: { created: [] } });
+        return Promise.resolve({ data: { created: [], skipped } });
       }
       return Promise.resolve({ data: {} });
     });
@@ -873,6 +880,57 @@ describe('autofillGameFromNhlGamecenter', () => {
     ).toHaveLength(0);
   });
 
+  it('reports a roster-history conflict when the season roster add is skipped', async () => {
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          forwards: [
+            ...boxscore.playerByGameStats.homeTeam.forwards,
+            {
+              playerId: 8478104,
+              sweaterNumber: 19,
+              firstName: { default: 'Norman' },
+              lastName: { default: 'Mystery' },
+            },
+          ],
+        },
+      },
+    };
+    skippedRosterPlayerIds.add('auto-mystery-0');
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>19</td><td>L</td><td>Norman Mystery</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+
+    let error: unknown;
+    try {
+      await autofillGameFromNhlGamecenter(game, '317');
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toMatch(
+      /could not add MIN season roster player: league player number 8478104/i,
+    );
+    expect((error as Error).message).not.toMatch(/Missing MIN player matches/i);
+  });
+
   it('reports manual player moves when a missing player already exists on another team', async () => {
     const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
     // #19 is dressed for MIN in the report, but the same player ("Nicholas Mystery")
@@ -882,8 +940,21 @@ describe('autofillGameFromNhlGamecenter', () => {
         id: 'mystery-existing',
         first_name: 'Nicholas',
         last_name: 'Mystery',
-        team_id: 'car-team',
-        team_code: 'CAR',
+        team_id: 'sjs-team',
+        team_code: 'SJS',
+        team_name: 'San Jose Sharks',
+        start_date: '2024-10-10',
+        end_date: null,
+      },
+      {
+        id: 'mystery-existing',
+        first_name: 'Nicholas',
+        last_name: 'Mystery',
+        team_id: 'sea-team',
+        team_code: 'SEA',
+        team_name: 'Seattle Kraken',
+        start_date: '2025-06-19',
+        end_date: '2025-12-19',
       },
     ];
     optionalRosterReportHtml = `
@@ -917,7 +988,8 @@ describe('autofillGameFromNhlGamecenter', () => {
             playerName: 'Nick Mystery',
             jerseyNumber: 19,
             position: 'LW',
-            fromTeamCode: 'CAR',
+            fromTeamCode: 'SEA',
+            fromTeamName: 'Seattle Kraken',
             toTeamCode: 'MIN',
           }),
         ],

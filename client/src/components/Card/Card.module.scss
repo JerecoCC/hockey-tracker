@@ -20,9 +20,9 @@
   border: 1px solid var(--app-border, #{$border});
 }
 
-// Light variant (white background, shadow)
+// Light variant (soft light background, shadow)
 .light {
-  background: #fff;
+  background: var(--app-card-light-bg, #f8fafc);
   border-radius: $radius-xl;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
   padding: $space-4xl;
