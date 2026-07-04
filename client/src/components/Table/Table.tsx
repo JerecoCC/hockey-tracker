@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import Icon from '../Icon/Icon';
 import TeamLogo from '../TeamLogo/TeamLogo';
 import Tooltip from '../Tooltip/Tooltip';
@@ -91,6 +92,7 @@ interface TableProps<T> {
   sortDir?: 'asc' | 'desc';
   onSort?: (key: string, dir: 'asc' | 'desc') => void;
   onRowClick?: (row: T) => void;
+  getRowHref?: (row: T) => string | null | undefined;
   rowClassName?: (row: T, index: number) => string | undefined;
 }
 
@@ -105,6 +107,7 @@ const Table = <T,>({
   sortDir = 'asc',
   onSort,
   onRowClick,
+  getRowHref,
   rowClassName,
 }: TableProps<T>) => {
   const tableStyle =
@@ -183,8 +186,9 @@ const Table = <T,>({
             </tr>
           ) : (
             data.map((row, rowIndex) => {
+              const rowHref = getRowHref?.(row);
               const rowClasses = [
-                onRowClick ? styles.clickableRow : undefined,
+                onRowClick || rowHref ? styles.clickableRow : undefined,
                 rowClassName?.(row, rowIndex),
               ]
                 .filter(Boolean)
@@ -193,12 +197,13 @@ const Table = <T,>({
               return (
                 <tr
                   key={rowKey(row)}
-                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  onClick={!rowHref && onRowClick ? () => onRowClick(row) : undefined}
                   className={rowClasses || undefined}
                 >
                   {columns.map((col, index) => {
                     const colKey = getColSortKey(col);
                     const isActive = col.sortable && !!colKey && colKey === activeSortKey;
+                    const content = renderCell(col, row);
 
                     return (
                       <td
@@ -206,7 +211,16 @@ const Table = <T,>({
                         style={col.align ? { textAlign: col.align } : undefined}
                         className={isActive ? styles.sortedColumn : undefined}
                       >
-                        {renderCell(col, row)}
+                        {rowHref ? (
+                          <Link
+                            to={rowHref}
+                            className={styles.cellLink}
+                          >
+                            {content}
+                          </Link>
+                        ) : (
+                          content
+                        )}
                       </td>
                     );
                   })}

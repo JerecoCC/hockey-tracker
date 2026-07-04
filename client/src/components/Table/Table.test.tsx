@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import Table, { Column } from './Table';
 
 interface Item {
@@ -154,6 +155,30 @@ describe('Table', () => {
 
     expect(screen.getByText('Beta').closest('tr')).toHaveClass('highlight-row');
     expect(screen.getByText('Alpha').closest('tr')).not.toHaveClass('highlight-row');
+  });
+
+  it('renders row href cells as links', () => {
+    const linkColumns: Column<Item>[] = [
+      { header: 'Name', key: 'name' },
+      { type: 'date', header: 'Created', key: 'created' },
+    ];
+
+    render(
+      <MemoryRouter>
+        <Table
+          columns={linkColumns}
+          data={data}
+          rowKey={(r) => r.id}
+          getRowHref={(row) => `/items/${row.id}`}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: 'Alpha' })).toHaveAttribute('href', '/items/1');
+    expect(screen.getByRole('link', { name: '2024/06/01' })).toHaveAttribute(
+      'href',
+      '/items/2',
+    );
   });
 
   it('highlights the active sort column', () => {

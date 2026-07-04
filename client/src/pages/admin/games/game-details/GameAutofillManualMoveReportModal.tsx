@@ -1,6 +1,13 @@
 import Badge from '@/components/Badge/Badge';
+import Accordion from '@/components/Accordion/Accordion';
 import Modal from '@/components/Modal/Modal';
 import Table, { type Column } from '@/components/Table/Table';
+import {
+  buildLeagueDetailsPath,
+  buildLeaguePlayerDetailsPath,
+  buildPlayerDetailsPath,
+  buildTeamDetailsPath,
+} from '@/lib/routeSlugs';
 import type {
   GameAutofillManualJerseyChange,
   GameAutofillManualMoveReport,
@@ -32,14 +39,57 @@ function formatJersey(value: number | null | undefined) {
   return value == null ? '-' : `#${value}`;
 }
 
-function formatConflict(change: GameAutofillManualJerseyChange) {
-  if (!change.conflictingPlayerName && !change.conflictingLeaguePlayerNumber) return '-';
-  return [
-    change.conflictingPlayerName,
-    change.conflictingLeaguePlayerNumber
-      ? `league player number ${change.conflictingLeaguePlayerNumber}`
-      : null,
-  ].filter(Boolean).join(' / ');
+function splitPlayerName(playerName: string) {
+  const [firstName = '', ...lastNameParts] = playerName.trim().split(/\s+/);
+
+  return {
+    firstName,
+    lastName: lastNameParts.join(' '),
+  };
+}
+
+function getMovePlayerHref(leagueCode: string, move: GameAutofillManualPlayerMove) {
+  if (move.playerId) {
+    if (move.fromTeamCode) {
+      return `${buildTeamDetailsPath({
+        leagueCode,
+        teamCode: move.fromTeamCode,
+      })}/players/${move.playerId}`;
+    }
+
+    return `${buildLeagueDetailsPath({ leagueCode })}/players/${move.playerId}`;
+  }
+
+  const { firstName, lastName } = splitPlayerName(move.playerName);
+
+  if (move.fromTeamCode) {
+    return buildPlayerDetailsPath({
+      leagueCode,
+      teamCode: move.fromTeamCode,
+      firstName,
+      lastName,
+    });
+  }
+
+  return buildLeaguePlayerDetailsPath({
+    leagueCode,
+    firstName,
+    lastName,
+  });
+}
+
+function renderPlayerNumberCell(
+  name: string | null | undefined,
+  leaguePlayerNumber: string | null | undefined,
+) {
+  if (!name && !leaguePlayerNumber) return '-';
+
+  return (
+    <div className={styles.playerCell}>
+      <strong>{name ?? '-'}</strong>
+      {leaguePlayerNumber && <span>{leaguePlayerNumber}</span>}
+    </div>
+  );
 }
 
 const moveColumns: Column<GameAutofillManualPlayerMove>[] = [
@@ -78,12 +128,7 @@ const jerseyColumns: Column<GameAutofillManualJerseyChange>[] = [
   {
     type: 'custom',
     header: 'Player',
-    render: (change) => (
-      <div className={styles.playerCell}>
-        <strong>{change.playerName}</strong>
-        {change.leaguePlayerNumber && <span>league player number {change.leaguePlayerNumber}</span>}
-      </div>
-    ),
+    render: (change) => renderPlayerNumberCell(change.playerName, change.leaguePlayerNumber),
   },
   {
     type: 'custom',
@@ -103,7 +148,11 @@ const jerseyColumns: Column<GameAutofillManualJerseyChange>[] = [
   {
     type: 'custom',
     header: 'Conflicts with',
-    render: formatConflict,
+    render: (change) =>
+      renderPlayerNumberCell(
+        change.conflictingPlayerName,
+        change.conflictingLeaguePlayerNumber,
+      ),
   },
 ];
 
@@ -131,6 +180,7 @@ const GameAutofillManualMoveReportModal = ({ open, reports, onClose }: Props) =>
     onClose={onClose}
     cancelLabel="Close"
     size="lg"
+    disableBackdropClose
   >
     <div className={styles.report}>
       <p className={styles.intro}>
@@ -141,42 +191,49 @@ const GameAutofillManualMoveReportModal = ({ open, reports, onClose }: Props) =>
           const jerseyChanges = report.jerseyChanges ?? [];
 
           return (
-            <section
+            <Accordion
               key={`${report.gameId}-${report.leagueCode}`}
-              className={styles.game}
+              className={styles.gameAccordion}
+              bodyClassName={styles.gameAccordionBody}
+              headerType="light"
+              defaultOpen
+              label={
+                <span className={styles.gameHeader}>
+                  <Badge
+                    value={report.leagueCode}
+                    aria-label={report.leagueCode}
+                  />
+                  <strong>{report.gameLabel}</strong>
+                </span>
+              }
             >
-              <div className={styles.gameHeader}>
-                <Badge
-                  value={report.leagueCode}
-                  aria-label={report.leagueCode}
-                />
-                <strong>{report.gameLabel}</strong>
+              <div className={styles.gameBody}>
+                {report.moves.length > 0 && (
+                  <div className={styles.reportSection}>
+                    <h4>Player moves</h4>
+                    <Table
+                      columns={moveColumns}
+                      data={report.moves}
+                      rowKey={(move) => getMoveRowKey(report.gameId, move)}
+                      getRowHref={(move) => getMovePlayerHref(report.leagueCode, move)}
+                      minWidth={640}
+                    />
+                  </div>
+                )}
+
+                {jerseyChanges.length > 0 && (
+                  <div className={styles.reportSection}>
+                    <h4>Jersey number changes</h4>
+                    <Table
+                      columns={jerseyColumns}
+                      data={jerseyChanges}
+                      rowKey={(change) => getJerseyChangeRowKey(report.gameId, change)}
+                      minWidth={720}
+                    />
+                  </div>
+                )}
               </div>
-
-              {report.moves.length > 0 && (
-                <div className={styles.reportSection}>
-                  <h4>Player moves</h4>
-                  <Table
-                    columns={moveColumns}
-                    data={report.moves}
-                    rowKey={(move) => getMoveRowKey(report.gameId, move)}
-                    minWidth={640}
-                  />
-                </div>
-              )}
-
-              {jerseyChanges.length > 0 && (
-                <div className={styles.reportSection}>
-                  <h4>Jersey number changes</h4>
-                  <Table
-                    columns={jerseyColumns}
-                    data={jerseyChanges}
-                    rowKey={(change) => getJerseyChangeRowKey(report.gameId, change)}
-                    minWidth={720}
-                  />
-                </div>
-              )}
-            </section>
+            </Accordion>
           );
         })}
       </div>

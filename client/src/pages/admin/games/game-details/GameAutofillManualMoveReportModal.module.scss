@@ -18,10 +18,12 @@
   gap: $space-md;
 }
 
-.game {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
+.gameAccordion {
+  overflow: hidden;
+}
+
+.gameAccordionBody {
+  padding: $space-md;
 }
 
 .gameHeader {
@@ -34,6 +36,12 @@
     min-width: 0;
     overflow-wrap: anywhere;
   }
+}
+
+.gameBody {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
 }
 
 .reportSection {
