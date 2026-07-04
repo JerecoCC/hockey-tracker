@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
@@ -30,6 +30,7 @@ type FormValues = {
 
 const FORM_ID = 'nhl-game-autofill-form';
 const AUTOFILL_FAILURE_TOAST_MS = 12000;
+const AUTOFILL_REFRESH_DEBOUNCE_MS = 300;
 
 const NhlGameAutofillModal = ({
   open,
@@ -51,6 +52,9 @@ const NhlGameAutofillModal = ({
     mode: 'onChange',
   });
   const [filling, setFilling] = useState(false);
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshInFlightRef = useRef<Promise<void> | null>(null);
+  const refreshQueuedRef = useRef(false);
   const gameNumber = watch('game_number');
   const canUseGameNumber = isValid && !!String(gameNumber ?? '').trim();
 
@@ -64,11 +68,43 @@ const NhlGameAutofillModal = ({
       queryClient.invalidateQueries({ queryKey: ['shootout-attempts', game.id] }),
     ]);
 
-  const handleAutofillProgress = async (progress: NhlAutofillProgress) => {
-    onAutofillChange?.(progress);
-    if (progress.refresh) {
-      await invalidateGameDetailQueries();
+  const runQueuedGameDetailRefresh = () => {
+    refreshTimerRef.current = null;
+    if (refreshInFlightRef.current) {
+      refreshQueuedRef.current = true;
+      return;
     }
+    refreshInFlightRef.current = invalidateGameDetailQueries()
+      .then(() => undefined)
+      .finally(() => {
+        refreshInFlightRef.current = null;
+        if (refreshQueuedRef.current) {
+          refreshQueuedRef.current = false;
+          queueGameDetailRefresh();
+        }
+      });
+  };
+
+  const queueGameDetailRefresh = () => {
+    if (refreshTimerRef.current) return;
+    refreshTimerRef.current = setTimeout(runQueuedGameDetailRefresh, AUTOFILL_REFRESH_DEBOUNCE_MS);
+  };
+
+  const flushGameDetailRefresh = async () => {
+    if (refreshTimerRef.current) {
+      clearTimeout(refreshTimerRef.current);
+      refreshTimerRef.current = null;
+    }
+    refreshQueuedRef.current = false;
+    if (refreshInFlightRef.current) {
+      await refreshInFlightRef.current;
+    }
+    await invalidateGameDetailQueries();
+  };
+
+  const handleAutofillProgress = (progress: NhlAutofillProgress) => {
+    onAutofillChange?.(progress);
+    if (progress.refresh) queueGameDetailRefresh();
   };
 
   const onSubmit = handleSubmit(async (values) => {
@@ -86,7 +122,7 @@ const NhlGameAutofillModal = ({
       const result = await autofillGameFromNhlGamecenter(game, input, {
         onProgress: handleAutofillProgress,
       });
-      await invalidateGameDetailQueries();
+      await flushGameDetailRefresh();
       await queryClient.invalidateQueries({ queryKey: ['games'] });
       toast.success(
         `Filled NHL game ${result.summary.gameId}: ${result.summary.goalsCreated} goals, ${result.summary.rosterPlayers} roster players.`,

@@ -154,13 +154,6 @@ async function emitAutofillProgress(
 ) {
   if (!onProgress) return;
   await onProgress({ leagueLabel: 'PWHL', ...progress });
-  await new Promise<void>((resolve) => {
-    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
-      setTimeout(resolve, 0);
-      return;
-    }
-    window.requestAnimationFrame(() => resolve());
-  });
 }
 
 export async function autofillGameFromPwhlGamecenter(
