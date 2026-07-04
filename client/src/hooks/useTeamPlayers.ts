@@ -244,6 +244,11 @@ export const useStintActions = (playerId: string | null) => {
     jerseyNumber: number,
     effectiveDate?: string | null,
   ): Promise<boolean> => {
+    if (!effectiveDate) {
+      toast.error('Effective date is required to change a jersey number');
+      return false;
+    }
+
     setSaving(true);
     try {
       await axios.patch(
@@ -253,7 +258,7 @@ export const useStintActions = (playerId: string | null) => {
           team_id: stint.team_id,
           season_id: stint.season_id,
           jersey_number: jerseyNumber,
-          ...(effectiveDate ? { effective_date: effectiveDate } : {}),
+          effective_date: effectiveDate,
         },
         { headers: authHeaders() },
       );

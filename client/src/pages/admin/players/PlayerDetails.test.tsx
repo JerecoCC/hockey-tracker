@@ -193,7 +193,9 @@ beforeAll(() => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockedAxios.get.mockReset();
   mockedAxios.patch.mockReset();
+  mockedAxios.post.mockReset();
   (mockedAxios.isAxiosError as unknown as jest.Mock).mockReturnValue(false);
   document.title = 'Hockey Tracker';
   mockUseTabState.mockReturnValue([0, jest.fn()]);
@@ -679,6 +681,168 @@ describe('PlayerDetails info tab', () => {
     await user.click(screen.getByRole('button', { name: 'Move Player' }));
 
     expect(screen.getByText('Move Player Modal')).toBeInTheDocument();
+  });
+
+  it('records NHL autofill jersey changes through dated jersey history', async () => {
+    const user = userEvent.setup();
+    const updateStint = jest.fn().mockResolvedValue(true);
+    const changeJerseyNumber = jest.fn().mockResolvedValue(true);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8470000',
+        first_name: 'John',
+        last_name: 'Smith',
+        photo: null,
+        date_of_birth: '1997-01-13',
+        birth_city: 'Edmonton',
+        birth_country: 'CAN',
+        height_cm: 185,
+        weight_lbs: 195,
+        position: 'C',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [{ id: 'team-1', code: 'TOR', league_id: 'league-1' }],
+    });
+    mockUseStintActions.mockReturnValue({
+      createStint: jest.fn(),
+      updateStint,
+      deleteStint: jest.fn(),
+      changeJerseyNumber,
+      changePlayerPhoto: jest.fn(),
+      uploadStintPhoto: jest.fn(),
+      saving: false,
+    });
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        firstName: { default: 'John' },
+        lastName: { default: 'Smith' },
+        currentTeamAbbrev: 'TOR',
+        sweaterNumber: 91,
+        jerseyNumberEffectiveDate: '2025-01-05',
+        position: 'C',
+      },
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    await waitFor(() =>
+      expect(changeJerseyNumber).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'stint-1' }),
+        91,
+        '2025-01-05',
+      ),
+    );
+    expect(updateStint).not.toHaveBeenCalledWith(
+      'stint-1',
+      expect.objectContaining({ jersey_number: 91 }),
+    );
+  });
+
+  it('infers NHL autofill jersey change date from the first game with the new number', async () => {
+    const user = userEvent.setup();
+    const changeJerseyNumber = jest.fn().mockResolvedValue(true);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8470000',
+        first_name: 'John',
+        last_name: 'Smith',
+        photo: null,
+        date_of_birth: '1997-01-13',
+        birth_city: 'Edmonton',
+        birth_country: 'CAN',
+        height_cm: 185,
+        weight_lbs: 195,
+        position: 'C',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [{ id: 'team-1', code: 'TOR', league_id: 'league-1' }],
+    });
+    mockUseStintActions.mockReturnValue({
+      createStint: jest.fn(),
+      updateStint: jest.fn(),
+      deleteStint: jest.fn(),
+      changeJerseyNumber,
+      changePlayerPhoto: jest.fn(),
+      uploadStintPhoto: jest.fn(),
+      saving: false,
+    });
+    mockedAxios.get
+      .mockResolvedValueOnce({
+        data: {
+          firstName: { default: 'John' },
+          lastName: { default: 'Smith' },
+          currentTeamAbbrev: 'TOR',
+          sweaterNumber: 91,
+          position: 'C',
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          gameLog: [
+            { gameId: 2025020001, gameDate: '2025-01-03', teamAbbrev: 'TOR' },
+            { gameId: 2025020002, gameDate: '2025-01-05', teamAbbrev: 'TOR' },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ data: { gameLog: [] } })
+      .mockResolvedValueOnce({
+        data: {
+          gameDate: '2025-01-03',
+          awayTeam: { abbrev: 'TOR' },
+          playerByGameStats: {
+            awayTeam: {
+              forwards: [{ playerId: 8470000, sweaterNumber: 19 }],
+              defense: [],
+              goalies: [],
+            },
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        data: {
+          gameDate: '2025-01-05',
+          awayTeam: { abbrev: 'TOR' },
+          playerByGameStats: {
+            awayTeam: {
+              forwards: [{ playerId: 8470000, sweaterNumber: 91 }],
+              defense: [],
+              goalies: [],
+            },
+          },
+        },
+      });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    await waitFor(() =>
+      expect(changeJerseyNumber).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'stint-1' }),
+        91,
+        '2025-01-05',
+      ),
+    );
   });
 
   it('retires a player from the more actions menu', async () => {

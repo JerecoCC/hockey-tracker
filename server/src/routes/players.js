@@ -1971,6 +1971,18 @@ router.post('/', async (req, res) => {
         ${rookie_season_id || null},
         ${is_active ?? true}
       )
+      ON CONFLICT (league_player_number) WHERE league_player_number IS NOT NULL
+      DO UPDATE SET
+        photo = COALESCE(players.photo, EXCLUDED.photo),
+        date_of_birth = COALESCE(players.date_of_birth, EXCLUDED.date_of_birth),
+        birth_city = COALESCE(players.birth_city, EXCLUDED.birth_city),
+        birth_country = COALESCE(players.birth_country, EXCLUDED.birth_country),
+        height_cm = COALESCE(players.height_cm, EXCLUDED.height_cm),
+        weight_lbs = COALESCE(players.weight_lbs, EXCLUDED.weight_lbs),
+        position = COALESCE(players.position, EXCLUDED.position),
+        shoots = COALESCE(players.shoots, EXCLUDED.shoots),
+        rookie_season_id = COALESCE(players.rookie_season_id, EXCLUDED.rookie_season_id),
+        is_active = players.is_active OR EXCLUDED.is_active
       RETURNING
         id, league_player_number, first_name, last_name, photo,
         date_of_birth::text AS date_of_birth,
@@ -2020,6 +2032,12 @@ router.post('/bulk', async (req, res) => {
           ${first_name.trim()}, ${last_name.trim()},
           ${position}, ${shoots ?? null}, ${rookie_season_id || null}, true
         )
+        ON CONFLICT (league_player_number) WHERE league_player_number IS NOT NULL
+        DO UPDATE SET
+          position = COALESCE(players.position, EXCLUDED.position),
+          shoots = COALESCE(players.shoots, EXCLUDED.shoots),
+          rookie_season_id = COALESCE(players.rookie_season_id, EXCLUDED.rookie_season_id),
+          is_active = players.is_active OR EXCLUDED.is_active
         RETURNING
           id, league_player_number, first_name, last_name, photo,
           date_of_birth::text AS date_of_birth,
@@ -2175,6 +2193,9 @@ router.patch('/:id', async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ error: 'Player not found' });
     return res.json(rows[0]);
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'league_player_number already belongs to another player' });
+    }
     console.error('players update error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

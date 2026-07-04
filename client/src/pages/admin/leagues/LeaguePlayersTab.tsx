@@ -111,8 +111,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
   const showListSkeleton = showPaginationSkeleton || showSeasonSkeleton || showFilterSkeleton;
   const playerDataIndicator = (player: PlayerRecord) => {
     const hasMissingData = !player.date_of_birth || !player.start_date || !player.acquisition_type;
-    const hasSingleSeasonPoint = player.season_points === 1;
-    if (!hasSingleSeasonPoint || !hasMissingData) return '';
+    if (!hasMissingData) return '';
     return ` ${missingPlayerDataIndicator}`;
   };
   const renderPlayerTags = (player: PlayerRecord) => {

@@ -49,7 +49,11 @@ import {
   type PlayerStintRecord,
   type TeamPlayerRecord,
 } from '@/hooks/useTeamPlayers';
-import { type CreatePlayerData } from '@/hooks/useLeaguePlayers';
+import {
+  type CreatePlayerData,
+  type PlayerPosition,
+  type PlayerShoots,
+} from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import { formatPlayerPosition } from '@/lib/playerPosition';
 import {
@@ -77,6 +81,264 @@ const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 const GAME_LOG_PAGE_SIZE = 20;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+interface NhlLocalizedText {
+  default?: string;
+  en?: string;
+  [key: string]: string | undefined;
+}
+
+interface NhlPlayerLanding {
+  firstName?: NhlLocalizedText;
+  lastName?: NhlLocalizedText;
+  birthDate?: string | null;
+  birthCity?: NhlLocalizedText | string | null;
+  birthCountry?: string | null;
+  heightInCentimeters?: number | null;
+  heightInInches?: number | null;
+  weightInPounds?: number | null;
+  position?: string | null;
+  shootsCatches?: string | null;
+  isActive?: boolean;
+  currentTeamAbbrev?: string | null;
+  sweaterNumber?: number | null;
+  currentTeamStartDate?: string | null;
+  currentTeamRosterDate?: string | null;
+  acquisitionDate?: string | null;
+  acquiredDate?: string | null;
+  currentJerseyNumberEffectiveDate?: string | null;
+  jerseyNumberEffectiveDate?: string | null;
+  currentSweaterNumberEffectiveDate?: string | null;
+  sweaterNumberEffectiveDate?: string | null;
+  jerseyNumberDate?: string | null;
+  sweaterNumberDate?: string | null;
+  acquisitionType?: string | null;
+  currentTeamAcquisitionType?: string | null;
+}
+
+interface NhlPlayerGameLogEntry {
+  gameId?: number | string | null;
+  gameDate?: string | null;
+  teamAbbrev?: NhlLocalizedText | string | null;
+  sweaterNumber?: number | null;
+  jerseyNumber?: number | null;
+}
+
+interface NhlPlayerGameLogResponse {
+  gameLog?: NhlPlayerGameLogEntry[];
+  games?: NhlPlayerGameLogEntry[];
+}
+
+const NHL_JERSEY_INFERENCE_GAME_TYPES = [2, 3] as const;
+
+const readNhlText = (value: NhlLocalizedText | string | null | undefined) => {
+  if (!value) return null;
+  if (typeof value === 'string') return value;
+  return value.default ?? value.en ?? Object.values(value).find(Boolean) ?? null;
+};
+
+const normalizeTeamCode = (value: string | null | undefined) => value?.trim().toUpperCase() ?? null;
+
+const normalizeNhlPosition = (value: string | null | undefined): PlayerPosition | null => {
+  const position = value?.trim().toUpperCase();
+  if (!position) return null;
+  if (['C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G'].includes(position)) {
+    return position as PlayerPosition;
+  }
+  if (position === 'L') return 'LW';
+  if (position === 'R') return 'RW';
+  return null;
+};
+
+const normalizeShoots = (value: string | null | undefined): PlayerShoots | null => {
+  const shoots = value?.trim().toUpperCase();
+  return shoots === 'L' || shoots === 'R' ? shoots : null;
+};
+
+const normalizeAcquisitionType = (value: string | null | undefined) => {
+  const type = value?.trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (!type) return null;
+  if (type === 'free_agent') return 'free_agency';
+  if (
+    [
+      'draft',
+      'trade',
+      'free_agency',
+      'waivers',
+      'signing',
+      'foundational_signing',
+      'expansion_signing',
+      'expansion_draft',
+      'team_transfer',
+      'loan',
+      'other',
+    ].includes(type)
+  ) {
+    return type;
+  }
+  return null;
+};
+
+const officialNhlCurrentTeamMovement = (landing: NhlPlayerLanding) => ({
+  date:
+    landing.currentTeamStartDate?.slice(0, 10) ??
+    landing.currentTeamRosterDate?.slice(0, 10) ??
+    landing.acquisitionDate?.slice(0, 10) ??
+    landing.acquiredDate?.slice(0, 10) ??
+    null,
+  acquisitionType: normalizeAcquisitionType(
+    landing.currentTeamAcquisitionType ?? landing.acquisitionType,
+  ),
+});
+
+const officialNhlJerseyNumberDate = (landing: NhlPlayerLanding) =>
+  landing.currentJerseyNumberEffectiveDate?.slice(0, 10) ??
+  landing.jerseyNumberEffectiveDate?.slice(0, 10) ??
+  landing.currentSweaterNumberEffectiveDate?.slice(0, 10) ??
+  landing.sweaterNumberEffectiveDate?.slice(0, 10) ??
+  landing.jerseyNumberDate?.slice(0, 10) ??
+  landing.sweaterNumberDate?.slice(0, 10) ??
+  null;
+
+const normalizeIsoDate = (value: string | null | undefined) => {
+  const date = value?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+  return date;
+};
+
+const nhlSeasonCode = (seasonName: string | null | undefined, fallbackDate?: string | null) => {
+  const seasonMatch = seasonName?.match(/(\d{4})\D+(\d{2,4})/);
+  if (seasonMatch) {
+    const start = Number(seasonMatch[1]);
+    let end = Number(seasonMatch[2]);
+    if (seasonMatch[2].length === 2) {
+      end = Math.floor(start / 100) * 100 + end;
+      if (end < start) end += 100;
+    }
+    return `${start}${end}`;
+  }
+
+  const date = normalizeIsoDate(fallbackDate);
+  if (!date) return null;
+  const [yearText, monthText] = date.split('-');
+  const year = Number(yearText);
+  const month = Number(monthText);
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return null;
+  const start = month >= 7 ? year : year - 1;
+  return `${start}${start + 1}`;
+};
+
+const nhlGameLogEntries = (
+  response: NhlPlayerGameLogResponse | NhlPlayerGameLogEntry[],
+) => {
+  if (Array.isArray(response)) return response;
+  return response.gameLog ?? response.games ?? [];
+};
+
+const optionalNumber = (value: unknown) => {
+  if (value == null || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+function nhlBoxscorePlayerHasJersey(
+  boxscore: any,
+  playerNumber: string,
+  jerseyNumber: number,
+  teamCode: string | null,
+) {
+  const nhlPlayerNumber = Number(playerNumber);
+  return (['away', 'home'] as const).some((side) => {
+    const boxscoreTeam = boxscore?.[`${side}Team`];
+    const boxscoreTeamAbbrev =
+      readNhlText(boxscoreTeam?.abbrev) ??
+      (typeof boxscoreTeam?.abbrev === 'string' ? boxscoreTeam.abbrev : null);
+    const boxscoreTeamCode = normalizeTeamCode(
+      boxscoreTeamAbbrev,
+    );
+    if (teamCode && boxscoreTeamCode && boxscoreTeamCode !== teamCode) return false;
+
+    const stats = boxscore?.playerByGameStats?.[`${side}Team`] ?? {};
+    return (['forwards', 'defense', 'goalies'] as const).some((group) =>
+      Array.isArray(stats[group]) &&
+      stats[group].some(
+        (row: any) =>
+          Number(row?.playerId) === nhlPlayerNumber &&
+          Number(row?.sweaterNumber) === jerseyNumber,
+      ),
+    );
+  });
+}
+
+async function inferNhlJerseyNumberDateFromGames({
+  fetchNhlProxy,
+  playerNumber,
+  seasonCode,
+  teamCode,
+  jerseyNumber,
+  stintStartDate,
+}: {
+  fetchNhlProxy: <T>(url: string) => Promise<T>;
+  playerNumber: string;
+  seasonCode: string | null;
+  teamCode: string | null;
+  jerseyNumber: number;
+  stintStartDate?: string | null;
+}) {
+  if (!seasonCode || !teamCode || !playerNumber) return null;
+
+  const entries: NhlPlayerGameLogEntry[] = [];
+  for (const gameType of NHL_JERSEY_INFERENCE_GAME_TYPES) {
+    try {
+      const response = await fetchNhlProxy<NhlPlayerGameLogResponse | NhlPlayerGameLogEntry[]>(
+        `https://api-web.nhle.com/v1/player/${playerNumber}/game-log/${seasonCode}/${gameType}`,
+      );
+      entries.push(...nhlGameLogEntries(response));
+    } catch {
+      // Playoff logs may not exist for every player; regular-season matches are enough.
+    }
+  }
+
+  const stintStart = normalizeIsoDate(stintStartDate);
+  const seenGameIds = new Set<string>();
+  const candidates = entries
+    .map((entry) => {
+      const teamAbbrev =
+        readNhlText(entry.teamAbbrev) ??
+        (typeof entry.teamAbbrev === 'string' ? entry.teamAbbrev : null);
+      return {
+        gameId: entry.gameId == null ? null : String(entry.gameId),
+        gameDate: normalizeIsoDate(entry.gameDate),
+        teamCode: normalizeTeamCode(teamAbbrev),
+        entryJerseyNumber: optionalNumber(entry.sweaterNumber ?? entry.jerseyNumber),
+      };
+    })
+    .filter((entry) => entry.gameId && entry.gameDate)
+    .filter((entry) => !stintStart || entry.gameDate! >= stintStart)
+    .filter((entry) => !entry.teamCode || entry.teamCode === teamCode)
+    .sort((a, b) => a.gameDate!.localeCompare(b.gameDate!))
+    .filter((entry) => {
+      if (!entry.gameId || seenGameIds.has(entry.gameId)) return false;
+      seenGameIds.add(entry.gameId);
+      return true;
+    });
+
+  for (const candidate of candidates) {
+    if (candidate.entryJerseyNumber === jerseyNumber) return candidate.gameDate;
+
+    try {
+      const boxscore = await fetchNhlProxy<any>(
+        `https://api-web.nhle.com/v1/gamecenter/${candidate.gameId}/boxscore`,
+      );
+      if (nhlBoxscorePlayerHasJersey(boxscore, playerNumber, jerseyNumber, teamCode)) {
+        return normalizeIsoDate(boxscore?.gameDate) ?? candidate.gameDate;
+      }
+    } catch {
+      // Keep looking; an unavailable boxscore should not block later evidence.
+    }
+  }
+
+  return null;
+}
 
 const formatHeight = (cm: number | null) => {
   if (!cm) return null;
@@ -537,6 +799,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const [movePlayerOpen, setMovePlayerOpen] = useState(false);
   const [retirePlayerOpen, setRetirePlayerOpen] = useState(false);
   const [retirePlayerBusy, setRetirePlayerBusy] = useState(false);
+  const [autoFillPlayerBusy, setAutoFillPlayerBusy] = useState(false);
   const [gameLogSeasonId, setGameLogSeasonId] = useState('all');
   const [gameLogType, setGameLogType] = useState('all');
   const [gameLogPage, setGameLogPage] = useState(1);
@@ -599,6 +862,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     jerseyNumber?: number | null,
     position?: string | null,
     acquisitionType?: string | null,
+    options: { showToast?: boolean; navigateAfter?: boolean } = {},
   ): Promise<boolean> => {
     try {
       await axios.post(
@@ -610,12 +874,12 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           trade_date: moveDate,
           jersey_number: jerseyNumber ?? null,
           position: position ?? null,
-          acquisition_type: acquisitionType ?? 'trade',
+          acquisition_type: acquisitionType ?? null,
         },
         { headers: authHeaders() },
       );
 
-      toast.success('Player moved successfully!');
+      if (options.showToast !== false) toast.success('Player moved successfully!');
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['player', playerId] }),
@@ -631,15 +895,17 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
         queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] }),
       ]);
 
-      const toTeam = teams.find((team) => team.id === toTeamId);
-      navigate(
-        buildPlayerDetailsPath({
-          leagueCode,
-          teamCode: toTeam?.code ?? toTeamId,
-          firstName: player?.first_name,
-          lastName: player?.last_name,
-        }),
-      );
+      if (options.navigateAfter !== false) {
+        const toTeam = teams.find((team) => team.id === toTeamId);
+        navigate(
+          buildPlayerDetailsPath({
+            leagueCode,
+            teamCode: toTeam?.code ?? toTeamId,
+            firstName: player?.first_name,
+            lastName: player?.last_name,
+          }),
+        );
+      }
       return true;
     } catch (err) {
       const message =
@@ -691,6 +957,145 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const latestStint = stints[0];
   const teamHistoryStints = collapseSameTeamStints(stints);
   const fullName = player ? `${player.first_name} ${player.last_name}` : 'Not Found';
+  const currentLeagueCode = normalizeTeamCode(
+    routeLookup?.league_code ?? teamDetails?.league_code ?? leagueCode,
+  );
+
+  const fetchNhlProxy = async <T,>(url: string) => {
+    const { data } = await axios.get<T>(`${API}/admin/games/nhl-api`, {
+      headers: authHeaders(),
+      params: { url },
+    });
+    return data;
+  };
+
+  const handleAutoFillPlayerData = async () => {
+    if (!player?.id || !player.league_player_number || currentLeagueCode !== 'NHL') return;
+
+    setAutoFillPlayerBusy(true);
+    try {
+      const landing = await fetchNhlProxy<NhlPlayerLanding>(
+        `https://api-web.nhle.com/v1/player/${player.league_player_number}/landing`,
+      );
+      const firstName = readNhlText(landing.firstName);
+      const lastName = readNhlText(landing.lastName);
+      const heightCm =
+        landing.heightInCentimeters ??
+        (landing.heightInInches == null ? null : Math.round(landing.heightInInches * 2.54));
+      const birthCity = readNhlText(landing.birthCity);
+      const position = normalizeNhlPosition(landing.position);
+      const shoots = normalizeShoots(landing.shootsCatches);
+      const payload: Partial<CreatePlayerData> = {};
+      if (firstName) payload.first_name = firstName;
+      if (lastName) payload.last_name = lastName;
+      if (landing.birthDate) payload.date_of_birth = landing.birthDate;
+      if (birthCity) payload.birth_city = birthCity;
+      if (landing.birthCountry) payload.birth_country = landing.birthCountry;
+      if (heightCm != null) payload.height_cm = heightCm;
+      if (landing.weightInPounds != null) payload.weight_lbs = landing.weightInPounds;
+      if (position) payload.position = position;
+      if (shoots) payload.shoots = shoots;
+      if (typeof landing.isActive === 'boolean') payload.is_active = landing.isActive;
+
+      await axios.patch(`${API}/admin/players/${player.id}`, payload, { headers: authHeaders() });
+
+      const officialMovement = officialNhlCurrentTeamMovement(landing);
+      const landingTeamCode = normalizeTeamCode(landing.currentTeamAbbrev);
+      const destinationTeam = landingTeamCode
+        ? teams.find(
+            (team) =>
+              normalizeTeamCode(team.code) === landingTeamCode &&
+              (!leagueId || team.league_id === leagueId),
+          )
+        : null;
+      let movementRecorded = false;
+      let jerseyUpdated = false;
+      let jerseyDateInferred = false;
+      let movementSkippedMissingDate = false;
+      let jerseySkippedMissingDate = false;
+
+      if (latestStint && destinationTeam && destinationTeam.id !== latestStint.team_id) {
+        if (officialMovement.date) {
+          movementRecorded = await movePlayer(
+            player.id,
+            latestStint.season_id,
+            destinationTeam.id,
+            officialMovement.date,
+            landing.sweaterNumber ?? null,
+            position,
+            officialMovement.acquisitionType,
+            { showToast: false, navigateAfter: false },
+          );
+        } else {
+          movementSkippedMissingDate = true;
+        }
+      } else if (
+        latestStint &&
+        landing.sweaterNumber != null &&
+        landing.sweaterNumber !== latestStint.jersey_number
+      ) {
+        let jerseyEffectiveDate = officialNhlJerseyNumberDate(landing);
+        if (!jerseyEffectiveDate) {
+          const latestStintSeason = seasons.find((season) => season.id === latestStint.season_id);
+          jerseyEffectiveDate = await inferNhlJerseyNumberDateFromGames({
+            fetchNhlProxy,
+            playerNumber: player.league_player_number,
+            seasonCode: nhlSeasonCode(latestStintSeason?.name, latestStint.start_date),
+            teamCode: landingTeamCode ?? normalizeTeamCode(latestStint.team.code),
+            jerseyNumber: landing.sweaterNumber,
+            stintStartDate: latestStint.start_date,
+          });
+          jerseyDateInferred = !!jerseyEffectiveDate;
+        }
+        if (jerseyEffectiveDate) {
+          jerseyUpdated = await changeJerseyNumber(
+            latestStint,
+            landing.sweaterNumber,
+            jerseyEffectiveDate,
+          );
+          if (jerseyUpdated && position && position !== latestStint.position) {
+            await updateStint(latestStint.id, { position });
+          }
+        } else {
+          jerseySkippedMissingDate = true;
+        }
+      }
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['player', player.id] }),
+        queryClient.invalidateQueries({ queryKey: ['player-trade-history', player.id] }),
+        queryClient.invalidateQueries({ queryKey: ['jersey-history', player.id] }),
+        queryClient.invalidateQueries({ queryKey: ['players'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-roster'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-lineup'] }),
+      ]);
+
+      if (movementSkippedMissingDate) {
+        toast.warn('Player data auto-filled. Movement needs an official acquisition date.');
+      } else if (jerseySkippedMissingDate) {
+        toast.warn(
+          'Player data auto-filled. Jersey change was skipped because no first game with the new number was found.',
+        );
+      } else if (movementRecorded) {
+        toast.success('Player data auto-filled and movement recorded.');
+      } else if (jerseyUpdated && jerseyDateInferred) {
+        toast.success('Player data and jersey number auto-filled from first game with new number.');
+      } else if (jerseyUpdated) {
+        toast.success('Player data and jersey number auto-filled.');
+      } else {
+        toast.success('Player data auto-filled.');
+      }
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
+          ? err.response.data.error
+          : 'Failed to auto-fill player data';
+      toast.error(message);
+    } finally {
+      setAutoFillPlayerBusy(false);
+    }
+  };
+
   const leagueHref = isAdminView
     ? buildLeagueDetailsPath({
         leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
@@ -902,7 +1307,22 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     latestStint?.season_id &&
     !latestStint?.end_date
   );
+  const canAutoFillNhlPlayer = !!(
+    isAdminView &&
+    currentLeagueCode === 'NHL' &&
+    player.league_player_number
+  );
   const playerActionItems = [
+    ...(canAutoFillNhlPlayer
+      ? [
+          {
+            label: autoFillPlayerBusy ? 'Auto-filling Player Data...' : 'Auto-fill Player Data',
+            icon: 'manage_search',
+            disabled: autoFillPlayerBusy,
+            onClick: handleAutoFillPlayerData,
+          },
+        ]
+      : []),
     ...(canMovePlayer
       ? [
           {

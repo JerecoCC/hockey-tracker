@@ -50,10 +50,11 @@ const ChangeJerseyModal = ({ open, stint, onClose, changeJerseyNumber }: Props) 
 
   const onSubmit = handleSubmit(async (data) => {
     if (!stint) return;
+    if (!data.effective_date) return;
     const ok = await changeJerseyNumber(
       stint,
       Number(data.jersey_number),
-      data.effective_date || null,
+      data.effective_date,
     );
     if (ok) handleClose();
   });
@@ -95,6 +96,8 @@ const ChangeJerseyModal = ({ open, stint, onClose, changeJerseyNumber }: Props) 
             label="Effective Date"
             control={control}
             name="effective_date"
+            required
+            rules={{ required: true }}
             disabled={isSubmitting}
           />
         </div>

@@ -284,6 +284,21 @@ describe('GET /api/admin/player-teams/history/:playerId', () => {
 });
 
 describe('PATCH /api/admin/player-teams', () => {
+  it('requires an effective date when changing a jersey number', async () => {
+    const res = await request(app)
+      .patch('/api/admin/player-teams')
+      .send({
+        player_id: 'player-1',
+        team_id: 'team-1',
+        season_id: 'season-1',
+        jersey_number: 91,
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/effective_date is required/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
   it('updates prospect status without creating a new stint', async () => {
     sql.mockResolvedValueOnce([{
       id: 'stint-1',
@@ -340,6 +355,43 @@ describe('PATCH /api/admin/player-teams', () => {
       is_prospect: true,
     });
     expect(sql).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('POST /api/admin/player-teams/trade', () => {
+  it('keeps acquisition_type null when explicitly provided as unknown', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'old-stint', team_id: 'team-old' }])
+      .mockResolvedValueOnce([{ id: 'old-career-stint' }])
+      .mockResolvedValueOnce([{
+        id: 'new-stint',
+        player_id: 'player-1',
+        team_id: 'team-new',
+        season_id: 'season-1',
+        jersey_number: 28,
+        position: 'D',
+        acquisition_type: null,
+        start_date: '2025-11-15',
+        end_date: null,
+      }])
+      .mockResolvedValueOnce([{ id: 'new-career-stint' }]);
+
+    const res = await request(app)
+      .post('/api/admin/player-teams/trade')
+      .send({
+        player_id: 'player-1',
+        season_id: 'season-1',
+        to_team_id: 'team-new',
+        trade_date: '2025-11-15',
+        jersey_number: 28,
+        position: 'D',
+        acquisition_type: null,
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.new_stint.acquisition_type).toBeNull();
+    const insertValues = sql.mock.calls[2].slice(1);
+    expect(insertValues[insertValues.length - 1]).toBeNull();
   });
 });
 

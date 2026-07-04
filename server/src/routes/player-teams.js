@@ -241,6 +241,10 @@ router.patch('/', async (req, res) => {
   const positionInBody = 'position' in req.body;
   const prospectInBody = 'is_prospect' in req.body;
 
+  if (jerseyInBody && jersey_number != null && !effective_date) {
+    return res.status(400).json({ error: 'effective_date is required when changing jersey number' });
+  }
+
   try {
     // If jersey_number is changing, record history before the update.
     if (jerseyInBody && jersey_number != null) {
@@ -254,7 +258,7 @@ router.patch('/', async (req, res) => {
           AND end_date IS NULL
       `;
       if (current && current.jersey_number !== jersey_number) {
-        const changeDate = effective_date ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+        const changeDate = effective_date;
         // Seed initial history if none exists for this stint yet.
         const existingHistory = await sql`
           SELECT 1 FROM jersey_number_history WHERE player_teams_id = ${current.id} LIMIT 1
@@ -729,7 +733,8 @@ router.delete('/:id', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/bulk-trade', async (req, res) => {
   const { players, season_id, to_team_id, trade_date } = req.body;
-  const acquisition_type = normalizeAcquisitionType(req.body.acquisition_type) ?? 'trade';
+  const acquisition_type =
+    'acquisition_type' in req.body ? normalizeAcquisitionType(req.body.acquisition_type) : 'trade';
 
   if (!Array.isArray(players) || players.length === 0)
     return res.status(400).json({ error: 'players must be a non-empty array' });
@@ -792,7 +797,8 @@ router.post('/bulk-trade', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/trade', async (req, res) => {
   const { player_id, season_id, to_team_id, trade_date, jersey_number = null, position = null } = req.body;
-  const acquisition_type = normalizeAcquisitionType(req.body.acquisition_type) ?? 'trade';
+  const acquisition_type =
+    'acquisition_type' in req.body ? normalizeAcquisitionType(req.body.acquisition_type) : 'trade';
   if (!player_id)  return res.status(400).json({ error: 'player_id is required' });
   if (!season_id)  return res.status(400).json({ error: 'season_id is required' });
   if (!to_team_id) return res.status(400).json({ error: 'to_team_id is required' });

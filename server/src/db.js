@@ -964,6 +964,11 @@ async function initSchema() {
   // Migrations for columns added after the table was first created
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS league_player_number TEXT`;
   await sql`CREATE INDEX IF NOT EXISTS players_league_player_number_idx ON players (league_player_number) WHERE league_player_number IS NOT NULL`;
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS players_league_player_number_unique_idx
+      ON players (league_player_number)
+      WHERE league_player_number IS NOT NULL
+  `;
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS rookie_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL`;
   await sql`ALTER TABLE players DROP COLUMN IF EXISTS nationality`;

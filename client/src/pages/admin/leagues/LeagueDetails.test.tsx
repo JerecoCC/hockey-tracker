@@ -1342,7 +1342,7 @@ describe('LeagueDetailsPage – players tab', () => {
     });
     clickPlayersTab();
 
-    const row = screen.getByText('John Smith').closest('li');
+    const row = screen.getByText(/^John Smith/).closest('li');
     expect(row?.querySelector('a')).toHaveAttribute('href', '/admin/leagues/tl/players/john-smith');
   });
 
@@ -1434,13 +1434,13 @@ describe('LeagueDetailsPage – players tab', () => {
     });
     clickPlayersTab();
 
-    expect(screen.getByText('John Smith')).toBeInTheDocument();
+    expect(screen.getByText(/^John Smith/)).toBeInTheDocument();
     expect(container.querySelectorAll('.loadingRow')).toHaveLength(0);
 
     const nextTooltip = screen.getByRole('tooltip', { name: /next page/i });
     fireEvent.click(nextTooltip.previousElementSibling as HTMLElement);
 
-    expect(screen.queryByText('John Smith')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^John Smith/)).not.toBeInTheDocument();
     expect(container.querySelectorAll('.loadingRow')).toHaveLength(15);
     expect(screen.getByText('16-21 of 21')).toBeInTheDocument();
     expect(screen.queryByLabelText('Loading players')).not.toBeInTheDocument();
@@ -1494,19 +1494,19 @@ describe('LeagueDetailsPage – players tab', () => {
     });
     clickPlayersTab();
 
-    expect(screen.getByText('John Smith')).toBeInTheDocument();
+    expect(screen.getByText(/^John Smith/)).toBeInTheDocument();
     expect(container.querySelectorAll('.loadingRow')).toHaveLength(0);
 
     await waitFor(() => expect(screen.getByRole('combobox')).toHaveTextContent('Spring 2024'));
     fireEvent.click(screen.getByRole('combobox'));
     fireEvent.click(screen.getByRole('button', { name: 'Winter 2025' }));
 
-    expect(screen.queryByText('John Smith')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^John Smith/)).not.toBeInTheDocument();
     expect(container.querySelectorAll('.loadingRow')).toHaveLength(15);
     expect(screen.queryByLabelText('Loading players')).not.toBeInTheDocument();
   });
 
-  it('shows missing data indicators only for players with one season point', () => {
+  it('shows missing data indicators for players missing selected-season data', () => {
     setup({ league: mockLeague }, {}, null, {
       players: [
         {
@@ -1579,8 +1579,7 @@ describe('LeagueDetailsPage – players tab', () => {
 
     expect(screen.getByText('John Smith \u26A0\uFE0F')).toBeInTheDocument();
     expect(screen.queryByText('John Smith \uD83D\uDCDD')).not.toBeInTheDocument();
-    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
-    expect(screen.queryByText('Jane Doe \u26A0\uFE0F')).not.toBeInTheDocument();
+    expect(screen.getByText('Jane Doe \u26A0\uFE0F')).toBeInTheDocument();
     expect(screen.getByText('Pat Ready')).toBeInTheDocument();
     expect(screen.queryByText('Pat Ready \u26A0\uFE0F')).not.toBeInTheDocument();
   });
