@@ -56,7 +56,8 @@ $color-bg: #fff;
   --list-item-hover-bg: rgba(255, 255, 255, 0.04);
 }
 
-:root[data-theme='light'] {
+:root[data-theme='light'],
+[data-theme='light'] {
   color-scheme: light;
   --app-bg: #f3f6fb;
   --app-surface: #f8fafc;
@@ -82,6 +83,7 @@ $color-bg: #fff;
   --app-skeleton-highlight: #eef4fb;
   --app-tooltip-bg: var(--app-surface);
   --app-tooltip-border: #cbd5e1;
+  --filter-field-background: var(--app-field-bg);
   --list-item-hover-bg: rgba(37, 99, 235, 0.06);
 }
 

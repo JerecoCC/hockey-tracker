@@ -44,6 +44,7 @@ const LoginPage = () => {
       <Card
         variant="light"
         className={styles.authCard}
+        data-theme="light"
       >
         <h1 className={styles.title}>
           <Icon
@@ -65,7 +66,7 @@ const LoginPage = () => {
             label="Email"
             placeholder="you@example.com"
             autoComplete="email"
-            className={styles.authInput}
+            wrapperClassName={styles.authField}
             required
             rules={{ required: 'Email is required.' }}
           />
@@ -77,7 +78,7 @@ const LoginPage = () => {
             label="Password"
             placeholder="Password"
             autoComplete="current-password"
-            className={styles.authInput}
+            wrapperClassName={styles.authField}
             required
             rules={{ required: 'Password is required.' }}
           />
@@ -86,17 +87,17 @@ const LoginPage = () => {
             className={styles.primaryBtn}
             type="submit"
             size="lg"
+            icon="account_circle"
             disabled={isSubmitting}
           >
             {isSubmitting ? 'Signing in...' : 'Sign in'}
           </Button>
         </form>
 
-        <div className={styles.dividerRow}>
-          <Divider />
-          <span>or</span>
-          <Divider />
-        </div>
+        <Divider
+          className={styles.authDivider}
+          text="or"
+        />
 
         <GoogleButton label="Sign in with Google" />
 

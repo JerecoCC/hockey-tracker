@@ -25,6 +25,16 @@ describe('Divider', () => {
     expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
   });
 
+  it('renders text in a horizontal divider', () => {
+    const { container, getByText } = render(<Divider text="or" />);
+    const divider = container.firstElementChild;
+
+    expect(divider).toHaveClass('horizontal');
+    expect(divider).toHaveClass('horizontalWithText');
+    expect(divider).toHaveAttribute('aria-hidden', 'false');
+    expect(getByText('or')).toBeInTheDocument();
+  });
+
   it('forwards className and span attributes', () => {
     const { container } = render(
       <Divider

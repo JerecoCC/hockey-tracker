@@ -49,6 +49,7 @@ const SignupPage = () => {
       <Card
         variant="light"
         className={styles.authCard}
+        data-theme="light"
       >
         <h1 className={styles.title}>
           <Icon
@@ -70,7 +71,7 @@ const SignupPage = () => {
             label="Name"
             placeholder="Wayne Gretzky"
             autoComplete="name"
-            className={styles.authInput}
+            wrapperClassName={styles.authField}
             required
             rules={{ required: 'Name is required.' }}
           />
@@ -82,7 +83,7 @@ const SignupPage = () => {
             label="Email"
             placeholder="you@example.com"
             autoComplete="email"
-            className={styles.authInput}
+            wrapperClassName={styles.authField}
             required
             rules={{ required: 'Email is required.' }}
           />
@@ -94,7 +95,7 @@ const SignupPage = () => {
             label="Password"
             placeholder="Min. 6 characters"
             autoComplete="new-password"
-            className={styles.authInput}
+            wrapperClassName={styles.authField}
             required
             rules={{
               required: 'Password is required.',
@@ -112,7 +113,7 @@ const SignupPage = () => {
             label="Confirm password"
             placeholder="Confirm password"
             autoComplete="new-password"
-            className={styles.authInput}
+            wrapperClassName={styles.authField}
             required
             rules={{
               required: 'Please confirm your password.',
@@ -124,17 +125,17 @@ const SignupPage = () => {
             className={styles.primaryBtn}
             type="submit"
             size="lg"
+            icon="person_add"
             disabled={isSubmitting}
           >
             {isSubmitting ? 'Creating account...' : 'Create account'}
           </Button>
         </form>
 
-        <div className={styles.dividerRow}>
-          <Divider />
-          <span>or</span>
-          <Divider />
-        </div>
+        <Divider
+          className={styles.authDivider}
+          text="or"
+        />
 
         <GoogleButton label="Sign up with Google" />
 
