@@ -142,10 +142,11 @@
   }
 
   &TeamCount {
-    font-size: $font-xs;
-    font-weight: 600;
-    color: var(--app-text-muted, #{$text-dim});
-    white-space: nowrap;
+    --badge-padding: 0.05rem 0.4rem;
+    --badge-font-size: #{$font-xs};
+    --badge-font-weight: 600;
+    --badge-label-color: var(--app-text-muted, #{$text-dim});
+    --badge-value-color: var(--app-text-muted, #{$text-dim});
   }
 }
 
@@ -202,15 +203,12 @@
   }
 
   &GroupNameCount {
-    display: inline-flex;
-    align-items: center;
-    flex-shrink: 0;
-    color: var(--app-text-muted, #{$text-dim});
-    font-size: $font-xs;
-    font-weight: 600;
-    letter-spacing: 0;
-    line-height: 1;
+    --badge-padding: 0.05rem 0.4rem;
+    --badge-font-size: #{$font-xs};
+    --badge-font-weight: 600;
+    --badge-label-color: var(--app-text-muted, #{$text-dim});
+    --badge-value-color: var(--app-text-muted, #{$text-dim});
+
     text-transform: none;
-    white-space: nowrap;
   }
 }

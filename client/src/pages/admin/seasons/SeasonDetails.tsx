@@ -78,6 +78,9 @@ type StandingDisplayRow = TeamStandingRecord & {
 };
 
 const PAGE_SIZE = 10;
+const STATS_TABLE_TEAM_LOGO_SIZE = 28;
+const STATS_TABLE_PLAYER_AVATAR_SIZE = 32;
+const STANDINGS_TABLE_TEAM_LOGO_SIZE = 28;
 /** Goalie stats only include goalies who played at least this many games. */
 const GOALIE_MIN_GAMES = 25;
 const GOALIE_MIN_GAMES_TOOLTIP = 'Only show goalies who played for 25 or more games';
@@ -648,7 +651,7 @@ const SeasonDetailsPage = () => {
         logoDark={row.team_logo_dark}
         logoLight={row.team_logo_light}
         code={row.team_code ?? '?'}
-        size={24}
+        size={STATS_TABLE_TEAM_LOGO_SIZE}
         shape="square"
       />
       <PlayerAvatar
@@ -656,7 +659,7 @@ const SeasonDetailsPage = () => {
         initials={`${row.first_name.charAt(0)}${row.last_name.charAt(0)}`}
         primaryColor={row.team_primary_color}
         textColor={row.team_text_color}
-        size={28}
+        size={STATS_TABLE_PLAYER_AVATAR_SIZE}
       />
       <span className={styles.statsPlayerName}>
         {row.last_name}, {row.first_name}
@@ -719,7 +722,7 @@ const SeasonDetailsPage = () => {
             alt={row.team_name ?? row.team_code ?? ''}
             primaryColor={row.team_primary_color}
             textColor={row.team_text_color}
-            size={24}
+            size={STANDINGS_TABLE_TEAM_LOGO_SIZE}
             shape="circle"
           />
           {row.team_name ?? row.team_code ?? '—'}

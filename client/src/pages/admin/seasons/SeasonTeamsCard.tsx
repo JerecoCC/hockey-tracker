@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Accordion from '@/components/Accordion/Accordion';
+import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import Divider from '@/components/Divider/Divider';
 import Section from '@/components/Section/Section';
@@ -104,8 +105,9 @@ const GroupNode = ({
   const roleLabel = group.role ? ROLE_LABELS[group.role] : null;
   const isLeaf = children.length === 0;
   const teamCount = countGroupTeams(group, allGroups);
+  const teamCountLabel = teamCount === 1 ? 'team' : 'teams';
   const groupName = roleLabel ? `${group.name} ${roleLabel}` : group.name;
-  const groupCountLabel = `(${teamCount} ${teamCount === 1 ? 'team' : 'teams'})`;
+  const groupCountLabel = `${teamCount} ${teamCountLabel}`;
 
   const groupBody = (
     <>
@@ -149,8 +151,11 @@ const GroupNode = ({
             <div className={styles.alignmentParentGroupTitle}>
               <span className={styles.alignmentParentGroupName}>
                 {groupName}
-                {' '}
-                <span className={styles.alignmentGroupNameCount}>{groupCountLabel}</span>
+                <Badge
+                  className={styles.alignmentGroupNameCount}
+                  value={teamCount}
+                  label={teamCountLabel}
+                />
               </span>
             </div>
             <Divider className={styles.alignmentParentGroupHeaderDivider} />
@@ -165,12 +170,11 @@ const GroupNode = ({
           bodyClassName={styles.groupBody}
           label={<span className={styles.groupLabel}>{group.name}</span>}
           labelMeta={
-            <span
+            <Badge
               className={styles.groupTeamCount}
-              title={`${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
-            >
-              {groupCountLabel}
-            </span>
+              value={teamCount}
+              label={teamCountLabel}
+            />
           }
           headerRight={
             roleLabel ? (

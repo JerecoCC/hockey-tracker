@@ -113,9 +113,13 @@ describe('SeasonTeamsCard', () => {
     const parentGroup = rootItem?.firstElementChild;
     expect(parentGroup).toHaveClass('alignmentParentGroup');
     expect(parentGroup).not.toHaveClass('accordion');
-    expect(parentGroup?.querySelector('.alignmentParentGroupHeader')).toHaveTextContent(
-      'Eastern Conference (2 teams)',
-    );
+    const parentHeader = parentGroup?.querySelector('.alignmentParentGroupHeader');
+    expect(parentHeader).toHaveTextContent('Eastern Conference');
+    const parentBadge = parentHeader?.querySelector('.alignmentGroupNameCount');
+    expect(parentBadge).toHaveClass('badge');
+    expect(parentBadge).not.toHaveAttribute('title');
+    expect(parentBadge).toHaveTextContent('2');
+    expect(parentBadge).toHaveTextContent('teams');
     expect(
       parentGroup?.querySelector('.alignmentParentGroupHeaderDivider.divider.horizontal'),
     ).toBeInTheDocument();
@@ -123,6 +127,9 @@ describe('SeasonTeamsCard', () => {
     expect(container.querySelectorAll('.accordion')).toHaveLength(1);
     const subgroupAccordion = container.querySelector('.accordion');
     expect(subgroupAccordion).toHaveTextContent('Metropolitan');
+    const subgroupBadge = subgroupAccordion?.querySelector('.groupTeamCount');
+    expect(subgroupBadge).toHaveClass('badge');
+    expect(subgroupBadge).not.toHaveAttribute('title');
     expect(parentGroup?.querySelector('.groupSubgroupList')).toBeInTheDocument();
 
     const teamList = subgroupAccordion?.querySelector('.teamList');
