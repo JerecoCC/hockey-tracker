@@ -78,7 +78,7 @@
 
   &Header {
     flex: 0 0 auto;
-    min-height: 30px;
+    min-height: 34px;
     padding: $space-xs $space-sm;
   }
 
@@ -147,8 +147,8 @@
   }
 
   &Number {
-    --chip-size: 1.5rem;
-    --chip-font-size: #{$font-xs};
+    --chip-size: 1.75rem;
+    --chip-font-size: #{$font-sm};
     --chip-padding-x: 0;
 
     color: var(--month-calendar-day-number-color);
