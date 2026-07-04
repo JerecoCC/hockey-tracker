@@ -35,6 +35,11 @@ import BulkCreateGamesModal from './BulkCreateGamesModal';
 import GameFormModal from './GameFormModal';
 import { autofillGameFromNhlGamecenter } from '@/pages/admin/games/game-details/nhlGameAutofill';
 import { autofillGameFromPwhlGamecenter } from '@/pages/admin/games/game-details/pwhlGameAutofill';
+import {
+  isManualPlayerMovementRequiredError,
+  type GameAutofillManualMoveReport,
+} from '@/pages/admin/games/game-details/gameAutofillTypes';
+import GameAutofillManualMoveReportModal from '@/pages/admin/games/game-details/GameAutofillManualMoveReportModal';
 import { buildGameDetailsPath } from '@/lib/routeSlugs';
 import Icon from '@/components/Icon/Icon';
 import {
@@ -510,6 +515,7 @@ const SeasonGamesTab = ({
   const [editTarget, setEditTarget] = useState<GameRecord | null>(null);
   const [autofillDay, setAutofillDay] = useState<string | null>(null);
   const [autofillingGameIds, setAutofillingGameIds] = useState<Set<string>>(() => new Set());
+  const [manualMoveReports, setManualMoveReports] = useState<GameAutofillManualMoveReport[]>([]);
   const todayKey = dateToISO(toDay(new Date()));
   const initialSummaryDay = groupedByDate.some(([dateKey]) => dateKey === todayKey)
     ? todayKey
@@ -690,7 +696,9 @@ const SeasonGamesTab = ({
 
     setAutofillDay(dateKey);
     setAutofillingGameIds(new Set(candidates.map((game) => game.id)));
+    setManualMoveReports([]);
     const failures: string[] = [];
+    const manualMoveReportsForRun: GameAutofillManualMoveReport[] = [];
     let filled = 0;
     const dayLabel = fmtDayHeading(dateKey);
     const nhlCandidates = candidates.filter((game) => isNhlGame(game, leagueCode));
@@ -798,10 +806,11 @@ const SeasonGamesTab = ({
         }
 
         try {
+          const gameWithLeagueId = game.league_id || !leagueId ? game : { ...game, league_id: leagueId };
           if (autofillCode === 'PWHL') {
-            await autofillGameFromPwhlGamecenter(game, gameId);
+            await autofillGameFromPwhlGamecenter(gameWithLeagueId, gameId);
           } else {
-            await autofillGameFromNhlGamecenter(game, gameId);
+            await autofillGameFromNhlGamecenter(gameWithLeagueId, gameId);
           }
           filled += 1;
           await refreshAutofilledGame(game.id);
@@ -810,7 +819,11 @@ const SeasonGamesTab = ({
             `Auto-filled ${describeGame(game)} (${index + 1}/${candidates.length}).`,
           );
         } catch (err) {
-          const message = getErrorMessage(err, 'Auto-fill failed');
+          const manualMoveError = isManualPlayerMovementRequiredError(err) ? err : null;
+          if (manualMoveError) manualMoveReportsForRun.push(manualMoveError.report);
+          const message = manualMoveError
+            ? 'manual player movement required'
+            : getErrorMessage(err, 'Auto-fill failed');
           failures.push(`${describeGame(game)}: ${message}`);
           console.warn(`${autofillCode ?? 'League'} day auto-fill skipped ${describeGame(game)}`, err);
           updateProgressToast(
@@ -826,6 +839,9 @@ const SeasonGamesTab = ({
 
       if (failures.length > 0) {
         console.warn(`${autofillLeagueLabel} day auto-fill skipped games:`, failures);
+      }
+      if (manualMoveReportsForRun.length > 0) {
+        setManualMoveReports(manualMoveReportsForRun);
       }
 
       if (failures.length === 0) {
@@ -1215,6 +1231,12 @@ const SeasonGamesTab = ({
         createGame={createGame}
         updateGame={updateGame}
         onClose={handleFormClose}
+      />
+
+      <GameAutofillManualMoveReportModal
+        open={manualMoveReports.length > 0}
+        reports={manualMoveReports}
+        onClose={() => setManualMoveReports([])}
       />
 
     </>

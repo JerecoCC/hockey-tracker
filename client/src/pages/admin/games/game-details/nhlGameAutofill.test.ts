@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { autofillGameFromNhlGamecenter } from './nhlGameAutofill';
+import { isManualPlayerMovementRequiredError } from './gameAutofillTypes';
 import type { GameRecord } from '@/hooks/useGames';
 
 jest.mock('axios');
@@ -872,7 +873,7 @@ describe('autofillGameFromNhlGamecenter', () => {
     ).toHaveLength(0);
   });
 
-  it('requires an official acquisition date when a missing player already exists on another team', async () => {
+  it('reports manual player moves when a missing player already exists on another team', async () => {
     const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
     // #19 is dressed for MIN in the report, but the same player ("Nicholas Mystery")
     // is already rostered on CAR. Auto-fill must not use the game date as the move date.
@@ -902,9 +903,26 @@ describe('autofillGameFromNhlGamecenter', () => {
       </body></html>
     `;
 
-    await expect(autofillGameFromNhlGamecenter(gameWithLeague, '317')).rejects.toThrow(
-      /official acquisition date/i,
-    );
+    try {
+      await autofillGameFromNhlGamecenter(gameWithLeague, '317');
+      throw new Error('Expected NHL autofill to require manual player movement');
+    } catch (err) {
+      expect(isManualPlayerMovementRequiredError(err)).toBe(true);
+      if (!isManualPlayerMovementRequiredError(err)) throw err;
+      expect(err.report).toMatchObject({
+        leagueCode: 'NHL',
+        gameId: 'game-1',
+        moves: [
+          expect.objectContaining({
+            playerName: 'Nick Mystery',
+            jerseyNumber: 19,
+            position: 'LW',
+            fromTeamCode: 'CAR',
+            toTeamCode: 'MIN',
+          }),
+        ],
+      });
+    }
     // No duplicate player is created.
     expect(
       mockedAxios.post.mock.calls.filter(([url]) => String(url).endsWith('/admin/players/bulk')),

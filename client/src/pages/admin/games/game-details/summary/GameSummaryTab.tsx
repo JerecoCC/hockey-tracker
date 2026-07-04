@@ -31,7 +31,8 @@ import { formatPlayerName } from '../formatUtils';
 import { sumVisiblePeriodShots } from '../shotPeriods';
 import { buildSeasonDetailsPath } from '@/lib/routeSlugs';
 import GoalieSwitchReportCard from './GoalieSwitchReportCard';
-import type { GameAutofillProgress } from '../gameAutofillTypes';
+import type { GameAutofillManualMoveReport, GameAutofillProgress } from '../gameAutofillTypes';
+import GameAutofillManualMoveReportModal from '../GameAutofillManualMoveReportModal';
 
 const NhlGameAutofillModal = lazy(() => import('../NhlGameAutofillModal'));
 const PwhlGameAutofillModal = lazy(() => import('../PwhlGameAutofillModal'));
@@ -354,6 +355,11 @@ const GameSummaryTab = ({
   const [startGameModalOpen, setStartGameModalOpen] = useState(false);
   const [nhlAutofillModalOpen, setNhlAutofillModalOpen] = useState(false);
   const [pwhlAutofillModalOpen, setPwhlAutofillModalOpen] = useState(false);
+  const [manualMoveReports, setManualMoveReports] = useState<GameAutofillManualMoveReport[]>([]);
+  const autofillGame = useMemo<GameRecord>(
+    () => (game.league_id || !leagueId ? game : { ...game, league_id: leagueId }),
+    [game, leagueId],
+  );
   const openStartGameModal = () => setStartGameModalOpen(true);
   const handleStartGame = async (isoTime: string) => {
     const started = await startGame(isoTime);
@@ -858,22 +864,23 @@ const GameSummaryTab = ({
         {canAutofillNhlGame && nhlAutofillModalOpen && (
           <NhlGameAutofillModal
             open={nhlAutofillModalOpen}
-            game={game}
+            game={autofillGame}
             onClose={() => setNhlAutofillModalOpen(false)}
             onAutofillChange={onGameAutofillChange}
+            onManualMoveReport={(report) => setManualMoveReports([report])}
           />
         )}
 
         {canAutofillPwhlGame && pwhlAutofillModalOpen && (
           <PwhlGameAutofillModal
             open={pwhlAutofillModalOpen}
-            game={game}
+            game={autofillGame}
             onClose={() => setPwhlAutofillModalOpen(false)}
             onAutofillChange={onGameAutofillChange}
+            onManualMoveReport={(report) => setManualMoveReports([report])}
           />
         )}
 
-        {/* ── 3 Stars modal ── */}
         {editable && starsModalOpen && (
           <ThreeStarsModal
             open={starsModalOpen}
@@ -974,6 +981,12 @@ const GameSummaryTab = ({
           />
         )}
       </Suspense>
+
+      <GameAutofillManualMoveReportModal
+        open={manualMoveReports.length > 0}
+        reports={manualMoveReports}
+        onClose={() => setManualMoveReports([])}
+      />
 
       {/* ── Delete Game confirm ── */}
       {editable && (

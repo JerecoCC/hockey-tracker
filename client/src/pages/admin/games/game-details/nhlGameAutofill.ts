@@ -5,7 +5,11 @@ import type { GoalRecord, PostGoalData } from '@/hooks/useGameGoals';
 import type { GoalieStatRecord, UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
 import type { LineupPositionSlot } from '@/hooks/useGameLineup';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
-import type { GameAutofillProgress } from './gameAutofillTypes';
+import {
+  ManualPlayerMovementRequiredError,
+  type GameAutofillManualMoveReport,
+  type GameAutofillProgress,
+} from './gameAutofillTypes';
 import {
   buildGoalieStints,
   buildGoalieStintsFromToiHtml,
@@ -830,6 +834,7 @@ interface LeaguePlayer {
   last_name: string;
   team_id: string | null;
   team_code: string | null;
+  team_name?: string | null;
 }
 
 /** All players rostered in this game's league for the season, with their team. */
@@ -866,6 +871,17 @@ function localPlayerMatchesName(player: Pick<TeamPlayerRecord, 'first_name' | 'l
 
 function reportPlayerIdentifier(reportPlayer: ReportRosterPlayer, leaguePlayerNumber?: string | number) {
   return leaguePlayerNumberLabel(leaguePlayerNumber) ?? `#${reportPlayer.sweaterNumber} ${reportPlayer.name}`;
+}
+
+function gameLabel(game: GameRecord) {
+  const date = (game.scheduled_at ?? '').slice(0, 10);
+  const matchup = `${game.away_team.code} @ ${game.home_team.code}`;
+  return date ? `${date} ${matchup}` : matchup;
+}
+
+function reportPlayerDisplayName(reportPlayer: ReportRosterPlayer) {
+  const { firstName, lastName } = splitReportName(reportPlayer.name);
+  return `${firstName} ${lastName}`.trim();
 }
 
 interface PlayerConflict {
@@ -955,9 +971,7 @@ async function moveCrossTeamPlayerConflicts(
 ) {
   const normalizedMoveDate = moveDate?.slice(0, 10);
   if (!normalizedMoveDate) {
-    throw new Error(
-      'Auto-fill found cross-team player movement, but no official acquisition date was available. Record the movement date manually, then run auto-fill again.',
-    );
+    throw new ManualPlayerMovementRequiredError(buildManualMoveReport(game, conflicts));
   }
 
   for (const conflict of conflicts) {
@@ -994,6 +1008,33 @@ async function moveCrossTeamPlayerConflicts(
       )
       .join(', ')}.`,
   );
+}
+
+function buildManualMoveReport(
+  game: GameRecord,
+  conflicts: MovePlayerConflict[],
+): GameAutofillManualMoveReport {
+  return {
+    leagueCode: 'NHL',
+    gameId: game.id,
+    gameLabel: gameLabel(game),
+    gameDate: (game.scheduled_at ?? '').slice(0, 10) || null,
+    moves: conflicts.map((conflict) => ({
+      playerName: reportPlayerDisplayName(conflict.reportPlayer),
+      leaguePlayerNumber: conflict.leaguePlayerNumber ?? conflict.existing.league_player_number ?? null,
+      jerseyNumber: conflict.reportPlayer.sweaterNumber,
+      position: reportPositionToLocalPosition(conflict.reportPlayer.position),
+      fromTeamCode: conflict.existing.team_code,
+      fromTeamName: conflict.existing.team_name ?? null,
+      toTeamCode: conflict.targetCode,
+      toTeamName:
+        conflict.targetTeamId === game.away_team.id
+          ? game.away_team.name
+          : conflict.targetTeamId === game.home_team.id
+            ? game.home_team.name
+            : null,
+    })),
+  };
 }
 
 /**
@@ -1297,7 +1338,7 @@ function matchNhlPlayers(
         localPlayerMatchesName(player, fullName) ||
         (!!nhlPlayer.name && localPlayerMatchesName(player, nhlPlayer.name)),
     );
-    const local = exactLeagueNumberMatch ?? nameConfirmedJerseyMatch ?? rows[0];
+    const local = exactLeagueNumberMatch ?? nameConfirmedJerseyMatch;
     if (!local) {
       missing.push(leaguePlayerNumberLabel(nhlPlayer.playerId) ?? `#${nhlPlayer.sweaterNumber} ${fullName}`);
       return [];
@@ -1330,9 +1371,12 @@ function matchReportPlayers(
   const missing: string[] = [];
   const matched = reportPlayers.flatMap((reportPlayer) => {
     const leaguePlayerNumber = leaguePlayerNumberBySweater.get(reportPlayer.sweaterNumber);
+    const nameConfirmedJerseyMatch = (localByJersey.get(reportPlayer.sweaterNumber) ?? []).find(
+      (player) => localPlayerMatchesName(player, reportPlayer.name),
+    );
     const local =
       (leaguePlayerNumber ? localByLeagueNumber.get(leaguePlayerNumber) : undefined) ??
-      (localByJersey.get(reportPlayer.sweaterNumber) ?? [])[0];
+      nameConfirmedJerseyMatch;
     if (!local) {
       missing.push(reportPlayerIdentifier(reportPlayer, leaguePlayerNumber));
       return [];

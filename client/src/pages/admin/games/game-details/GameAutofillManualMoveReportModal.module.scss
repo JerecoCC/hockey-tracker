@@ -1,0 +1,101 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.intro {
+  margin: 0;
+  color: var(--app-text-muted, #{$text-dim});
+}
+
+.games {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.game {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.gameHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  min-width: 0;
+
+  strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.league {
+  flex: 0 0 auto;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--app-border, #{$border});
+  border-radius: $radius-sm;
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-xs;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--app-border, #{$border});
+  border-radius: $radius-md;
+}
+
+.table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: $space-sm $space-md;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--app-border, #{$border});
+  }
+
+  th {
+    color: var(--app-text-muted, #{$text-dim});
+    font-size: $font-xs;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  td {
+    color: var(--app-text, #{$text-body});
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+}
+
+.playerCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+
+  strong,
+  span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  span {
+    color: var(--app-text-muted, #{$text-dim});
+    font-size: $font-sm;
+  }
+}

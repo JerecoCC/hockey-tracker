@@ -6,6 +6,10 @@ import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import type { GameRecord } from '@/hooks/useGames';
 import {
+  isManualPlayerMovementRequiredError,
+  type GameAutofillManualMoveReport,
+} from './gameAutofillTypes';
+import {
   autofillGameFromNhlGamecenter,
   nhlAutofillApiError,
   type NhlAutofillProgress,
@@ -17,6 +21,7 @@ interface Props {
   game: GameRecord;
   onClose: () => void;
   onAutofillChange?: (progress: NhlAutofillProgress | null) => void;
+  onManualMoveReport?: (report: GameAutofillManualMoveReport) => void;
 }
 
 type FormValues = {
@@ -26,7 +31,13 @@ type FormValues = {
 const FORM_ID = 'nhl-game-autofill-form';
 const AUTOFILL_FAILURE_TOAST_MS = 12000;
 
-const NhlGameAutofillModal = ({ open, game, onClose, onAutofillChange }: Props) => {
+const NhlGameAutofillModal = ({
+  open,
+  game,
+  onClose,
+  onAutofillChange,
+  onManualMoveReport,
+}: Props) => {
   const queryClient = useQueryClient();
   const {
     control,
@@ -84,6 +95,14 @@ const NhlGameAutofillModal = ({ open, game, onClose, onAutofillChange }: Props) 
         toast.error(result.warnings.join(' '), { autoClose: AUTOFILL_FAILURE_TOAST_MS });
       }
     } catch (err) {
+      if (isManualPlayerMovementRequiredError(err)) {
+        onManualMoveReport?.(err.report);
+        toast.error(
+          'Auto-fill needs manual player movements before it can continue. Review the report modal.',
+          { autoClose: AUTOFILL_FAILURE_TOAST_MS },
+        );
+        return;
+      }
       const message = nhlAutofillApiError(err, 'Unable to auto-fill game from NHL data.');
       toast.error(message, { autoClose: AUTOFILL_FAILURE_TOAST_MS });
     } finally {

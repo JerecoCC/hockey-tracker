@@ -5,7 +5,11 @@ import type { GoalRecord, PostGoalData } from '@/hooks/useGameGoals';
 import type { GoalieStatRecord } from '@/hooks/useGameGoalieStats';
 import type { LineupPositionSlot } from '@/hooks/useGameLineup';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
-import type { GameAutofillProgress } from './gameAutofillTypes';
+import {
+  ManualPlayerMovementRequiredError,
+  type GameAutofillManualMoveReport,
+  type GameAutofillProgress,
+} from './gameAutofillTypes';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const PWHL_BASE_URL = 'https://lscluster.hockeytech.com/feed/index.php';
@@ -40,6 +44,7 @@ interface LeaguePlayer {
   last_name: string;
   team_id: string | null;
   team_code: string | null;
+  team_name?: string | null;
 }
 
 interface PwhlPlayer {
@@ -114,6 +119,12 @@ function leaguePlayerNumberLabel(value: string | number | null | undefined) {
 
 function pwhlPlayerIdentifier(player: PwhlPlayer) {
   return leaguePlayerNumberLabel(player.playerId) ?? `#${player.sweaterNumber} ${player.name}`;
+}
+
+function gameLabel(game: GameRecord) {
+  const date = (game.scheduled_at ?? '').slice(0, 10);
+  const matchup = `${game.away_team.code} @ ${game.home_team.code}`;
+  return date ? `${date} ${matchup}` : matchup;
 }
 
 function localPlayerIdentifier(
@@ -717,9 +728,7 @@ async function moveCrossTeamPlayerConflicts(
 ) {
   const normalizedMoveDate = moveDate?.slice(0, 10);
   if (!normalizedMoveDate) {
-    throw new Error(
-      'Auto-fill found cross-team PWHL player movement, but no official acquisition date was available. Record the movement date manually, then run auto-fill again.',
-    );
+    throw new ManualPlayerMovementRequiredError(buildManualMoveReport(game, conflicts));
   }
 
   for (const conflict of conflicts) {
@@ -750,6 +759,33 @@ async function moveCrossTeamPlayerConflicts(
       .map((conflict) => `${pwhlPlayerIdentifier(conflict.externalPlayer)} to ${conflict.targetCode}`)
       .join(', ')}.`,
   );
+}
+
+function buildManualMoveReport(
+  game: GameRecord,
+  conflicts: MovePlayerConflict[],
+): GameAutofillManualMoveReport {
+  return {
+    leagueCode: 'PWHL',
+    gameId: game.id,
+    gameLabel: gameLabel(game),
+    gameDate: (game.scheduled_at ?? '').slice(0, 10) || null,
+    moves: conflicts.map((conflict) => ({
+      playerName: conflict.externalPlayer.name,
+      leaguePlayerNumber: String(conflict.externalPlayer.playerId),
+      jerseyNumber: conflict.externalPlayer.sweaterNumber,
+      position: conflict.externalPlayer.position,
+      fromTeamCode: conflict.existing.team_code,
+      fromTeamName: conflict.existing.team_name ?? null,
+      toTeamCode: conflict.targetCode,
+      toTeamName:
+        conflict.targetTeamId === game.away_team.id
+          ? game.away_team.name
+          : conflict.targetTeamId === game.home_team.id
+            ? game.home_team.name
+            : null,
+    })),
+  };
 }
 
 async function ensurePwhlPlayersRostered(
