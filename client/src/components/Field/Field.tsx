@@ -12,6 +12,7 @@ import { Controller, type Control, type RegisterOptions } from 'react-hook-form'
 import Icon from '../Icon/Icon';
 import cn from 'classnames';
 import DatePicker from '../DatePicker/DatePicker';
+import Divider from '../Divider/Divider';
 import TimePicker from '../TimePicker/TimePicker';
 import Select, { SelectOption } from '../Select/Select';
 import SearchField from '../SearchField/SearchField';
@@ -288,8 +289,12 @@ const Field = (props: FieldProps) => {
             if (!isPassword && !hasSuffix) return input;
             if (isPassword) {
               return (
-                <div className={styles.inputWrapper}>
+                <div className={cn(styles.inputWrapper, styles.passwordWrapper)}>
                   {input}
+                  <Divider
+                    variant="vertical"
+                    className={styles.passwordDivider}
+                  />
                   <button
                     type="button"
                     className={styles.passwordToggle}

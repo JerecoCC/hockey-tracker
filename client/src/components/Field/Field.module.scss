@@ -116,6 +116,23 @@
   }
 }
 
+.passwordWrapper {
+  .field {
+    padding-right: 4rem;
+  }
+}
+
+.passwordDivider {
+  --divider-color: var(--app-field-border, #{$border});
+
+  position: absolute;
+  top: $space-sm;
+  right: 2.5rem;
+  bottom: $space-sm;
+  margin-block: 0;
+  pointer-events: none;
+}
+
 // Unit label (e.g. "ft", "lbs") shown inside the field on the right
 .fieldWithSuffix {
   padding-right: 2.25rem;

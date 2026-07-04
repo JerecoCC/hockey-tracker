@@ -71,6 +71,11 @@ describe('Field – password type', () => {
     expect(screen.getByRole('button', { name: /show password/i })).toBeInTheDocument();
   });
 
+  it('renders a divider before the password toggle', () => {
+    const { container } = render(<PasswordField />);
+    expect(container.querySelector('.passwordDivider')).toBeInTheDocument();
+  });
+
   it('switches input to type="text" after clicking the toggle', () => {
     render(<PasswordField />);
     const toggle = screen.getByRole('button', { name: /show password/i });
