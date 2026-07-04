@@ -981,10 +981,13 @@ function findCrossTeamPlayerConflicts(
   for (const reportPlayer of missing) {
     const { firstName, lastName } = splitReportName(reportPlayer.name);
     const leaguePlayerNumber = leaguePlayerNumberBySweater.get(reportPlayer.sweaterNumber);
+    const fullNameMatch = byFullName.get(normalizeNameKey(`${firstName} ${lastName}`));
     const existing =
       (leaguePlayerNumber ? byLeaguePlayerNumber.get(leaguePlayerNumber) : undefined) ??
-      byFullName.get(normalizeNameKey(`${firstName} ${lastName}`)) ??
-      byLastInitial.get(lastNameInitialKey(firstName, lastName));
+      fullNameMatch ??
+      // When GameCenter gives us the NHL player id, a last-name/first-initial
+      // fallback is too broad: "Andre Lee" and "Anders Lee" both become lee|a.
+      (leaguePlayerNumber ? undefined : byLastInitial.get(lastNameInitialKey(firstName, lastName)));
     if (existing) {
       conflicts.push({
         reportPlayer,

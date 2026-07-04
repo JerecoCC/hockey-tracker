@@ -1004,6 +1004,78 @@ describe('autofillGameFromNhlGamecenter', () => {
     ).toHaveLength(0);
   });
 
+  it('does not treat a known NHL player id as a first-initial cross-team match', async () => {
+    const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          forwards: [
+            ...boxscore.playerByGameStats.homeTeam.forwards,
+            {
+              playerId: 8481732,
+              sweaterNumber: 47,
+              firstName: { default: 'Andre' },
+              lastName: { default: 'Lee' },
+            },
+          ],
+        },
+      },
+    };
+    leagueRosterPlayers = [
+      {
+        id: 'anders-lee',
+        league_player_number: '8475314',
+        first_name: 'Anders',
+        last_name: 'Lee',
+        team_id: 'nyi-team',
+        team_code: 'NYI',
+        team_name: 'New York Islanders',
+        start_date: '2025-10-01',
+        end_date: null,
+      },
+    ];
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>47</td><td>L</td><td>Andre Lee</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+
+    await expect(autofillGameFromNhlGamecenter(gameWithLeague, '317')).resolves.toMatchObject({
+      summary: expect.objectContaining({ rosterPlayers: 2 }),
+    });
+
+    const playerBulkPosts = mockedAxios.post.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/players/bulk'),
+    );
+    expect(playerBulkPosts).toHaveLength(1);
+    expect(playerBulkPosts[0][1]).toMatchObject({
+      players: [
+        expect.objectContaining({
+          first_name: 'Andre',
+          last_name: 'Lee',
+          league_player_number: '8481732',
+        }),
+      ],
+    });
+    expect(
+      mockedAxios.post.mock.calls.filter(([url]) => String(url).endsWith('/admin/player-teams/trade')),
+    ).toHaveLength(0);
+  });
+
   it('includes jersey changes when a manual move player takes an occupied local number', async () => {
     const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
     boxscoreData = {
