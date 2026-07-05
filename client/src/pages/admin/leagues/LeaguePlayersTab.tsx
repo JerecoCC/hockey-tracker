@@ -16,7 +16,7 @@ import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { missingPlayerDataIndicator } from '@/lib/playerDataStatus';
 import { formatPlayerPosition } from '@/lib/playerPosition';
 import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playerSearch';
-import { getPlayerStatus } from '@/lib/playerStatus';
+import { getPlayerStatus, PLAYER_STATUS_LABELS, type PlayerStatus } from '@/lib/playerStatus';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
@@ -28,18 +28,23 @@ interface Props {
 const PLAYER_SKELETON_ROW_COUNT = 15;
 const PLAYER_SEARCH_DEBOUNCE_MS = 350;
 const PLAYER_SEARCH_MIN_LENGTH = 3;
+const PLAYER_STATUS_TAG_INTENTS: Record<PlayerStatus, 'success' | 'neutral' | 'warning'> = {
+  active: 'success',
+  inactive: 'neutral',
+  retired: 'warning',
+};
 
 const buildFilterFetchKey = ({
   search,
   rookiesOnly,
-  includeRetiredPlayers,
+  includeInactivePlayers,
 }: {
   search: string;
   rookiesOnly: boolean;
-  includeRetiredPlayers: boolean;
+  includeInactivePlayers: boolean;
 }) =>
   `${search}|${rookiesOnly ? 'rookies' : 'all'}|${
-    includeRetiredPlayers ? 'retired' : 'active'
+    includeInactivePlayers ? 'inactive' : 'active'
   }`;
 
 const playerSkeletonRow = (key: number) => (
@@ -72,12 +77,12 @@ const LeaguePlayersTab = ({ className }: Props) => {
     seasons,
     selectedSeasonId,
     rookiesOnly,
-    includeRetiredPlayers,
+    includeInactivePlayers,
     onPageChange,
     onSearchChange,
     onSeasonChange,
     onRookiesOnlyChange,
-    onIncludeRetiredPlayersChange,
+    onIncludeInactivePlayersChange,
     loading,
     fetching,
     busy,
@@ -97,7 +102,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const emptyMessage = rookiesOnly
     ? 'No rookies for this season.'
-    : includeRetiredPlayers
+    : includeInactivePlayers
       ? 'No players in this league yet.'
       : 'No active players in this league yet.';
   const showPaginationSkeleton = fetching && paginationFetchPage === page;
@@ -106,7 +111,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
   const currentFilterFetchKey = buildFilterFetchKey({
     search,
     rookiesOnly,
-    includeRetiredPlayers,
+    includeInactivePlayers,
   });
   const showFilterSkeleton =
     fetching && filterFetchKey !== null && filterFetchKey === currentFilterFetchKey;
@@ -119,8 +124,8 @@ const LeaguePlayersTab = ({ className }: Props) => {
   const renderPlayerTags = (player: PlayerRecord) => {
     const isRookie = !!selectedSeasonId && player.rookie_season_id === selectedSeasonId;
     const status = getPlayerStatus(player);
-    const isInactive = status !== 'active';
-    if (!isRookie && !isInactive) return undefined;
+    const showStatusTag = includeInactivePlayers || status !== 'active';
+    if (!isRookie && !showStatusTag) return undefined;
 
     return (
       <span className={styles.playerRowTags}>
@@ -130,7 +135,12 @@ const LeaguePlayersTab = ({ className }: Props) => {
             intent="accent"
           />
         )}
-        {isInactive && <Tag label={status === 'retired' ? 'Retired' : 'Inactive'} />}
+        {showStatusTag && (
+          <Tag
+            label={PLAYER_STATUS_LABELS[status]}
+            intent={PLAYER_STATUS_TAG_INTENTS[status]}
+          />
+        )}
       </span>
     );
   };
@@ -191,7 +201,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
         buildFilterFetchKey({
           search: query,
           rookiesOnly,
-          includeRetiredPlayers,
+          includeInactivePlayers,
         }),
       );
     }
@@ -205,22 +215,22 @@ const LeaguePlayersTab = ({ className }: Props) => {
       buildFilterFetchKey({
         search,
         rookiesOnly: nextRookiesOnly,
-        includeRetiredPlayers,
+        includeInactivePlayers,
       }),
     );
     onRookiesOnlyChange(nextRookiesOnly);
   };
 
-  const handleIncludeRetiredToggle = () => {
-    const nextIncludeRetiredPlayers = !includeRetiredPlayers;
+  const handleIncludeInactiveToggle = () => {
+    const nextIncludeInactivePlayers = !includeInactivePlayers;
     setFilterFetchKey(
       buildFilterFetchKey({
         search,
         rookiesOnly,
-        includeRetiredPlayers: nextIncludeRetiredPlayers,
+        includeInactivePlayers: nextIncludeInactivePlayers,
       }),
     );
-    onIncludeRetiredPlayersChange(nextIncludeRetiredPlayers);
+    onIncludeInactivePlayersChange(nextIncludeInactivePlayers);
   };
 
   const handleConfirmDelete = async () => {
@@ -394,12 +404,12 @@ const LeaguePlayersTab = ({ className }: Props) => {
                 />
                 <ToggleButton
                   variant="switch"
-                  active={includeRetiredPlayers}
-                  onClick={handleIncludeRetiredToggle}
+                  active={includeInactivePlayers}
+                  onClick={handleIncludeInactiveToggle}
                   activeIcon="visibility"
                   inactiveIcon="visibility_off"
-                  activeTooltip="Show retired players"
-                  inactiveTooltip="Show retired players"
+                  activeTooltip="Show inactive players"
+                  inactiveTooltip="Show inactive players"
                 />
               </div>
             }

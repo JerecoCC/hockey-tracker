@@ -178,6 +178,21 @@ describe('GET /api/admin/players', () => {
     expect(countQueryText).toContain('rookie_season_id =');
   });
 
+  it('includes inactive and retired players in paginated league player rows and counts', async () => {
+    sql
+      .mockResolvedValueOnce([PLAYER_WITH_ROSTER])
+      .mockResolvedValueOnce([{ total: 1 }]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&season_id=season-1&page=1&page_size=20&include_inactive=true');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+
+    expect(sql.mock.calls[0]).toContain(true);
+    expect(sql.mock.calls[1]).toContain(true);
+  });
+
   it('filters by team_id and returns roster fields', async () => {
     sql.mockResolvedValueOnce([PLAYER_WITH_ROSTER]);
     const res = await request(app).get('/api/admin/players?team_id=team-1');

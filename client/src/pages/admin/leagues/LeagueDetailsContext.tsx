@@ -12,7 +12,7 @@ interface LeaguePlayersContextValue {
   seasons: LeagueSeasonRecord[];
   selectedSeasonId: string | null;
   rookiesOnly: boolean;
-  includeRetiredPlayers: boolean;
+  includeInactivePlayers: boolean;
   loading: boolean;
   fetching: boolean;
   busy: string | null;
@@ -20,7 +20,7 @@ interface LeaguePlayersContextValue {
   onSearchChange: (query: string) => void;
   onSeasonChange: (id: string) => void;
   onRookiesOnlyChange: (active: boolean) => void;
-  onIncludeRetiredPlayersChange: (active: boolean) => void;
+  onIncludeInactivePlayersChange: (active: boolean) => void;
   onAdd: () => void;
   onBulkAdd: () => void;
   onEdit: (player: PlayerRecord) => void;

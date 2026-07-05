@@ -1143,7 +1143,7 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.getByText(/no active players in this league yet/i)).toBeInTheDocument();
   });
 
-  it('passes rookie and retired player filters to the players query', async () => {
+  it('passes rookie and inactive player filters to the players query', async () => {
     const seasons = [
       {
         id: 'season-1',
@@ -1171,17 +1171,17 @@ describe('LeagueDetailsPage – players tab', () => {
           pageSize: 15,
           search: '',
           rookiesOnly: false,
-          includeRetired: false,
+          includeInactive: false,
           includeProspects: true,
         }),
       ),
     );
 
     const rookiesSwitch = screen.getByRole('switch', { name: 'Rookies only' });
-    const retiredSwitch = screen.getByRole('switch', { name: 'Show retired players' });
+    const inactiveSwitch = screen.getByRole('switch', { name: 'Show inactive players' });
 
     expect(rookiesSwitch).toHaveAttribute('aria-checked', 'false');
-    expect(retiredSwitch).toHaveAttribute('aria-checked', 'false');
+    expect(inactiveSwitch).toHaveAttribute('aria-checked', 'false');
 
     fireEvent.click(rookiesSwitch);
     await waitFor(() =>
@@ -1190,20 +1190,20 @@ describe('LeagueDetailsPage – players tab', () => {
         'season-1',
         expect.objectContaining({
           rookiesOnly: true,
-          includeRetired: false,
+          includeInactive: false,
           includeProspects: true,
         }),
       ),
     );
 
-    fireEvent.click(retiredSwitch);
+    fireEvent.click(inactiveSwitch);
     await waitFor(() =>
       expect(useLeaguePlayers).toHaveBeenLastCalledWith(
         undefined,
         'season-1',
         expect.objectContaining({
           rookiesOnly: true,
-          includeRetired: true,
+          includeInactive: true,
           includeProspects: true,
         }),
       ),
@@ -1346,7 +1346,7 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(row?.querySelector('a')).toHaveAttribute('href', '/admin/leagues/tl/players/john-smith');
   });
 
-  it('shows only rookie and retired player row tags', async () => {
+  it('shows rookie and player status row tags', async () => {
     const seasons = [
       {
         id: 'season-1',
@@ -1393,19 +1393,43 @@ describe('LeagueDetailsPage – players tab', () => {
           position: 'D',
           shoots: 'R',
           rookie_season_id: null,
+          status: 'inactive',
+          is_active: false,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+        },
+        {
+          id: 'player-3',
+          first_name: 'Jack',
+          last_name: 'Retired',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'G',
+          shoots: 'L',
+          rookie_season_id: null,
+          status: 'retired',
           is_active: false,
           created_at: '2024-01-01T00:00:00Z',
           team_id: null,
           team_code: null,
         },
       ],
-      total: 2,
+      total: 3,
     });
     clickPlayersTab();
 
     await waitFor(() => expect(screen.getByText('Rookie')).toBeInTheDocument());
+    expect(screen.getByText('Inactive')).toBeInTheDocument();
     expect(screen.getByText('Retired')).toBeInTheDocument();
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Show inactive players' }));
+    expect(screen.getByText('Active')).toBeInTheDocument();
   });
 
   it('shows player list skeleton rows only after pagination controls start fetching', () => {

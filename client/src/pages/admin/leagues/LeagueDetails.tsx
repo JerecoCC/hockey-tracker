@@ -94,7 +94,7 @@ const LeagueDetailsPage = () => {
   const [playersPage, setPlayersPage] = useState(1);
   const [playersSearch, setPlayersSearch] = useState('');
   const [playersRookiesOnly, setPlayersRookiesOnly] = useState(false);
-  const [playersIncludeRetired, setPlayersIncludeRetired] = useState(false);
+  const [playersIncludeInactive, setPlayersIncludeInactive] = useState(false);
 
   usePageBreadcrumbs(
     leagueLoading
@@ -158,7 +158,7 @@ const LeagueDetailsPage = () => {
     pageSize: PLAYERS_PAGE_SIZE,
     search: playersSearch,
     rookiesOnly: playersRookiesOnly,
-    includeRetired: playersIncludeRetired,
+    includeInactive: playersIncludeInactive,
     includeProspects: true,
   });
   const leagueContextValue = useMemo(
@@ -179,7 +179,7 @@ const LeagueDetailsPage = () => {
               seasons,
               selectedSeasonId,
               rookiesOnly: playersRookiesOnly,
-              includeRetiredPlayers: playersIncludeRetired,
+              includeInactivePlayers: playersIncludeInactive,
               loading: playersLoading,
               fetching: playersFetching,
               busy: playerBusy,
@@ -196,9 +196,9 @@ const LeagueDetailsPage = () => {
                 setPlayersPage(1);
                 setPlayersRookiesOnly(active);
               },
-              onIncludeRetiredPlayersChange: (active: boolean) => {
+              onIncludeInactivePlayersChange: (active: boolean) => {
                 setPlayersPage(1);
-                setPlayersIncludeRetired(active);
+                setPlayersIncludeInactive(active);
               },
               onAdd: () => {
                 setEditTargetPlayer(null);
@@ -248,7 +248,7 @@ const LeagueDetailsPage = () => {
       loading,
       navigate,
       playerBusy,
-      playersIncludeRetired,
+      playersIncludeInactive,
       players,
       playersFetching,
       playersLoading,
