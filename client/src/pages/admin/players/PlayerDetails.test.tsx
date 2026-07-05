@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 import usePlayerDetails, {
   usePlayerAwards,
   usePlayerCurrentSeasonStats,
@@ -26,8 +27,19 @@ const mockUsePageBreadcrumbs = jest.fn();
 const mockJerseyHistoryEditModal = jest.fn(() => null);
 const mockChangePhotoModal = jest.fn(() => null);
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+const mockedToast = toast as jest.Mocked<typeof toast>;
 
 jest.mock('axios');
+jest.mock('react-toastify', () => ({
+  toast: {
+    loading: jest.fn(),
+    update: jest.fn(),
+    success: jest.fn(),
+    error: jest.fn(),
+    warn: jest.fn(),
+    info: jest.fn(),
+  },
+}));
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: jest.fn() }),
 }));
@@ -213,6 +225,7 @@ beforeEach(() => {
   mockedAxios.get.mockReset();
   mockedAxios.patch.mockReset();
   mockedAxios.post.mockReset();
+  mockedToast.loading.mockReturnValue('player-autofill-toast');
   (mockedAxios.isAxiosError as unknown as jest.Mock).mockReturnValue(false);
   document.title = 'Hockey Tracker';
   mockUseTabState.mockReturnValue([0, jest.fn()]);
@@ -1152,6 +1165,64 @@ describe('PlayerDetails info tab', () => {
     await user.click(screen.getByRole('button', { name: 'Move Player' }));
 
     expect(screen.getByText('Move Player Modal')).toBeInTheDocument();
+  });
+
+  it('uses a progress toast and saves NHL birth state with the birth city during autofill', async () => {
+    const user = userEvent.setup();
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        firstName: { default: 'John' },
+        lastName: { default: 'Smith' },
+        birthDate: '1997-01-13',
+        birthCity: { default: 'Mississauga' },
+        birthStateProvince: { default: 'Ontario' },
+        birthCountry: 'CAN',
+        currentTeamAbbrev: 'TOR',
+        sweaterNumber: 19,
+        position: 'C',
+      },
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    await waitFor(() =>
+      expect(mockedAxios.patch).toHaveBeenCalledWith(
+        '/api/admin/players/player-1',
+        expect.objectContaining({
+          birth_city: 'Mississauga, Ontario',
+          birth_country: 'CAN',
+        }),
+        expect.any(Object),
+      ),
+    );
+
+    expect(mockedToast.loading).toHaveBeenCalledWith(
+      'Auto-filling player data: fetching NHL player...',
+      expect.objectContaining({
+        autoClose: false,
+        hideProgressBar: false,
+        progress: 0,
+        progressClassName: 'autoFillProgressBar',
+      }),
+    );
+    await waitFor(() =>
+      expect(mockedToast.update).toHaveBeenCalledWith(
+        'player-autofill-toast',
+        expect.objectContaining({
+          render: 'Player data auto-filled.',
+          type: 'success',
+          isLoading: false,
+          hideProgressBar: true,
+          progress: 1,
+          progressClassName: 'autoFillProgressBar',
+        }),
+      ),
+    );
+    expect(mockedToast.success).not.toHaveBeenCalledWith('Player data auto-filled.');
   });
 
   it('records NHL autofill jersey changes through dated jersey history', async () => {

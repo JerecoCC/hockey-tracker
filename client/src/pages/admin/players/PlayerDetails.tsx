@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import { toast, type TypeOptions } from 'react-toastify';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
@@ -77,6 +77,9 @@ import useDocumentIcon from '@/hooks/useDocumentIcon';
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 const GAME_LOG_PAGE_SIZE = 20;
+const AUTOFILL_RESULT_TOAST_MS = 4000;
+const AUTOFILL_FAILURE_TOAST_MS = 12000;
+const PLAYER_AUTOFILL_PROGRESS_STEPS = 5;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface NhlLocalizedText {
@@ -90,6 +93,10 @@ interface NhlPlayerLanding {
   lastName?: NhlLocalizedText;
   birthDate?: string | null;
   birthCity?: NhlLocalizedText | string | null;
+  birthStateProvince?: NhlLocalizedText | string | null;
+  birthState?: NhlLocalizedText | string | null;
+  birthProvince?: NhlLocalizedText | string | null;
+  stateProvince?: NhlLocalizedText | string | null;
   birthCountry?: string | null;
   heightInCentimeters?: number | null;
   heightInInches?: number | null;
@@ -131,6 +138,23 @@ const readNhlText = (value: NhlLocalizedText | string | null | undefined) => {
   if (!value) return null;
   if (typeof value === 'string') return value;
   return value.default ?? value.en ?? Object.values(value).find(Boolean) ?? null;
+};
+
+const formatNhlBirthCity = (landing: NhlPlayerLanding) => {
+  const city = readNhlText(landing.birthCity)?.trim();
+  if (!city) return null;
+
+  const stateProvince = readNhlText(
+    landing.birthStateProvince ??
+      landing.birthState ??
+      landing.birthProvince ??
+      landing.stateProvince,
+  )?.trim();
+  if (!stateProvince) return city;
+
+  const cityParts = city.split(',').map((part) => part.trim().toLowerCase());
+  if (cityParts.includes(stateProvince.toLowerCase())) return city;
+  return `${city}, ${stateProvince}`;
 };
 
 const normalizeTeamCode = (value: string | null | undefined) => value?.trim().toUpperCase() ?? null;
@@ -1108,16 +1132,59 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     if (!player?.id || !player.league_player_number || currentLeagueCode !== 'NHL') return;
 
     setAutoFillPlayerBusy(true);
+    const progressToastId = toast.loading('Auto-filling player data: fetching NHL player...', {
+      autoClose: false,
+      closeButton: false,
+      closeOnClick: false,
+      draggable: false,
+      hideProgressBar: false,
+      pauseOnHover: false,
+      progress: 0,
+      progressClassName: styles.autoFillProgressBar,
+    });
+
+    const updateProgressToast = (completedSteps: number, message: string) => {
+      toast.update(progressToastId, {
+        render: message,
+        isLoading: true,
+        autoClose: false,
+        closeButton: false,
+        closeOnClick: false,
+        draggable: false,
+        hideProgressBar: false,
+        pauseOnHover: false,
+        progress: Math.min(completedSteps / PLAYER_AUTOFILL_PROGRESS_STEPS, 0.98),
+        progressClassName: styles.autoFillProgressBar,
+      });
+    };
+
+    const finishProgressToast = (type: TypeOptions, message: string) => {
+      toast.update(progressToastId, {
+        render: message,
+        type,
+        isLoading: false,
+        autoClose: type === 'success' ? AUTOFILL_RESULT_TOAST_MS : AUTOFILL_FAILURE_TOAST_MS,
+        closeButton: true,
+        closeOnClick: true,
+        draggable: true,
+        hideProgressBar: true,
+        pauseOnHover: true,
+        progress: 1,
+        progressClassName: styles.autoFillProgressBar,
+      });
+    };
+
     try {
       const landing = await fetchNhlProxy<NhlPlayerLanding>(
         `https://api-web.nhle.com/v1/player/${player.league_player_number}/landing`,
       );
+      updateProgressToast(1, 'Auto-filling player data: saving NHL player details...');
       const firstName = readNhlText(landing.firstName);
       const lastName = readNhlText(landing.lastName);
       const heightCm =
         landing.heightInCentimeters ??
         (landing.heightInInches == null ? null : Math.round(landing.heightInInches * 2.54));
-      const birthCity = readNhlText(landing.birthCity);
+      const birthCity = formatNhlBirthCity(landing);
       const position = normalizeNhlPosition(landing.position);
       const shoots = normalizeShoots(landing.shootsCatches);
       const payload: Partial<CreatePlayerData> = {};
@@ -1132,6 +1199,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       if (shoots) payload.shoots = shoots;
 
       await axios.patch(`${API}/admin/players/${player.id}`, payload, { headers: authHeaders() });
+      updateProgressToast(2, 'Auto-filling player data: checking team and jersey history...');
 
       const officialMovement = officialNhlCurrentTeamMovement(landing);
       const landingTeamCode = normalizeTeamCode(landing.currentTeamAbbrev);
@@ -1150,6 +1218,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
 
       if (latestStint && destinationTeam && destinationTeam.id !== latestStint.team_id) {
         if (officialMovement.date) {
+          updateProgressToast(3, 'Auto-filling player data: recording team movement...');
           movementRecorded = await movePlayer(
             player.id,
             latestStint.season_id,
@@ -1170,6 +1239,10 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       ) {
         let jerseyEffectiveDate = officialNhlJerseyNumberDate(landing);
         if (!jerseyEffectiveDate) {
+          updateProgressToast(
+            3,
+            `Auto-filling player data: finding first game with #${landing.sweaterNumber}...`,
+          );
           const latestStintSeason = seasons.find((season) => season.id === latestStint.season_id);
           jerseyEffectiveDate = await inferNhlJerseyNumberDateFromGames({
             fetchNhlProxy,
@@ -1182,6 +1255,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           jerseyDateInferred = !!jerseyEffectiveDate;
         }
         if (jerseyEffectiveDate) {
+          updateProgressToast(4, 'Auto-filling player data: recording jersey number change...');
           jerseyUpdated = await changeJerseyNumber(
             latestStint,
             landing.sweaterNumber,
@@ -1195,6 +1269,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
         }
       }
 
+      updateProgressToast(4, 'Auto-filling player data: refreshing player data...');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['player', player.id] }),
         queryClient.invalidateQueries({ queryKey: ['player-trade-history', player.id] }),
@@ -1205,26 +1280,33 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       ]);
 
       if (movementSkippedMissingDate) {
-        toast.warn('Player data auto-filled. Movement needs an official acquisition date.');
+        finishProgressToast(
+          'warning',
+          'Player data auto-filled. Movement needs an official acquisition date.',
+        );
       } else if (jerseySkippedMissingDate) {
-        toast.warn(
+        finishProgressToast(
+          'warning',
           'Player data auto-filled. Jersey change was skipped because no first game with the new number was found.',
         );
       } else if (movementRecorded) {
-        toast.success('Player data auto-filled and movement recorded.');
+        finishProgressToast('success', 'Player data auto-filled and movement recorded.');
       } else if (jerseyUpdated && jerseyDateInferred) {
-        toast.success('Player data and jersey number auto-filled from first game with new number.');
+        finishProgressToast(
+          'success',
+          'Player data and jersey number auto-filled from first game with new number.',
+        );
       } else if (jerseyUpdated) {
-        toast.success('Player data and jersey number auto-filled.');
+        finishProgressToast('success', 'Player data and jersey number auto-filled.');
       } else {
-        toast.success('Player data auto-filled.');
+        finishProgressToast('success', 'Player data auto-filled.');
       }
     } catch (err) {
       const message =
         axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
           ? err.response.data.error
           : 'Failed to auto-fill player data';
-      toast.error(message);
+      finishProgressToast('error', message);
     } finally {
       setAutoFillPlayerBusy(false);
     }

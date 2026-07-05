@@ -32,6 +32,11 @@
   margin: 0;
 }
 
+.autoFillProgressBar.autoFillProgressBar {
+  background: $accent !important;
+  background-color: $accent !important;
+}
+
 // ── Tabs spacing ───────────────────────────────────────────────────────────
 .tabsWrapper {
   margin-top: $page-section-gap;
