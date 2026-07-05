@@ -252,10 +252,18 @@ describe('GET /api/admin/player-teams/history/:playerId', () => {
       },
     ]);
     const queryText = sql.mock.calls[0][0].join(' ');
-    expect(queryText.indexOf('COALESCE(pts.start_date')).toBeGreaterThanOrEqual(0);
-    expect(queryText.indexOf('CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END')).toBeGreaterThan(
-      queryText.indexOf('COALESCE(pts.start_date'),
+    const openRosterIndex = queryText.indexOf('CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END');
+    const rosterDateIndex = queryText.indexOf(
+      'COALESCE(pt.end_date, pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST',
     );
+    const openStintIndex = queryText.indexOf('CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END');
+    const stintDateIndex = queryText.indexOf(
+      'COALESCE(pts.end_date, pts.start_date, pts.created_at::date) DESC NULLS LAST',
+    );
+    expect(openRosterIndex).toBeGreaterThanOrEqual(0);
+    expect(rosterDateIndex).toBeGreaterThan(openRosterIndex);
+    expect(openStintIndex).toBeGreaterThanOrEqual(0);
+    expect(stintDateIndex).toBeGreaterThan(openStintIndex);
   });
 
   it('returns null acquisition_type when the stint has no acquisition type', async () => {

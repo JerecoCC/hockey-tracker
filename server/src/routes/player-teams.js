@@ -414,7 +414,8 @@ router.get('/history/:playerId', async (req, res) => {
           AND (${season_id ?? null}::uuid IS NULL OR pt.season_id = ${season_id ?? null}::uuid)
         ORDER BY
           CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
-          COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC,
+          COALESCE(pt.end_date, pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
+          COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
           pt.created_at DESC
         LIMIT 1
       ) roster ON TRUE
@@ -445,9 +446,9 @@ router.get('/history/:playerId', async (req, res) => {
           OR roster.id IS NOT NULL
         )
       ORDER BY
-        COALESCE(pts.start_date, pts.created_at::date) DESC,
         CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
-        pts.end_date DESC NULLS LAST,
+        COALESCE(pts.end_date, pts.start_date, pts.created_at::date) DESC NULLS LAST,
+        COALESCE(pts.start_date, pts.created_at::date) DESC NULLS LAST,
         pts.created_at DESC
     `;
     return res.json(rows.map(mapHistoryRow));
