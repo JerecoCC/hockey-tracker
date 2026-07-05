@@ -12,7 +12,7 @@
   --accordion-header-muted: var(--app-text-muted, #{$text-dim});
   --accordion-toggle-color: var(--accordion-header-muted);
   --accordion-toggle-hover-color: var(--accordion-header-text);
-  --accordion-toggle-divider-padding-block: #{$space-sm};
+  --accordion-toggle-size: 2rem;
 
   display: flex;
   flex-direction: column;
@@ -92,9 +92,9 @@
 }
 
 .toggle {
-  width: 2rem;
-  height: 2rem;
-  min-width: 2rem;
+  width: var(--accordion-toggle-size);
+  height: var(--accordion-toggle-size);
+  min-width: var(--accordion-toggle-size);
   padding: 0;
   color: var(--accordion-toggle-color);
   border-radius: $radius-md;
@@ -131,9 +131,10 @@
     --divider-vertical-margin-block: 0;
 
     position: absolute;
-    inset-block-start: var(--accordion-toggle-divider-padding-block);
+    inset-block-start: 50%;
     inset-inline-end: 0;
-    height: calc(100% - var(--accordion-toggle-divider-padding-block) - var(--accordion-toggle-divider-padding-block));
+    height: var(--accordion-toggle-size);
+    transform: translateY(-50%);
   }
 }
 
