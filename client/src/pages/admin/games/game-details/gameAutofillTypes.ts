@@ -1,3 +1,5 @@
+export const GAME_AUTOFILL_ACTION_ICON = 'api_search';
+
 export interface GameAutofillProgress {
   step: string;
   message: string;

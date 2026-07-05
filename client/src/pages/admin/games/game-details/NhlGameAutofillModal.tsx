@@ -5,6 +5,7 @@ import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import type { GameRecord } from '@/hooks/useGames';
 import {
+  GAME_AUTOFILL_ACTION_ICON,
   isManualPlayerMovementRequiredError,
   type GameAutofillManualMoveReport,
 } from './gameAutofillTypes';
@@ -160,7 +161,7 @@ const NhlGameAutofillModal = ({
       title="Auto-fill NHL Game"
       onClose={onClose}
       confirmLabel={filling ? 'Filling...' : 'Auto-fill'}
-      confirmIcon="sports_hockey"
+      confirmIcon={GAME_AUTOFILL_ACTION_ICON}
       confirmForm={FORM_ID}
       confirmIntent="info"
       confirmDisabled={filling || !canUseGameNumber || game.status === 'final'}

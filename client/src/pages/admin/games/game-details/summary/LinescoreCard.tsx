@@ -5,6 +5,7 @@ import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord } from '@/hooks/useGames';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import { PERIOD, PERIOD_IDS, otPeriodId } from '../constants';
+import { GAME_AUTOFILL_ACTION_ICON } from '../gameAutofillTypes';
 import styles from '../GameDetailsPage.module.scss';
 
 interface LinescorePeriod {
@@ -89,14 +90,14 @@ const LinescoreCard = ({
         <div className={styles.linescoreActions}>
           {onAutofillGame && (
             <Button
-                variant="outlined"
-                intent="info"
-                icon="sports_hockey"
-                size="sm"
-                tooltip="Auto-fill game"
-                disabled={!!busy}
-                onClick={onAutofillGame}
-              />
+              variant="outlined"
+              intent="info"
+              icon={GAME_AUTOFILL_ACTION_ICON}
+              size="sm"
+              tooltip="Auto-fill game"
+              disabled={!!busy}
+              onClick={onAutofillGame}
+            />
           )}
           {game.status === 'scheduled' && onStartGame && onReschedule && onDelete && (
             <>

@@ -36,6 +36,7 @@ import GameFormModal from './GameFormModal';
 import { autofillGameFromNhlGamecenter } from '@/pages/admin/games/game-details/nhlGameAutofill';
 import { autofillGameFromPwhlGamecenter } from '@/pages/admin/games/game-details/pwhlGameAutofill';
 import {
+  GAME_AUTOFILL_ACTION_ICON,
   isManualPlayerMovementRequiredError,
   type GameAutofillManualMoveReport,
 } from '@/pages/admin/games/game-details/gameAutofillTypes';
@@ -895,7 +896,7 @@ const SeasonGamesTab = ({
                 autofillDay === dateKey
                   ? `Auto-filling ${autofillLeagueLabel} Games`
                   : `Auto-fill ${autofillLeagueLabel} Games`,
-              icon: 'sports_hockey',
+              icon: GAME_AUTOFILL_ACTION_ICON,
               disabled: autofillDay !== null,
               onClick: () => {
                 void handleAutofillDay(dateKey, dayGames);
