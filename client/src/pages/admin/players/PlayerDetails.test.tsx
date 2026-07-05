@@ -1241,6 +1241,114 @@ describe('PlayerDetails info tab', () => {
     expect(mockedToast.success).not.toHaveBeenCalledWith('Player data auto-filled.');
   });
 
+  it('auto-fills PWHL player details and season photo from HockeyTech profile data', async () => {
+    const user = userEvent.setup();
+    mockUsePlayerRouteLookup.mockReturnValue({
+      routeLookup: {
+        player_id: 'player-1',
+        team_id: 'team-1',
+        league_id: 'league-1',
+        league_code: 'PWHL',
+        team_code: 'MIN',
+        player_slug: 'lee-stecklein',
+      },
+      loading: false,
+    });
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '24',
+        first_name: 'Lee',
+        last_name: 'Stecklein',
+        photo: null,
+        date_of_birth: null,
+        birth_city: null,
+        birth_country: null,
+        height_cm: null,
+        weight_lbs: null,
+        position: null,
+        shoots: null,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        info: {
+          firstName: 'Lee',
+          lastName: 'Stecklein',
+          playerId: '24',
+          jerseyNumber: '2',
+          position: 'D',
+          shoots: 'L',
+          catches: '',
+          height: '6\'0"',
+          weight: '165',
+          birthDate: '1994-04-23',
+          birthPlace: 'Roseville , Minnesota, United States',
+          profileImage: 'https://assets.leaguestat.com/pwhl/240x240/24.jpg',
+        },
+      },
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+    mockedAxios.post.mockResolvedValueOnce({ data: { id: 'photo-1' } });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    await waitFor(() =>
+      expect(mockedAxios.patch).toHaveBeenCalledWith(
+        '/api/admin/players/player-1',
+        expect.objectContaining({
+          first_name: 'Lee',
+          last_name: 'Stecklein',
+          date_of_birth: '1994-04-23',
+          birth_city: 'Roseville, Minnesota',
+          birth_country: 'USA',
+          height_cm: 183,
+          weight_lbs: 165,
+          position: 'D',
+          shoots: 'L',
+        }),
+        expect.any(Object),
+      ),
+    );
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      '/api/admin/games/pwhl-api',
+      expect.objectContaining({
+        params: {
+          url: expect.stringContaining('view=player'),
+        },
+      }),
+    );
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      '/api/admin/player-teams/history/player-1/photos',
+      {
+        team_id: 'team-1',
+        season_id: 'season-1',
+        photo: 'https://assets.leaguestat.com/pwhl/240x240/24.jpg',
+      },
+      expect.any(Object),
+    );
+    expect(mockedToast.loading).toHaveBeenCalledWith(
+      'Auto-filling player data: fetching PWHL player...',
+      expect.any(Object),
+    );
+    await waitFor(() =>
+      expect(mockedToast.update).toHaveBeenCalledWith(
+        'player-autofill-toast',
+        expect.objectContaining({
+          render: 'Player data and photo auto-filled.',
+          type: 'success',
+        }),
+      ),
+    );
+  });
+
   it('records NHL autofill jersey changes through dated jersey history', async () => {
     const user = userEvent.setup();
     const updateStint = jest.fn().mockResolvedValue(true);

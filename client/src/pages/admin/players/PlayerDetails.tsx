@@ -77,6 +77,10 @@ import styles from './PlayerDetails.module.scss';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
 
 const API = import.meta.env.VITE_API_URL || '/api';
+const PWHL_BASE_URL = 'https://lscluster.hockeytech.com/feed/index.php';
+const PWHL_APP_KEY = '446521baf8c38984';
+const PWHL_CLIENT_CODE = 'pwhl';
+const PWHL_LEAGUE_ID = '1';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 const apiError = (err: unknown, fallback: string): string =>
   axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
@@ -138,12 +142,60 @@ interface NhlPlayerGameLogResponse {
   games?: NhlPlayerGameLogEntry[];
 }
 
+interface PwhlPlayerProfile {
+  info?: PwhlPlayerProfileInfo | null;
+}
+
+interface PwhlPlayerProfileInfo {
+  firstName?: string | number | null;
+  lastName?: string | number | null;
+  playerId?: string | number | null;
+  jerseyNumber?: string | number | null;
+  position?: string | null;
+  shoots?: string | null;
+  catches?: string | null;
+  height?: string | null;
+  height_sans_hyphen?: string | null;
+  height_hyphenated?: string | null;
+  weight?: string | number | null;
+  birthDate?: string | null;
+  birthPlace?: string | null;
+  profileImage?: string | null;
+}
+
 const NHL_JERSEY_INFERENCE_GAME_TYPES = [2, 3] as const;
+
+const PWHL_BIRTH_COUNTRY_CODES: Record<string, string> = {
+  canada: 'CAN',
+  czechia: 'CZE',
+  'czech republic': 'CZE',
+  denmark: 'DEN',
+  finland: 'FIN',
+  france: 'FRA',
+  germany: 'GER',
+  hungary: 'HUN',
+  japan: 'JPN',
+  russia: 'RUS',
+  slovakia: 'SVK',
+  sweden: 'SWE',
+  switzerland: 'SUI',
+  'united kingdom': 'GBR',
+  'united states': 'USA',
+  'united states of america': 'USA',
+  us: 'USA',
+  usa: 'USA',
+};
 
 const readNhlText = (value: NhlLocalizedText | string | null | undefined) => {
   if (!value) return null;
   if (typeof value === 'string') return value;
   return value.default ?? value.en ?? Object.values(value).find(Boolean) ?? null;
+};
+
+const readPwhlText = (value: string | number | null | undefined) => {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text || null;
 };
 
 const formatNhlBirthCity = (landing: NhlPlayerLanding) => {
@@ -179,6 +231,59 @@ const normalizeNhlPosition = (value: string | null | undefined): PlayerPosition 
 const normalizeShoots = (value: string | null | undefined): PlayerShoots | null => {
   const shoots = value?.trim().toUpperCase();
   return shoots === 'L' || shoots === 'R' ? shoots : null;
+};
+
+const normalizePwhlBirthCountry = (value: string | null | undefined) => {
+  const country = value?.trim();
+  if (!country) return null;
+  const key = country.toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ');
+  return PWHL_BIRTH_COUNTRY_CODES[key] ?? country;
+};
+
+const formatPwhlBirthPlace = (value: string | null | undefined) => {
+  const parts = String(value ?? '')
+    .split(',')
+    .map((part) => part.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+  if (parts.length === 0) return { city: null, country: null };
+  if (parts.length === 1) return { city: parts[0], country: null };
+
+  return {
+    city: parts.slice(0, -1).join(', '),
+    country: normalizePwhlBirthCountry(parts[parts.length - 1]),
+  };
+};
+
+const pwhlPlayerProfileUrl = (playerNumber: string) => {
+  const params = new URLSearchParams({
+    feed: 'statviewfeed',
+    view: 'player',
+    player_id: playerNumber,
+    key: PWHL_APP_KEY,
+    client_code: PWHL_CLIENT_CODE,
+    lang: 'en',
+    league_id: PWHL_LEAGUE_ID,
+    fmt: 'json',
+  });
+  return `${PWHL_BASE_URL}?${params.toString()}`;
+};
+
+const parsePwhlHeightCm = (value: string | null | undefined) => {
+  const text = value?.trim();
+  if (!text) return null;
+  const match = text.match(/^(\d+)\s*(?:'|-)\s*(\d{1,2})/);
+  if (!match) return null;
+
+  const feet = Number(match[1]);
+  const inches = Number(match[2]);
+  if (!Number.isFinite(feet) || !Number.isFinite(inches)) return null;
+  return Math.round((feet * 12 + inches) * 2.54);
+};
+
+const parsePwhlWeightLbs = (value: string | number | null | undefined) => {
+  if (value == null || value === '') return null;
+  const weight = Number(value);
+  return weight != null && weight > 0 ? weight : null;
 };
 
 const normalizeAcquisitionType = (value: string | null | undefined) => {
@@ -1187,20 +1292,38 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     return data;
   };
 
-  const handleAutoFillPlayerData = async () => {
-    if (!player?.id || !player.league_player_number || currentLeagueCode !== 'NHL') return;
-
-    setAutoFillPlayerBusy(true);
-    const progressToastId = toast.loading('Auto-filling player data: fetching NHL player...', {
-      autoClose: false,
-      closeButton: false,
-      closeOnClick: false,
-      draggable: false,
-      hideProgressBar: false,
-      pauseOnHover: false,
-      progress: 0,
-      progressClassName: styles.autoFillProgressBar,
+  const fetchPwhlProxy = async <T,>(url: string) => {
+    const { data } = await axios.get<T>(`${API}/admin/games/pwhl-api`, {
+      headers: authHeaders(),
+      params: { url },
     });
+    return data;
+  };
+
+  const handleAutoFillPlayerData = async () => {
+    if (
+      !player?.id ||
+      !player.league_player_number ||
+      !['NHL', 'PWHL'].includes(currentLeagueCode ?? '')
+    ) {
+      return;
+    }
+
+    const autoFillLeagueLabel = currentLeagueCode === 'PWHL' ? 'PWHL' : 'NHL';
+    setAutoFillPlayerBusy(true);
+    const progressToastId = toast.loading(
+      `Auto-filling player data: fetching ${autoFillLeagueLabel} player...`,
+      {
+        autoClose: false,
+        closeButton: false,
+        closeOnClick: false,
+        draggable: false,
+        hideProgressBar: false,
+        pauseOnHover: false,
+        progress: 0,
+        progressClassName: styles.autoFillProgressBar,
+      },
+    );
 
     const updateProgressToast = (completedSteps: number, message: string) => {
       toast.update(progressToastId, {
@@ -1234,6 +1357,75 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     };
 
     try {
+      if (currentLeagueCode === 'PWHL') {
+        const profile = await fetchPwhlProxy<PwhlPlayerProfile>(
+          pwhlPlayerProfileUrl(player.league_player_number),
+        );
+        const info = profile.info;
+        if (!info) throw new Error('PWHL player profile did not include player info.');
+
+        updateProgressToast(1, 'Auto-filling player data: saving PWHL player details...');
+        const birthPlace = formatPwhlBirthPlace(info.birthPlace);
+        const position = normalizeNhlPosition(info.position);
+        const shoots = normalizeShoots(
+          position === 'G'
+            ? readPwhlText(info.catches) ?? readPwhlText(info.shoots)
+            : readPwhlText(info.shoots) ?? readPwhlText(info.catches),
+        );
+        const heightCm = parsePwhlHeightCm(
+          info.height ?? info.height_sans_hyphen ?? info.height_hyphenated,
+        );
+        const weightLbs = parsePwhlWeightLbs(info.weight);
+        const payload: Partial<CreatePlayerData> = {};
+        const firstName = readPwhlText(info.firstName);
+        const lastName = readPwhlText(info.lastName);
+        const birthDate = normalizeIsoDate(info.birthDate);
+
+        if (firstName) payload.first_name = firstName;
+        if (lastName) payload.last_name = lastName;
+        if (birthDate) payload.date_of_birth = birthDate;
+        if (birthPlace.city) payload.birth_city = birthPlace.city;
+        if (birthPlace.country) payload.birth_country = birthPlace.country;
+        if (heightCm != null) payload.height_cm = heightCm;
+        if (weightLbs != null) payload.weight_lbs = weightLbs;
+        if (position) payload.position = position;
+        if (shoots) payload.shoots = shoots;
+
+        await axios.patch(`${API}/admin/players/${player.id}`, payload, { headers: authHeaders() });
+
+        const profileImage = readPwhlText(info.profileImage);
+        let photoUpdated = false;
+        if (latestStint && profileImage) {
+          updateProgressToast(2, 'Auto-filling player data: saving PWHL player photo...');
+          await axios.post(
+            `${API}/admin/player-teams/history/${player.id}/photos`,
+            {
+              team_id: latestStint.team_id,
+              season_id: latestStint.season_id,
+              photo: profileImage,
+            },
+            { headers: authHeaders() },
+          );
+          photoUpdated = true;
+        }
+
+        updateProgressToast(4, 'Auto-filling player data: refreshing player data...');
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['player', player.id] }),
+          queryClient.invalidateQueries({ queryKey: ['player-trade-history', player.id] }),
+          queryClient.invalidateQueries({ queryKey: ['player-photo-history', player.id] }),
+          queryClient.invalidateQueries({ queryKey: ['players'] }),
+          queryClient.invalidateQueries({ queryKey: ['game-roster'] }),
+          queryClient.invalidateQueries({ queryKey: ['game-lineup'] }),
+        ]);
+
+        finishProgressToast(
+          'success',
+          photoUpdated ? 'Player data and photo auto-filled.' : 'Player data auto-filled.',
+        );
+        return;
+      }
+
       const landing = await fetchNhlProxy<NhlPlayerLanding>(
         `https://api-web.nhle.com/v1/player/${player.league_player_number}/landing`,
       );
@@ -1576,9 +1768,9 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     latestStint?.season_id &&
     !latestStint?.end_date
   );
-  const canAutoFillNhlPlayer = !!(
+  const canAutoFillPlayerData = !!(
     isAdminView &&
-    currentLeagueCode === 'NHL' &&
+    (currentLeagueCode === 'NHL' || currentLeagueCode === 'PWHL') &&
     player.league_player_number
   );
   const copyLeaguePlayerNumber = async () => {
@@ -1592,7 +1784,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     }
   };
   const playerActionItems = [
-    ...(canAutoFillNhlPlayer
+    ...(canAutoFillPlayerData
       ? [
           {
             label: autoFillPlayerBusy ? 'Auto-filling Player Data...' : 'Auto-fill Player Data',
