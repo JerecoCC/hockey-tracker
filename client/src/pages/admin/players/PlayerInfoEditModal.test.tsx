@@ -71,7 +71,7 @@ describe('PlayerInfoEditModal', () => {
     );
   });
 
-  it('edits player status with the player info payload', async () => {
+  it('edits active player status with a segmented control', async () => {
     const updatePlayer = jest.fn().mockResolvedValue(true);
 
     render(
@@ -84,15 +84,44 @@ describe('PlayerInfoEditModal', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('combobox', { name: 'Status' }));
-    fireEvent.click(screen.getByText('Retired'));
+    expect(screen.queryByRole('combobox', { name: 'Status' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Inactive' }));
     fireEvent.submit(document.getElementById('player-info-form') as HTMLFormElement);
 
     await waitFor(() =>
       expect(updatePlayer).toHaveBeenCalledWith(
         'player-1',
-        expect.objectContaining({ status: 'retired' }),
+        expect.objectContaining({ status: 'inactive' }),
       ),
     );
+  });
+
+  it('hides player status when the player is retired and omits it from the payload', async () => {
+    const updatePlayer = jest.fn().mockResolvedValue(true);
+
+    render(
+      <PlayerInfoEditModal
+        open
+        player={{ ...player, status: 'retired', is_active: false }}
+        seasons={[{ id: 'season-1', name: '2025-26', is_current: true }]}
+        onClose={jest.fn()}
+        updatePlayer={updatePlayer}
+      />,
+    );
+
+    expect(screen.queryByText('Status')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Active' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Inactive' })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('League Player Number'), {
+      target: { value: '8480000' },
+    });
+    fireEvent.submit(document.getElementById('player-info-form') as HTMLFormElement);
+
+    await waitFor(() => expect(updatePlayer).toHaveBeenCalled());
+    expect(updatePlayer.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ league_player_number: '8480000' }),
+    );
+    expect(updatePlayer.mock.calls[0][1]).not.toHaveProperty('status');
   });
 });

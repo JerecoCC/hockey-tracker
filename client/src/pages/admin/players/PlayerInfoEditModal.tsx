@@ -20,7 +20,6 @@ const SHOOTS_OPTIONS = [
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
-  { value: 'retired', label: 'Retired' },
 ];
 
 const NO_ROOKIE_SEASON = 'none';
@@ -80,6 +79,8 @@ interface Props {
 }
 
 const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: Props) => {
+  const playerStatus = player ? getPlayerStatus(player) : 'active';
+  const isRetired = playerStatus === 'retired';
   const formValues = useMemo<FormValues>(() => {
     const { ft, inches } =
       player?.height_cm != null
@@ -87,7 +88,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
         : { ft: null as null, inches: null as null };
     return {
       league_player_number: player?.league_player_number ?? '',
-      status: player ? getPlayerStatus(player) : 'active',
+      status: playerStatus,
       shoots: player?.shoots ?? null,
       date_of_birth: player?.date_of_birth ?? '',
       birth_city: player?.birth_city ?? '',
@@ -97,7 +98,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
       weight_lbs: player?.weight_lbs != null ? String(player.weight_lbs) : '',
       rookie_season_id: player?.rookie_season_id ?? NO_ROOKIE_SEASON,
     };
-  }, [player]);
+  }, [player, playerStatus]);
   const rookieSeasonOptions = useMemo(
     () => [
       { value: NO_ROOKIE_SEASON, label: 'No rookie season' },
@@ -147,7 +148,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
     const hasIn = data.height_in !== '';
     const ok = await updatePlayer(player.id, {
       league_player_number: data.league_player_number.trim() || null,
-      status: data.status,
+      ...(!isRetired ? { status: data.status } : {}),
       shoots: data.shoots || null,
       date_of_birth: data.date_of_birth || null,
       birth_city: data.birth_city || null,
@@ -222,16 +223,26 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
             />
           )}
         </div>
-        <div className={styles.fullRow}>
-          <Field
-            type="select"
-            label="Status"
-            control={control}
-            name="status"
-            options={STATUS_OPTIONS}
-            disabled={isSubmitting}
-          />
-        </div>
+        {!isRetired && (
+          <div className={styles.fullRow}>
+            <div className={styles.segmentedField}>
+              <span className={styles.heightGroupLabel}>Status</span>
+              <Controller
+                control={control}
+                name="status"
+                render={({ field }) => (
+                  <SegmentedControl
+                    value={field.value}
+                    onChange={(value) => field.onChange(value as PlayerStatus)}
+                    variant="field"
+                    options={STATUS_OPTIONS}
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            </div>
+          </div>
+        )}
         <Divider className={styles.divider} />
         <div className={styles.playerInfoBirthRow}>
           <Field

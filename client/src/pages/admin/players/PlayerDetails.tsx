@@ -71,11 +71,16 @@ import ChangeJerseyModal from './ChangeJerseyModal';
 import JerseyHistoryEditModal from './JerseyHistoryEditModal';
 import ChangePhotoModal from './ChangePhotoModal';
 import PlayerInfoEditModal from './PlayerInfoEditModal';
+import RetirePlayerModal from './RetirePlayerModal';
 import styles from './PlayerDetails.module.scss';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+const apiError = (err: unknown, fallback: string): string =>
+  axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
+    ? err.response.data.error
+    : fallback;
 const GAME_LOG_PAGE_SIZE = 20;
 const AUTOFILL_RESULT_TOAST_MS = 4000;
 const AUTOFILL_FAILURE_TOAST_MS = 12000;
@@ -967,6 +972,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const [photoPreviewSrc, setPhotoPreviewSrc] = useState<string | null>(null);
   const [movePlayerOpen, setMovePlayerOpen] = useState(false);
   const [autoFillPlayerBusy, setAutoFillPlayerBusy] = useState(false);
+  const [retirePlayerOpen, setRetirePlayerOpen] = useState(false);
+  const [playerStatusSaving, setPlayerStatusSaving] = useState(false);
   const [gameLogSeasonId, setGameLogSeasonId] = useState('all');
   const [gameLogType, setGameLogType] = useState('all');
   const [gameLogPage, setGameLogPage] = useState(1);
@@ -1016,6 +1023,57 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     } catch {
       toast.error('Failed to update player');
       return false;
+    }
+  };
+
+  const invalidatePlayerStatusQueries = async (playerId: string) => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['player', playerId] }),
+      queryClient.invalidateQueries({ queryKey: ['players'] }),
+      queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] }),
+      queryClient.invalidateQueries({ queryKey: ['game-roster'] }),
+      queryClient.invalidateQueries({ queryKey: ['game-lineup'] }),
+      queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] }),
+      queryClient.invalidateQueries({ queryKey: ['game-goals'] }),
+      queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] }),
+    ]);
+  };
+
+  const retirePlayer = async (retirementDate: string): Promise<boolean> => {
+    if (!adminPlayerId) return false;
+    setPlayerStatusSaving(true);
+    try {
+      await axios.patch(
+        `${API}/admin/players/${adminPlayerId}/retire`,
+        { retirement_date: retirementDate },
+        { headers: authHeaders() },
+      );
+      toast.success('Player retired!');
+      await invalidatePlayerStatusQueries(adminPlayerId);
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to retire player'));
+      return false;
+    } finally {
+      setPlayerStatusSaving(false);
+    }
+  };
+
+  const unretirePlayer = async () => {
+    if (!adminPlayerId) return;
+    setPlayerStatusSaving(true);
+    try {
+      await axios.patch(
+        `${API}/admin/players/${adminPlayerId}/unretire`,
+        {},
+        { headers: authHeaders() },
+      );
+      toast.success('Player unretired!');
+      await invalidatePlayerStatusQueries(adminPlayerId);
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to unretire player'));
+    } finally {
+      setPlayerStatusSaving(false);
     }
   };
 
@@ -1541,6 +1599,26 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             onClick: () => setMovePlayerOpen(true),
           },
         ]
+      : []),
+    ...(isAdminView
+      ? playerStatus === 'retired'
+        ? [
+            {
+              label: 'Unretire Player',
+              icon: 'undo',
+              disabled: playerStatusSaving,
+              onClick: unretirePlayer,
+            },
+          ]
+        : [
+            {
+              label: 'Retire Player',
+              icon: 'event_busy',
+              intent: 'danger' as const,
+              disabled: playerStatusSaving,
+              onClick: () => setRetirePlayerOpen(true),
+            },
+          ]
       : []),
   ];
   const positionLabel = formatPlayerPosition(effectivePosition);
@@ -2193,6 +2271,14 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             leagueId={leagueId ?? ''}
             onClose={() => setMovePlayerOpen(false)}
             movePlayer={movePlayer}
+          />
+
+          <RetirePlayerModal
+            open={retirePlayerOpen}
+            playerName={fullName}
+            busy={playerStatusSaving}
+            onClose={() => setRetirePlayerOpen(false)}
+            onRetire={retirePlayer}
           />
 
           <PlayerInfoEditModal

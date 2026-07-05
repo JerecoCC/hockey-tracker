@@ -1394,19 +1394,31 @@ describe('PlayerDetails info tab', () => {
     );
   });
 
-  it('does not expose player status changes in the more actions menu', async () => {
+  it('retires a player from the more actions menu with a retirement date', async () => {
     const user = userEvent.setup();
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
 
     render(<PlayerDetails />);
 
     await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Retire Player' }));
 
-    expect(screen.queryByRole('button', { name: 'Retire Player' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Unretire Player' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Retire Player' })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Retirement Date/)).toBeInTheDocument();
+    fireEvent.submit(document.getElementById('retire-player-form') as HTMLFormElement);
+
+    await waitFor(() =>
+      expect(mockedAxios.patch).toHaveBeenCalledWith(
+        '/api/admin/players/player-1/retire',
+        { retirement_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) },
+        expect.any(Object),
+      ),
+    );
   });
 
-  it('still hides player status actions for retired players', async () => {
+  it('unretires retired players from the more actions menu', async () => {
     const user = userEvent.setup();
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
     mockUsePlayerDetails.mockReturnValue({
       player: {
         id: 'player-1',
@@ -1432,9 +1444,16 @@ describe('PlayerDetails info tab', () => {
     render(<PlayerDetails />);
 
     await user.click(screen.getByRole('button', { name: 'More actions' }));
-
     expect(screen.queryByRole('button', { name: 'Retire Player' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Unretire Player' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Unretire Player' }));
+
+    await waitFor(() =>
+      expect(mockedAxios.patch).toHaveBeenCalledWith(
+        '/api/admin/players/player-1/unretire',
+        {},
+        expect.any(Object),
+      ),
+    );
   });
 
   it('opens the player info edit modal from the info card action', async () => {

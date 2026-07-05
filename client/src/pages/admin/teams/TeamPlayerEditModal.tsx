@@ -1,8 +1,9 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
 import Modal from '@/components/Modal/Modal';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import {
   type CreatePlayerData,
   type PlayerPosition,
@@ -26,7 +27,6 @@ const POSITION_OPTIONS = [
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
   { value: 'inactive', label: 'Inactive' },
-  { value: 'retired', label: 'Retired' },
 ];
 
 interface FormValues {
@@ -64,6 +64,8 @@ const TeamPlayerEditModal = ({
   updatePlayerTeam,
   uploadPlayerPhoto,
 }: Props) => {
+  const playerStatus = editTarget ? getPlayerStatus(editTarget) : 'active';
+  const isRetired = playerStatus === 'retired';
   const formValues = useMemo<FormValues>(
     () => ({
       photo: editTarget?.photo ?? null,
@@ -71,9 +73,9 @@ const TeamPlayerEditModal = ({
       first_name: editTarget?.first_name ?? '',
       last_name: editTarget?.last_name ?? '',
       position: editTarget?.position ?? null,
-      status: editTarget ? getPlayerStatus(editTarget) : 'active',
+      status: playerStatus,
     }),
-    [editTarget],
+    [editTarget, playerStatus],
   );
   const {
     control,
@@ -110,7 +112,7 @@ const TeamPlayerEditModal = ({
       first_name: data.first_name,
       last_name: data.last_name,
       position: data.position || null,
-      status: data.status,
+      ...(!isRetired ? { status: data.status } : {}),
     });
     if (!playerOk) return;
 
@@ -196,16 +198,24 @@ const TeamPlayerEditModal = ({
             rules={{ required: true }}
             disabled={isSubmitting}
           />
-          <Field
-            type="select"
-            label="Status"
-            required
-            control={control}
-            name="status"
-            options={STATUS_OPTIONS}
-            rules={{ required: true }}
-            disabled={isSubmitting}
-          />
+          {!isRetired && (
+            <div className={styles.segmentedField}>
+              <span className={styles.heightGroupLabel}>Status</span>
+              <Controller
+                control={control}
+                name="status"
+                render={({ field }) => (
+                  <SegmentedControl
+                    value={field.value}
+                    onChange={(value) => field.onChange(value as PlayerStatus)}
+                    variant="field"
+                    options={STATUS_OPTIONS}
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            </div>
+          )}
         </div>
       </form>
     </Modal>

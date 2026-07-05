@@ -74,7 +74,7 @@ describe('TeamPlayerEditModal', () => {
     expect(updatePlayer.mock.calls[0][1]).not.toHaveProperty('league_player_number');
   });
 
-  it('edits player status in the edit player form', async () => {
+  it('edits active player status with a segmented control in the edit player form', async () => {
     const updatePlayer = jest.fn().mockResolvedValue(true);
     const updatePlayerTeam = jest.fn().mockResolvedValue(true);
 
@@ -91,15 +91,44 @@ describe('TeamPlayerEditModal', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('combobox', { name: /Status/ }));
-    fireEvent.click(screen.getByText('Retired'));
+    expect(screen.queryByRole('combobox', { name: /Status/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Inactive' }));
     fireEvent.submit(document.getElementById('team-player-edit-form') as HTMLFormElement);
 
     await waitFor(() =>
       expect(updatePlayer).toHaveBeenCalledWith(
         'player-1',
-        expect.objectContaining({ status: 'retired' }),
+        expect.objectContaining({ status: 'inactive' }),
       ),
     );
+  });
+
+  it('hides status in the edit player form for retired players and omits it from the payload', async () => {
+    const updatePlayer = jest.fn().mockResolvedValue(true);
+    const updatePlayerTeam = jest.fn().mockResolvedValue(true);
+
+    render(
+      <TeamPlayerEditModal
+        open
+        editTarget={{ ...player, status: 'retired', is_active: false }}
+        teamId="team-1"
+        seasonId="season-1"
+        onClose={jest.fn()}
+        updatePlayer={updatePlayer}
+        updatePlayerTeam={updatePlayerTeam}
+        uploadPlayerPhoto={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByText('Status')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Active' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Inactive' })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/First Name/), { target: { value: 'Jane' } });
+    fireEvent.submit(document.getElementById('team-player-edit-form') as HTMLFormElement);
+
+    await waitFor(() => expect(updatePlayer).toHaveBeenCalled());
+    expect(updatePlayer.mock.calls[0][1]).toEqual(expect.objectContaining({ first_name: 'Jane' }));
+    expect(updatePlayer.mock.calls[0][1]).not.toHaveProperty('status');
   });
 });
