@@ -178,10 +178,9 @@ describe('ChangePhotoModal', () => {
     renderModal('edit');
 
     expect(screen.getByRole('dialog', { name: 'Edit Season Photo' })).toBeInTheDocument();
-    expect(screen.queryByLabelText('Season')).not.toBeInTheDocument();
     expect(screen.queryByRole('combobox', { name: 'Season' })).not.toBeInTheDocument();
     expect(screen.getByText('Season')).toBeInTheDocument();
-    expect(screen.getByText('2024-25')).toBeInTheDocument();
+    expect(screen.getByText('2024-25').closest('[aria-disabled="true"]')).toBeInTheDocument();
   });
 
   it('uses a dismissible banner for inherited photos', async () => {

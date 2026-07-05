@@ -4,6 +4,7 @@ import Banner from '@/components/Banner/Banner';
 import Field from '@/components/Field/Field';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
 import Modal from '@/components/Modal/Modal';
+import ReadOnlyField from '@/components/ReadOnlyField/ReadOnlyField';
 import {
   type PlayerPhotoEntry,
   type PlayerStintRecord,
@@ -81,7 +82,7 @@ const ChangePhotoModal = ({
   const selectedSeasonName =
     seasons.find((season) => season.id === selectedSeasonId)?.name ??
     explicitPhoto?.season_name ??
-    'Selected season';
+    'Season unavailable';
   const showInheritedBanner = Boolean(inheritedPhoto) && !inheritedBannerDismissed;
 
   useLayoutEffect(() => {
@@ -131,15 +132,11 @@ const ChangePhotoModal = ({
         onSubmit={onSubmit}
       >
         {isEditMode ? (
-          <div className={styles.readonlyField}>
-            <span className={styles.readonlyFieldLabel}>Season</span>
-            <div
-              className={styles.readonlyFieldBox}
-              title="This photo record already belongs to this season."
-            >
-              <span className={styles.readonlyFieldValue}>{selectedSeasonName}</span>
-            </div>
-          </div>
+          <ReadOnlyField
+            label="Season"
+            value={selectedSeasonName}
+            title="This photo record already belongs to this season."
+          />
         ) : (
           <Field
             type="select"
