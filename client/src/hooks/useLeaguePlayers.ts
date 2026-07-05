@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
+import { type PlayerStatus } from '@/lib/playerStatus';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -14,6 +15,7 @@ const apiError = (err: unknown, fallback: string): string =>
 
 export type PlayerPosition = 'C' | 'LW' | 'RW' | 'F' | 'D' | 'LD' | 'RD' | 'G';
 export type PlayerShoots = 'L' | 'R';
+export type { PlayerStatus } from '@/lib/playerStatus';
 
 export interface PlayerRecord {
   id: string;
@@ -30,6 +32,7 @@ export interface PlayerRecord {
   shoots: PlayerShoots | null;
   rookie_season_id?: string | null;
   rookie_season_name?: string | null;
+  status?: PlayerStatus;
   is_active: boolean;
   created_at: string;
   // Roster fields — populated when fetching by league_id or team_id
@@ -62,6 +65,7 @@ export interface CreatePlayerData {
   height_cm?: number | null;
   weight_lbs?: number | null;
   rookie_season_id?: string | null;
+  status?: PlayerStatus;
   is_active?: boolean;
 }
 

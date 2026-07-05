@@ -26,6 +26,7 @@ const PLAYER = {
   weight_lbs: 185,
   position: 'C',
   shoots: 'L',
+  status: 'active',
   is_active: true,
   created_at: new Date().toISOString(),
 };
@@ -677,6 +678,29 @@ describe('POST /api/admin/players', () => {
     expect(res.body.first_name).toBe('Wayne');
   });
 
+  it('creates an inactive player when status is provided', async () => {
+    sql.mockResolvedValueOnce([{ ...PLAYER, status: 'inactive', is_active: false }]);
+    const res = await request(app).post('/api/admin/players')
+      .send({
+        first_name: 'Wayne',
+        last_name: 'Gretzky',
+        position: 'C',
+        shoots: 'L',
+        status: 'inactive',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe('inactive');
+    expect(sql.mock.calls[0][0].join(' ')).toContain('status, is_active');
+  });
+
+  it('returns 400 when status is invalid', async () => {
+    const res = await request(app).post('/api/admin/players')
+      .send({ first_name: 'Wayne', last_name: 'Gretzky', status: 'hurt' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/status/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
   it('returns 400 when first_name is missing', async () => {
     const res = await request(app).post('/api/admin/players')
       .send({ last_name: 'Gretzky' });
@@ -791,6 +815,7 @@ describe('PATCH /api/admin/players/:id/retire', () => {
   it('marks the player inactive and closes current stint records', async () => {
     const retiredPlayer = {
       ...PLAYER,
+      status: 'retired',
       is_active: false,
       retirement_date: '2025-06-30',
       retired_stint_id: 'career-stint-1',
@@ -806,6 +831,7 @@ describe('PATCH /api/admin/players/:id/retire', () => {
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       id: 'player-1',
+      status: 'retired',
       is_active: false,
       retirement_date: '2025-06-30',
       retired_stint_id: 'career-stint-1',
@@ -815,7 +841,7 @@ describe('PATCH /api/admin/players/:id/retire', () => {
 
     const queryText = sql.mock.calls[0][0].join(' ');
     expect(queryText).toContain('UPDATE players');
-    expect(queryText).toContain('SET is_active = FALSE');
+    expect(queryText).toContain("SET status = 'retired', is_active = FALSE");
     expect(queryText).toContain('player_team_stints');
     expect(queryText).toContain('player_teams');
     expect(queryText).toContain('SET end_date =');
@@ -856,6 +882,7 @@ describe('PATCH /api/admin/players/:id/unretire', () => {
   it('marks the player active and reopens latest closed stint records', async () => {
     const unretiredPlayer = {
       ...PLAYER,
+      status: 'active',
       is_active: true,
       unretired_stint_id: 'career-stint-1',
       unretired_team_id: 'team-1',
@@ -870,6 +897,7 @@ describe('PATCH /api/admin/players/:id/unretire', () => {
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       id: 'player-1',
+      status: 'active',
       is_active: true,
       unretired_stint_id: 'career-stint-1',
       unretired_player_team_id: 'player-team-1',
@@ -878,7 +906,7 @@ describe('PATCH /api/admin/players/:id/unretire', () => {
 
     const queryText = sql.mock.calls[0][0].join(' ');
     expect(queryText).toContain('UPDATE players');
-    expect(queryText).toContain('SET is_active = TRUE');
+    expect(queryText).toContain("SET status = 'active', is_active = TRUE");
     expect(queryText).toContain('player_team_stints');
     expect(queryText).toContain('player_teams');
     expect(queryText).toContain('SET end_date = NULL');
@@ -913,6 +941,27 @@ describe('PATCH /api/admin/players/:id', () => {
       .send({ weight_lbs: 190 });
     expect(res.status).toBe(200);
     expect(res.body.weight_lbs).toBe(190);
+  });
+
+  it('updates player status and derived active flag', async () => {
+    sql.mockResolvedValueOnce([{ ...PLAYER, status: 'inactive', is_active: false }]);
+    const res = await request(app).patch('/api/admin/players/player-1')
+      .send({ status: 'inactive' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ status: 'inactive', is_active: false });
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('status        = CASE');
+    expect(queryText).toContain('is_active     = CASE');
+  });
+
+  it('returns 400 when updating to an invalid status', async () => {
+    const res = await request(app).patch('/api/admin/players/player-1')
+      .send({ status: 'injured' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/status/i);
+    expect(sql).not.toHaveBeenCalled();
   });
 
   it('returns 404 when not found', async () => {

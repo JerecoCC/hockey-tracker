@@ -956,6 +956,7 @@ async function initSchema() {
       position       TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G')),
       shoots         TEXT CHECK (shoots IN ('L', 'R')),
       rookie_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL,
+      status         TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'retired')),
       is_active      BOOLEAN NOT NULL DEFAULT TRUE,
       created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
@@ -970,6 +971,29 @@ async function initSchema() {
       WHERE league_player_number IS NOT NULL
   `;
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
+  await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS status TEXT`;
+  await sql`
+    UPDATE players
+    SET status = CASE WHEN is_active THEN 'active' ELSE 'retired' END
+    WHERE status IS NULL
+  `;
+  await sql`ALTER TABLE players ALTER COLUMN status SET DEFAULT 'active'`;
+  await sql`ALTER TABLE players ALTER COLUMN status SET NOT NULL`;
+  await sql`ALTER TABLE players DROP CONSTRAINT IF EXISTS players_status_check`;
+  await sql`
+    ALTER TABLE players ADD CONSTRAINT players_status_check
+    CHECK (status IN ('active', 'inactive', 'retired'))
+  `;
+  await sql`
+    UPDATE players
+    SET is_active = (status = 'active')
+    WHERE is_active IS DISTINCT FROM (status = 'active')
+  `;
+  await sql`ALTER TABLE players DROP CONSTRAINT IF EXISTS players_status_active_check`;
+  await sql`
+    ALTER TABLE players ADD CONSTRAINT players_status_active_check
+    CHECK (is_active = (status = 'active'))
+  `;
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS rookie_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL`;
   await sql`ALTER TABLE players DROP COLUMN IF EXISTS nationality`;
 

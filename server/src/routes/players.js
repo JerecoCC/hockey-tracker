@@ -32,6 +32,16 @@ const normalizeLeagueNumber = (value) => {
   return trimmed || null;
 };
 
+const PLAYER_STATUSES = new Set(['active', 'inactive', 'retired']);
+
+const normalizePlayerStatus = ({ status, is_active }, fallback = 'active') => {
+  if (status !== undefined && status !== null && status !== '') {
+    return String(status).trim().toLowerCase();
+  }
+  if (typeof is_active === 'boolean') return is_active ? 'active' : 'inactive';
+  return fallback;
+};
+
 const normalizePlayerSearchAlias = (value) =>
   String(value ?? '')
     .normalize('NFD')
@@ -93,7 +103,7 @@ router.get('/', async (req, res) => {
           p.height_cm, p.weight_lbs, COALESCE(latest_pt.position, p.position) AS position, p.shoots,
           p.rookie_season_id,
           (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
-          p.is_active, p.created_at,
+          p.status, p.is_active, p.created_at,
           COALESCE(latest_jnh.jersey_number, latest_pt.jersey_number) AS jersey_number,
           latest_pt.id AS player_team_id,
           latest_pt.team_id,
@@ -178,7 +188,7 @@ router.get('/', async (req, res) => {
                 birth_city, birth_country,
                 height_cm, weight_lbs, position, shoots,
                 rookie_season_id, rookie_season_name,
-                is_active, created_at,
+                status, is_active, created_at,
                 jersey_number, player_team_id, team_id, team_name, team_code, team_logo, team_logo_dark, team_logo_light, primary_color, text_color, is_prospect,
                 acquisition_type, start_date::text AS start_date, has_games, season_points
               FROM (
@@ -190,7 +200,7 @@ router.get('/', async (req, res) => {
                   p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
                   p.rookie_season_id,
                   (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
-                  p.is_active, p.created_at,
+                  p.status, p.is_active, p.created_at,
                   pt.jersey_number,
                   pt.id          AS player_team_id,
                   pt.is_prospect,
@@ -291,7 +301,7 @@ router.get('/', async (req, res) => {
                 birth_city, birth_country,
                 height_cm, weight_lbs, position, shoots,
                 rookie_season_id, rookie_season_name,
-                is_active, created_at,
+                status, is_active, created_at,
                 jersey_number, player_team_id, team_id, team_name, team_code, team_logo, team_logo_dark, team_logo_light, primary_color, text_color, is_prospect,
                 acquisition_type, start_date::text AS start_date, has_games
               FROM (
@@ -303,7 +313,7 @@ router.get('/', async (req, res) => {
                   p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
                   p.rookie_season_id,
                   (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
-                  p.is_active, p.created_at,
+                  p.status, p.is_active, p.created_at,
                   pt.jersey_number,
                   pt.id          AS player_team_id,
                   pt.is_prospect,
@@ -483,7 +493,7 @@ router.get('/', async (req, res) => {
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             rookie_season_id, rookie_season_name,
-            is_active, created_at,
+            status, is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, team_code, team_logo, team_logo_dark, team_logo_light, primary_color, text_color, is_prospect,
             acquisition_type, start_date::text AS start_date, has_games, season_points
           FROM (
@@ -495,7 +505,7 @@ router.get('/', async (req, res) => {
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.rookie_season_id,
               (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
-              p.is_active, p.created_at,
+              p.status, p.is_active, p.created_at,
               pt.jersey_number,
               pt.id          AS player_team_id,
               pt.is_prospect,
@@ -573,7 +583,7 @@ router.get('/', async (req, res) => {
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             rookie_season_id, rookie_season_name,
-            is_active, created_at,
+            status, is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, team_code, team_logo, team_logo_dark, team_logo_light, primary_color, text_color, is_prospect,
             acquisition_type, start_date::text AS start_date, has_games
           FROM (
@@ -585,7 +595,7 @@ router.get('/', async (req, res) => {
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.rookie_season_id,
               (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
-              p.is_active, p.created_at,
+              p.status, p.is_active, p.created_at,
               pt.jersey_number,
               pt.id          AS player_team_id,
               pt.is_prospect,
@@ -648,7 +658,7 @@ router.get('/', async (req, res) => {
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             rookie_season_id, rookie_season_name,
-            is_active, created_at,
+            status, is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
@@ -659,7 +669,7 @@ router.get('/', async (req, res) => {
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.rookie_season_id,
               (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
-              p.is_active, p.created_at,
+              p.status, p.is_active, p.created_at,
               pt.jersey_number,
               pt.id          AS player_team_id,
               pt.team_id,
@@ -694,7 +704,7 @@ router.get('/', async (req, res) => {
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             rookie_season_id, rookie_season_name,
-            is_active, created_at,
+            status, is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
@@ -704,7 +714,7 @@ router.get('/', async (req, res) => {
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.rookie_season_id,
               (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
-              p.is_active, p.created_at,
+              p.status, p.is_active, p.created_at,
               pt.jersey_number,
               pt.id          AS player_team_id,
               pt.team_id,
@@ -736,7 +746,7 @@ router.get('/', async (req, res) => {
             height_cm, weight_lbs, position, shoots,
             rookie_season_id,
             (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
-            is_active, created_at
+            status, is_active, created_at
           FROM players ORDER BY last_name, first_name
         `;
     return res.json(players);
@@ -2011,7 +2021,7 @@ router.get('/:id', async (req, res) => {
         height_cm, weight_lbs, position, shoots,
         rookie_season_id,
         (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
-        is_active, created_at
+        status, is_active, created_at
       FROM players WHERE id = ${id}
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Player not found' });
@@ -2029,15 +2039,19 @@ router.post('/', async (req, res) => {
   const {
     first_name, last_name, position, shoots,
     date_of_birth, birth_city, birth_country,
-    height_cm, weight_lbs, rookie_season_id, is_active, league_player_number,
+    height_cm, weight_lbs, rookie_season_id, is_active, league_player_number, status,
   } = req.body;
   const normalizedLeaguePlayerNumber = normalizeLeagueNumber(league_player_number);
+  const playerStatus = normalizePlayerStatus({ status, is_active });
 
   if (!first_name || typeof first_name !== 'string' || first_name.trim() === '') {
     return res.status(400).json({ error: 'first_name is required' });
   }
   if (!last_name || typeof last_name !== 'string' || last_name.trim() === '') {
     return res.status(400).json({ error: 'last_name is required' });
+  }
+  if (!PLAYER_STATUSES.has(playerStatus)) {
+    return res.status(400).json({ error: 'status must be active, inactive, or retired' });
   }
 
   try {
@@ -2046,7 +2060,7 @@ router.post('/', async (req, res) => {
         league_player_number,
         first_name, last_name, position, shoots,
         date_of_birth, birth_city, birth_country,
-        height_cm, weight_lbs, rookie_season_id, is_active
+        height_cm, weight_lbs, rookie_season_id, status, is_active
       ) VALUES (
         ${normalizedLeaguePlayerNumber},
         ${first_name.trim()}, ${last_name.trim()},
@@ -2055,7 +2069,8 @@ router.post('/', async (req, res) => {
         ${birth_country?.trim().toUpperCase() ?? null},
         ${height_cm ?? null}, ${weight_lbs ?? null},
         ${rookie_season_id || null},
-        ${is_active ?? true}
+        ${playerStatus},
+        ${playerStatus === 'active'}
       )
       ON CONFLICT (league_player_number) WHERE league_player_number IS NOT NULL
       DO UPDATE SET
@@ -2068,7 +2083,18 @@ router.post('/', async (req, res) => {
         position = COALESCE(players.position, EXCLUDED.position),
         shoots = COALESCE(players.shoots, EXCLUDED.shoots),
         rookie_season_id = COALESCE(players.rookie_season_id, EXCLUDED.rookie_season_id),
-        is_active = players.is_active OR EXCLUDED.is_active
+        status = CASE
+          WHEN players.status = 'active' OR EXCLUDED.status = 'active' THEN 'active'
+          WHEN players.status = 'retired' OR EXCLUDED.status = 'retired' THEN 'retired'
+          ELSE 'inactive'
+        END,
+        is_active = (
+          CASE
+            WHEN players.status = 'active' OR EXCLUDED.status = 'active' THEN 'active'
+            WHEN players.status = 'retired' OR EXCLUDED.status = 'retired' THEN 'retired'
+            ELSE 'inactive'
+          END
+        ) = 'active'
       RETURNING
         id, league_player_number, first_name, last_name, photo,
         date_of_birth::text AS date_of_birth,
@@ -2076,7 +2102,7 @@ router.post('/', async (req, res) => {
         height_cm, weight_lbs, position, shoots,
         rookie_season_id,
         (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
-        is_active, created_at
+        status, is_active, created_at
     `;
     return res.status(201).json(rows[0]);
   } catch (err) {
@@ -2109,21 +2135,37 @@ router.post('/bulk', async (req, res) => {
 
   try {
     const created = [];
-    for (const { first_name, last_name, position, shoots, rookie_season_id, league_player_number } of players) {
+    for (const { first_name, last_name, position, shoots, rookie_season_id, league_player_number, status, is_active } of players) {
       const normalizedLeaguePlayerNumber = normalizeLeagueNumber(league_player_number);
+      const playerStatus = normalizePlayerStatus({ status, is_active });
+      if (!PLAYER_STATUSES.has(playerStatus)) {
+        return res.status(400).json({ error: 'status must be active, inactive, or retired' });
+      }
       const rows = await sql`
-        INSERT INTO players (league_player_number, first_name, last_name, position, shoots, rookie_season_id, is_active)
+        INSERT INTO players (league_player_number, first_name, last_name, position, shoots, rookie_season_id, status, is_active)
         VALUES (
           ${normalizedLeaguePlayerNumber},
           ${first_name.trim()}, ${last_name.trim()},
-          ${position}, ${shoots ?? null}, ${rookie_season_id || null}, true
+          ${position}, ${shoots ?? null}, ${rookie_season_id || null},
+          ${playerStatus}, ${playerStatus === 'active'}
         )
         ON CONFLICT (league_player_number) WHERE league_player_number IS NOT NULL
         DO UPDATE SET
           position = COALESCE(players.position, EXCLUDED.position),
           shoots = COALESCE(players.shoots, EXCLUDED.shoots),
           rookie_season_id = COALESCE(players.rookie_season_id, EXCLUDED.rookie_season_id),
-          is_active = players.is_active OR EXCLUDED.is_active
+          status = CASE
+            WHEN players.status = 'active' OR EXCLUDED.status = 'active' THEN 'active'
+            WHEN players.status = 'retired' OR EXCLUDED.status = 'retired' THEN 'retired'
+            ELSE 'inactive'
+          END,
+          is_active = (
+            CASE
+              WHEN players.status = 'active' OR EXCLUDED.status = 'active' THEN 'active'
+              WHEN players.status = 'retired' OR EXCLUDED.status = 'retired' THEN 'retired'
+              ELSE 'inactive'
+            END
+          ) = 'active'
         RETURNING
           id, league_player_number, first_name, last_name, photo,
           date_of_birth::text AS date_of_birth,
@@ -2131,7 +2173,7 @@ router.post('/bulk', async (req, res) => {
           height_cm, weight_lbs, position, shoots,
           rookie_season_id,
           (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
-          is_active, created_at
+          status, is_active, created_at
       `;
       created.push(rows[0]);
     }
@@ -2159,7 +2201,7 @@ router.patch('/:id/retire', async (req, res) => {
     const rows = await sql`
       WITH retired_player AS (
         UPDATE players
-        SET is_active = FALSE
+        SET status = 'retired', is_active = FALSE
         WHERE id = ${id}
         RETURNING
           id, league_player_number, first_name, last_name, photo,
@@ -2168,7 +2210,7 @@ router.patch('/:id/retire', async (req, res) => {
           height_cm, weight_lbs, position, shoots,
           rookie_season_id,
           (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
-          is_active, created_at
+          status, is_active, created_at
       ),
       latest_career_stint AS (
         SELECT pts.id, pts.team_id
@@ -2237,7 +2279,7 @@ router.patch('/:id/unretire', async (req, res) => {
     const rows = await sql`
       WITH unretired_player AS (
         UPDATE players
-        SET is_active = TRUE
+        SET status = 'active', is_active = TRUE
         WHERE id = ${id}
         RETURNING
           id, league_player_number, first_name, last_name, photo,
@@ -2246,7 +2288,7 @@ router.patch('/:id/unretire', async (req, res) => {
           height_cm, weight_lbs, position, shoots,
           rookie_season_id,
           (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
-          is_active, created_at
+          status, is_active, created_at
       ),
       latest_closed_career_stint AS (
         SELECT pts.id, pts.team_id
@@ -2316,7 +2358,7 @@ router.patch('/:id', async (req, res) => {
   const {
     first_name, last_name, position, shoots,
     date_of_birth, birth_city, birth_country,
-    height_cm, weight_lbs, rookie_season_id, is_active, league_player_number,
+    height_cm, weight_lbs, rookie_season_id, is_active, league_player_number, status,
   } = req.body;
 
   const firstNameInBody    = 'first_name'    in req.body;
@@ -2329,9 +2371,15 @@ router.patch('/:id', async (req, res) => {
   const heightInBody       = 'height_cm'     in req.body;
   const weightInBody       = 'weight_lbs'    in req.body;
   const rookieSeasonInBody = 'rookie_season_id' in req.body;
+  const statusInBody       = 'status'        in req.body;
   const isActiveInBody     = 'is_active'     in req.body;
   const leaguePlayerNumberInBody = 'league_player_number' in req.body;
   const normalizedLeaguePlayerNumber = normalizeLeagueNumber(league_player_number);
+  const playerStatus = normalizePlayerStatus({ status, is_active });
+
+  if ((statusInBody || isActiveInBody) && !PLAYER_STATUSES.has(playerStatus)) {
+    return res.status(400).json({ error: 'status must be active, inactive, or retired' });
+  }
 
   try {
     const rows = await sql`
@@ -2347,7 +2395,8 @@ router.patch('/:id', async (req, res) => {
         height_cm     = CASE WHEN ${heightInBody}       THEN ${height_cm ?? null}                             ELSE height_cm     END,
         weight_lbs    = CASE WHEN ${weightInBody}       THEN ${weight_lbs ?? null}                            ELSE weight_lbs    END,
         rookie_season_id = CASE WHEN ${rookieSeasonInBody} THEN ${rookie_season_id || null}                   ELSE rookie_season_id END,
-        is_active     = CASE WHEN ${isActiveInBody}     THEN ${is_active ?? true}                             ELSE is_active     END
+        status        = CASE WHEN ${statusInBody || isActiveInBody} THEN ${playerStatus}                      ELSE status        END,
+        is_active     = CASE WHEN ${statusInBody || isActiveInBody} THEN ${playerStatus === 'active'}         ELSE is_active     END
       WHERE id = ${id}
       RETURNING
         id, league_player_number, first_name, last_name, photo,
@@ -2356,7 +2405,7 @@ router.patch('/:id', async (req, res) => {
         height_cm, weight_lbs, position, shoots,
         rookie_season_id,
         (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
-        is_active, created_at
+          status, is_active, created_at
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Player not found' });
     return res.json(rows[0]);

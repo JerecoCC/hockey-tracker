@@ -16,6 +16,7 @@ import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { missingPlayerDataIndicator } from '@/lib/playerDataStatus';
 import { formatPlayerPosition } from '@/lib/playerPosition';
 import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playerSearch';
+import { getPlayerStatus } from '@/lib/playerStatus';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
@@ -117,8 +118,9 @@ const LeaguePlayersTab = ({ className }: Props) => {
   };
   const renderPlayerTags = (player: PlayerRecord) => {
     const isRookie = !!selectedSeasonId && player.rookie_season_id === selectedSeasonId;
-    const isRetired = !player.is_active;
-    if (!isRookie && !isRetired) return undefined;
+    const status = getPlayerStatus(player);
+    const isInactive = status !== 'active';
+    if (!isRookie && !isInactive) return undefined;
 
     return (
       <span className={styles.playerRowTags}>
@@ -128,7 +130,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
             intent="accent"
           />
         )}
-        {isRetired && <Tag label="Retired" />}
+        {isInactive && <Tag label={status === 'retired' ? 'Retired' : 'Inactive'} />}
       </span>
     );
   };

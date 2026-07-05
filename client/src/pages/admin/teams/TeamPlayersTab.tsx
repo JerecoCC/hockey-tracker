@@ -16,6 +16,7 @@ import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
 import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playerSearch';
+import { getPlayerStatus } from '@/lib/playerStatus';
 import { buildPlayerDetailsPath, buildUserPlayerDetailsPath } from '@/lib/routeSlugs';
 import LineupCreatePlayersModal from '../games/game-details/lineups/LineupCreatePlayersModal';
 import AddPlayersModal from './AddPlayersModal';
@@ -163,6 +164,7 @@ const TeamPlayersTab = ({
 
   const renderPlayer = (p: TeamPlayerRecord) => {
     const playerName = `${p.first_name} ${p.last_name}`;
+    const status = getPlayerStatus(p);
     const playerDetailsPath =
       mode === 'user'
         ? buildUserPlayerDetailsPath({
@@ -249,8 +251,13 @@ const TeamPlayersTab = ({
             ? { type: 'tag', label: 'Prospect', intent: 'neutral' }
             : {
                 type: 'tag',
-                label: p.is_active ? 'Active' : 'Inactive',
-                intent: p.is_active ? 'success' : 'neutral',
+                label:
+                  status === 'active'
+                    ? 'Active'
+                    : status === 'retired'
+                      ? 'Retired'
+                      : 'Inactive',
+                intent: status === 'active' ? 'success' : 'neutral',
               }
         }
         onClick={() => navigate(playerDetailsPath)}

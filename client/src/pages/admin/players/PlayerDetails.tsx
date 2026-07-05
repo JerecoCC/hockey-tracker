@@ -57,6 +57,7 @@ import {
 } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import { formatPlayerPosition } from '@/lib/playerPosition';
+import { getPlayerStatus, PLAYER_STATUS_LABELS } from '@/lib/playerStatus';
 import {
   buildGameDetailsPath,
   buildLeagueDetailsPath,
@@ -1164,7 +1165,9 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       if (landing.weightInPounds != null) payload.weight_lbs = landing.weightInPounds;
       if (position) payload.position = position;
       if (shoots) payload.shoots = shoots;
-      if (typeof landing.isActive === 'boolean') payload.is_active = landing.isActive;
+      if (typeof landing.isActive === 'boolean') {
+        payload.status = landing.isActive ? 'active' : 'inactive';
+      }
 
       await axios.patch(`${API}/admin/players/${player.id}`, payload, { headers: authHeaders() });
 
@@ -1420,6 +1423,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
 
   if (!player) return <p className={styles.loaderText}>Player not found.</p>;
 
+  const playerStatus = getPlayerStatus(player);
+  const isPlayerRetired = playerStatus === 'retired';
   const initials = `${player.first_name[0]}${player.last_name[0]}`;
   const heroTeam =
     latestStint?.team ??
@@ -1494,7 +1499,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           },
         ]
       : []),
-    ...(isAdminView && player.is_active
+    ...(isAdminView && !isPlayerRetired
       ? [
           {
             label: 'Retire Player',
@@ -1504,7 +1509,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           },
         ]
       : []),
-    ...(isAdminView && !player.is_active
+    ...(isAdminView && isPlayerRetired
       ? [
           {
             label: 'Unretire Player',
@@ -1950,8 +1955,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             )}
             <div className={styles.heroStatus}>
               <Tag
-                label={player.is_active ? 'Active' : 'Retired'}
-                intent={player.is_active ? 'success' : 'neutral'}
+                label={PLAYER_STATUS_LABELS[playerStatus]}
+                intent={playerStatus === 'active' ? 'success' : 'neutral'}
               />
             </div>
           </div>

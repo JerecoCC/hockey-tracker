@@ -1108,7 +1108,7 @@ router.get('/players', async (req, res) => {
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             rookie_season_id, rookie_season_name,
-            is_active, created_at,
+            status, is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
@@ -1119,7 +1119,7 @@ router.get('/players', async (req, res) => {
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.rookie_season_id,
               (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
-              p.is_active, p.created_at,
+              p.status, p.is_active, p.created_at,
               pt.jersey_number,
               pt.id AS player_team_id,
               pt.team_id,
@@ -1153,7 +1153,7 @@ router.get('/players', async (req, res) => {
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             rookie_season_id, rookie_season_name,
-            is_active, created_at,
+            status, is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
@@ -1164,7 +1164,7 @@ router.get('/players', async (req, res) => {
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.rookie_season_id,
               (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
-              p.is_active, p.created_at,
+              p.status, p.is_active, p.created_at,
               pt.jersey_number,
               pt.id AS player_team_id,
               pt.team_id,
@@ -1881,7 +1881,7 @@ router.get('/players/:id', async (req, res) => {
         p.shoots,
         p.rookie_season_id,
         (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
-        p.is_active,
+        p.status, p.is_active,
         p.created_at,
         latest_pt.id AS player_team_id,
         latest_pt.team_id,

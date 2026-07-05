@@ -9,11 +9,18 @@ import {
   type PlayerRecord,
   type PlayerShoots,
 } from '@/hooks/useLeaguePlayers';
+import { getPlayerStatus, type PlayerStatus } from '@/lib/playerStatus';
 import styles from '../leagues/PlayerFormModal.module.scss';
 
 const SHOOTS_OPTIONS = [
   { value: 'L', label: 'Left' },
   { value: 'R', label: 'Right' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'retired', label: 'Retired' },
 ];
 
 const NO_ROOKIE_SEASON = 'none';
@@ -47,6 +54,7 @@ const isWholeNumberInput = (value: string) => value === '' || /^\d+$/.test(value
 
 interface FormValues {
   league_player_number: string;
+  status: PlayerStatus;
   shoots: PlayerShoots | null;
   date_of_birth: string;
   birth_city: string;
@@ -79,6 +87,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
         : { ft: null as null, inches: null as null };
     return {
       league_player_number: player?.league_player_number ?? '',
+      status: player ? getPlayerStatus(player) : 'active',
       shoots: player?.shoots ?? null,
       date_of_birth: player?.date_of_birth ?? '',
       birth_city: player?.birth_city ?? '',
@@ -138,6 +147,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
     const hasIn = data.height_in !== '';
     const ok = await updatePlayer(player.id, {
       league_player_number: data.league_player_number.trim() || null,
+      status: data.status,
       shoots: data.shoots || null,
       date_of_birth: data.date_of_birth || null,
       birth_city: data.birth_city || null,
@@ -211,6 +221,16 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
               disabled={isSubmitting}
             />
           )}
+        </div>
+        <div className={styles.fullRow}>
+          <Field
+            type="select"
+            label="Status"
+            control={control}
+            name="status"
+            options={STATUS_OPTIONS}
+            disabled={isSubmitting}
+          />
         </div>
         <Divider className={styles.divider} />
         <div className={styles.playerInfoBirthRow}>
