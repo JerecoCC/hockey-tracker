@@ -32,6 +32,7 @@ import {
   faGear,
   faHeart,
   faCalendarDays,
+  faCalendarXmark,
   faCaretDown,
   faCaretUp,
   faChevronDown,
@@ -135,6 +136,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   favorite: faHeart,
   heart: faHeart,
   calendar: faCalendarDays,
+  event_busy: faCalendarXmark,
   download: faDownload,
   play_arrow: faPlay,
   folder_plus: faFolderPlus,
@@ -160,6 +162,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   restart_alt: faArrowRotateRight,
   undo: faArrowRotateLeft,
   search: faMagnifyingGlass,
+  manage_search: faMagnifyingGlassChart,
 
   // auth
   account_circle: faCircleUser,

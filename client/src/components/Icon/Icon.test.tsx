@@ -121,4 +121,9 @@ describe('Icon', () => {
     const { container } = render(<Icon name="table_rows" />);
     expect(container.querySelector('svg')).toBeInTheDocument();
   });
+
+  it.each(['manage_search', 'event_busy', 'undo'])('renders an SVG for player action icon %s', (name) => {
+    const { container } = render(<Icon name={name} />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
 });
