@@ -311,6 +311,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
                       const playerHref = buildLeaguePlayerDetailsPath({
                         leagueCode: league.code,
                         leagueId: league.id,
+                        leaguePlayerNumber: p.league_player_number,
                         firstName: p.first_name,
                         lastName: p.last_name,
                       });

@@ -1212,44 +1212,111 @@ router.get('/players/route-lookup', async (req, res) => {
 
   try {
     const rows = await sql`
+      WITH candidate_routes AS (
+        SELECT
+          p.id AS player_id,
+          p.league_player_number,
+          t.id AS roster_team_id,
+          l.id AS league_id,
+          l.code AS league_code,
+          ti.code AS roster_team_code,
+          COALESCE(latest_jnh.jersey_number, pt.jersey_number) AS jersey_number,
+          pt.jersey_number AS roster_jersey_number,
+          pt.start_date,
+          pt.end_date,
+          pt.created_at,
+          trim(both '-' from regexp_replace(
+            lower(trim(concat_ws(' ', p.first_name, p.last_name))),
+            '[^a-z0-9]+',
+            '-',
+            'g'
+          )) AS name_slug,
+          trim(both '-' from regexp_replace(
+            lower(trim(COALESCE(p.league_player_number, ''))),
+            '[^a-z0-9]+',
+            '-',
+            'g'
+          )) AS league_player_slug
+        FROM players p
+        JOIN player_teams pt ON pt.player_id = p.id
+        JOIN teams t ON t.id = pt.team_id
+        JOIN leagues l ON l.id = t.league_id
+        LEFT JOIN LATERAL (
+          SELECT code
+          FROM team_iterations
+          WHERE team_id = t.id
+          ORDER BY
+            CASE WHEN end_date IS NULL THEN 0 ELSE 1 END,
+            start_date DESC NULLS LAST,
+            recorded_at DESC NULLS LAST
+          LIMIT 1
+        ) ti ON true
+        LEFT JOIN LATERAL (
+          SELECT jersey_number
+          FROM jersey_number_history
+          WHERE player_teams_id = pt.id
+          ORDER BY effective_from DESC, id DESC
+          LIMIT 1
+        ) latest_jnh ON true
+        WHERE lower(l.code) = lower(${leagueCode})
+          AND (${teamCode || null}::text IS NULL OR lower(ti.code) = lower(${teamCode}))
+      ),
+      matched_routes AS (
+        SELECT
+          *,
+          CASE
+            WHEN ${teamCode || null}::text IS NOT NULL
+              AND jersey_number IS NOT NULL
+              AND name_slug <> ''
+            THEN jersey_number::text || '-' || name_slug
+            WHEN ${teamCode || null}::text IS NULL
+              AND league_player_slug <> ''
+            THEN league_player_slug
+            ELSE name_slug
+          END AS player_slug,
+          CASE
+            WHEN ${teamCode || null}::text IS NOT NULL
+              AND jersey_number IS NOT NULL
+              AND (jersey_number::text || '-' || name_slug) = ${playerSlug}
+            THEN 0
+            WHEN ${teamCode || null}::text IS NULL
+              AND league_player_slug = ${playerSlug}
+            THEN 0
+            WHEN name_slug = ${playerSlug}
+            THEN 1
+            WHEN league_player_slug = ${playerSlug}
+            THEN 2
+            WHEN roster_jersey_number IS NOT NULL
+              AND (roster_jersey_number::text || '-' || name_slug) = ${playerSlug}
+            THEN 3
+            ELSE 4
+          END AS match_rank
+        FROM candidate_routes
+        WHERE name_slug = ${playerSlug}
+          OR league_player_slug = ${playerSlug}
+          OR (
+            jersey_number IS NOT NULL
+            AND (jersey_number::text || '-' || name_slug) = ${playerSlug}
+          )
+          OR (
+            roster_jersey_number IS NOT NULL
+            AND (roster_jersey_number::text || '-' || name_slug) = ${playerSlug}
+          )
+      )
       SELECT
-        p.id AS player_id,
-        t.id AS team_id,
-        l.id AS league_id,
-        l.code AS league_code,
-        ti.code AS team_code,
-        trim(both '-' from regexp_replace(
-          lower(trim(concat_ws(' ', p.first_name, p.last_name))),
-          '[^a-z0-9]+',
-          '-',
-          'g'
-        )) AS player_slug
-      FROM players p
-      JOIN player_teams pt ON pt.player_id = p.id
-      JOIN teams t ON t.id = pt.team_id
-      JOIN leagues l ON l.id = t.league_id
-      LEFT JOIN LATERAL (
-        SELECT code
-        FROM team_iterations
-        WHERE team_id = t.id
-        ORDER BY
-          CASE WHEN end_date IS NULL THEN 0 ELSE 1 END,
-          start_date DESC NULLS LAST,
-          recorded_at DESC NULLS LAST
-        LIMIT 1
-      ) ti ON true
-      WHERE lower(l.code) = lower(${leagueCode})
-        AND (${teamCode || null}::text IS NULL OR lower(ti.code) = lower(${teamCode}))
-        AND trim(both '-' from regexp_replace(
-          lower(trim(concat_ws(' ', p.first_name, p.last_name))),
-          '[^a-z0-9]+',
-          '-',
-          'g'
-        )) = ${playerSlug}
+        player_id,
+        CASE WHEN ${teamCode || null}::text IS NULL THEN NULL ELSE roster_team_id END AS team_id,
+        league_id,
+        league_code,
+        CASE WHEN ${teamCode || null}::text IS NULL THEN NULL ELSE roster_team_code END AS team_code,
+        player_slug
+      FROM matched_routes
       ORDER BY
-        CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
-        pt.end_date DESC NULLS LAST,
-        pt.created_at DESC NULLS LAST
+        match_rank,
+        CASE WHEN end_date IS NULL THEN 0 ELSE 1 END,
+        end_date DESC NULLS LAST,
+        start_date DESC NULLS LAST,
+        created_at DESC NULLS LAST
       LIMIT 1
     `;
 

@@ -10,8 +10,9 @@ const reports: GameAutofillManualMoveReport[] = [
     gameLabel: '2026-01-21 OTT @ NY',
     moves: [
       {
-        playerId: '11111111-1111-4111-8111-111111111111',
-        playerName: 'Emma Greco',
+        playerName: 'E. Greco',
+        localFirstName: 'Emma',
+        localLastName: 'Greco',
         leaguePlayerNumber: '118',
         jerseyNumber: 25,
         position: 'LD',
@@ -105,18 +106,18 @@ describe('GameAutofillManualMoveReportModal', () => {
   it('links player move rows to the player details page', () => {
     renderModal({ nextReports: [reports[0]] });
 
-    const playerLink = screen.getByRole('link', { name: /Emma Greco/ });
+    const playerLink = screen.getByRole('link', { name: /E\. Greco/ });
     const rowLinks = within(playerLink.closest('tr') as HTMLTableRowElement).getAllByRole('link');
 
     expect(playerLink).toHaveAttribute(
       'href',
-      '/admin/leagues/pwhl/teams/van/players/11111111-1111-4111-8111-111111111111',
+      '/admin/leagues/pwhl/players/118',
     );
     expect(rowLinks).toHaveLength(4);
     rowLinks.forEach((link) => {
       expect(link).toHaveAttribute(
         'href',
-        '/admin/leagues/pwhl/teams/van/players/11111111-1111-4111-8111-111111111111',
+        '/admin/leagues/pwhl/players/118',
       );
     });
   });

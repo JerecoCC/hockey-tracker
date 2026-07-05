@@ -66,6 +66,7 @@ interface Props {
     playerId: string,
     firstName: string | null | undefined,
     lastName: string | null | undefined,
+    jerseyNumber?: number | null,
   ) => string;
   linescorePeriods: { id: string; label: string; shortLabel: string }[];
   goalieStats: GoalieStatRecord[];
@@ -557,8 +558,8 @@ const GameSummaryTab = ({
                 showPlayerDataStatus={showPlayerDataStatus}
                 getPlayerHref={
                   playerHrefBuilder
-                    ? (teamId, playerId, firstName, lastName) =>
-                        playerHrefBuilder(teamId, playerId, firstName, lastName)
+                    ? (teamId, playerId, firstName, lastName, jerseyNumber) =>
+                        playerHrefBuilder(teamId, playerId, firstName, lastName, jerseyNumber)
                     : undefined
                 }
                 onEdit={
@@ -607,7 +608,13 @@ const GameSummaryTab = ({
                       const teamId = playerTeamMap.get(playerId);
                       const entry = roster.find((player) => player.player_id === playerId);
                       return teamId && entry
-                        ? playerHrefBuilder(teamId, playerId, entry.first_name, entry.last_name)
+                        ? playerHrefBuilder(
+                            teamId,
+                            playerId,
+                            entry.first_name,
+                            entry.last_name,
+                            entry.jersey_number,
+                          )
                         : '#';
                     }
                   : undefined
@@ -625,8 +632,8 @@ const GameSummaryTab = ({
                 goals={goals}
                 getPlayerHref={
                   playerHrefBuilder
-                    ? (teamId, playerId, firstName, lastName) =>
-                        playerHrefBuilder(teamId, playerId, firstName, lastName)
+                    ? (teamId, playerId, firstName, lastName, jerseyNumber) =>
+                        playerHrefBuilder(teamId, playerId, firstName, lastName, jerseyNumber)
                     : undefined
                 }
                 isFinal={editable && isFinal && isEditMode}

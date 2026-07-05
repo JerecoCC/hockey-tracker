@@ -790,8 +790,9 @@ function buildManualMoveReport(
     gameLabel: gameLabel(game),
     gameDate: (game.scheduled_at ?? '').slice(0, 10) || null,
     moves: conflicts.map((conflict) => ({
-      playerId: conflict.existing.id,
       playerName: conflict.externalPlayer.name,
+      localFirstName: conflict.existing.first_name,
+      localLastName: conflict.existing.last_name,
       leaguePlayerNumber: String(conflict.externalPlayer.playerId),
       jerseyNumber: conflict.externalPlayer.sweaterNumber,
       position: conflict.externalPlayer.position,

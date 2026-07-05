@@ -151,7 +151,7 @@ describe('TeamPlayersTab', () => {
     await user.click(screen.getByRole('button', { name: 'Open Auston Matthews' }));
 
     expect(mockNavigate).toHaveBeenCalledWith(
-      '/admin/leagues/nhl/teams/tor/players/auston-matthews',
+      '/admin/leagues/nhl/teams/tor/players/34-auston-matthews',
     );
     expect(screen.queryByRole('button', { name: /view player/i })).not.toBeInTheDocument();
     expect(container.querySelector('.playerHeaderDivider')).not.toBeInTheDocument();
@@ -276,6 +276,6 @@ describe('TeamPlayersTab', () => {
 
     await user.click(screen.getByRole('button', { name: 'Open Auston Matthews' }));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/leagues/nhl/teams/tor/players/auston-matthews');
+    expect(mockNavigate).toHaveBeenCalledWith('/leagues/nhl/teams/tor/players/34-auston-matthews');
   });
 });

@@ -557,6 +557,7 @@ const SeasonAwardsTab = ({
     return buildPlayerDetailsPath({
       teamCode: recipient.team_code,
       teamId: recipient.team_id,
+      jerseyNumber: recipient.jersey_number,
       ...playerPathInput,
     });
   };

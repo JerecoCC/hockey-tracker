@@ -33,6 +33,31 @@ export const playerRouteSlug = (
   lastName: string | null | undefined,
 ) => toRouteSlug([firstName, lastName].filter(Boolean).join(' '));
 
+export const playerTeamRouteSlug = ({
+  firstName,
+  lastName,
+  jerseyNumber,
+}: {
+  firstName: string | null | undefined;
+  lastName: string | null | undefined;
+  jerseyNumber?: number | string | null;
+}) => {
+  const nameSlug = playerRouteSlug(firstName, lastName);
+  const jerseySlug = jerseyNumber == null ? '' : toRouteSlug(String(jerseyNumber));
+  if (jerseySlug && nameSlug) return `${jerseySlug}-${nameSlug}`;
+  return nameSlug || jerseySlug;
+};
+
+export const leaguePlayerRouteSlug = ({
+  leaguePlayerNumber,
+  firstName,
+  lastName,
+}: {
+  leaguePlayerNumber?: number | string | null;
+  firstName: string | null | undefined;
+  lastName: string | null | undefined;
+}) => toRouteSlug(leaguePlayerNumber == null ? '' : String(leaguePlayerNumber)) || playerRouteSlug(firstName, lastName);
+
 export const buildLeagueDetailsPath = ({
   leagueCode,
   leagueId,
@@ -88,6 +113,7 @@ export const buildUserPlayerDetailsPath = ({
   teamId,
   firstName,
   lastName,
+  jerseyNumber,
 }: {
   leagueCode: string | null | undefined;
   leagueId?: string | null;
@@ -95,23 +121,32 @@ export const buildUserPlayerDetailsPath = ({
   teamId?: string | null;
   firstName: string | null | undefined;
   lastName: string | null | undefined;
+  jerseyNumber?: number | string | null;
 }) =>
-  `${buildUserTeamDetailsPath({ leagueCode, leagueId, teamCode, teamId })}/players/${playerRouteSlug(
+  `${buildUserTeamDetailsPath({ leagueCode, leagueId, teamCode, teamId })}/players/${playerTeamRouteSlug({
     firstName,
     lastName,
-  )}`;
+    jerseyNumber,
+  })}`;
 
 export const buildUserLeaguePlayerDetailsPath = ({
   leagueCode,
   leagueId,
+  leaguePlayerNumber,
   firstName,
   lastName,
 }: {
   leagueCode: string | null | undefined;
   leagueId?: string | null;
+  leaguePlayerNumber?: number | string | null;
   firstName: string | null | undefined;
   lastName: string | null | undefined;
-}) => `/leagues/${slugOrId(leagueCode, leagueId)}/players/${playerRouteSlug(firstName, lastName)}`;
+}) =>
+  `/leagues/${slugOrId(leagueCode, leagueId)}/players/${leaguePlayerRouteSlug({
+    leaguePlayerNumber,
+    firstName,
+    lastName,
+  })}`;
 
 export const buildSeasonDetailsPath = ({
   leagueCode,
@@ -304,6 +339,7 @@ export const buildPlayerDetailsPath = ({
   teamId,
   firstName,
   lastName,
+  jerseyNumber,
 }: {
   leagueCode: string | null | undefined;
   leagueId?: string | null;
@@ -311,26 +347,31 @@ export const buildPlayerDetailsPath = ({
   teamId?: string | null;
   firstName: string | null | undefined;
   lastName: string | null | undefined;
+  jerseyNumber?: number | string | null;
 }) =>
-  `${buildTeamDetailsPath({ leagueCode, leagueId, teamCode, teamId })}/players/${playerRouteSlug(
+  `${buildTeamDetailsPath({ leagueCode, leagueId, teamCode, teamId })}/players/${playerTeamRouteSlug({
     firstName,
     lastName,
-  )}`;
+    jerseyNumber,
+  })}`;
 
 export const buildLeaguePlayerDetailsPath = ({
   leagueCode,
   leagueId,
+  leaguePlayerNumber,
   firstName,
   lastName,
 }: {
   leagueCode: string | null | undefined;
   leagueId?: string | null;
+  leaguePlayerNumber?: number | string | null;
   firstName: string | null | undefined;
   lastName: string | null | undefined;
 }) =>
-  `${buildLeagueDetailsPath({ leagueCode, leagueId })}/players/${playerRouteSlug(
+  `${buildLeagueDetailsPath({ leagueCode, leagueId })}/players/${leaguePlayerRouteSlug({
+    leaguePlayerNumber,
     firstName,
     lastName,
-  )}`;
+  })}`;
 
 export type PlayerDetailsPathInput = Parameters<typeof buildPlayerDetailsPath>[0];

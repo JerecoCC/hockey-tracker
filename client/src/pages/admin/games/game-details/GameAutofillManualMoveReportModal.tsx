@@ -2,12 +2,7 @@ import Badge from '@/components/Badge/Badge';
 import Accordion from '@/components/Accordion/Accordion';
 import Modal from '@/components/Modal/Modal';
 import Table, { type Column } from '@/components/Table/Table';
-import {
-  buildLeagueDetailsPath,
-  buildLeaguePlayerDetailsPath,
-  buildPlayerDetailsPath,
-  buildTeamDetailsPath,
-} from '@/lib/routeSlugs';
+import { buildLeaguePlayerDetailsPath, buildPlayerDetailsPath } from '@/lib/routeSlugs';
 import type {
   GameAutofillManualJerseyChange,
   GameAutofillManualMoveReport,
@@ -49,32 +44,37 @@ function splitPlayerName(playerName: string) {
 }
 
 function getMovePlayerHref(leagueCode: string, move: GameAutofillManualPlayerMove) {
-  if (move.playerId) {
-    if (move.fromTeamCode) {
-      return `${buildTeamDetailsPath({
-        leagueCode,
-        teamCode: move.fromTeamCode,
-      })}/players/${move.playerId}`;
-    }
+  const routeName =
+    move.localFirstName || move.localLastName
+      ? {
+          firstName: move.localFirstName ?? '',
+          lastName: move.localLastName ?? '',
+        }
+      : splitPlayerName(move.playerName);
 
-    return `${buildLeagueDetailsPath({ leagueCode })}/players/${move.playerId}`;
+  if (move.leaguePlayerNumber) {
+    return buildLeaguePlayerDetailsPath({
+      leagueCode,
+      leaguePlayerNumber: move.leaguePlayerNumber,
+      firstName: routeName.firstName,
+      lastName: routeName.lastName,
+    });
   }
-
-  const { firstName, lastName } = splitPlayerName(move.playerName);
 
   if (move.fromTeamCode) {
     return buildPlayerDetailsPath({
       leagueCode,
       teamCode: move.fromTeamCode,
-      firstName,
-      lastName,
+      firstName: routeName.firstName,
+      lastName: routeName.lastName,
+      jerseyNumber: move.jerseyNumber,
     });
   }
 
   return buildLeaguePlayerDetailsPath({
     leagueCode,
-    firstName,
-    lastName,
+    firstName: routeName.firstName,
+    lastName: routeName.lastName,
   });
 }
 

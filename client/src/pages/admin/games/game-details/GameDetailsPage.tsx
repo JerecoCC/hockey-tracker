@@ -460,6 +460,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     _playerId: string,
     firstName: string | null | undefined,
     lastName: string | null | undefined,
+    jerseyNumber?: number | null,
   ) => {
     const team =
       teamId === game.away_team.id
@@ -474,6 +475,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
       teamId,
       firstName,
       lastName,
+      jerseyNumber,
     };
     return isAdminView
       ? buildPlayerDetailsPath(playerPathInput)

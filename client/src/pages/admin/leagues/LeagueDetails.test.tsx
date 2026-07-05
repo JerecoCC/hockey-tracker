@@ -1322,6 +1322,7 @@ describe('LeagueDetailsPage – players tab', () => {
       players: [
         {
           id: 'player-1',
+          league_player_number: '1001',
           first_name: 'John',
           last_name: 'Smith',
           photo: null,
@@ -1343,7 +1344,7 @@ describe('LeagueDetailsPage – players tab', () => {
     clickPlayersTab();
 
     const row = screen.getByText(/^John Smith/).closest('li');
-    expect(row?.querySelector('a')).toHaveAttribute('href', '/admin/leagues/tl/players/john-smith');
+    expect(row?.querySelector('a')).toHaveAttribute('href', '/admin/leagues/tl/players/1001');
   });
 
   it('shows rookie and player status row tags', async () => {

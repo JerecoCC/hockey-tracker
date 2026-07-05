@@ -102,6 +102,7 @@ interface Props {
     playerId: string,
     firstName: string | null | undefined,
     lastName: string | null | undefined,
+    jerseyNumber?: number | null,
   ) => string;
   isFinal: boolean;
   updateGoalieStint?: (
@@ -203,6 +204,7 @@ const GoalieStatsCard = ({
           goalie.player_id,
           goalie.first_name,
           goalie.last_name,
+          goalie.jersey_number,
         ),
       },
     ];

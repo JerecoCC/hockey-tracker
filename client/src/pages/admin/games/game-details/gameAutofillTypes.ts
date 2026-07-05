@@ -8,8 +8,9 @@ export interface GameAutofillProgress {
 }
 
 export interface GameAutofillManualPlayerMove {
-  playerId?: string | null;
   playerName: string;
+  localFirstName?: string | null;
+  localLastName?: string | null;
   leaguePlayerNumber?: string | null;
   jerseyNumber?: number | null;
   position?: string | null;

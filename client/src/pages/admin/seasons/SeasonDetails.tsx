@@ -812,6 +812,7 @@ const SeasonDetailsPage = () => {
             teamCode: row.team_code,
             firstName: row.first_name,
             lastName: row.last_name,
+            jerseyNumber: row.jersey_number,
           })
         : leagueHref,
     );

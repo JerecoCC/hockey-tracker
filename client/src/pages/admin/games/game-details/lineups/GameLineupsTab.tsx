@@ -34,6 +34,7 @@ interface Props {
     playerId: string,
     firstName: string | null | undefined,
     lastName: string | null | undefined,
+    jerseyNumber?: number | null,
   ) => string;
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
@@ -265,7 +266,13 @@ const GameLineupsTab = ({
                   showPlayerDataStatus,
                 )}`}
                 placeholder={`${e.first_name[0]}${e.last_name[0]}`}
-                href={playerHrefBuilder?.(e.team_id, e.player_id, e.first_name, e.last_name)}
+                href={playerHrefBuilder?.(
+                  e.team_id,
+                  e.player_id,
+                  e.first_name,
+                  e.last_name,
+                  e.jersey_number,
+                )}
                 rightContent={
                   isStartingGoalie
                     ? { type: 'tag', label: 'Starting Goalie', intent: 'accent' }

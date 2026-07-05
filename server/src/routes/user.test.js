@@ -179,6 +179,28 @@ describe('GET /api/user/players/route-lookup', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(lookup);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('jersey_number::text');
+    expect(queryText).toContain('league_player_slug');
+  });
+
+  it('resolves a user league-scoped player details route by league player number', async () => {
+    const lookup = {
+      player_id: 'player-1',
+      team_id: null,
+      league_id: 'league-1',
+      league_code: 'NHL',
+      team_code: null,
+      player_slug: '8478402',
+    };
+    sql.mockResolvedValueOnce([lookup]);
+
+    const res = await request(app).get(
+      '/api/user/players/route-lookup?league_code=nhl&player_slug=8478402',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(lookup);
   });
 });
 

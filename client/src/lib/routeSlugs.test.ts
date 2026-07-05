@@ -1,10 +1,14 @@
 import {
+  buildPlayerDetailsPath,
   buildGameDetailsPath,
+  buildLeaguePlayerDetailsPath,
   buildUserGameDetailsPath,
   buildUserLeaguePlayerDetailsPath,
   buildUserPlayerDetailsPath,
   buildUserTeamDetailsPath,
   buildUserWatchedTeamPath,
+  leaguePlayerRouteSlug,
+  playerTeamRouteSlug,
   userWatchedTeamRouteSlug,
 } from './routeSlugs';
 
@@ -122,7 +126,19 @@ describe('buildUserTeamDetailsPath', () => {
 });
 
 describe('buildUserPlayerDetailsPath', () => {
-  it('builds the user team-scoped player details route', () => {
+  it('builds the user team-scoped player details route with the jersey number when available', () => {
+    expect(
+      buildUserPlayerDetailsPath({
+        leagueCode: 'NHL',
+        teamCode: 'TOR',
+        firstName: 'Auston',
+        lastName: 'Matthews',
+        jerseyNumber: 34,
+      }),
+    ).toBe('/leagues/nhl/teams/tor/players/34-auston-matthews');
+  });
+
+  it('keeps a name slug for user team-scoped player details without a jersey number', () => {
     expect(
       buildUserPlayerDetailsPath({
         leagueCode: 'NHL',
@@ -135,7 +151,18 @@ describe('buildUserPlayerDetailsPath', () => {
 });
 
 describe('buildUserLeaguePlayerDetailsPath', () => {
-  it('builds the user league-scoped player details route', () => {
+  it('builds the user league-scoped player details route with the league player number when available', () => {
+    expect(
+      buildUserLeaguePlayerDetailsPath({
+        leagueCode: 'NHL',
+        leaguePlayerNumber: '8475786',
+        firstName: 'Sarah',
+        lastName: 'Nurse',
+      }),
+    ).toBe('/leagues/nhl/players/8475786');
+  });
+
+  it('keeps a name slug for user league-scoped player details without a league player number', () => {
     expect(
       buildUserLeaguePlayerDetailsPath({
         leagueCode: 'NHL',
@@ -143,6 +170,52 @@ describe('buildUserLeaguePlayerDetailsPath', () => {
         lastName: 'Nurse',
       }),
     ).toBe('/leagues/nhl/players/sarah-nurse');
+  });
+});
+
+describe('buildPlayerDetailsPath', () => {
+  it('builds the admin team-scoped player details route with the jersey number when available', () => {
+    expect(
+      buildPlayerDetailsPath({
+        leagueCode: 'NHL',
+        teamCode: 'VAN',
+        firstName: 'Elias',
+        lastName: 'Pettersson',
+        jerseyNumber: 40,
+      }),
+    ).toBe('/admin/leagues/nhl/teams/van/players/40-elias-pettersson');
+  });
+});
+
+describe('buildLeaguePlayerDetailsPath', () => {
+  it('builds the admin league-scoped player details route with the league player number when available', () => {
+    expect(
+      buildLeaguePlayerDetailsPath({
+        leagueCode: 'NHL',
+        leaguePlayerNumber: '8480012',
+        firstName: 'Elias',
+        lastName: 'Pettersson',
+      }),
+    ).toBe('/admin/leagues/nhl/players/8480012');
+  });
+});
+
+describe('player route slugs', () => {
+  it('supports team and league player slug variants', () => {
+    expect(
+      playerTeamRouteSlug({
+        firstName: 'Elias',
+        lastName: 'Pettersson',
+        jerseyNumber: 40,
+      }),
+    ).toBe('40-elias-pettersson');
+    expect(
+      leaguePlayerRouteSlug({
+        leaguePlayerNumber: '8480012',
+        firstName: 'Elias',
+        lastName: 'Pettersson',
+      }),
+    ).toBe('8480012');
   });
 });
 

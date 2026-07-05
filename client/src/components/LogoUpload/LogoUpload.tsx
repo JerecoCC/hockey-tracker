@@ -142,7 +142,10 @@ const LogoUpload = (props: Props) => {
     >
       {label && <span className={styles.labelText}>{label}</span>}
       {displayUrl ? (
-        <div className={`${styles.previewWrapper} ${isCircle ? styles.previewWrapperCircle : ''}`}>
+        <div
+          className={`${styles.previewWrapper} ${isCircle ? styles.previewWrapperCircle : ''} ${disabled ? styles.previewWrapperDisabled : ''}`}
+          aria-disabled={disabled || undefined}
+        >
           {previewFailed ? (
             <div className={`${styles.logoPreview} ${styles.filePreview}`}>
               <Icon
@@ -176,8 +179,10 @@ const LogoUpload = (props: Props) => {
         <label
           ref={labelRef}
           tabIndex={disabled ? -1 : 0}
+          aria-disabled={disabled || undefined}
           className={`${styles.fileLabel} ${isCircle ? styles.fileLabelCircle : ''} ${disabled ? styles.fileLabelDisabled : ''}`}
           onKeyDown={(e: KeyboardEvent<HTMLLabelElement>) => {
+            if (disabled) return;
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
               fileInputRef.current?.click();

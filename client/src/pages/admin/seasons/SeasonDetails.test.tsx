@@ -573,7 +573,7 @@ describe('SeasonDetails stats tab', () => {
 
     await user.click(screen.getByRole('button', { name: 'View John Smith' }));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor/players/john-smith');
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor/players/19-john-smith');
   });
 
   it('opens full leader lists from the summary header icon buttons', async () => {
@@ -598,6 +598,6 @@ describe('SeasonDetails stats tab', () => {
     await user.click(screen.getByRole('button', { name: 'Forwards' }));
     await user.click(screen.getByText('Smith, John'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor/players/john-smith');
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor/players/19-john-smith');
   });
 });

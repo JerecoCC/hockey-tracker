@@ -18,6 +18,7 @@ interface Props {
     playerId: string,
     firstName: string | null | undefined,
     lastName: string | null | undefined,
+    jerseyNumber?: number | null,
   ) => string;
   onEdit?: () => void;
   showPlayerDataStatus?: boolean;
@@ -76,6 +77,7 @@ const ThreeStarsCard = ({
                 player.player_id,
                 player.first_name,
                 player.last_name,
+                player.jersey_number,
               )}
               primaryColor={team.primary_color}
               textColor={team.text_color}

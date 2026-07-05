@@ -172,12 +172,14 @@ const TeamPlayersTab = ({
             teamCode,
             firstName: p.first_name,
             lastName: p.last_name,
+            jerseyNumber: p.jersey_number,
           })
         : buildPlayerDetailsPath({
             leagueCode,
             teamCode,
             firstName: p.first_name,
             lastName: p.last_name,
+            jerseyNumber: p.jersey_number,
           });
     const actions: ListItemAction[] = [];
 
