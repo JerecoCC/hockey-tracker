@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Accordion from '@/components/Accordion/Accordion';
@@ -10,11 +9,9 @@ import Card from '@/components/Card/Card';
 import Chip from '@/components/Chip/Chip';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Divider from '@/components/Divider/Divider';
-import Field from '@/components/Field/Field';
 import Section from '@/components/Section/Section';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
 import ListItem from '@/components/ListItem/ListItem';
-import Modal from '@/components/Modal/Modal';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
@@ -99,7 +96,6 @@ interface NhlPlayerLanding {
   weightInPounds?: number | null;
   position?: string | null;
   shootsCatches?: string | null;
-  isActive?: boolean;
   currentTeamAbbrev?: string | null;
   sweaterNumber?: number | null;
   currentTeamStartDate?: string | null;
@@ -938,10 +934,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const [changingPhotoMode, setChangingPhotoMode] = useState<PhotoModalMode>('set');
   const [photoPreviewSrc, setPhotoPreviewSrc] = useState<string | null>(null);
   const [movePlayerOpen, setMovePlayerOpen] = useState(false);
-  const [retirePlayerOpen, setRetirePlayerOpen] = useState(false);
-  const [retirePlayerBusy, setRetirePlayerBusy] = useState(false);
-  const [unretirePlayerOpen, setUnretirePlayerOpen] = useState(false);
-  const [unretirePlayerBusy, setUnretirePlayerBusy] = useState(false);
   const [autoFillPlayerBusy, setAutoFillPlayerBusy] = useState(false);
   const [gameLogSeasonId, setGameLogSeasonId] = useState('all');
   const [gameLogType, setGameLogType] = useState('all');
@@ -1089,76 +1081,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     }
   };
 
-  const retirePlayer = async (retirementDate: string): Promise<boolean> => {
-    if (!id) return false;
-    setRetirePlayerBusy(true);
-    try {
-      await axios.patch(
-        `${API}/admin/players/${id}/retire`,
-        { retirement_date: retirementDate },
-        { headers: authHeaders() },
-      );
-
-      toast.success('Player retired successfully!');
-
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['player', id] }),
-        queryClient.invalidateQueries({ queryKey: ['player-trade-history', id] }),
-        queryClient.invalidateQueries({ queryKey: ['players'] }),
-        queryClient.invalidateQueries({ queryKey: ['teams', teamId] }),
-        queryClient.invalidateQueries({ queryKey: ['game-roster'] }),
-        queryClient.invalidateQueries({ queryKey: ['game-lineup'] }),
-        queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] }),
-        queryClient.invalidateQueries({ queryKey: ['game-goals'] }),
-        queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] }),
-      ]);
-
-      return true;
-    } catch (err) {
-      const message =
-        axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
-          ? err.response.data.error
-          : 'Failed to retire player';
-      toast.error(message);
-      return false;
-    } finally {
-      setRetirePlayerBusy(false);
-    }
-  };
-
-  const unretirePlayer = async (): Promise<boolean> => {
-    if (!id) return false;
-    setUnretirePlayerBusy(true);
-    try {
-      await axios.patch(`${API}/admin/players/${id}/unretire`, {}, { headers: authHeaders() });
-
-      toast.success('Player unretired successfully!');
-
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['player', id] }),
-        queryClient.invalidateQueries({ queryKey: ['player-trade-history', id] }),
-        queryClient.invalidateQueries({ queryKey: ['players'] }),
-        queryClient.invalidateQueries({ queryKey: ['teams', teamId] }),
-        queryClient.invalidateQueries({ queryKey: ['game-roster'] }),
-        queryClient.invalidateQueries({ queryKey: ['game-lineup'] }),
-        queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] }),
-        queryClient.invalidateQueries({ queryKey: ['game-goals'] }),
-        queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] }),
-      ]);
-
-      return true;
-    } catch (err) {
-      const message =
-        axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
-          ? err.response.data.error
-          : 'Failed to unretire player';
-      toast.error(message);
-      return false;
-    } finally {
-      setUnretirePlayerBusy(false);
-    }
-  };
-
   const latestStint = stints[0];
   const teamHistoryStints = collapseSameTeamStints(stints);
   const fullName = player ? `${player.first_name} ${player.last_name}` : 'Not Found';
@@ -1200,9 +1122,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       if (landing.weightInPounds != null) payload.weight_lbs = landing.weightInPounds;
       if (position) payload.position = position;
       if (shoots) payload.shoots = shoots;
-      if (typeof landing.isActive === 'boolean') {
-        payload.status = landing.isActive ? 'active' : 'inactive';
-      }
 
       await axios.patch(`${API}/admin/players/${player.id}`, payload, { headers: authHeaders() });
 
@@ -1459,7 +1378,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   if (!player) return <p className={styles.loaderText}>Player not found.</p>;
 
   const playerStatus = getPlayerStatus(player);
-  const isPlayerRetired = playerStatus === 'retired';
   const initials = `${player.first_name[0]}${player.last_name[0]}`;
   const heroTeam =
     latestStint?.team ??
@@ -1531,25 +1449,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             label: 'Move Player',
             icon: 'swap_horiz',
             onClick: () => setMovePlayerOpen(true),
-          },
-        ]
-      : []),
-    ...(isAdminView && !isPlayerRetired
-      ? [
-          {
-            label: 'Retire Player',
-            icon: 'person_remove',
-            intent: 'danger' as const,
-            onClick: () => setRetirePlayerOpen(true),
-          },
-        ]
-      : []),
-    ...(isAdminView && isPlayerRetired
-      ? [
-          {
-            label: 'Unretire Player',
-            icon: 'person_add',
-            onClick: () => setUnretirePlayerOpen(true),
           },
         ]
       : []),
@@ -2206,29 +2105,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             movePlayer={movePlayer}
           />
 
-          <RetirePlayerModal
-            open={retirePlayerOpen}
-            playerName={fullName}
-            busy={retirePlayerBusy}
-            onClose={() => setRetirePlayerOpen(false)}
-            onConfirm={retirePlayer}
-          />
-
-          <ConfirmModal
-            open={unretirePlayerOpen}
-            title="Unretire Player"
-            body={`This will mark ${fullName} as active again and reopen their latest team stint.`}
-            confirmLabel="Unretire Player"
-            confirmIcon="person_add"
-            variant="accent"
-            busy={unretirePlayerBusy}
-            onCancel={() => setUnretirePlayerOpen(false)}
-            onConfirm={async () => {
-              const ok = await unretirePlayer();
-              if (ok) setUnretirePlayerOpen(false);
-            }}
-          />
-
           <PlayerInfoEditModal
             open={editPlayerInfoOpen}
             player={player}
@@ -2359,79 +2235,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 // ── Helper: label/value cell ────────────────────────────────────────────────
-const RetirePlayerModal = ({
-  open,
-  playerName,
-  busy,
-  onClose,
-  onConfirm,
-}: {
-  open: boolean;
-  playerName: string;
-  busy: boolean;
-  onClose: () => void;
-  onConfirm: (retirementDate: string) => Promise<boolean>;
-}) => {
-  const { control, handleSubmit, reset, watch } = useForm<{ retirement_date: string }>({
-    defaultValues: { retirement_date: '' },
-  });
-  const retirementDate = watch('retirement_date');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    reset({ retirement_date: '' });
-    setIsSubmitting(false);
-  }, [open, reset]);
-
-  const handleClose = () => {
-    reset({ retirement_date: '' });
-    onClose();
-  };
-
-  const onSubmit = handleSubmit(async ({ retirement_date }) => {
-    if (!retirement_date) return;
-
-    setIsSubmitting(true);
-    const ok = await onConfirm(retirement_date);
-    setIsSubmitting(false);
-    if (ok) handleClose();
-  });
-
-  return (
-    <Modal
-      open={open}
-      title="Retire Player"
-      onClose={handleClose}
-      confirmLabel={isSubmitting || busy ? 'Retiring...' : 'Retire Player'}
-      confirmForm="retire-player-form"
-      confirmIntent="danger"
-      confirmDisabled={isSubmitting || busy || !retirementDate}
-      busy={isSubmitting || busy}
-    >
-      <form
-        id="retire-player-form"
-        className={styles.retireForm}
-        onSubmit={onSubmit}
-      >
-        <p className={styles.retireCopy}>
-          This will mark {playerName} as retired and close their latest active team stint.
-        </p>
-        <Field
-          label="Retirement Date"
-          type="datepicker"
-          control={control}
-          name="retirement_date"
-          rules={{ required: 'Retirement date is required' }}
-          placeholder="Select retirement date..."
-          required
-          autoFocus
-        />
-      </form>
-    </Modal>
-  );
-};
-
 const InfoCell = ({ label, value }: { label: string; value: string | null | undefined }) => (
   <div className={styles.infoCell}>
     <span className={styles.infoCellLabel}>{label}</span>

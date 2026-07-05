@@ -43,6 +43,10 @@ const player = {
   is_prospect: false,
 } as TeamPlayerRecord;
 
+beforeAll(() => {
+  HTMLElement.prototype.scrollIntoView = jest.fn();
+});
+
 describe('TeamPlayerEditModal', () => {
   it('does not expose league player number in the edit player form', async () => {
     const updatePlayer = jest.fn().mockResolvedValue(true);
@@ -68,5 +72,34 @@ describe('TeamPlayerEditModal', () => {
 
     await waitFor(() => expect(updatePlayer).toHaveBeenCalled());
     expect(updatePlayer.mock.calls[0][1]).not.toHaveProperty('league_player_number');
+  });
+
+  it('edits player status in the edit player form', async () => {
+    const updatePlayer = jest.fn().mockResolvedValue(true);
+    const updatePlayerTeam = jest.fn().mockResolvedValue(true);
+
+    render(
+      <TeamPlayerEditModal
+        open
+        editTarget={player}
+        teamId="team-1"
+        seasonId="season-1"
+        onClose={jest.fn()}
+        updatePlayer={updatePlayer}
+        updatePlayerTeam={updatePlayerTeam}
+        uploadPlayerPhoto={jest.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('combobox', { name: /Status/ }));
+    fireEvent.click(screen.getByText('Retired'));
+    fireEvent.submit(document.getElementById('team-player-edit-form') as HTMLFormElement);
+
+    await waitFor(() =>
+      expect(updatePlayer).toHaveBeenCalledWith(
+        'player-1',
+        expect.objectContaining({ status: 'retired' }),
+      ),
+    );
   });
 });

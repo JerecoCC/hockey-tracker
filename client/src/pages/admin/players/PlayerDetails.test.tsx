@@ -1151,6 +1151,7 @@ describe('PlayerDetails info tab', () => {
         sweaterNumber: 91,
         jerseyNumberEffectiveDate: '2025-01-05',
         position: 'C',
+        isActive: false,
       },
     });
     mockedAxios.patch.mockResolvedValueOnce({ data: {} });
@@ -1167,6 +1168,10 @@ describe('PlayerDetails info tab', () => {
         '2025-01-05',
       ),
     );
+    const playerPatch = mockedAxios.patch.mock.calls.find(
+      ([url]) => url === '/api/admin/players/player-1',
+    );
+    expect(playerPatch?.[1]).not.toHaveProperty('status');
     expect(updateStint).not.toHaveBeenCalledWith(
       'stint-1',
       expect.objectContaining({ jersey_number: 91 }),
@@ -1270,36 +1275,19 @@ describe('PlayerDetails info tab', () => {
     );
   });
 
-  it('retires a player from the more actions menu', async () => {
+  it('does not expose player status changes in the more actions menu', async () => {
     const user = userEvent.setup();
-    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
 
     render(<PlayerDetails />);
 
     await user.click(screen.getByRole('button', { name: 'More actions' }));
-    await user.click(screen.getByRole('button', { name: 'Retire Player' }));
 
-    const retirementDate = screen.getByRole('textbox', { name: /Retirement Date/ });
-    for (const key of ['0', '6', '3', '0', '2', '0', '2', '5']) {
-      fireEvent.keyDown(retirementDate, { key });
-    }
-
-    const submit = screen.getByRole('button', { name: 'Retire Player' });
-    await waitFor(() => expect(submit).not.toBeDisabled());
-    await user.click(submit);
-
-    await waitFor(() => {
-      expect(mockedAxios.patch).toHaveBeenCalledWith(
-        '/api/admin/players/player-1/retire',
-        { retirement_date: '2025-06-30' },
-        expect.objectContaining({ headers: expect.any(Object) }),
-      );
-    });
+    expect(screen.queryByRole('button', { name: 'Retire Player' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Unretire Player' })).not.toBeInTheDocument();
   });
 
-  it('unretires a player from the more actions menu', async () => {
+  it('still hides player status actions for retired players', async () => {
     const user = userEvent.setup();
-    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
     mockUsePlayerDetails.mockReturnValue({
       player: {
         id: 'player-1',
@@ -1314,6 +1302,7 @@ describe('PlayerDetails info tab', () => {
         weight_lbs: 195,
         position: 'C',
         shoots: 'L',
+        status: 'retired',
         is_active: false,
         created_at: '2024-01-01T00:00:00Z',
       },
@@ -1324,20 +1313,9 @@ describe('PlayerDetails info tab', () => {
     render(<PlayerDetails />);
 
     await user.click(screen.getByRole('button', { name: 'More actions' }));
-    await user.click(screen.getByRole('button', { name: 'Unretire Player' }));
 
-    expect(screen.getByRole('dialog', { name: 'Unretire Player' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retire Player' })).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Unretire Player' }));
-
-    await waitFor(() => {
-      expect(mockedAxios.patch).toHaveBeenCalledWith(
-        '/api/admin/players/player-1/unretire',
-        {},
-        expect.objectContaining({ headers: expect.any(Object) }),
-      );
-    });
+    expect(screen.queryByRole('button', { name: 'Unretire Player' })).not.toBeInTheDocument();
   });
 
   it('opens the player info edit modal from the info card action', async () => {

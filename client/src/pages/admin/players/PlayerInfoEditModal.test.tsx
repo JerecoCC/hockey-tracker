@@ -34,6 +34,10 @@ const player = {
   created_at: '2024-01-01T00:00:00Z',
 } as PlayerRecord;
 
+beforeAll(() => {
+  HTMLElement.prototype.scrollIntoView = jest.fn();
+});
+
 describe('PlayerInfoEditModal', () => {
   it('edits the league player number with the player info payload', async () => {
     const updatePlayer = jest.fn().mockResolvedValue(true);
@@ -63,6 +67,31 @@ describe('PlayerInfoEditModal', () => {
       expect(updatePlayer).toHaveBeenCalledWith(
         'player-1',
         expect.objectContaining({ league_player_number: '8480000' }),
+      ),
+    );
+  });
+
+  it('edits player status with the player info payload', async () => {
+    const updatePlayer = jest.fn().mockResolvedValue(true);
+
+    render(
+      <PlayerInfoEditModal
+        open
+        player={player}
+        seasons={[{ id: 'season-1', name: '2025-26', is_current: true }]}
+        onClose={jest.fn()}
+        updatePlayer={updatePlayer}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('combobox', { name: 'Status' }));
+    fireEvent.click(screen.getByText('Retired'));
+    fireEvent.submit(document.getElementById('player-info-form') as HTMLFormElement);
+
+    await waitFor(() =>
+      expect(updatePlayer).toHaveBeenCalledWith(
+        'player-1',
+        expect.objectContaining({ status: 'retired' }),
       ),
     );
   });

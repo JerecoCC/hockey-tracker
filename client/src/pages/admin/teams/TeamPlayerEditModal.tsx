@@ -3,8 +3,13 @@ import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
 import Modal from '@/components/Modal/Modal';
-import { type CreatePlayerData, type PlayerPosition } from '@/hooks/useLeaguePlayers';
+import {
+  type CreatePlayerData,
+  type PlayerPosition,
+  type PlayerStatus,
+} from '@/hooks/useLeaguePlayers';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
+import { getPlayerStatus } from '@/lib/playerStatus';
 import styles from '../leagues/PlayerFormModal.module.scss';
 
 const POSITION_OPTIONS = [
@@ -18,12 +23,19 @@ const POSITION_OPTIONS = [
   { value: 'G', label: 'Goalie' },
 ];
 
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'retired', label: 'Retired' },
+];
+
 interface FormValues {
   photo: File | string | null;
   jersey_number: string;
   first_name: string;
   last_name: string;
   position: PlayerPosition | null;
+  status: PlayerStatus;
 }
 
 interface Props {
@@ -59,6 +71,7 @@ const TeamPlayerEditModal = ({
       first_name: editTarget?.first_name ?? '',
       last_name: editTarget?.last_name ?? '',
       position: editTarget?.position ?? null,
+      status: editTarget ? getPlayerStatus(editTarget) : 'active',
     }),
     [editTarget],
   );
@@ -97,6 +110,7 @@ const TeamPlayerEditModal = ({
       first_name: data.first_name,
       last_name: data.last_name,
       position: data.position || null,
+      status: data.status,
     });
     if (!playerOk) return;
 
@@ -170,17 +184,29 @@ const TeamPlayerEditModal = ({
             disabled={isSubmitting}
           />
         </div>
-        <Field
-          type="select"
-          label="Position"
-          required
-          control={control}
-          name="position"
-          options={POSITION_OPTIONS}
-          placeholder="Select position"
-          rules={{ required: true }}
-          disabled={isSubmitting}
-        />
+        <div className={styles.row}>
+          <Field
+            type="select"
+            label="Position"
+            required
+            control={control}
+            name="position"
+            options={POSITION_OPTIONS}
+            placeholder="Select position"
+            rules={{ required: true }}
+            disabled={isSubmitting}
+          />
+          <Field
+            type="select"
+            label="Status"
+            required
+            control={control}
+            name="status"
+            options={STATUS_OPTIONS}
+            rules={{ required: true }}
+            disabled={isSubmitting}
+          />
+        </div>
       </form>
     </Modal>
   );
