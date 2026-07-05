@@ -67,7 +67,7 @@ const JerseyHistoryEditModal = ({
   return (
     <Modal
       open={open}
-      title="Edit Jersey History"
+      title="Edit Jersey Number Change"
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving...' : 'Save'}
       confirmForm="edit-jersey-history-form"

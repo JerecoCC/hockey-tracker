@@ -62,7 +62,7 @@ const ChangeJerseyModal = ({ open, stint, onClose, changeJerseyNumber }: Props) 
   return (
     <Modal
       open={open}
-      title="Change Jersey Number"
+      title="Record Jersey Number Change"
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving...' : 'Save'}
       confirmForm="change-jersey-form"

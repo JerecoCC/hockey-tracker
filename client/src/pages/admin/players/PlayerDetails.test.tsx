@@ -526,7 +526,9 @@ describe('PlayerDetails info tab', () => {
     expect(within(currentJerseyItem).getByText('Current')).toHaveClass('tag', 'success');
     expect(currentJerseyItem).toHaveClass('itemCompact');
 
-    await user.click(within(currentJerseyItem).getByRole('button', { name: 'Edit jersey history' }));
+    await user.click(
+      within(currentJerseyItem).getByRole('button', { name: 'Edit jersey number change' }),
+    );
     expect(mockJerseyHistoryEditModal).toHaveBeenLastCalledWith(
       expect.objectContaining({
         open: true,
@@ -545,8 +547,24 @@ describe('PlayerDetails info tab', () => {
       .closest('li') as HTMLElement;
     expect(within(startingJerseyItem).getByText('19')).toHaveClass('chip');
     expect(within(startingJerseyItem).getByText('Oct 1, 2024 - Jan 4, 2025')).toHaveClass('name');
-    expect(within(startingJerseyItem).getByText('Past')).toHaveClass('tag', 'neutral');
+    expect(within(startingJerseyItem).queryByText('Past')).not.toBeInTheDocument();
     expect(startingJerseyItem).toHaveClass('itemCompact');
+
+    await user.click(
+      within(startingJerseyItem).getByRole('button', { name: 'Edit jersey number change' }),
+    );
+    expect(mockJerseyHistoryEditModal).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        open: true,
+        entry: expect.objectContaining({
+          id: 'jersey-1',
+          player_teams_id: 'stint-1',
+          jersey_number: 19,
+          effective_from: '2024-10-01',
+        }),
+        updateJerseyHistoryEntry: expect.any(Function),
+      }),
+    );
 
     expect(within(stintAccordion).getByText('Season Photos')).toBeInTheDocument();
     const photoItem = within(stintAccordion).getByRole('button', {
@@ -558,13 +576,19 @@ describe('PlayerDetails info tab', () => {
     expect(within(photoItem).queryByText('Toronto Maple Leafs')).not.toBeInTheDocument();
     expect(photoItem).toHaveClass('itemCompact');
 
-    await user.click(within(photoItem).getByRole('button', { name: 'Change season photo' }));
+    const editSeasonPhotoButton = within(photoItem).getByRole('button', {
+      name: 'Edit season photo',
+    });
+    expect(editSeasonPhotoButton).toBeEnabled();
+
+    await user.click(editSeasonPhotoButton);
     expect(screen.queryByRole('dialog', { name: 'Image Preview' })).not.toBeInTheDocument();
     expect(mockChangePhotoModal).toHaveBeenLastCalledWith(
       expect.objectContaining({
         open: true,
         stint: expect.objectContaining({ id: 'stint-1' }),
         initialSeasonId: 'season-1',
+        mode: 'edit',
         history: expect.arrayContaining([
           expect.objectContaining({
             id: 'photo-1',
@@ -579,6 +603,198 @@ describe('PlayerDetails info tab', () => {
 
     expect(screen.getByRole('dialog', { name: 'Image Preview' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'John Smith' })).toHaveAttribute('src', '/photo.jpg');
+  });
+
+  it('shows edit actions for jersey records from every collapsed same-team stint', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'current-stint',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          season_id: 'season-2',
+          roster_player_team_id: 'roster-current',
+          team: {
+            id: 'team-1',
+            name: 'Toronto Maple Leafs',
+            code: 'TOR',
+            logo: null,
+            primary_color: '#003e7e',
+            text_color: '#ffffff',
+          },
+          jersey_number: 91,
+          is_prospect: false,
+          position: 'C',
+          acquisition_type: 'trade',
+          start_date: '2025-10-01',
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+          created_at: '2025-10-01T00:00:00Z',
+        },
+        {
+          id: 'older-stint',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          season_id: 'season-1',
+          roster_player_team_id: 'roster-older',
+          team: {
+            id: 'team-1',
+            name: 'Toronto Maple Leafs',
+            code: 'TOR',
+            logo: null,
+            primary_color: '#003e7e',
+            text_color: '#ffffff',
+          },
+          jersey_number: 19,
+          is_prospect: false,
+          position: 'C',
+          acquisition_type: 'trade',
+          start_date: '2024-10-01',
+          end_date: '2025-06-01',
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+          created_at: '2024-10-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUseJerseyHistory.mockReturnValue({
+      byStint: {
+        'roster-current': [
+          {
+            id: 'jersey-current',
+            player_teams_id: 'roster-current',
+            jersey_number: 91,
+            effective_from: '2025-10-01',
+          },
+        ],
+        'roster-older': [
+          {
+            id: 'jersey-older',
+            player_teams_id: 'roster-older',
+            jersey_number: 19,
+            effective_from: '2024-10-01',
+          },
+        ],
+      },
+    });
+
+    const { container } = render(<PlayerDetails />);
+    const historyList = container.querySelector('.stintList') as HTMLElement;
+    const stintAccordion = within(historyList)
+      .getByText('Toronto Maple Leafs')
+      .closest('.stintAccordion') as HTMLElement;
+
+    await user.click(within(stintAccordion).getByRole('button', { name: 'Expand' }));
+
+    const currentJerseyItem = within(stintAccordion)
+      .getByText('Oct 1, 2025 - Present')
+      .closest('li') as HTMLElement;
+    await user.click(
+      within(currentJerseyItem).getByRole('button', { name: 'Edit jersey number change' }),
+    );
+    expect(mockJerseyHistoryEditModal).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        open: true,
+        entry: expect.objectContaining({
+          id: 'jersey-current',
+          player_teams_id: 'roster-current',
+        }),
+      }),
+    );
+
+    const olderJerseyItem = within(stintAccordion)
+      .getByText('Oct 1, 2024 - Sep 30, 2025')
+      .closest('li') as HTMLElement;
+    await user.click(
+      within(olderJerseyItem).getByRole('button', { name: 'Edit jersey number change' }),
+    );
+    expect(mockJerseyHistoryEditModal).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        open: true,
+        entry: expect.objectContaining({
+          id: 'jersey-older',
+          player_teams_id: 'roster-older',
+        }),
+      }),
+    );
+  });
+
+  it('shows the set team photo header action when an eligible season is missing a photo', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUseTeams.mockReturnValue({
+      teams: [{ id: 'team-1', code: 'TOR', league_id: 'league-1' }],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-1',
+          league_id: 'league-1',
+          name: '2024-25',
+          start_date: '2024-10-01',
+          end_date: '2025-06-30',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          id: 'season-2',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: null,
+          created_at: '2025-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUsePlayerPhotoHistory.mockReturnValue({
+      photos: [
+        {
+          id: 'photo-1',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          season_id: 'season-1',
+          photo: '/photo.jpg',
+          created_at: '2025-01-01T00:00:00Z',
+          season_name: '2024-25',
+          team_name: 'Toronto Maple Leafs',
+        },
+      ],
+      byTeam: {
+        'team-1': [
+          {
+            id: 'photo-1',
+            player_id: 'player-1',
+            team_id: 'team-1',
+            season_id: 'season-1',
+            photo: '/photo.jpg',
+            created_at: '2025-01-01T00:00:00Z',
+            season_name: '2024-25',
+            team_name: 'Toronto Maple Leafs',
+          },
+        ],
+      },
+    });
+
+    const { container } = render(<PlayerDetails />);
+    const historyList = container.querySelector('.stintList') as HTMLElement;
+    const stintAccordion = within(historyList)
+      .getByText('Toronto Maple Leafs')
+      .closest('.stintAccordion') as HTMLElement;
+
+    await user.click(within(stintAccordion).getByRole('button', { name: 'Set team photo' }));
+
+    expect(mockChangePhotoModal).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        open: true,
+        stint: expect.objectContaining({ id: 'stint-1' }),
+        initialSeasonId: 'season-2',
+        mode: 'set',
+      }),
+    );
   });
 
   it('marks only the photo and jersey number used in the hero as current', async () => {
@@ -710,14 +926,14 @@ describe('PlayerDetails info tab', () => {
     const pastPhotoItem = within(pastAccordion).getByRole('button', {
       name: 'Preview 2025-26 photo',
     });
-    expect(within(pastPhotoItem).getByText('Past')).toHaveClass('tag', 'neutral');
+    expect(within(pastPhotoItem).queryByText('Past')).not.toBeInTheDocument();
 
     const pastJerseyItem = within(pastAccordion)
       .getAllByText('Aug 18, 2022 - Mar 6, 2026')
       .map((node) => node.closest('li') as HTMLElement | null)
       .find((node): node is HTMLElement => node?.classList.contains('itemCompact') ?? false);
     expect(pastJerseyItem).toBeDefined();
-    expect(within(pastJerseyItem).getByText('Past')).toHaveClass('tag', 'neutral');
+    expect(within(pastJerseyItem).queryByText('Past')).not.toBeInTheDocument();
   });
 
   it('moves the move player action into the more actions menu', async () => {
@@ -921,6 +1137,49 @@ describe('PlayerDetails info tab', () => {
       expect(mockedAxios.patch).toHaveBeenCalledWith(
         '/api/admin/players/player-1/retire',
         { retirement_date: '2025-06-30' },
+        expect.objectContaining({ headers: expect.any(Object) }),
+      );
+    });
+  });
+
+  it('unretires a player from the more actions menu', async () => {
+    const user = userEvent.setup();
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8478402',
+        first_name: 'John',
+        last_name: 'Smith',
+        photo: null,
+        date_of_birth: '1997-01-13',
+        birth_city: 'Edmonton',
+        birth_country: 'CAN',
+        height_cm: 185,
+        weight_lbs: 195,
+        position: 'C',
+        shoots: 'L',
+        is_active: false,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Unretire Player' }));
+
+    expect(screen.getByRole('dialog', { name: 'Unretire Player' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retire Player' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Unretire Player' }));
+
+    await waitFor(() => {
+      expect(mockedAxios.patch).toHaveBeenCalledWith(
+        '/api/admin/players/player-1/unretire',
+        {},
         expect.objectContaining({ headers: expect.any(Object) }),
       );
     });
@@ -1229,6 +1488,7 @@ describe('collapseSameTeamStints', () => {
       start_date: '2024-10-01',
       end_date: null,
     });
+    expect(result[0].collapsed_stints.map((item) => item.id)).toEqual(['newer', 'older']);
   });
 
   it('keeps separate stints when the player returns to a team after another team', () => {

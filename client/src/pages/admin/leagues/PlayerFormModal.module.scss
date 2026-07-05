@@ -200,22 +200,40 @@
   row-gap: $space-md;
 }
 
-.photoInheritance {
-  &Notice {
-    display: flex;
-    flex-direction: column;
-    gap: $space-xs;
-    padding: $space-sm $space-md;
-    border: 1px solid var(--app-border, #{$border});
-    border-radius: $radius-sm;
-    background: var(--app-surface-muted, rgba(255, 255, 255, 0.02));
-    color: var(--app-text-muted, #{$text-dim});
-    font-size: $font-sm;
-    line-height: 1.4;
-  }
+.readonlyField {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  min-width: 0;
+}
 
-  &Label {
-    color: var(--app-text, #{$text-body});
-    font-weight: 700;
-  }
+.readonlyFieldLabel {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: var(--app-text-muted, #{$text-dim});
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.readonlyFieldBox {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  width: 100%;
+  min-width: 0;
+  padding: 0 $space-lg;
+  border: 1px solid var(--app-field-border, #{$border});
+  border-radius: $radius-sm;
+  background: var(--app-field-bg, var(--app-surface-subtle));
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-base;
+  line-height: 1.4;
+  cursor: default;
+}
+
+.readonlyFieldValue {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

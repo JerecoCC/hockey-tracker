@@ -1316,44 +1316,111 @@ router.get('/route-lookup', async (req, res) => {
 
   try {
     const rows = await sql`
+      WITH candidate_routes AS (
+        SELECT
+          p.id AS player_id,
+          p.league_player_number,
+          t.id AS roster_team_id,
+          l.id AS league_id,
+          l.code AS league_code,
+          ti.code AS roster_team_code,
+          COALESCE(latest_jnh.jersey_number, pt.jersey_number) AS jersey_number,
+          pt.jersey_number AS roster_jersey_number,
+          pt.start_date,
+          pt.end_date,
+          pt.created_at,
+          trim(both '-' from regexp_replace(
+            lower(trim(concat_ws(' ', p.first_name, p.last_name))),
+            '[^a-z0-9]+',
+            '-',
+            'g'
+          )) AS name_slug,
+          trim(both '-' from regexp_replace(
+            lower(trim(COALESCE(p.league_player_number, ''))),
+            '[^a-z0-9]+',
+            '-',
+            'g'
+          )) AS league_player_slug
+        FROM players p
+        JOIN player_teams pt ON pt.player_id = p.id
+        JOIN teams t ON t.id = pt.team_id
+        JOIN leagues l ON l.id = t.league_id
+        LEFT JOIN LATERAL (
+          SELECT code
+          FROM team_iterations
+          WHERE team_id = t.id
+          ORDER BY
+            CASE WHEN end_date IS NULL THEN 0 ELSE 1 END,
+            start_date DESC NULLS LAST,
+            recorded_at DESC NULLS LAST
+          LIMIT 1
+        ) ti ON true
+        LEFT JOIN LATERAL (
+          SELECT jersey_number
+          FROM jersey_number_history
+          WHERE player_teams_id = pt.id
+          ORDER BY effective_from DESC, id DESC
+          LIMIT 1
+        ) latest_jnh ON true
+        WHERE lower(l.code) = lower(${leagueCode})
+          AND (${teamCode || null}::text IS NULL OR lower(ti.code) = lower(${teamCode}))
+      ),
+      matched_routes AS (
+        SELECT
+          *,
+          CASE
+            WHEN ${teamCode || null}::text IS NOT NULL
+              AND jersey_number IS NOT NULL
+              AND name_slug <> ''
+            THEN jersey_number::text || '-' || name_slug
+            WHEN ${teamCode || null}::text IS NULL
+              AND league_player_slug <> ''
+            THEN league_player_slug
+            ELSE name_slug
+          END AS player_slug,
+          CASE
+            WHEN ${teamCode || null}::text IS NOT NULL
+              AND jersey_number IS NOT NULL
+              AND (jersey_number::text || '-' || name_slug) = ${playerSlug}
+            THEN 0
+            WHEN ${teamCode || null}::text IS NULL
+              AND league_player_slug = ${playerSlug}
+            THEN 0
+            WHEN name_slug = ${playerSlug}
+            THEN 1
+            WHEN league_player_slug = ${playerSlug}
+            THEN 2
+            WHEN roster_jersey_number IS NOT NULL
+              AND (roster_jersey_number::text || '-' || name_slug) = ${playerSlug}
+            THEN 3
+            ELSE 4
+          END AS match_rank
+        FROM candidate_routes
+        WHERE name_slug = ${playerSlug}
+          OR league_player_slug = ${playerSlug}
+          OR (
+            jersey_number IS NOT NULL
+            AND (jersey_number::text || '-' || name_slug) = ${playerSlug}
+          )
+          OR (
+            roster_jersey_number IS NOT NULL
+            AND (roster_jersey_number::text || '-' || name_slug) = ${playerSlug}
+          )
+      )
       SELECT
-        p.id AS player_id,
-        t.id AS team_id,
-        l.id AS league_id,
-        l.code AS league_code,
-        ti.code AS team_code,
-        trim(both '-' from regexp_replace(
-          lower(trim(concat_ws(' ', p.first_name, p.last_name))),
-          '[^a-z0-9]+',
-          '-',
-          'g'
-        )) AS player_slug
-      FROM players p
-      JOIN player_teams pt ON pt.player_id = p.id
-      JOIN teams t ON t.id = pt.team_id
-      JOIN leagues l ON l.id = t.league_id
-      LEFT JOIN LATERAL (
-        SELECT code
-        FROM team_iterations
-        WHERE team_id = t.id
-        ORDER BY
-          CASE WHEN end_date IS NULL THEN 0 ELSE 1 END,
-          start_date DESC NULLS LAST,
-          recorded_at DESC NULLS LAST
-        LIMIT 1
-      ) ti ON true
-      WHERE lower(l.code) = lower(${leagueCode})
-        AND (${teamCode || null}::text IS NULL OR lower(ti.code) = lower(${teamCode}))
-        AND trim(both '-' from regexp_replace(
-          lower(trim(concat_ws(' ', p.first_name, p.last_name))),
-          '[^a-z0-9]+',
-          '-',
-          'g'
-        )) = ${playerSlug}
+        player_id,
+        CASE WHEN ${teamCode || null}::text IS NULL THEN NULL ELSE roster_team_id END AS team_id,
+        league_id,
+        league_code,
+        CASE WHEN ${teamCode || null}::text IS NULL THEN NULL ELSE roster_team_code END AS team_code,
+        player_slug
+      FROM matched_routes
       ORDER BY
-        CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
-        pt.end_date DESC NULLS LAST,
-        pt.created_at DESC NULLS LAST
+        match_rank,
+        CASE WHEN end_date IS NULL THEN 0 ELSE 1 END,
+        end_date DESC NULLS LAST,
+        start_date DESC NULLS LAST,
+        created_at DESC NULLS LAST
       LIMIT 1
     `;
 
@@ -2155,6 +2222,88 @@ router.patch('/:id/retire', async (req, res) => {
     return res.json(rows[0]);
   } catch (err) {
     console.error('players retire error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/players/:id/unretire
+// Marks a player active and reopens their latest closed career/roster stint.
+// ---------------------------------------------------------------------------
+router.patch('/:id/unretire', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const rows = await sql`
+      WITH unretired_player AS (
+        UPDATE players
+        SET is_active = TRUE
+        WHERE id = ${id}
+        RETURNING
+          id, league_player_number, first_name, last_name, photo,
+          date_of_birth::text AS date_of_birth,
+          birth_city, birth_country,
+          height_cm, weight_lbs, position, shoots,
+          rookie_season_id,
+          (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
+          is_active, created_at
+      ),
+      latest_closed_career_stint AS (
+        SELECT pts.id, pts.team_id
+        FROM player_team_stints pts
+        WHERE pts.player_id = ${id}
+          AND pts.end_date IS NOT NULL
+          AND EXISTS (SELECT 1 FROM unretired_player)
+        ORDER BY pts.end_date DESC, pts.start_date DESC NULLS LAST, pts.created_at DESC, pts.id DESC
+        LIMIT 1
+      ),
+      reopened_career_stint AS (
+        UPDATE player_team_stints pts
+        SET end_date = NULL
+        FROM latest_closed_career_stint latest
+        WHERE pts.id = latest.id
+        RETURNING pts.id, pts.team_id
+      ),
+      latest_closed_roster_stint AS (
+        SELECT pt.id
+        FROM player_teams pt
+        WHERE pt.player_id = ${id}
+          AND pt.end_date IS NOT NULL
+          AND EXISTS (SELECT 1 FROM unretired_player)
+          AND (
+            (
+              EXISTS (SELECT 1 FROM reopened_career_stint)
+              AND pt.team_id = (SELECT team_id FROM reopened_career_stint LIMIT 1)
+            )
+            OR NOT EXISTS (SELECT 1 FROM reopened_career_stint)
+          )
+        ORDER BY pt.end_date DESC, pt.start_date DESC NULLS LAST, pt.created_at DESC, pt.id DESC
+        LIMIT 1
+      ),
+      reopened_roster_stint AS (
+        UPDATE player_teams pt
+        SET end_date = NULL
+        FROM latest_closed_roster_stint latest
+        WHERE pt.id = latest.id
+        RETURNING pt.id, pt.team_id, pt.season_id
+      )
+      SELECT
+        unretired_player.*,
+        (SELECT id FROM reopened_career_stint LIMIT 1) AS unretired_stint_id,
+        (SELECT team_id FROM reopened_career_stint LIMIT 1) AS unretired_team_id,
+        (SELECT id FROM reopened_roster_stint LIMIT 1) AS unretired_player_team_id,
+        (SELECT season_id FROM reopened_roster_stint LIMIT 1) AS unretired_season_id
+      FROM unretired_player
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Player not found' });
+    return res.json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({
+        error: 'Cannot unretire player while another active team stint conflicts with the latest closed stint',
+      });
+    }
+    console.error('players unretire error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

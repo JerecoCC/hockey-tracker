@@ -12,6 +12,8 @@ export interface ListItemAction {
   icon: string;
   intent?: ButtonIntent;
   tooltip?: string;
+  ariaLabel?: string;
+  tooltipIntent?: 'default' | 'error';
   disabled?: boolean;
   onClick: () => void;
 }
@@ -154,9 +156,7 @@ const ListItem = ({
 }: Props) => {
   const isCompact = size === 'compact';
   const hasExtra = !isCompact && (!!subtitle || !!note);
-  const visibleActions = isCompact
-    ? []
-    : (actions?.filter((a): a is ListItemAction => Boolean(a)) ?? []);
+  const visibleActions = actions?.filter((a): a is ListItemAction => Boolean(a)) ?? [];
   const isCircle = image_shape === 'circle';
   const rightContentDescriptor = isListItemRightContent(rightContent)
     ? rightContent
@@ -300,6 +300,8 @@ const ListItem = ({
               icon={action.icon}
               size="sm"
               tooltip={action.tooltip}
+              tooltipIntent={action.tooltipIntent}
+              aria-label={action.ariaLabel ?? action.tooltip}
               disabled={action.disabled}
               onClick={(event) => {
                 event.stopPropagation();

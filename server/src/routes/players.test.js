@@ -230,21 +230,62 @@ describe('GET /api/admin/players/route-lookup', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(lookup);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('jersey_number::text');
+    expect(queryText).toContain('league_player_slug');
   });
 
-  it('resolves a league-scoped player URL without a team code', async () => {
+  it('resolves a team-scoped jersey-name player URL to database ids', async () => {
+    const lookup = {
+      player_id: 'player-1',
+      team_id: 'team-1',
+      league_id: 'league-1',
+      league_code: 'NHL',
+      team_code: 'VAN',
+      player_slug: '40-elias-pettersson',
+    };
+    sql.mockResolvedValueOnce([lookup]);
+
+    const res = await request(app).get(
+      '/api/admin/players/route-lookup?league_code=nhl&team_code=van&player_slug=40-elias-pettersson',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(lookup);
+  });
+
+  it('resolves a league-scoped player URL by league player number', async () => {
     const lookup = {
       player_id: 'player-1',
       team_id: null,
       league_id: 'league-1',
       league_code: 'NHL',
       team_code: null,
-      player_slug: 'kyle-masters',
+      player_slug: '8478402',
     };
     sql.mockResolvedValueOnce([lookup]);
 
     const res = await request(app).get(
-      '/api/admin/players/route-lookup?league_code=nhl&player_slug=kyle-masters',
+      '/api/admin/players/route-lookup?league_code=nhl&player_slug=8478402',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(lookup);
+  });
+
+  it('still resolves a league-scoped player URL by name slug', async () => {
+    const lookup = {
+      player_id: 'player-1',
+      team_id: null,
+      league_id: 'league-1',
+      league_code: 'NHL',
+      team_code: null,
+      player_slug: '8478402',
+    };
+    sql.mockResolvedValueOnce([lookup]);
+
+    const res = await request(app).get(
+      '/api/admin/players/route-lookup?league_code=nhl&player_slug=john-smith',
     );
 
     expect(res.status).toBe(200);
@@ -803,6 +844,60 @@ describe('PATCH /api/admin/players/:id/retire', () => {
 
     const res = await request(app).patch('/api/admin/players/player-1/retire')
       .send({ retirement_date: '2025-06-30' });
+
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/players/:id/unretire
+// ---------------------------------------------------------------------------
+describe('PATCH /api/admin/players/:id/unretire', () => {
+  it('marks the player active and reopens latest closed stint records', async () => {
+    const unretiredPlayer = {
+      ...PLAYER,
+      is_active: true,
+      unretired_stint_id: 'career-stint-1',
+      unretired_team_id: 'team-1',
+      unretired_player_team_id: 'player-team-1',
+      unretired_season_id: 'season-1',
+    };
+    sql.mockResolvedValueOnce([unretiredPlayer]);
+
+    const res = await request(app).patch('/api/admin/players/player-1/unretire')
+      .send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: 'player-1',
+      is_active: true,
+      unretired_stint_id: 'career-stint-1',
+      unretired_player_team_id: 'player-team-1',
+    });
+    expect(sql).toHaveBeenCalledTimes(1);
+
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('UPDATE players');
+    expect(queryText).toContain('SET is_active = TRUE');
+    expect(queryText).toContain('player_team_stints');
+    expect(queryText).toContain('player_teams');
+    expect(queryText).toContain('SET end_date = NULL');
+  });
+
+  it('returns 404 when the player is not found', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app).patch('/api/admin/players/nope/unretire')
+      .send({});
+
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+
+    const res = await request(app).patch('/api/admin/players/player-1/unretire')
+      .send({});
 
     expect(res.status).toBe(500);
   });

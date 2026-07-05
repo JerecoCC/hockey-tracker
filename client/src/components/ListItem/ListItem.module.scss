@@ -17,7 +17,8 @@
     background $transition-fast,
     border-color $transition-fast;
 
-  &:hover {
+  &:hover,
+  &:focus-within {
     background: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
 
     // Reveals the ActionOverlay

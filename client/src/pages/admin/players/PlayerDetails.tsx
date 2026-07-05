@@ -60,12 +60,9 @@ import { formatPlayerPosition } from '@/lib/playerPosition';
 import {
   buildGameDetailsPath,
   buildLeagueDetailsPath,
-  buildLeaguePlayerDetailsPath,
   buildPlayerDetailsPath,
   buildTeamDetailsPath,
   buildUserGameDetailsPath,
-  buildUserLeaguePlayerDetailsPath,
-  buildUserPlayerDetailsPath,
   buildUserTeamDetailsPath,
   toRouteSlug,
 } from '@/lib/routeSlugs';
@@ -405,7 +402,11 @@ const formatStintDates = (stint: PlayerStintRecord) => {
   return 'Dates not set';
 };
 
-export const collapseSameTeamStints = (stints: PlayerStintRecord[]): PlayerStintRecord[] => {
+type TeamHistoryStint = PlayerStintRecord & {
+  collapsed_stints: PlayerStintRecord[];
+};
+
+export const collapseSameTeamStints = (stints: PlayerStintRecord[]): TeamHistoryStint[] => {
   const groups: PlayerStintRecord[][] = [];
 
   for (const stint of stints) {
@@ -427,6 +428,7 @@ export const collapseSameTeamStints = (stints: PlayerStintRecord[]): PlayerStint
       end_date: newest.end_date,
       has_stats: group.some((stint) => stint.has_stats),
       can_delete: group.every((stint) => stint.can_delete !== false),
+      collapsed_stints: group,
     };
   });
 };
@@ -451,6 +453,75 @@ const formatHistoryDateRange = (startDate: string, endDate: string | null) =>
 
 const stintHistoryKey = (stint: PlayerStintRecord) => stint.roster_player_team_id ?? stint.id;
 
+const hasCollapsedStints = (stint: PlayerStintRecord): stint is TeamHistoryStint =>
+  'collapsed_stints' in stint && Array.isArray(stint.collapsed_stints);
+
+const getCollapsedStints = (stint: PlayerStintRecord) =>
+  hasCollapsedStints(stint) && stint.collapsed_stints.length > 0
+    ? stint.collapsed_stints
+    : [stint];
+
+const getCollapsedJerseyHistory = (
+  stint: PlayerStintRecord,
+  jerseyHistoryByStint: Record<string, JerseyHistoryEntry[]>,
+) => {
+  const seenIds = new Set<string>();
+
+  return getCollapsedStints(stint).flatMap((collapsedStint) => {
+    const history = jerseyHistoryByStint[stintHistoryKey(collapsedStint)] ?? [];
+
+    return history.filter((entry) => {
+      if (seenIds.has(entry.id)) return false;
+      seenIds.add(entry.id);
+      return true;
+    });
+  });
+};
+
+const dateKey = (date: string | null | undefined) => date?.slice(0, 10) ?? null;
+
+const seasonOverlapsStint = (season: SeasonRecord, stint: PlayerStintRecord) => {
+  if (season.id === stint.season_id) return true;
+
+  const seasonStart = dateKey(season.start_date);
+  const seasonEnd = dateKey(season.end_date) ?? (season.is_current ? null : seasonStart);
+  const stintStart = dateKey(stint.start_date);
+  const stintEnd = dateKey(stint.end_date);
+
+  if (stintStart && seasonEnd && seasonEnd < stintStart) return false;
+  if (stintEnd && seasonStart && seasonStart > stintEnd) return false;
+
+  return seasonStart != null || seasonEnd != null;
+};
+
+const findMissingPhotoSeason = (
+  stint: PlayerStintRecord,
+  seasons: SeasonRecord[],
+  photoHistory: PlayerPhotoEntry[],
+  teamLeagueId?: string | null,
+) => {
+  const fallbackLeagueId = seasons.find((season) => season.id === stint.season_id)?.league_id;
+  const leagueId = teamLeagueId ?? fallbackLeagueId ?? null;
+  const photoSeasonIds = new Set(
+    photoHistory
+      .filter((entry) => entry.team_id === stint.team_id)
+      .map((entry) => entry.season_id),
+  );
+
+  return seasons
+    .filter((season) => {
+      if (leagueId && season.league_id !== leagueId) return false;
+      return seasonOverlapsStint(season, stint) && !photoSeasonIds.has(season.id);
+    })
+    .sort(
+      (a, b) =>
+        (dateKey(b.start_date) ?? '').localeCompare(dateKey(a.start_date) ?? '') ||
+        b.name.localeCompare(a.name),
+    )[0];
+};
+
+type PhotoModalMode = 'set' | 'edit';
+
 const buildJerseyHistoryRows = (
   stint: PlayerStintRecord,
   history: JerseyHistoryEntry[],
@@ -462,6 +533,7 @@ const buildJerseyHistoryRows = (
     id: entry.id,
     jerseyNumber: entry.jersey_number,
     effectiveFrom: entry.effective_from,
+    stintKey: entry.player_teams_id,
     historyEntry: entry as JerseyHistoryEntry | null,
   }));
 
@@ -474,6 +546,7 @@ const buildJerseyHistoryRows = (
       id: `assumed-${stint.id}`,
       jerseyNumber: stint.jersey_number,
       effectiveFrom: stint.start_date,
+      stintKey: historyKey,
       historyEntry: null,
     });
   }
@@ -492,7 +565,7 @@ const buildJerseyHistoryRows = (
         historyEntry: entry.historyEntry,
         dateRange: formatHistoryDateRange(entry.effectiveFrom, endDate),
         current:
-          historyKey === currentStintKey &&
+          entry.stintKey === currentStintKey &&
           idx === 0 &&
           currentJerseyNumber != null &&
           entry.jerseyNumber === currentJerseyNumber,
@@ -533,7 +606,6 @@ const StintHistoryDetails = ({
   initials,
   onPreviewPhoto,
   onChangePhoto,
-  onChangeJersey,
   onEditJerseyHistoryEntry,
 }: {
   stint: PlayerStintRecord;
@@ -544,8 +616,11 @@ const StintHistoryDetails = ({
   currentPhotoHistoryId: string | null;
   initials: string;
   onPreviewPhoto: (photo: string) => void;
-  onChangePhoto: (stint: PlayerStintRecord, seasonId?: string | null) => void;
-  onChangeJersey: (stint: PlayerStintRecord) => void;
+  onChangePhoto: (
+    stint: PlayerStintRecord,
+    seasonId?: string | null,
+    mode?: PhotoModalMode,
+  ) => void;
   onEditJerseyHistoryEntry: (entry: JerseyHistoryEntry) => void;
 }) => {
   const jerseyRows = buildJerseyHistoryRows(
@@ -565,22 +640,6 @@ const StintHistoryDetails = ({
           <ul className={styles.stintHistoryList}>
             {photoHistory.map((entry) => {
               const current = entry.id === currentPhotoHistoryId;
-              const action = (
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="image"
-                  size="sm"
-                  tooltip="Change season photo"
-                  aria-label="Change season photo"
-                  tooltipClassName={styles.stintHistoryRowAction}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onChangePhoto(stint, entry.season_id);
-                  }}
-                  onKeyDown={(event) => event.stopPropagation()}
-                />
-              );
 
               return (
                 <ListItem
@@ -598,14 +657,21 @@ const StintHistoryDetails = ({
                     />
                   }
                   rightContent={
-                    <span className={styles.stintHistoryRowMeta}>
-                      {action}
+                    current ? (
                       <Tag
-                        label={current ? 'Current' : 'Past'}
-                        intent={current ? 'success' : 'neutral'}
+                        label="Current"
+                        intent="success"
                       />
-                    </span>
+                    ) : null
                   }
+                  actions={[
+                    {
+                      icon: 'image',
+                      tooltip: 'Edit season photo',
+                      ariaLabel: 'Edit season photo',
+                      onClick: () => onChangePhoto(stint, entry.season_id, 'edit'),
+                    },
+                  ]}
                   ariaLabel={`Preview ${entry.season_name ?? 'season'} photo`}
                   onClick={() => onPreviewPhoto(entry.photo)}
                 />
@@ -622,30 +688,6 @@ const StintHistoryDetails = ({
         ) : (
           <ul className={styles.stintHistoryList}>
             {jerseyRows.map((entry) => {
-              const action = entry.historyEntry ? (
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="edit"
-                  size="sm"
-                  tooltip="Edit jersey history"
-                  aria-label="Edit jersey history"
-                  tooltipClassName={styles.stintHistoryRowAction}
-                  onClick={() => onEditJerseyHistoryEntry(entry.historyEntry!)}
-                />
-              ) : entry.current ? (
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="jersey"
-                  size="sm"
-                  tooltip="Change jersey number"
-                  aria-label="Change jersey number"
-                  tooltipClassName={styles.stintHistoryRowAction}
-                  onClick={() => onChangeJersey(stint)}
-                />
-              ) : null;
-
               return (
                 <ListItem
                   key={entry.id}
@@ -661,13 +703,23 @@ const StintHistoryDetails = ({
                     </Chip>
                   }
                   rightContent={
-                    <span className={styles.stintHistoryRowMeta}>
-                      {action}
+                    entry.current ? (
                       <Tag
-                        label={entry.current ? 'Current' : 'Past'}
-                        intent={entry.current ? 'success' : 'neutral'}
+                        label="Current"
+                        intent="success"
                       />
-                    </span>
+                    ) : null
+                  }
+                  actions={
+                    entry.historyEntry
+                      ? [
+                          {
+                            icon: 'edit',
+                            tooltip: 'Edit jersey number change',
+                            onClick: () => onEditJerseyHistoryEntry(entry.historyEntry!),
+                          },
+                        ]
+                      : undefined
                   }
                 />
               );
@@ -859,10 +911,13 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     useState<JerseyHistoryEntry | null>(null);
   const [changingPhotoStint, setChangingPhotoStint] = useState<PlayerStintRecord | null>(null);
   const [changingPhotoSeasonId, setChangingPhotoSeasonId] = useState<string | null>(null);
+  const [changingPhotoMode, setChangingPhotoMode] = useState<PhotoModalMode>('set');
   const [photoPreviewSrc, setPhotoPreviewSrc] = useState<string | null>(null);
   const [movePlayerOpen, setMovePlayerOpen] = useState(false);
   const [retirePlayerOpen, setRetirePlayerOpen] = useState(false);
   const [retirePlayerBusy, setRetirePlayerBusy] = useState(false);
+  const [unretirePlayerOpen, setUnretirePlayerOpen] = useState(false);
+  const [unretirePlayerBusy, setUnretirePlayerBusy] = useState(false);
   const [autoFillPlayerBusy, setAutoFillPlayerBusy] = useState(false);
   const [gameLogSeasonId, setGameLogSeasonId] = useState('all');
   const [gameLogType, setGameLogType] = useState('all');
@@ -885,14 +940,17 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const openChangePhotoModal = (
     stint: PlayerStintRecord,
     seasonId: string | null = null,
+    modalMode: PhotoModalMode = 'set',
   ) => {
     setChangingPhotoStint(stint);
     setChangingPhotoSeasonId(seasonId);
+    setChangingPhotoMode(modalMode);
   };
 
   const closeChangePhotoModal = () => {
     setChangingPhotoStint(null);
     setChangingPhotoSeasonId(null);
+    setChangingPhotoMode('set');
   };
 
   const updatePlayer = async (
@@ -980,6 +1038,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             teamCode: toTeam?.code ?? toTeamId,
             firstName: player?.first_name,
             lastName: player?.last_name,
+            jerseyNumber,
           }),
         );
       }
@@ -1028,6 +1087,39 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       return false;
     } finally {
       setRetirePlayerBusy(false);
+    }
+  };
+
+  const unretirePlayer = async (): Promise<boolean> => {
+    if (!id) return false;
+    setUnretirePlayerBusy(true);
+    try {
+      await axios.patch(`${API}/admin/players/${id}/unretire`, {}, { headers: authHeaders() });
+
+      toast.success('Player unretired successfully!');
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['player', id] }),
+        queryClient.invalidateQueries({ queryKey: ['player-trade-history', id] }),
+        queryClient.invalidateQueries({ queryKey: ['players'] }),
+        queryClient.invalidateQueries({ queryKey: ['teams', teamId] }),
+        queryClient.invalidateQueries({ queryKey: ['game-roster'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-lineup'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-goals'] }),
+        queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] }),
+      ]);
+
+      return true;
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
+          ? err.response.data.error
+          : 'Failed to unretire player';
+      toast.error(message);
+      return false;
+    } finally {
+      setUnretirePlayerBusy(false);
     }
   };
 
@@ -1199,31 +1291,24 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     player && routeLookup
       ? routeLookup.team_id && routeLookup.team_code
         ? isAdminView
-          ? buildPlayerDetailsPath({
+          ? `${buildTeamDetailsPath({
               leagueCode: routeLookup.league_code,
               teamCode: routeLookup.team_code,
-              firstName: player.first_name,
-              lastName: player.last_name,
-            })
-          : buildUserPlayerDetailsPath({
+              teamId: routeLookup.team_id,
+            })}/players/${routeLookup.player_slug}`
+          : `${buildUserTeamDetailsPath({
               leagueCode: routeLookup.league_code,
               teamCode: routeLookup.team_code,
-              firstName: player.first_name,
-              lastName: player.last_name,
-            })
+              teamId: routeLookup.team_id,
+            })}/players/${routeLookup.player_slug}`
         : isAdminView
-          ? buildLeaguePlayerDetailsPath({
+          ? `${buildLeagueDetailsPath({
               leagueCode: routeLookup.league_code,
               leagueId: routeLookup.league_id,
-              firstName: player.first_name,
-              lastName: player.last_name,
-            })
-          : buildUserLeaguePlayerDetailsPath({
-              leagueCode: routeLookup.league_code,
-              leagueId: routeLookup.league_id,
-              firstName: player.first_name,
-              lastName: player.last_name,
-            })
+            })}/players/${routeLookup.player_slug}`
+          : `/leagues/${toRouteSlug(routeLookup.league_code) || routeLookup.league_id}/players/${
+              routeLookup.player_slug
+            }`
       : null;
 
   useEffect(() => {
@@ -1416,6 +1501,15 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             icon: 'person_remove',
             intent: 'danger' as const,
             onClick: () => setRetirePlayerOpen(true),
+          },
+        ]
+      : []),
+    ...(isAdminView && !player.is_active
+      ? [
+          {
+            label: 'Unretire Player',
+            icon: 'person_add',
+            onClick: () => setUnretirePlayerOpen(true),
           },
         ]
       : []),
@@ -1923,18 +2017,34 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                       ) : (
                         <ul className={styles.stintList}>
                           {teamHistoryStints.map((s) => {
-                            const jerseyHistory = jerseyHistoryByStint[stintHistoryKey(s)] ?? [];
+                            const jerseyHistory = getCollapsedJerseyHistory(
+                              s,
+                              jerseyHistoryByStint,
+                            );
                             const photoHistory = photoHistoryByTeam[s.team_id] ?? [];
-                            const hasPhotoHistory = photoHistory.length > 0;
+                            const teamLeagueId = teams.find((team) => team.id === s.team_id)?.league_id;
+                            const missingPhotoSeason = findMissingPhotoSeason(
+                              s,
+                              seasons,
+                              photoHistory,
+                              teamLeagueId,
+                            );
                             const acquisitionLabel = s.acquisition_type
                               ? (ACQUISITION_TYPE_LABELS[s.acquisition_type] ?? s.acquisition_type)
                               : null;
                             const actions = [
-                              !hasPhotoHistory
+                              missingPhotoSeason
                                 ? {
                                     icon: 'image',
-                                    tooltip: 'Change season photo',
-                                    onClick: () => openChangePhotoModal(s),
+                                    tooltip: 'Set team photo',
+                                    onClick: () => openChangePhotoModal(s, missingPhotoSeason.id),
+                                  }
+                                : null,
+                              !s.end_date
+                                ? {
+                                    icon: 'jersey',
+                                    tooltip: 'Record jersey number change',
+                                    onClick: () => setChangingJerseyStint(s),
                                   }
                                 : null,
                               {
@@ -2015,7 +2125,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                                     initials={initials}
                                     onPreviewPhoto={(src) => setPhotoPreviewSrc(src)}
                                     onChangePhoto={openChangePhotoModal}
-                                    onChangeJersey={setChangingJerseyStint}
                                     onEditJerseyHistoryEntry={setEditingJerseyHistoryEntry}
                                   />
                                 </Accordion>
@@ -2063,6 +2172,21 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             onConfirm={retirePlayer}
           />
 
+          <ConfirmModal
+            open={unretirePlayerOpen}
+            title="Unretire Player"
+            body={`This will mark ${fullName} as active again and reopen their latest team stint.`}
+            confirmLabel="Unretire Player"
+            confirmIcon="person_add"
+            variant="accent"
+            busy={unretirePlayerBusy}
+            onCancel={() => setUnretirePlayerOpen(false)}
+            onConfirm={async () => {
+              const ok = await unretirePlayer();
+              if (ok) setUnretirePlayerOpen(false);
+            }}
+          />
+
           <PlayerInfoEditModal
             open={editPlayerInfoOpen}
             player={player}
@@ -2104,6 +2228,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             open={!!changingPhotoStint}
             stint={changingPhotoStint}
             initialSeasonId={changingPhotoSeasonId}
+            mode={changingPhotoMode}
             seasons={seasons.filter(
               (s) =>
                 s.league_id === teams.find((t) => t.id === changingPhotoStint?.team_id)?.league_id,

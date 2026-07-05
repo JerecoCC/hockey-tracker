@@ -372,27 +372,6 @@
 
   &HistoryListItem {
     --list-item-hover-bg: var(--app-surface-subtle, rgba(255, 255, 255, 0.03));
-
-    &:hover,
-    &:focus-within {
-      .stintHistoryRowAction {
-        opacity: 1;
-        pointer-events: auto;
-      }
-    }
-  }
-
-  &HistoryRowMeta {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: $space-sm;
-  }
-
-  &HistoryRowAction {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity $transition-fast;
   }
 
   &HistoryEmpty {

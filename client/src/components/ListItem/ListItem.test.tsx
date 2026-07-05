@@ -250,7 +250,7 @@ describe('ListItem - custom rightContent', () => {
 // Compact layout
 // ---------------------------------------------------------------------------
 describe('ListItem - compact layout', () => {
-  it('renders only pre-text content, main text, and right content', () => {
+  it('renders pre-text content, main text, right content, and actions', () => {
     renderItem({
       name: 'Leafs',
       size: 'compact',
@@ -262,7 +262,7 @@ describe('ListItem - compact layout', () => {
       preTextContent: <span data-testid="pre-text">1.</span>,
       rightContent: <span data-testid="right-content">99</span>,
       children: <span>Extra details</span>,
-      actions: [{ icon: 'edit', onClick: jest.fn() }],
+      actions: [{ icon: 'edit', tooltip: 'Edit jersey number change', onClick: jest.fn() }],
     });
 
     expect(screen.getByTestId('pre-text')).toHaveTextContent('1.');
@@ -274,7 +274,7 @@ describe('ListItem - compact layout', () => {
     expect(screen.queryByText('Subtitle')).not.toBeInTheDocument();
     expect(screen.queryByText('Note')).not.toBeInTheDocument();
     expect(screen.queryByText('Extra details')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit jersey number change' })).toBeInTheDocument();
   });
 });
 
