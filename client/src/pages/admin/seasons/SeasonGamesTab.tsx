@@ -48,6 +48,7 @@ import {
   toEasternDateKey,
   weekBelongsToCalendarMonth,
 } from './seasonDateUtils';
+import { partitionAutofillingGames } from './seasonGamesAutofillUtils';
 import styles from './SeasonGamesTab.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -959,18 +960,25 @@ const SeasonGamesTab = ({
     );
   };
 
-  const renderCalendarAutofillSkeletons = () => (
+  const renderCalendarGameAutofillSkeleton = (game: GameRecord) => (
+    <div
+      key={game.id}
+      className={styles.calendarAutofillSkeletonItem}
+      aria-label={`Auto-filling ${describeGame(game)}`}
+    >
+      <Skeleton
+        type="block"
+        className={styles.calendarAutofillSkeleton}
+      />
+    </div>
+  );
+
+  const renderCalendarAutofillSkeletons = (loadingGames: GameRecord[]) => (
     <div
       className={styles.calendarAutofillSkeletonList}
       aria-label="Auto-filling games"
     >
-      {Array.from({ length: 3 }).map((_, index) => (
-        <Skeleton
-          key={index}
-          type="block"
-          className={styles.calendarAutofillSkeleton}
-        />
-      ))}
+      {loadingGames.map((game) => renderCalendarGameAutofillSkeleton(game))}
     </div>
   );
 
@@ -1008,13 +1016,39 @@ const SeasonGamesTab = ({
   const renderWeekGameList = (dateKey: string, dayGames: GameRecord[]) => {
     if (autofillDay !== dateKey) return dayGames.map((game) => renderGameCard(game));
 
-    const revealedGames = dayGames.filter((game) => !autofillingGameIds.has(game.id));
-    const loadingGames = dayGames.filter((game) => autofillingGameIds.has(game.id));
+    const { revealedGames, loadingGames } = partitionAutofillingGames(
+      dayGames,
+      autofillingGameIds,
+    );
 
     return [
       ...revealedGames.map((game) => renderGameCard(game)),
       ...loadingGames.map((game) => renderWeekGameAutofillSkeleton(game)),
     ];
+  };
+
+  const renderCalendarGameList = (dateKey: string, dayGames: GameRecord[]) => {
+    if (dayGames.length === 0) return null;
+
+    if (autofillDay !== dateKey) {
+      return (
+        <ScheduleCalendarGameList>
+          {dayGames.map((game) => renderCalendarGamePill(game))}
+        </ScheduleCalendarGameList>
+      );
+    }
+
+    const { revealedGames, loadingGames } = partitionAutofillingGames(
+      dayGames,
+      autofillingGameIds,
+    );
+
+    return (
+      <ScheduleCalendarGameList>
+        {revealedGames.map((game) => renderCalendarGamePill(game))}
+        {loadingGames.length > 0 ? renderCalendarAutofillSkeletons(loadingGames) : null}
+      </ScheduleCalendarGameList>
+    );
   };
 
   return (
@@ -1172,12 +1206,7 @@ const SeasonGamesTab = ({
                 }}
                 renderDayContent={({ dateKey }) => {
                   const dayGames = calendarGamesByDate.get(dateKey) ?? [];
-                  if (autofillDay === dateKey) return renderCalendarAutofillSkeletons();
-                  return dayGames.length > 0 ? (
-                    <ScheduleCalendarGameList>
-                      {dayGames.map((game) => renderCalendarGamePill(game))}
-                    </ScheduleCalendarGameList>
-                  ) : null;
+                  return renderCalendarGameList(dateKey, dayGames);
                 }}
               />
             </ScheduleCalendarCard>
