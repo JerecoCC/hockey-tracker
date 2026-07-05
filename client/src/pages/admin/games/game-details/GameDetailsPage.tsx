@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import Tabs from '@/components/Tabs/Tabs';
@@ -180,37 +180,6 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   );
   const isGameAutofilling = !!gameAutofillProgress;
   const isEditMode = isAdminView;
-
-  // Keep the sticky auto-fill banner pinned just below the sticky scoreboard.
-  // The scoreboard height is dynamic, so measure it and offset the banner's
-  // sticky `top` accordingly (the scoreboard is not sticky on mobile).
-  const autofillBannerRef = useRef<HTMLDivElement>(null);
-  const [autofillBannerTop, setAutofillBannerTop] = useState<number | null>(null);
-  useEffect(() => {
-    if (!isGameAutofilling) return;
-    const banner = autofillBannerRef.current;
-    const scoreboard = banner?.previousElementSibling as HTMLElement | null;
-    if (!banner || !scoreboard) return;
-
-    const HEADER_OFFSET = 52;
-    const MOBILE_HEADER_OFFSET = 88;
-    const GAP = 8;
-    const update = () => {
-      if (window.innerWidth <= 768) {
-        setAutofillBannerTop(MOBILE_HEADER_OFFSET);
-        return;
-      }
-      setAutofillBannerTop(HEADER_OFFSET + scoreboard.getBoundingClientRect().height + GAP);
-    };
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(scoreboard);
-    window.addEventListener('resize', update);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', update);
-    };
-  }, [isGameAutofilling]);
 
   /**
    * Which side ('away' | 'home') won the shootout, or null if not yet decided.
@@ -584,38 +553,9 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
           useLocalTimezone={!isAdminView}
         />
 
-        {gameAutofillProgress && (
-          <div
-            ref={autofillBannerRef}
-            className={styles.gameAutofillStatus}
-            style={autofillBannerTop != null ? { top: `${autofillBannerTop}px` } : undefined}
-            role="status"
-            aria-live="polite"
-            aria-label={gameAutofillProgress.message}
-          >
-            <div className={styles.gameAutofillStatusHeader}>
-              <span className={styles.gameAutofillPulse} />
-              <div className={styles.gameAutofillStatusText}>
-                <strong>
-                  Auto-filling {gameAutofillProgress.leagueLabel ?? game.league_code ?? 'league'} game
-                </strong>
-                <span>{gameAutofillProgress.message}</span>
-              </div>
-            </div>
-            {gameAutofillProgress.total ? (
-              <progress
-                className={styles.gameAutofillProgress}
-                value={gameAutofillProgress.completed ?? 0}
-                max={gameAutofillProgress.total}
-                aria-label="Auto-fill progress"
-              />
-            ) : null}
-          </div>
-        )}
-
         {/* ── Tabs ── */}
         <Tabs
-          className={gameAutofillProgress ? undefined : styles.gameDetailsTabs}
+          className={styles.gameDetailsTabs}
           activeIndex={activeTab}
           onTabChange={handleTabChange}
           keepMounted={isGameAutofilling}

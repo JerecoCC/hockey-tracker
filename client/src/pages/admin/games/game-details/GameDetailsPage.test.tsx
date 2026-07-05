@@ -235,7 +235,7 @@ describe('GameDetailsPage', () => {
     expect(mockLineupsTab.mock.calls[0][0].showPlayerDataStatus).toBe(true);
   });
 
-  it('keeps game details visible while showing NHL auto-fill progress', async () => {
+  it('keeps game details visible and locked while NHL auto-fill progress is toasted', async () => {
     mockUseParams.mockReturnValue({ leagueId: 'league-1', seasonId: 'season-1', id: 'game-1' });
     render(<GameDetailsPage />);
     await waitForGameTabs();
@@ -250,12 +250,8 @@ describe('GameDetailsPage', () => {
       });
     });
 
-    expect(screen.getByRole('status', { name: /added goal 1 of 3/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/auto-fill progress/i)).toBeInTheDocument();
-    expect(
-      screen.getByText('scoreboard').compareDocumentPosition(screen.getByRole('status')) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(screen.queryByRole('status', { name: /added goal 1 of 3/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/auto-fill progress/i)).not.toBeInTheDocument();
     expect(screen.getByText('scoreboard')).toBeVisible();
     expect(screen.getByText('summary')).toBeVisible();
     expect(screen.getByText('lineups')).toBeVisible();

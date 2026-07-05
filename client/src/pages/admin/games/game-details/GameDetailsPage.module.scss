@@ -263,130 +263,23 @@
   text-align: center;
 }
 
-.gameAutofill {
-  &Status {
-    display: flex;
-    flex-direction: column;
-    gap: $space-md;
-    // Stay visible while scrolling, pinned just below the sticky scoreboard
-    // (its dynamic height sets `top` inline; this is the pre-measurement fallback).
-    // Sits beneath the scoreboard (z-index 4) so it never overlaps on top of it.
-    position: sticky;
-    top: 52px;
-    z-index: 3;
-    margin: -$space-sm 0 $space-xl;
-    padding: $space-lg $space-xl;
-    border: 2px solid rgba($info-light, 0.9);
-    border-radius: $radius-lg;
-    overflow: hidden;
-    background: linear-gradient(90deg, rgba($info, 0.34), rgba($bg-card, 0.98) 42%), $bg-card;
-    box-shadow:
-      0 0 0 1px rgba($info-light, 0.16),
-      0 16px 34px rgba(0, 0, 0, 0.36),
-      0 0 28px rgba($info, 0.22);
-
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 0 auto 0 0;
-      width: 5px;
-      border-radius: $radius-lg 0 0 $radius-lg;
-      background: $info-light;
-      box-shadow: 0 0 16px rgba($info-light, 0.7);
-    }
-  }
-
-  &StatusHeader {
-    display: flex;
-    align-items: center;
-    gap: $space-md;
-    min-width: 0;
-  }
-
-  &Pulse {
-    width: 14px;
-    height: 14px;
-    border-radius: 999px;
-    background: $info-light;
-    box-shadow: 0 0 0 0 rgba($info-light, 0.55);
-    animation: gameAutofillPulse 1.4s ease-out infinite;
-    flex-shrink: 0;
-  }
-
-  &StatusText {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: $space-xs;
-
-    strong {
-      color: var(--app-text-strong, #{$text-bright});
-      font-size: $font-lg;
-      font-weight: 700;
-      line-height: 1.2;
-    }
-
-    span {
-      color: var(--app-text, #{$text-body});
-      font-size: $font-base;
-      line-height: 1.25;
-      overflow-wrap: anywhere;
-    }
-  }
-
-  &Progress {
-    width: 100%;
-    height: 10px;
-    overflow: hidden;
-    border: 1px solid rgba($info-light, 0.35);
-    border-radius: 999px;
-    background: rgba($bg-page, 0.95);
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
-
-    &::-webkit-progress-bar {
-      background: rgba($bg-page, 0.95);
-    }
-
-    &::-webkit-progress-value {
-      border-radius: 999px;
-      background: linear-gradient(90deg, $info-light, $accent-light);
-      box-shadow: 0 0 12px rgba($info-light, 0.55);
-    }
-
-    &::-moz-progress-bar {
-      border-radius: 999px;
-      background: linear-gradient(90deg, $info-light, $accent-light);
-      box-shadow: 0 0 12px rgba($info-light, 0.55);
-    }
-  }
-
-  &LockedRegion {
-    opacity: 0.62;
-
-    :is(button, a, input, select, textarea, [role='button']) {
-      pointer-events: none;
-    }
-
-    button,
-    input,
-    select,
-    textarea {
-      cursor: not-allowed;
-    }
-  }
+.gameAutofillProgressBar.gameAutofillProgressBar {
+  background: $accent !important;
+  background-color: $accent !important;
 }
 
-@keyframes gameAutofillPulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba($info-light, 0.5);
+.gameAutofillLockedRegion {
+  opacity: 0.62;
+
+  :is(button, a, input, select, textarea, [role='button']) {
+    pointer-events: none;
   }
 
-  70% {
-    box-shadow: 0 0 0 10px rgba($info-light, 0);
-  }
-
-  100% {
-    box-shadow: 0 0 0 0 rgba($info-light, 0);
+  button,
+  input,
+  select,
+  textarea {
+    cursor: not-allowed;
   }
 }
 
@@ -1432,10 +1325,6 @@
   .nhlGoalieCheckerTeamHeader {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .gameAutofillStatusHeader {
-    align-items: flex-start;
   }
 
   .nhlGoalieChecker {

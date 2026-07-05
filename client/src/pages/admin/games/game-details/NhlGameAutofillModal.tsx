@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { toast } from 'react-toastify';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import type { GameRecord } from '@/hooks/useGames';
@@ -14,6 +13,7 @@ import {
   nhlAutofillApiError,
   type NhlAutofillProgress,
 } from './nhlGameAutofill';
+import { startGameAutofillProgressToast } from './gameAutofillToast';
 import styles from './GameDetailsPage.module.scss';
 
 interface Props {
@@ -29,7 +29,6 @@ type FormValues = {
 };
 
 const FORM_ID = 'nhl-game-autofill-form';
-const AUTOFILL_FAILURE_TOAST_MS = 12000;
 const AUTOFILL_REFRESH_DEBOUNCE_MS = 300;
 
 const NhlGameAutofillModal = ({
@@ -112,6 +111,10 @@ const NhlGameAutofillModal = ({
     if (!input || game.status === 'final') return;
 
     setFilling(true);
+    const progressToast = startGameAutofillProgressToast({
+      leagueLabel: 'NHL',
+      progressClassName: styles.gameAutofillProgressBar,
+    });
     onAutofillChange?.({
       step: 'start',
       message: 'Starting NHL auto-fill...',
@@ -120,27 +123,31 @@ const NhlGameAutofillModal = ({
 
     try {
       const result = await autofillGameFromNhlGamecenter(game, input, {
-        onProgress: handleAutofillProgress,
+        onProgress: (progress) => {
+          progressToast.update(progress);
+          handleAutofillProgress(progress);
+        },
       });
       await flushGameDetailRefresh();
       await queryClient.invalidateQueries({ queryKey: ['games'] });
-      toast.success(
-        `Filled NHL game ${result.summary.gameId}: ${result.summary.goalsCreated} goals, ${result.summary.rosterPlayers} roster players.`,
+      const successMessage = `Filled NHL game ${result.summary.gameId}: ${result.summary.goalsCreated} goals, ${result.summary.rosterPlayers} roster players.`;
+      progressToast.finish(
+        result.warnings.length > 0 ? 'warning' : 'success',
+        result.warnings.length > 0
+          ? `${successMessage} ${result.warnings.join(' ')}`
+          : successMessage,
       );
-      if (result.warnings.length > 0) {
-        toast.error(result.warnings.join(' '), { autoClose: AUTOFILL_FAILURE_TOAST_MS });
-      }
     } catch (err) {
       if (isManualPlayerMovementRequiredError(err)) {
         onManualMoveReport?.(err.report);
-        toast.error(
+        progressToast.finish(
+          'error',
           'Auto-fill needs manual player updates before it can continue. Review the report modal.',
-          { autoClose: AUTOFILL_FAILURE_TOAST_MS },
         );
         return;
       }
       const message = nhlAutofillApiError(err, 'Unable to auto-fill game from NHL data.');
-      toast.error(message, { autoClose: AUTOFILL_FAILURE_TOAST_MS });
+      progressToast.finish('error', message);
     } finally {
       setFilling(false);
       onAutofillChange?.(null);
