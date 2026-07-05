@@ -9,6 +9,7 @@ import Card from '@/components/Card/Card';
 import Chip from '@/components/Chip/Chip';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Divider from '@/components/Divider/Divider';
+import Icon from '@/components/Icon/Icon';
 import Section from '@/components/Section/Section';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
 import ListItem from '@/components/ListItem/ListItem';
@@ -1580,6 +1581,16 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     currentLeagueCode === 'NHL' &&
     player.league_player_number
   );
+  const copyLeaguePlayerNumber = async () => {
+    if (!player.league_player_number) return;
+
+    try {
+      await copyTextToClipboard(player.league_player_number);
+      toast.success('League player number copied.');
+    } catch {
+      toast.error('Failed to copy league player number.');
+    }
+  };
   const playerActionItems = [
     ...(canAutoFillNhlPlayer
       ? [
@@ -1796,6 +1807,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           <InfoCell
             label="League Player Number"
             value={player.league_player_number}
+            onCopy={copyLeaguePlayerNumber}
           />
           <InfoCell
             label="Rookie Season"
@@ -2411,11 +2423,59 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 // ── Helper: label/value cell ────────────────────────────────────────────────
-const InfoCell = ({ label, value }: { label: string; value: string | null | undefined }) => (
+const copyTextToClipboard = async (value: string) => {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = value;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  const copied = document.execCommand('copy');
+  document.body.removeChild(textarea);
+
+  if (!copied) throw new Error('Clipboard copy failed');
+};
+
+interface InfoCellProps {
+  label: string;
+  value: string | null | undefined;
+  onCopy?: () => void | Promise<void>;
+}
+
+const InfoCell = ({ label, value, onCopy }: InfoCellProps) => (
   <div className={styles.infoCell}>
     <span className={styles.infoCellLabel}>{label}</span>
     {value ? (
-      <span className={styles.infoCellValue}>{value}</span>
+      onCopy ? (
+        <button
+          type="button"
+          className={styles.infoCellCopyButton}
+          onClick={() => {
+            void onCopy();
+          }}
+          aria-label={`Copy ${label.toLowerCase()} ${value}`}
+          title={`Copy ${label.toLowerCase()}`}
+        >
+          <span className={styles.infoCellValue}>{value}</span>
+          <span
+            className={styles.infoCellCopyIndicator}
+            aria-hidden
+          >
+            <Icon
+              name="clone"
+              size="0.85rem"
+            />
+          </span>
+        </button>
+      ) : (
+        <span className={styles.infoCellValue}>{value}</span>
+      )
     ) : (
       <span className={styles.infoCellMuted}>—</span>
     )}

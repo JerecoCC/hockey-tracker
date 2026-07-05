@@ -427,6 +427,22 @@ describe('PlayerDetails info tab', () => {
     expect(container.querySelector('.currentSeasonCards')).toBeInTheDocument();
   });
 
+  it('copies the league player number from the player info card', async () => {
+    const user = userEvent.setup();
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'Copy league player number 8478402' }));
+
+    expect(writeText).toHaveBeenCalledWith('8478402');
+    expect(mockedToast.success).toHaveBeenCalledWith('League player number copied.');
+  });
+
   it('uses public breadcrumbs in user mode', () => {
     render(<PlayerDetails mode="user" />);
 
