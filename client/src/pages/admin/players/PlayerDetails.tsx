@@ -894,7 +894,15 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   } = usePlayerCurrentSeasonStats(id, { mode, seasonId: seasonStatsSeasonId });
   const { lastFiveGames, loading: lastFiveGamesLoading } = usePlayerLastFiveGames(id, { mode });
   const { team: teamDetails } = useTeamDetails(teamId, { mode });
-  useDocumentIcon(teamDetails?.icon);
+  const documentIcon =
+    teamDetails?.icon ??
+    teamDetails?.logo ??
+    teamDetails?.logo_dark ??
+    teamDetails?.logo_light ??
+    player?.team_logo ??
+    player?.team_logo_dark ??
+    player?.team_logo_light;
+  useDocumentIcon(documentIcon);
   const adminPlayerId = isAdminView ? (id ?? null) : null;
   const { stints } = usePlayerTradeHistory(adminPlayerId);
   const { byStint: jerseyHistoryByStint } = useJerseyHistory(adminPlayerId);

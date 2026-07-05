@@ -645,11 +645,36 @@ describe('GET /api/admin/players/:id/game-logs', () => {
 // GET /api/admin/players/:id
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/players/:id', () => {
-  it('returns the player', async () => {
-    sql.mockResolvedValueOnce([PLAYER]);
+  it('returns the player with latest team logo fields', async () => {
+    sql.mockResolvedValueOnce([{
+      ...PLAYER,
+      player_team_id: 'player-team-1',
+      team_id: 'team-1',
+      jersey_number: 99,
+      is_prospect: false,
+      team_name: 'Oilers',
+      team_code: 'EDM',
+      team_logo: 'oilers.svg',
+      team_logo_dark: 'oilers-dark.svg',
+      team_logo_light: 'oilers-light.svg',
+      primary_color: '#ff4500',
+      text_color: '#ffffff',
+    }]);
     const res = await request(app).get('/api/admin/players/player-1');
     expect(res.status).toBe(200);
     expect(res.body.id).toBe('player-1');
+    expect(res.body).toMatchObject({
+      team_id: 'team-1',
+      team_code: 'EDM',
+      team_logo: 'oilers.svg',
+      team_logo_dark: 'oilers-dark.svg',
+      team_logo_light: 'oilers-light.svg',
+    });
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('latest_ti.logo AS team_logo');
+    expect(queryText).toContain('latest_ti.logo_dark AS team_logo_dark');
+    expect(queryText).toContain('latest_ti.logo_light AS team_logo_light');
+    expect(queryText).toContain('WHERE pt.player_id = p.id');
   });
 
   it('returns 404 when not found', async () => {

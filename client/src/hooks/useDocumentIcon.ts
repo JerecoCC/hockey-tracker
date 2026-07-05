@@ -2,15 +2,22 @@ import { useEffect } from 'react';
 
 const MANAGED_ICON_ATTR = 'data-hockey-tracker-document-icon';
 
+const iconPath = (href: string) => {
+  try {
+    return new URL(href, window.location.href).pathname.toLowerCase();
+  } catch {
+    return href.toLowerCase().split('?')[0];
+  }
+};
+
 const iconType = (href: string) => {
-  const path = (() => {
-    try {
-      return new URL(href, window.location.href).pathname;
-    } catch {
-      return href;
-    }
-  })();
-  return path.toLowerCase().endsWith('.ico') ? 'image/x-icon' : 'image/png';
+  const path = iconPath(href);
+  if (path.endsWith('.ico')) return 'image/x-icon';
+  if (path.endsWith('.svg')) return 'image/svg+xml';
+  if (path.endsWith('.webp')) return 'image/webp';
+  if (path.endsWith('.jpg') || path.endsWith('.jpeg')) return 'image/jpeg';
+  if (path.endsWith('.gif')) return 'image/gif';
+  return 'image/png';
 };
 
 const iconHref = (href: string) => {
@@ -37,7 +44,7 @@ const useDocumentIcon = (href: string | null | undefined) => {
     findIconLinks().forEach((link) => link.remove());
 
     const link = document.createElement('link');
-    link.rel = href.toLowerCase().split('?')[0].endsWith('.ico') ? 'shortcut icon' : 'icon';
+    link.rel = iconPath(href).endsWith('.ico') ? 'shortcut icon' : 'icon';
     link.type = iconType(href);
     link.href = iconHref(href);
     link.setAttribute(MANAGED_ICON_ATTR, 'true');

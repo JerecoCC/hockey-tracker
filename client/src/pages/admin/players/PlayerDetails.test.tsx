@@ -12,6 +12,7 @@ import useTeamDetails from '@/hooks/useTeamDetails';
 import useSeasons from '@/hooks/useSeasons';
 import useTeams from '@/hooks/useTeams';
 import useTabState from '@/hooks/useTabState';
+import useDocumentIcon from '@/hooks/useDocumentIcon';
 import {
   useJerseyHistory,
   usePlayerPhotoHistory,
@@ -51,6 +52,7 @@ jest.mock('@/hooks/useTeamDetails', () => jest.fn());
 jest.mock('@/hooks/useSeasons', () => jest.fn());
 jest.mock('@/hooks/useTeams', () => jest.fn());
 jest.mock('@/hooks/useTabState', () => jest.fn());
+jest.mock('@/hooks/useDocumentIcon', () => jest.fn());
 jest.mock('@/hooks/useTeamPlayers', () => ({
   usePlayerTradeHistory: jest.fn(),
   useJerseyHistory: jest.fn(),
@@ -174,6 +176,7 @@ const mockUseTeamDetails = useTeamDetails as jest.Mock;
 const mockUseSeasons = useSeasons as jest.Mock;
 const mockUseTeams = useTeams as jest.Mock;
 const mockUseTabState = useTabState as jest.Mock;
+const mockUseDocumentIcon = useDocumentIcon as jest.Mock;
 const mockUsePlayerTradeHistory = usePlayerTradeHistory as jest.Mock;
 const mockUseJerseyHistory = useJerseyHistory as jest.Mock;
 const mockUsePlayerPhotoHistory = usePlayerPhotoHistory as jest.Mock;
@@ -346,6 +349,51 @@ describe('PlayerDetails info tab', () => {
     unmount();
 
     expect(document.title).toBe('Hockey Tracker');
+  });
+
+  it("uses the player's team logo as the favicon on league-scoped player routes", () => {
+    mockUsePlayerRouteLookup.mockReturnValue({
+      routeLookup: {
+        player_id: 'player-1',
+        team_id: null,
+        league_id: 'league-1',
+        league_code: 'NHL',
+        team_code: null,
+        player_slug: '8478402',
+      },
+      loading: false,
+    });
+    mockUseTeamDetails.mockReturnValue({ team: null });
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8478402',
+        first_name: 'John',
+        last_name: 'Smith',
+        photo: null,
+        date_of_birth: '1997-01-13',
+        birth_city: 'Edmonton',
+        birth_country: 'CAN',
+        height_cm: 185,
+        weight_lbs: 195,
+        position: 'C',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        team_id: 'team-1',
+        team_name: 'Toronto Maple Leafs',
+        team_code: 'TOR',
+        team_logo: '/leafs-logo.png',
+        team_logo_dark: '/leafs-dark.png',
+        team_logo_light: '/leafs-light.png',
+      },
+      stats: [],
+      loading: false,
+    });
+
+    render(<PlayerDetails />);
+
+    expect(mockUseDocumentIcon).toHaveBeenCalledWith('/leafs-logo.png');
   });
 
   it('renders the titled player info card and combined selected-season stats section', () => {

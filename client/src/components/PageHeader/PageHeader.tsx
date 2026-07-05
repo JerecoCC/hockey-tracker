@@ -20,6 +20,7 @@ const getTitle = (pathname: string): string => {
   if (EXACT_TITLES[pathname]) return EXACT_TITLES[pathname];
   if (/\/admin\/leagues\/[^/]+\/teams\/[^/]+\/players\/[^/]+/.test(pathname))
     return 'Player Details';
+  if (/\/admin\/leagues\/[^/]+\/players\/[^/]+/.test(pathname)) return 'Player Details';
   if (/\/admin\/leagues\/[^/]+\/teams\//.test(pathname)) return 'Team Details';
   if (/\/admin\/leagues\/[^/]+\/seasons\/[^/]+\/playoffs\//.test(pathname)) return 'Series Details';
   if (/\/admin\/leagues\/[^/]+\/seasons\/[^/]+\/games\//.test(pathname)) return 'Game Details';

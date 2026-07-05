@@ -2015,14 +2015,67 @@ router.get('/:id', async (req, res) => {
   try {
     const rows = await sql`
       SELECT
-        id, league_player_number, first_name, last_name, photo,
-        date_of_birth::text AS date_of_birth,
-        birth_city, birth_country,
-        height_cm, weight_lbs, position, shoots,
-        rookie_season_id,
-        (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
-        status, is_active, created_at
-      FROM players WHERE id = ${id}
+        p.id,
+        p.league_player_number,
+        p.first_name,
+        p.last_name,
+        p.photo,
+        p.date_of_birth::text AS date_of_birth,
+        p.birth_city,
+        p.birth_country,
+        p.height_cm,
+        p.weight_lbs,
+        p.position,
+        p.shoots,
+        p.rookie_season_id,
+        (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
+        p.status,
+        p.is_active,
+        p.created_at,
+        latest_pt.id AS player_team_id,
+        latest_pt.team_id,
+        COALESCE(latest_jnh.jersey_number, latest_pt.jersey_number) AS jersey_number,
+        latest_pt.is_prospect,
+        latest_ti.name AS team_name,
+        latest_ti.code AS team_code,
+        latest_ti.logo AS team_logo,
+        latest_ti.logo_dark AS team_logo_dark,
+        latest_ti.logo_light AS team_logo_light,
+        latest_t.primary_color,
+        latest_t.text_color
+      FROM players p
+      LEFT JOIN LATERAL (
+        SELECT pt.*
+        FROM player_teams pt
+        WHERE pt.player_id = p.id
+        ORDER BY
+          CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+          COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+          pt.created_at DESC,
+          pt.id DESC
+        LIMIT 1
+      ) latest_pt ON TRUE
+      LEFT JOIN teams latest_t ON latest_t.id = latest_pt.team_id
+      LEFT JOIN LATERAL (
+        SELECT
+          name,
+          code,
+          team_logo_default(logo_dark, logo_light) AS logo,
+          team_logo_dark(logo_dark, logo_light) AS logo_dark,
+          team_logo_light(logo_dark, logo_light) AS logo_light
+        FROM team_iterations
+        WHERE team_id = latest_pt.team_id
+        ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
+        LIMIT 1
+      ) latest_ti ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT jersey_number
+        FROM jersey_number_history
+        WHERE player_teams_id = latest_pt.id
+        ORDER BY effective_from DESC, id DESC
+        LIMIT 1
+      ) latest_jnh ON TRUE
+      WHERE p.id = ${id}
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Player not found' });
     return res.json(rows[0]);
