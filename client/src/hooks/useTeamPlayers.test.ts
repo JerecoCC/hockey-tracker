@@ -217,6 +217,54 @@ describe('useStintActions', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['players'] });
   });
 
+  it('deletes a jersey history row and refreshes related player data', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+    mockedAxios.delete.mockResolvedValueOnce({});
+
+    const { result } = renderHook(() => useStintActions('player-1'), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(result.current.deleteJerseyHistoryEntry('jersey-1')).resolves.toBe(true);
+    });
+
+    expect(mockedAxios.delete).toHaveBeenCalledWith(
+      '/api/admin/player-teams/history/jerseys/jersey-1',
+      { headers: { Authorization: 'Bearer test-token' } },
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['jersey-history', 'player-1'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['player-trade-history', 'player-1'],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['players'] });
+  });
+
+  it('deletes a season photo and refreshes related player data', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+    mockedAxios.delete.mockResolvedValueOnce({});
+
+    const { result } = renderHook(() => useStintActions('player-1'), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(result.current.deletePlayerPhoto('photo-1')).resolves.toBe(true);
+    });
+
+    expect(mockedAxios.delete).toHaveBeenCalledWith(
+      '/api/admin/player-teams/history/photos/photo-1',
+      { headers: { Authorization: 'Bearer test-token' } },
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['player-photo-history', 'player-1'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['player-trade-history', 'player-1'],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['players'] });
+  });
+
   it('deletes a stint and refreshes related player data', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');

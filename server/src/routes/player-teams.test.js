@@ -310,9 +310,9 @@ describe('PATCH /api/admin/player-teams', () => {
         id: 'stint-1',
         jersey_number: 43,
         effective_start: '2025-12-01',
+        season_start: '2025-10-07',
       }])
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ start_date: '2025-10-07' }])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{
@@ -337,9 +337,10 @@ describe('PATCH /api/admin/player-teams', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.jersey_number).toBe(19);
-    expect(sql.mock.calls[2][0].join(' ')).toContain(
-      'SELECT seasons.start_date::text AS start_date FROM seasons',
+    expect(sql.mock.calls[0][0].join(' ')).toContain(
+      'COALESCE(pt.start_date, s.start_date, pt.created_at::date)::text AS effective_start',
     );
+    expect(sql.mock.calls[2][3]).toBe('2025-10-07');
   });
 
   it('updates prospect status without creating a new stint', async () => {
@@ -686,6 +687,36 @@ describe('PATCH /api/admin/player-teams/history/jerseys/:id', () => {
   });
 });
 
+describe('DELETE /api/admin/player-teams/history/jerseys/:id', () => {
+  it('deletes a jersey history row and syncs the latest stint jersey', async () => {
+    const row = {
+      id: 'j-1',
+      player_teams_id: 'stint-1',
+      jersey_number: 72,
+      effective_from: '2026-01-25',
+    };
+    sql.mockResolvedValueOnce([row]);
+
+    const res = await request(app).delete('/api/admin/player-teams/history/jerseys/j-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(row);
+    expect(sql).toHaveBeenCalledTimes(1);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('DELETE FROM jersey_number_history');
+    expect(queryText).toContain('UPDATE player_teams');
+  });
+
+  it('returns 404 when the jersey history row is missing', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app).delete('/api/admin/player-teams/history/jerseys/missing');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/jersey history row not found/i);
+  });
+});
+
 describe('GET /api/admin/player-teams/history/:playerId/photos', () => {
   it('returns player photo history rows unchanged', async () => {
     const rows = [{
@@ -737,5 +768,35 @@ describe('POST /api/admin/player-teams/history/:playerId/photos', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.id).toBe('photo-1');
+  });
+});
+
+describe('DELETE /api/admin/player-teams/history/photos/:id', () => {
+  it('deletes a player photo row', async () => {
+    const row = {
+      id: 'photo-1',
+      player_id: 'player-1',
+      team_id: 'team-1',
+      season_id: 'season-1',
+      photo: 'https://example.com/player.png',
+      created_at: '2024-10-01T00:00:00.000Z',
+    };
+    sql.mockResolvedValueOnce([row]);
+
+    const res = await request(app).delete('/api/admin/player-teams/history/photos/photo-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(row);
+    expect(sql).toHaveBeenCalledTimes(1);
+    expect(sql.mock.calls[0][0].join(' ')).toContain('DELETE FROM player_photos');
+  });
+
+  it('returns 404 when the player photo row is missing', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app).delete('/api/admin/player-teams/history/photos/missing');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/player photo row not found/i);
   });
 });

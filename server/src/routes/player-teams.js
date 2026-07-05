@@ -258,13 +258,17 @@ router.patch('/', async (req, res) => {
     // If jersey_number is changing, record history before the update.
     if (jerseyInBody && jersey_number != null) {
       const [current] = await sql`
-        SELECT id, jersey_number,
-               COALESCE(start_date, created_at::date) AS effective_start
-        FROM player_teams
-        WHERE player_id = ${player_id}
-          AND team_id   = ${team_id}
-          AND season_id = ${season_id}
-          AND end_date IS NULL
+        SELECT
+          pt.id,
+          pt.jersey_number,
+          COALESCE(pt.start_date, s.start_date, pt.created_at::date)::text AS effective_start,
+          s.start_date::text AS season_start
+        FROM player_teams pt
+        LEFT JOIN seasons s ON s.id = pt.season_id
+        WHERE pt.player_id = ${player_id}
+          AND pt.team_id   = ${team_id}
+          AND pt.season_id = ${season_id}
+          AND pt.end_date IS NULL
       `;
       if (current && current.jersey_number !== jersey_number) {
         const changeDate = effective_date;
@@ -273,16 +277,12 @@ router.patch('/', async (req, res) => {
           SELECT 1 FROM jersey_number_history WHERE player_teams_id = ${current.id} LIMIT 1
         `;
         if (existingHistory.length === 0 && current.jersey_number != null) {
-          // If the effective_date is backdated before the stint's natural start, use the
-          // season start date so the old jersey's entry always sorts before the new one.
+          // Prefer the roster/season start for the old number. If the change
+          // predates that, fall back to season start so the old entry can sort
+          // before the new one.
           let seedDate = current.effective_start;
           if (seedDate >= changeDate) {
-            const [season] = await sql`
-              SELECT seasons.start_date::text AS start_date FROM seasons
-              JOIN player_teams ON player_teams.season_id = seasons.id
-              WHERE player_teams.id = ${current.id}
-            `;
-            seedDate = season?.start_date ?? changeDate;
+            seedDate = current.season_start ?? changeDate;
           }
           await sql`
             INSERT INTO jersey_number_history (player_teams_id, jersey_number, effective_from)
@@ -534,6 +534,53 @@ router.patch('/history/jerseys/:id', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// DELETE /api/admin/player-teams/history/jerseys/:id
+// Deletes a stored jersey_number_history row and syncs the active player_teams
+// jersey to the remaining latest dated history entry for that stint.
+// ---------------------------------------------------------------------------
+router.delete('/history/jerseys/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const rows = await sql`
+      WITH deleted AS (
+        DELETE FROM jersey_number_history
+        WHERE id = ${id}
+        RETURNING id, player_teams_id, jersey_number, effective_from::text AS effective_from
+      ),
+      latest AS (
+        SELECT
+          deleted.player_teams_id,
+          latest_history.jersey_number
+        FROM deleted
+        LEFT JOIN LATERAL (
+          SELECT jersey_number
+          FROM jersey_number_history
+          WHERE player_teams_id = deleted.player_teams_id
+          ORDER BY effective_from DESC, created_at DESC, id DESC
+          LIMIT 1
+        ) latest_history ON TRUE
+      ),
+      synced AS (
+        UPDATE player_teams pt
+        SET jersey_number = latest.jersey_number
+        FROM latest
+        WHERE pt.id = latest.player_teams_id
+        RETURNING pt.id
+      )
+      SELECT * FROM deleted
+    `;
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Jersey history row not found' });
+    }
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('jersey history delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/player-teams/history/:playerId/photos
 // Returns player photo rows, independent from player_teams stints.
 // ---------------------------------------------------------------------------
@@ -601,6 +648,29 @@ router.post('/history/:playerId/photos', async (req, res) => {
     return res.status(201).json(rows[0]);
   } catch (err) {
     console.error('player photo upsert error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/player-teams/history/photos/:id
+// Deletes one saved player photo record.
+// ---------------------------------------------------------------------------
+router.delete('/history/photos/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const rows = await sql`
+      DELETE FROM player_photos
+      WHERE id = ${id}
+      RETURNING id, player_id, team_id, season_id, photo, created_at
+    `;
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Player photo row not found' });
+    }
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('player photo delete error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

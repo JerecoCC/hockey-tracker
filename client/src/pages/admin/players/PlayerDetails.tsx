@@ -539,9 +539,9 @@ const buildJerseyHistoryRows = (
   }));
 
   if (
+    entries.length === 0 &&
     stint.jersey_number != null &&
-    stint.start_date &&
-    !entries.some((entry) => entry.effectiveFrom === stint.start_date)
+    stint.start_date
   ) {
     entries.push({
       id: `assumed-${stint.id}`,
@@ -608,6 +608,8 @@ const StintHistoryDetails = ({
   onPreviewPhoto,
   onChangePhoto,
   onEditJerseyHistoryEntry,
+  onDeletePhotoEntry,
+  onDeleteJerseyHistoryEntry,
 }: {
   stint: PlayerStintRecord;
   jerseyHistory: JerseyHistoryEntry[];
@@ -623,6 +625,8 @@ const StintHistoryDetails = ({
     mode?: PhotoModalMode,
   ) => void;
   onEditJerseyHistoryEntry: (entry: JerseyHistoryEntry) => void;
+  onDeletePhotoEntry: (entry: PlayerPhotoEntry) => void;
+  onDeleteJerseyHistoryEntry: (entry: JerseyHistoryEntry) => void;
 }) => {
   const jerseyRows = buildJerseyHistoryRows(
     stint,
@@ -672,6 +676,13 @@ const StintHistoryDetails = ({
                       ariaLabel: 'Edit season photo',
                       onClick: () => onChangePhoto(stint, entry.season_id, 'edit'),
                     },
+                    {
+                      icon: 'delete',
+                      intent: 'danger' as const,
+                      tooltip: 'Delete season photo',
+                      ariaLabel: 'Delete season photo',
+                      onClick: () => onDeletePhotoEntry(entry),
+                    },
                   ]}
                   ariaLabel={`Preview ${entry.season_name ?? 'season'} photo`}
                   onClick={() => onPreviewPhoto(entry.photo)}
@@ -718,6 +729,13 @@ const StintHistoryDetails = ({
                             icon: 'edit',
                             tooltip: 'Edit jersey number change',
                             onClick: () => onEditJerseyHistoryEntry(entry.historyEntry!),
+                          },
+                          {
+                            icon: 'delete',
+                            intent: 'danger' as const,
+                            tooltip: 'Delete jersey number change',
+                            ariaLabel: 'Delete jersey number change',
+                            onClick: () => onDeleteJerseyHistoryEntry(entry.historyEntry!),
                           },
                         ]
                       : undefined
@@ -892,7 +910,9 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     deleteStint,
     changeJerseyNumber,
     updateJerseyHistoryEntry,
+    deleteJerseyHistoryEntry,
     changePlayerPhoto,
+    deletePlayerPhoto,
     uploadStintPhoto,
     saving: stintSaving,
   } = useStintActions(adminPlayerId);
@@ -910,7 +930,10 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const [changingJerseyStint, setChangingJerseyStint] = useState<PlayerStintRecord | null>(null);
   const [editingJerseyHistoryEntry, setEditingJerseyHistoryEntry] =
     useState<JerseyHistoryEntry | null>(null);
+  const [deletingJerseyHistoryEntry, setDeletingJerseyHistoryEntry] =
+    useState<JerseyHistoryEntry | null>(null);
   const [changingPhotoStint, setChangingPhotoStint] = useState<PlayerStintRecord | null>(null);
+  const [deletingPhotoEntry, setDeletingPhotoEntry] = useState<PlayerPhotoEntry | null>(null);
   const [changingPhotoSeasonId, setChangingPhotoSeasonId] = useState<string | null>(null);
   const [changingPhotoMode, setChangingPhotoMode] = useState<PhotoModalMode>('set');
   const [photoPreviewSrc, setPhotoPreviewSrc] = useState<string | null>(null);
@@ -988,6 +1011,18 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     if (!deletingStint) return;
     const ok = await deleteStint(deletingStint.id);
     if (ok) setDeletingStint(null);
+  };
+
+  const handleDeletePhotoEntry = async () => {
+    if (!deletingPhotoEntry) return;
+    const ok = await deletePlayerPhoto(deletingPhotoEntry.id);
+    if (ok) setDeletingPhotoEntry(null);
+  };
+
+  const handleDeleteJerseyHistoryEntry = async () => {
+    if (!deletingJerseyHistoryEntry) return;
+    const ok = await deleteJerseyHistoryEntry(deletingJerseyHistoryEntry.id);
+    if (ok) setDeletingJerseyHistoryEntry(null);
   };
 
   const movePlayer = async (
@@ -2131,6 +2166,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                                     onPreviewPhoto={(src) => setPhotoPreviewSrc(src)}
                                     onChangePhoto={openChangePhotoModal}
                                     onEditJerseyHistoryEntry={setEditingJerseyHistoryEntry}
+                                    onDeletePhotoEntry={setDeletingPhotoEntry}
+                                    onDeleteJerseyHistoryEntry={setDeletingJerseyHistoryEntry}
                                   />
                                 </Accordion>
                               </li>
@@ -2242,6 +2279,48 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             onClose={closeChangePhotoModal}
             uploadPhoto={uploadStintPhoto}
             changePlayerPhoto={changePlayerPhoto}
+          />
+
+          <ConfirmModal
+            open={!!deletingPhotoEntry}
+            title="Delete Season Photo"
+            body={
+              deletingPhotoEntry ? (
+                <>
+                  Delete the {deletingPhotoEntry.season_name ?? 'selected season'} photo record?{' '}
+                  This removes the saved season photo from the player&apos;s history.
+                </>
+              ) : (
+                ''
+              )
+            }
+            confirmLabel="Delete Season Photo"
+            confirmIcon="delete"
+            variant="danger"
+            busy={stintSaving}
+            onConfirm={handleDeletePhotoEntry}
+            onCancel={() => setDeletingPhotoEntry(null)}
+          />
+
+          <ConfirmModal
+            open={!!deletingJerseyHistoryEntry}
+            title="Delete Jersey Number Change"
+            body={
+              deletingJerseyHistoryEntry ? (
+                <>
+                  Delete the #{deletingJerseyHistoryEntry.jersey_number} jersey number record from{' '}
+                  {formatShortDate(deletingJerseyHistoryEntry.effective_from)}?
+                </>
+              ) : (
+                ''
+              )
+            }
+            confirmLabel="Delete Jersey Number Change"
+            confirmIcon="delete"
+            variant="danger"
+            busy={stintSaving}
+            onConfirm={handleDeleteJerseyHistoryEntry}
+            onCancel={() => setDeletingJerseyHistoryEntry(null)}
           />
 
           <ConfirmModal

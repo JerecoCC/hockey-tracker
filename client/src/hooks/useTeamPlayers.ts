@@ -309,6 +309,30 @@ export const useStintActions = (playerId: string | null) => {
     }
   };
 
+  const deleteJerseyHistoryEntry = async (entryId: string): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await axios.delete(`${API}/admin/player-teams/history/jerseys/${entryId}`, {
+        headers: authHeaders(),
+      });
+      toast.success('Jersey history deleted!');
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['jersey-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete jersey history'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const changePlayerPhoto = async (
     stint: PlayerStintRecord,
     seasonId: string,
@@ -343,13 +367,39 @@ export const useStintActions = (playerId: string | null) => {
     }
   };
 
+  const deletePlayerPhoto = async (photoId: string): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await axios.delete(`${API}/admin/player-teams/history/photos/${photoId}`, {
+        headers: authHeaders(),
+      });
+      toast.success('Season photo deleted!');
+      await queryClient.invalidateQueries({ queryKey: ['player-photo-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete season photo'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return {
     createStint,
     updateStint,
     deleteStint,
     changeJerseyNumber,
     updateJerseyHistoryEntry,
+    deleteJerseyHistoryEntry,
     changePlayerPhoto,
+    deletePlayerPhoto,
     uploadStintPhoto,
     saving,
   };

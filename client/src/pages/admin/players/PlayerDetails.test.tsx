@@ -310,7 +310,9 @@ beforeEach(() => {
     deleteStint: jest.fn(),
     changeJerseyNumber: jest.fn(),
     updateJerseyHistoryEntry: jest.fn(),
+    deleteJerseyHistoryEntry: jest.fn(),
     changePlayerPhoto: jest.fn(),
+    deletePlayerPhoto: jest.fn(),
     uploadStintPhoto: jest.fn(),
     saving: false,
   });
@@ -603,6 +605,159 @@ describe('PlayerDetails info tab', () => {
 
     expect(screen.getByRole('dialog', { name: 'Image Preview' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'John Smith' })).toHaveAttribute('src', '/photo.jpg');
+  });
+
+  it('does not add an assumed current jersey row when saved history exists', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-1',
+          team_id: 'team-1',
+          season_id: 'season-1',
+          team: {
+            id: 'team-1',
+            name: 'Toronto Maple Leafs',
+            code: 'TOR',
+            logo: null,
+            primary_color: '#003e7e',
+            text_color: '#ffffff',
+          },
+          jersey_number: 28,
+          is_prospect: false,
+          position: 'C',
+          acquisition_type: 'trade',
+          start_date: '2025-10-07',
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+    mockUseJerseyHistory.mockReturnValue({
+      byStint: {
+        'stint-1': [
+          {
+            id: 'jersey-original',
+            player_teams_id: 'stint-1',
+            jersey_number: 71,
+            effective_from: '2026-02-20',
+          },
+          {
+            id: 'jersey-current',
+            player_teams_id: 'stint-1',
+            jersey_number: 28,
+            effective_from: '2026-03-06',
+          },
+        ],
+      },
+    });
+
+    const { container } = render(<PlayerDetails />);
+    const historyList = container.querySelector('.stintList') as HTMLElement;
+    const stintAccordion = within(historyList)
+      .getByText('Toronto Maple Leafs')
+      .closest('.stintAccordion') as HTMLElement;
+
+    await user.click(within(stintAccordion).getByRole('button', { name: 'Expand' }));
+
+    const jerseySection = within(stintAccordion)
+      .getByText('Jersey Numbers')
+      .closest('.stintHistorySection') as HTMLElement;
+    expect(within(jerseySection).getAllByRole('listitem')).toHaveLength(2);
+    expect(within(jerseySection).getByText('Mar 6, 2026 - Present')).toBeInTheDocument();
+    expect(within(jerseySection).getByText('Feb 20, 2026 - Mar 5, 2026')).toBeInTheDocument();
+    expect(within(jerseySection).queryByText('Oct 7, 2025 - Feb 19, 2026')).not.toBeInTheDocument();
+  });
+
+  it('deletes season photo and jersey number records from history rows', async () => {
+    const user = userEvent.setup();
+    const deleteJerseyHistoryEntry = jest.fn().mockResolvedValue(true);
+    const deletePlayerPhoto = jest.fn().mockResolvedValue(true);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUseJerseyHistory.mockReturnValue({
+      byStint: {
+        'stint-1': [
+          {
+            id: 'jersey-1',
+            player_teams_id: 'stint-1',
+            jersey_number: 19,
+            effective_from: '2024-10-01',
+          },
+        ],
+      },
+    });
+    mockUsePlayerPhotoHistory.mockReturnValue({
+      photos: [
+        {
+          id: 'photo-1',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          season_id: 'season-1',
+          photo: '/photo.jpg',
+          created_at: '2025-01-01T00:00:00Z',
+          season_name: '2024-25',
+          team_name: 'Toronto Maple Leafs',
+        },
+      ],
+      byTeam: {
+        'team-1': [
+          {
+            id: 'photo-1',
+            player_id: 'player-1',
+            team_id: 'team-1',
+            season_id: 'season-1',
+            photo: '/photo.jpg',
+            created_at: '2025-01-01T00:00:00Z',
+            season_name: '2024-25',
+            team_name: 'Toronto Maple Leafs',
+          },
+        ],
+      },
+    });
+    mockUseStintActions.mockReturnValue({
+      createStint: jest.fn(),
+      updateStint: jest.fn(),
+      deleteStint: jest.fn(),
+      changeJerseyNumber: jest.fn(),
+      updateJerseyHistoryEntry: jest.fn(),
+      deleteJerseyHistoryEntry,
+      changePlayerPhoto: jest.fn(),
+      deletePlayerPhoto,
+      uploadStintPhoto: jest.fn(),
+      saving: false,
+    });
+
+    const { container } = render(<PlayerDetails />);
+    const historyList = container.querySelector('.stintList') as HTMLElement;
+    const stintAccordion = within(historyList)
+      .getByText('Toronto Maple Leafs')
+      .closest('.stintAccordion') as HTMLElement;
+
+    await user.click(within(stintAccordion).getByRole('button', { name: 'Expand' }));
+
+    const photoItem = within(stintAccordion).getByRole('button', {
+      name: 'Preview 2024-25 photo',
+    });
+    await user.click(within(photoItem).getByRole('button', { name: 'Delete season photo' }));
+    await user.click(screen.getByRole('button', { name: 'Delete Season Photo' }));
+
+    await waitFor(() => expect(deletePlayerPhoto).toHaveBeenCalledWith('photo-1'));
+
+    const jerseySection = within(stintAccordion)
+      .getByText('Jersey Numbers')
+      .closest('.stintHistorySection') as HTMLElement;
+    const jerseyItem = within(jerseySection)
+      .getByText('Oct 1, 2024 - Present')
+      .closest('li') as HTMLElement;
+    await user.click(
+      within(jerseyItem).getByRole('button', { name: 'Delete jersey number change' }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Delete Jersey Number Change' }));
+
+    await waitFor(() => expect(deleteJerseyHistoryEntry).toHaveBeenCalledWith('jersey-1'));
   });
 
   it('shows edit actions for jersey records from every collapsed same-team stint', async () => {
