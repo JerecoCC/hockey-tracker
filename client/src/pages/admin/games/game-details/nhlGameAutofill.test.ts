@@ -1076,6 +1076,82 @@ describe('autofillGameFromNhlGamecenter', () => {
     ).toHaveLength(0);
   });
 
+  it('does not treat a same-name player with a different known NHL player id as a cross-team match', async () => {
+    const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          goalies: [
+            {
+              playerId: 8483575,
+              sweaterNumber: 33,
+              firstName: { default: 'Matt' },
+              lastName: { default: 'Murray' },
+              toi: '60:00',
+              shotsAgainst: 21,
+              goalsAgainst: 2,
+            },
+          ],
+        },
+      },
+    };
+    leagueRosterPlayers = [
+      {
+        id: 'matt-murray-veteran',
+        league_player_number: '8476899',
+        first_name: 'Matt',
+        last_name: 'Murray',
+        team_id: 'tor-team',
+        team_code: 'TOR',
+        team_name: 'Toronto Maple Leafs',
+        start_date: '2025-10-01',
+        end_date: null,
+      },
+    ];
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>33</td><td>G</td><td>Matt Murray</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+
+    await expect(autofillGameFromNhlGamecenter(gameWithLeague, '317')).resolves.toMatchObject({
+      warnings: expect.arrayContaining([
+        expect.stringContaining('league player number 8483575'),
+      ]),
+    });
+
+    const playerBulkPosts = mockedAxios.post.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/players/bulk'),
+    );
+    expect(playerBulkPosts).toHaveLength(1);
+    expect(playerBulkPosts[0][1]).toMatchObject({
+      players: [
+        expect.objectContaining({
+          first_name: 'Matt',
+          last_name: 'Murray',
+          league_player_number: '8483575',
+        }),
+      ],
+    });
+    expect(
+      mockedAxios.post.mock.calls.filter(([url]) => String(url).endsWith('/admin/player-teams/trade')),
+    ).toHaveLength(0);
+  });
+
   it('includes jersey changes when a manual move player takes an occupied local number', async () => {
     const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
     boxscoreData = {
