@@ -52,6 +52,8 @@ export interface SeasonRecord {
   has_scheduled_games: boolean;
   /** True while regular-season games are still scheduled or in progress. */
   has_unfinished_regular_games: boolean;
+  /** True when at least one season team has fewer final regular games than games_per_season. */
+  has_incomplete_regular_team_games?: boolean;
   created_at: string;
 }
 

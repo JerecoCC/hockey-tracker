@@ -532,8 +532,8 @@ describe('LeagueDetailsPage – main render', () => {
     const editButton = screen.getByRole('button', { name: 'Edit' });
     expect(editButton).not.toHaveTextContent('Edit');
     expect(editButton).toHaveClass('sm');
-    expect(editButton).toHaveClass('iconOnly');
-    expect(editButton).not.toHaveClass('iconOnlyButton');
+    expect(editButton).toHaveClass('iconOnlyButton');
+    expect(editButton).not.toHaveClass('iconOnly');
   });
 
   it('shows the description placeholder when description is empty', () => {

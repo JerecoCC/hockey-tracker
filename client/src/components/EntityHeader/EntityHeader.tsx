@@ -76,6 +76,7 @@ const EntityHeader = ({
       intent="neutral"
       icon="edit"
       size="sm"
+      iconHeight="button"
       tooltip="Edit"
       aria-label="Edit"
       onClick={onEdit}

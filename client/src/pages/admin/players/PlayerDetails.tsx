@@ -2249,12 +2249,14 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                   intent="neutral"
                   icon="edit"
                   size="sm"
+                  iconHeight="button"
                   tooltip="Edit player"
                   onClick={() => setEditPlayerOpen(true)}
                 />
                 {playerActionItems.length > 0 && (
                   <MoreActionsMenu
                     items={playerActionItems}
+                    iconHeight="button"
                   />
                 )}
               </div>

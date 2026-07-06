@@ -25,6 +25,14 @@ const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const LOCAL_DATE_TIME_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?$/;
 const EXPLICIT_TIME_ZONE_RE = /(?:Z|[+-]\d{2}:?\d{2})$/i;
 const refreshGameStatSnapshots = (gameId) => rebuildGameStats(sql, gameId);
+const scheduleDateKey = (scheduledAt) => ormSql`
+  CASE
+    WHEN ${scheduledAt} IS NULL THEN NULL
+    WHEN (${scheduledAt} AT TIME ZONE 'UTC')::time = TIME '00:00:00'
+      THEN (${scheduledAt} AT TIME ZONE 'UTC')::date
+    ELSE (${scheduledAt} AT TIME ZONE 'America/New_York')::date
+  END
+`;
 
 const normalizeGameEasternTimestamp = (value) => {
   if (value === undefined) return undefined;
@@ -416,15 +424,17 @@ router.get('/', async (req, res) => {
     if (game_type) where.push(eq(gamesTable.gameType, game_type));
     if (status) where.push(eq(gamesTable.status, status));
     if (week) {
+      const gameDateKey = scheduleDateKey(gamesTable.scheduledAt);
       where.push(ormSql`
-        (${gamesTable.scheduledAt} AT TIME ZONE 'America/New_York')::date >= ${week}::date
-        AND (${gamesTable.scheduledAt} AT TIME ZONE 'America/New_York')::date < (${week}::date + INTERVAL '7 days')
+        ${gameDateKey} >= ${week}::date
+        AND ${gameDateKey} < (${week}::date + INTERVAL '7 days')
       `);
     }
     if (month) {
+      const gameDateKey = scheduleDateKey(gamesTable.scheduledAt);
       where.push(ormSql`
-        (${gamesTable.scheduledAt} AT TIME ZONE 'America/New_York')::date >= (${month} || '-01')::date
-        AND (${gamesTable.scheduledAt} AT TIME ZONE 'America/New_York')::date < ((${month} || '-01')::date + INTERVAL '1 month')
+        ${gameDateKey} >= (${month} || '-01')::date
+        AND ${gameDateKey} < ((${month} || '-01')::date + INTERVAL '1 month')
       `);
     }
 

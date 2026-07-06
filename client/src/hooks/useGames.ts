@@ -262,6 +262,9 @@ const updateCachedGame = (
   id: string,
   patch: Partial<GameRecord>,
 ) => {
+  const cachedGame = queryClient.getQueryData<GameRecord | null>(['games', id]);
+  const seasonId = patch.season_id ?? cachedGame?.season_id;
+
   queryClient.setQueryData<GameRecord | null>(['games', id], (game) => mergeGame(game, patch));
 
   const gameListQueries = queryClient
@@ -279,6 +282,11 @@ const updateCachedGame = (
       });
       return changed ? nextGames : games;
     });
+  }
+
+  if (seasonId) {
+    void queryClient.invalidateQueries({ queryKey: ['season', seasonId] });
+    void queryClient.invalidateQueries({ queryKey: ['seasons'] });
   }
 };
 
@@ -328,7 +336,16 @@ const useGames = (filters: Filters = {}, options: { mode?: GamesMode } = {}) => 
     },
   });
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['games'] });
+  const invalidate = (seasonId?: string) =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['games'] }),
+      ...(seasonId
+        ? [
+            queryClient.invalidateQueries({ queryKey: ['season', seasonId] }),
+            queryClient.invalidateQueries({ queryKey: ['seasons'] }),
+          ]
+        : []),
+    ]);
 
   const createGame = async (data: CreateGameData): Promise<GameRecord | null> => {
     setBusy('creating');
@@ -337,7 +354,7 @@ const useGames = (filters: Filters = {}, options: { mode?: GamesMode } = {}) => 
         headers: authHeaders(),
       });
       toast.success('Game created!');
-      await invalidate();
+      await invalidate(game.season_id ?? data.season_id);
       return game;
     } catch (err) {
       toast.error(apiError(err, 'Failed to create game'));
@@ -352,7 +369,7 @@ const useGames = (filters: Filters = {}, options: { mode?: GamesMode } = {}) => 
     try {
       await axios.patch(`${API}/admin/games/${id}`, data, { headers: authHeaders() });
       toast.success('Game updated!');
-      await invalidate();
+      await invalidate(data.season_id ?? filters.seasonId);
       queryClient.invalidateQueries({ queryKey: ['games', id] });
       return true;
     } catch (err) {
@@ -368,7 +385,7 @@ const useGames = (filters: Filters = {}, options: { mode?: GamesMode } = {}) => 
     try {
       await axios.delete(`${API}/admin/games/${id}`, { headers: authHeaders() });
       toast.success('Game deleted!');
-      await invalidate();
+      await invalidate(filters.seasonId);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete game'));
@@ -387,7 +404,7 @@ const useGames = (filters: Filters = {}, options: { mode?: GamesMode } = {}) => 
         ),
       );
       toast.success(`${data.length} game${data.length !== 1 ? 's' : ''} created!`);
-      await invalidate();
+      await invalidate(data.find((game) => game.season_id)?.season_id ?? filters.seasonId);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to create games'));

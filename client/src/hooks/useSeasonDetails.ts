@@ -172,8 +172,11 @@ const useSeasonDetails = (
         { headers: authHeaders() },
       );
       toast.success('Season roster updated!');
-      await queryClient.invalidateQueries({ queryKey: ['season-teams', seasonId] });
-      await queryClient.invalidateQueries({ queryKey: ['season-groups', seasonId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['season', seasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-teams', seasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-groups', seasonId] }),
+      ]);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update season roster'));
@@ -192,7 +195,10 @@ const useSeasonDetails = (
         { headers: authHeaders() },
       );
       toast.success('Season teams updated!');
-      await queryClient.invalidateQueries({ queryKey: ['season-groups', seasonId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['season', seasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-groups', seasonId] }),
+      ]);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update season teams'));
@@ -209,7 +215,10 @@ const useSeasonDetails = (
         headers: authHeaders(),
       });
       toast.success('Reverted to default teams');
-      await queryClient.invalidateQueries({ queryKey: ['season-groups', seasonId] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['season', seasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-groups', seasonId] }),
+      ]);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to reset season teams'));

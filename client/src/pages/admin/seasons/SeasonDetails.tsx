@@ -244,6 +244,7 @@ const SeasonDetailsPage = () => {
   });
 
   const hasUnfinishedRegularGames = season?.has_unfinished_regular_games ?? false;
+  const hasIncompleteRegularTeamGames = season?.has_incomplete_regular_team_games ?? false;
   const effectiveGoalieMinRegularMinutes =
     season?.goalie_min_regular_minutes ??
     season?.league_goalie_min_regular_minutes ??
@@ -920,7 +921,8 @@ const SeasonDetailsPage = () => {
                         : []),
                       ...(season.is_current &&
                       !season.playoffs_started &&
-                      !hasUnfinishedRegularGames
+                      !hasUnfinishedRegularGames &&
+                      !hasIncompleteRegularTeamGames
                         ? [
                             {
                               label: 'End Regular Season',
@@ -950,12 +952,16 @@ const SeasonDetailsPage = () => {
                           intent="neutral"
                           icon="edit"
                           size="sm"
+                          iconHeight="button"
                           tooltip="Edit season"
                           aria-label="Edit season"
                           onClick={() => setShowEditModal(true)}
                         />
                         {moreItems.length > 0 && (
-                          <MoreActionsMenu items={moreItems} />
+                          <MoreActionsMenu
+                            items={moreItems}
+                            iconHeight="button"
+                          />
                         )}
                       </>
                     );

@@ -20,6 +20,8 @@ interface Props {
   size?: 'sm' | 'md';
   /** Optional trigger icon-size override for constrained header contexts. */
   iconSize?: string;
+  /** Optional trigger height override for icon-only button contexts. */
+  iconHeight?: 'default' | 'button' | 'field';
   /** Extra className forwarded to the trigger wrapper. */
   wrapperClassName?: string;
 }
@@ -37,6 +39,7 @@ const MoreActionsMenu = ({
   disabled = false,
   size = 'sm',
   iconSize,
+  iconHeight = 'default',
   wrapperClassName,
 }: Props) => {
   const [open, setOpen] = useState(false);
@@ -154,6 +157,7 @@ const MoreActionsMenu = ({
         icon="more_vert"
         size={size}
         iconSize={iconSize}
+        iconHeight={iconHeight}
         tooltip="More actions"
         disabled={disabled}
         className={styles.trigger}

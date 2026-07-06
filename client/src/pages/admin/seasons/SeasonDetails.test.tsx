@@ -16,6 +16,7 @@ const mockMoreActionsMenu = jest.fn((props: any) => (
     aria-label="More actions"
     className="trigger"
     data-variant={props.variant ?? 'ghost'}
+    data-icon-height={props.iconHeight ?? 'default'}
   />
 ));
 
@@ -234,6 +235,7 @@ beforeEach(() => {
       is_ended: false,
       has_scheduled_games: false,
       has_unfinished_regular_games: false,
+      has_incomplete_regular_team_games: false,
       playoff_format: null,
       scoring_system: '2-1-0',
       league_scoring_system: '2-1-0',
@@ -395,6 +397,7 @@ describe('SeasonDetails standings tab', () => {
         is_ended: false,
         has_scheduled_games: false,
         has_unfinished_regular_games: false,
+        has_incomplete_regular_team_games: false,
         playoff_format: [
           { scope: 'division', method: 'top', count: 3 },
           { scope: 'conference', method: 'wildcard', count: 2 },
@@ -489,18 +492,45 @@ describe('SeasonDetails info tab', () => {
 
     const editButton = screen.getByRole('button', { name: 'Edit season' });
     expect(editButton).not.toHaveTextContent('Edit season');
-    expect(editButton).toHaveClass('sm', 'iconOnly');
-    expect(editButton).not.toHaveClass('iconOnlyButton');
+    expect(editButton).toHaveClass('sm', 'iconOnlyButton');
+    expect(editButton).not.toHaveClass('iconOnly');
 
     expect(mockMoreActionsMenu).toHaveBeenCalledWith(
       expect.objectContaining({
-        items: expect.any(Array),
+        items: expect.arrayContaining([
+          expect.objectContaining({ label: 'End Regular Season' }),
+        ]),
+        iconHeight: 'button',
       }),
     );
     expect(mockMoreActionsMenu.mock.calls[0][0]).not.toHaveProperty('useDefaultButtonStyle');
     const moreButton = screen.getByRole('button', { name: 'More actions' });
     expect(moreButton).toHaveClass('trigger');
     expect(moreButton).toHaveAttribute('data-variant', 'ghost');
+    expect(moreButton).toHaveAttribute('data-icon-height', 'button');
+  });
+
+  it('hides the end regular season action while a team is short of games_per_season', () => {
+    mockUseTabState.mockReturnValue([0, jest.fn()]);
+    const details = mockUseSeasonDetails();
+    mockUseSeasonDetails.mockClear();
+    mockUseSeasonDetails.mockReturnValue({
+      ...details,
+      season: {
+        ...details.season,
+        has_incomplete_regular_team_games: true,
+      },
+    });
+
+    render(<SeasonDetails />);
+
+    expect(mockMoreActionsMenu).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: expect.not.arrayContaining([
+          expect.objectContaining({ label: 'End Regular Season' }),
+        ]),
+      }),
+    );
   });
 });
 

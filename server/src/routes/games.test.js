@@ -38,6 +38,23 @@ const makeSelectChain = () => {
   return chain;
 };
 
+const sqlFragmentText = (fragment) => {
+  const seen = new WeakSet();
+  const walk = (value) => {
+    if (value == null) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (typeof value !== 'object') return '';
+    if (seen.has(value)) return '';
+    seen.add(value);
+    if (Array.isArray(value)) return value.map(walk).join(' ');
+    if (Array.isArray(value.queryChunks)) return value.queryChunks.map(walk).join(' ');
+    if (Array.isArray(value.value)) return value.value.map(walk).join(' ');
+    return Object.values(value).map(walk).join(' ');
+  };
+  return walk(fragment);
+};
+
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
 const LAST_FIVE_GAME = {
@@ -126,6 +143,32 @@ describe('GET /api/admin/games', () => {
     expect(db.select).toHaveBeenCalledTimes(1);
     expect(db.execute).not.toHaveBeenCalled();
     expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('uses the schedule date key for week filters', async () => {
+    selectRows = [GAME];
+    const res = await request(app)
+      .get('/api/admin/games?season_id=season-1&week=2026-01-01');
+
+    expect(res.status).toBe(200);
+    const chain = db.select.mock.results[0].value;
+    const whereText = sqlFragmentText(chain.where.mock.calls[0][0]);
+    expect(whereText).toContain('UTC');
+    expect(whereText).toContain('00:00:00');
+    expect(whereText).toContain('America/New_York');
+  });
+
+  it('uses the schedule date key for month filters', async () => {
+    selectRows = [GAME];
+    const res = await request(app)
+      .get('/api/admin/games?season_id=season-1&month=2026-01');
+
+    expect(res.status).toBe(200);
+    const chain = db.select.mock.results[0].value;
+    const whereText = sqlFragmentText(chain.where.mock.calls[0][0]);
+    expect(whereText).toContain('UTC');
+    expect(whereText).toContain('00:00:00');
+    expect(whereText).toContain('America/New_York');
   });
 
   it('rejects invalid week query values', async () => {

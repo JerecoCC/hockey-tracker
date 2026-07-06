@@ -6,6 +6,120 @@ const { normalizeSeasonBracketSlotKeys } = require('../lib/playoffBracketSlots')
 // All season routes require the admin role
 router.use(requireAdmin);
 
+const fetchRegularSeasonTeamCompletion = async (seasonId) => {
+  const rows = await sql`
+    WITH season_info AS (
+      SELECT
+        s.id,
+        s.league_id,
+        s.games_per_season,
+        s.group_alignment_set_id,
+        gas.structure_type AS alignment_structure_type
+      FROM seasons s
+      LEFT JOIN group_alignment_sets gas ON gas.id = s.group_alignment_set_id
+      WHERE s.id = ${seasonId}
+    ),
+    alignment_group_overrides AS (
+      SELECT DISTINCT alignment_group_id
+      FROM season_alignment_group_teams
+      WHERE season_id = ${seasonId}
+    ),
+    participant_teams AS (
+      SELECT team_id
+      FROM group_alignment_set_teams
+      WHERE alignment_set_id = (SELECT group_alignment_set_id FROM season_info)
+        AND (SELECT alignment_structure_type FROM season_info) = 'league'
+
+      UNION
+
+      SELECT sagt.team_id
+      FROM season_alignment_group_teams sagt
+      JOIN group_alignment_groups ag ON ag.id = sagt.alignment_group_id
+      WHERE sagt.season_id = ${seasonId}
+        AND ag.alignment_set_id = (SELECT group_alignment_set_id FROM season_info)
+        AND (SELECT alignment_structure_type FROM season_info) = 'groups'
+
+      UNION
+
+      SELECT gat.team_id
+      FROM group_alignment_teams gat
+      JOIN group_alignment_groups ag ON ag.id = gat.alignment_group_id
+      WHERE ag.alignment_set_id = (SELECT group_alignment_set_id FROM season_info)
+        AND (SELECT alignment_structure_type FROM season_info) = 'groups'
+        AND gat.alignment_group_id NOT IN (
+          SELECT alignment_group_id FROM alignment_group_overrides
+        )
+
+      UNION
+
+      SELECT team_id
+      FROM season_teams
+      WHERE season_id = ${seasonId}
+        AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+
+      UNION
+
+      SELECT team_id
+      FROM season_group_teams
+      WHERE season_id = ${seasonId}
+        AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+
+      UNION
+
+      SELECT gt.team_id
+      FROM group_teams gt
+      JOIN groups gr ON gr.id = gt.group_id
+      WHERE (SELECT group_alignment_set_id FROM season_info) IS NULL
+        AND (
+          gr.season_id = ${seasonId}
+          OR (
+              gr.league_id = (SELECT league_id FROM season_info)
+          AND gr.season_id IS NULL
+          AND COALESCE(gr.is_auto, false) = false
+          )
+         )
+
+      UNION
+
+      SELECT home_team_id
+      FROM games
+      WHERE season_id = ${seasonId}
+        AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+
+      UNION
+
+      SELECT away_team_id
+      FROM games
+      WHERE season_id = ${seasonId}
+        AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+    ),
+    aggregated AS (
+      SELECT
+        gts.team_id,
+        COUNT(*)::int AS gp
+      FROM game_team_stats gts
+      WHERE gts.season_id = ${seasonId}
+        AND gts.game_type = 'regular'
+        AND gts.team_id IN (SELECT team_id FROM participant_teams)
+        AND gts.opponent_team_id IN (SELECT team_id FROM participant_teams)
+        AND (gts.won OR gts.lost)
+      GROUP BY gts.team_id
+    )
+    SELECT EXISTS (
+      SELECT 1
+      FROM participant_teams pt
+      CROSS JOIN season_info si
+      LEFT JOIN aggregated a ON a.team_id = pt.team_id
+      WHERE COALESCE(si.games_per_season, 0) > 0
+        AND COALESCE(a.gp, 0) < si.games_per_season
+    ) AS has_incomplete_regular_team_games
+  `;
+
+  return {
+    has_incomplete_regular_team_games: Boolean(rows[0]?.has_incomplete_regular_team_games),
+  };
+};
+
 // ---------------------------------------------------------------------------
 // GET /api/admin/seasons  – list all seasons (with league info)
 // ---------------------------------------------------------------------------
@@ -111,7 +225,8 @@ router.get('/:id', async (req, res) => {
       WHERE s.id = ${id}
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Season not found' });
-    return res.json(rows[0]);
+    const completion = await fetchRegularSeasonTeamCompletion(id);
+    return res.json({ ...rows[0], ...completion });
   } catch (err) {
     console.error('seasons get error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -196,6 +311,7 @@ router.post('/', async (req, res) => {
                 playoff_qualification_format_id, group_alignment_set_id,
                 FALSE AS has_scheduled_games,
                 FALSE AS has_unfinished_regular_games,
+                FALSE AS has_incomplete_regular_team_games,
                 created_at
     `;
     return res.status(201).json(rows[0]);
@@ -495,8 +611,31 @@ router.patch('/:id/playoffs', async (req, res) => {
   const { id } = req.params;
 
   try {
-    const existing = await sql`SELECT id FROM seasons WHERE id = ${id}`;
+    const existing = await sql`
+      SELECT
+        id,
+        EXISTS (
+          SELECT 1 FROM games g
+          WHERE g.season_id = seasons.id
+            AND g.game_type = 'regular'
+            AND g.status IN ('scheduled', 'in_progress')
+        ) AS has_unfinished_regular_games
+      FROM seasons
+      WHERE id = ${id}
+    `;
     if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
+    if (existing[0].has_unfinished_regular_games) {
+      return res.status(409).json({
+        error: 'Regular season cannot end while regular-season games are scheduled or in progress',
+      });
+    }
+
+    const completion = await fetchRegularSeasonTeamCompletion(id);
+    if (completion.has_incomplete_regular_team_games) {
+      return res.status(409).json({
+        error: 'Regular season cannot end until every team has reached games_per_season',
+      });
+    }
 
     await sql`
       UPDATE seasons SET playoffs_started = TRUE WHERE id = ${id}
@@ -535,7 +674,7 @@ router.patch('/:id/playoffs', async (req, res) => {
         ON pqf.id = COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id)
       WHERE s.id = ${id}
     `;
-    return res.json(rows[0]);
+    return res.json({ ...rows[0], ...completion });
   } catch (err) {
     console.error('seasons start-playoffs error:', err);
     return res.status(500).json({ error: 'Internal server error' });

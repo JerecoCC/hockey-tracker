@@ -89,7 +89,7 @@ jest.mock(
       intent: _intent,
       size: _size,
       iconSize: _iconSize,
-      iconHeight: _iconHeight,
+      iconHeight,
       tooltipClassName: _tooltipClassName,
       tooltipIntent: _tooltipIntent,
       ...rest
@@ -99,6 +99,7 @@ jest.mock(
         onClick={onClick}
         disabled={disabled}
         aria-label={tooltip ?? (icon === 'edit' ? 'Edit' : icon)}
+        data-icon-height={iconHeight ?? 'default'}
         {...rest}
       >
         {children}
@@ -1175,7 +1176,10 @@ describe('PlayerDetails info tab', () => {
     const heroActions = container.querySelector('.heroActions') as HTMLElement;
     const actionButtons = within(heroActions).getAllByRole('button');
     expect(actionButtons[0]).toHaveAccessibleName('Edit player');
+    expect(actionButtons[0]).toHaveAttribute('data-icon-height', 'button');
     expect(actionButtons[1]).toHaveAccessibleName('More actions');
+    expect(actionButtons[1]).toHaveClass('trigger');
+    expect(actionButtons[1]).toHaveAttribute('data-icon-height', 'button');
 
     await user.click(screen.getByRole('button', { name: 'More actions' }));
     await user.click(screen.getByRole('button', { name: 'Move Player' }));
