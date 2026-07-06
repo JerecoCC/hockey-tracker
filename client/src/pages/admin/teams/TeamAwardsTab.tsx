@@ -3,11 +3,13 @@ import Accordion from '@/components/Accordion/Accordion';
 import AwardBanner from '@/components/AwardBanner/AwardBanner';
 import Badge from '@/components/Badge/Badge';
 import Icon from '@/components/Icon/Icon';
+import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import ListItem from '@/components/ListItem/ListItem';
 import Section from '@/components/Section/Section';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { useTeamAwards, type TeamAwardRecord } from '@/hooks/useTeamDetails';
+import { awardCompetitionScopeLabel } from '@/lib/awardDefinitions';
 import styles from './TeamDetails.module.scss';
 
 interface Props {
@@ -130,6 +132,37 @@ const awardSubtitle = (award: TeamAwardRecord) =>
     .filter(Boolean)
     .join(' | ');
 
+const awardStatLabel = (statKey: string | null) =>
+  statKey ? statKey.replace(/_/g, ' ') : 'Manual or voted';
+
+const awardScopeLabel = (award: Pick<TeamAwardRecord, 'competition_scope'>) =>
+  award.competition_scope ? awardCompetitionScopeLabel(award.competition_scope) : 'Full season';
+
+const awardInfoLabel = (group: TeamAwardGroup) => {
+  const award = group.awards[0];
+
+  return (
+    <span className={styles.awardGroupLabel}>
+      <span>{group.awardName}</span>
+      {award && (
+        <span data-accordion-ignore-toggle>
+          <InfoTooltip
+            ariaLabel={`${group.awardName} award details`}
+            size="0.85rem"
+            content={
+              <span className={styles.awardInfoTooltip}>
+                <span>Recipient: Team</span>
+                <span>Scope: {awardScopeLabel(award)}</span>
+                <span>Source: {awardStatLabel(award.stat_key)}</span>
+              </span>
+            }
+          />
+        </span>
+      )}
+    </span>
+  );
+};
+
 const TeamAwardsTab = ({ teamId, mode = 'admin' }: Props) => {
   const { awards, loading } = useTeamAwards(teamId, { mode });
   const [awardViewMode, setAwardViewMode] = useState<AwardViewMode>('list');
@@ -193,7 +226,7 @@ const TeamAwardsTab = ({ teamId, mode = 'admin' }: Props) => {
           {awardGroups.map((group) => (
             <Accordion
               key={group.awardId}
-              label={group.awardName}
+              label={awardInfoLabel(group)}
               labelMeta={
                 <Badge
                   value={group.awards.length}
@@ -213,6 +246,7 @@ const TeamAwardsTab = ({ teamId, mode = 'admin' }: Props) => {
                 {group.awards.map((award) => (
                   <ListItem
                     key={award.id}
+                    variant="plain"
                     image={award.team_logo}
                     imageDark={award.team_logo_dark}
                     imageLight={award.team_logo_light}

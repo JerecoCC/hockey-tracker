@@ -1800,11 +1800,20 @@ describe('PlayerDetails awards tab', () => {
     expect(walterCupGroup).not.toBeNull();
     expect(within(forwardGroup as HTMLElement).getByRole('button', { name: 'Collapse' }))
       .toBeInTheDocument();
+    expect(
+      within(forwardGroup as HTMLElement).getByLabelText('Forward of the Year award details'),
+    ).toBeInTheDocument();
+    expect(
+      within(walterCupGroup as HTMLElement).getByLabelText('Walter Cup Winner award details'),
+    ).toBeInTheDocument();
     expect(within(forwardGroup as HTMLElement).getByLabelText('2 wins')).toBeInTheDocument();
     expect(within(walterCupGroup as HTMLElement).getByLabelText('1 win')).toBeInTheDocument();
     expect(within(forwardGroup as HTMLElement).getByText('Toronto Maple Leafs')).toBeInTheDocument();
     expect(within(forwardGroup as HTMLElement).getByText('Montreal Victoire')).toBeInTheDocument();
     expect(within(forwardGroup as HTMLElement).getByText('2025-26')).toBeInTheDocument();
+    expect(within(forwardGroup as HTMLElement).getByText('2025-26').closest('li')).toHaveClass(
+      'itemPlain',
+    );
     expect(within(forwardGroup as HTMLElement).getByText('2024-25')).toBeInTheDocument();
     expect(
       within(walterCupGroup as HTMLElement).getByText('Toronto Maple Leafs'),

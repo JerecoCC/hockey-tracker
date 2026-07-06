@@ -459,7 +459,21 @@
   }
 
   &AccordionBody {
-    padding: $space-md;
+    padding: 0;
+  }
+
+  &GroupLabel {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: $space-xs;
+  }
+
+  &InfoTooltip {
+    display: flex;
+    min-width: 10rem;
+    flex-direction: column;
+    gap: $space-xs;
   }
 
   &TeamList {

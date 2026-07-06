@@ -13,6 +13,7 @@ import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Divider from '@/components/Divider/Divider';
 import Icon from '@/components/Icon/Icon';
 import Section from '@/components/Section/Section';
+import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
 import ListItem from '@/components/ListItem/ListItem';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
@@ -58,6 +59,7 @@ import {
 } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import { formatPlayerPosition } from '@/lib/playerPosition';
+import { awardCompetitionScopeLabel } from '@/lib/awardDefinitions';
 import { getPlayerStatus, PLAYER_STATUS_LABELS } from '@/lib/playerStatus';
 import {
   buildGameDetailsPath,
@@ -665,6 +667,40 @@ const groupPlayerAwards = (awards: PlayerAwardRecord[]): PlayerAwardGroup[] => {
     ...group,
     awards: sortPlayerAwards(group.awards),
   }));
+};
+
+const awardRecipientLabel = (recipientType: PlayerAwardRecord['recipient_type']) =>
+  recipientType === 'team' ? 'Team' : 'Player';
+
+const awardStatLabel = (statKey: string | null) =>
+  statKey ? statKey.replace(/_/g, ' ') : 'Manual or voted';
+
+const awardScopeLabel = (award: Pick<PlayerAwardRecord, 'competition_scope'>) =>
+  award.competition_scope ? awardCompetitionScopeLabel(award.competition_scope) : 'Full season';
+
+const awardInfoLabel = (group: PlayerAwardGroup) => {
+  const award = group.awards[0];
+
+  return (
+    <span className={styles.awardGroupLabel}>
+      <span>{group.awardName}</span>
+      {award && (
+        <span data-accordion-ignore-toggle>
+          <InfoTooltip
+            ariaLabel={`${group.awardName} award details`}
+            size="0.85rem"
+            content={
+              <span className={styles.awardInfoTooltip}>
+                <span>Recipient: {awardRecipientLabel(award.recipient_type)}</span>
+                <span>Scope: {awardScopeLabel(award)}</span>
+                <span>Source: {awardStatLabel(award.stat_key)}</span>
+              </span>
+            }
+          />
+        </span>
+      )}
+    </span>
+  );
 };
 
 const formatShortDate = (iso: string | null) => {
@@ -2310,7 +2346,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           {playerAwardGroups.map((group) => (
             <Accordion
               key={group.awardId}
-              label={group.awardName}
+              label={awardInfoLabel(group)}
               labelMeta={
                 <Badge
                   value={group.awards.length}
@@ -2330,6 +2366,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                 {group.awards.map((award) => (
                   <ListItem
                     key={award.id}
+                    variant="plain"
                     image={award.team_logo}
                     imageDark={award.team_logo_dark}
                     imageLight={award.team_logo_light}

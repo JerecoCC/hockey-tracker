@@ -79,8 +79,11 @@ describe('TeamAwardsTab', () => {
     expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('data-active', 'true');
     expect(screen.getByText('Presidents Trophy')).toBeInTheDocument();
     expect(screen.getByText('Walter Cup Winner')).toBeInTheDocument();
+    expect(screen.getByLabelText('Presidents Trophy award details')).toBeInTheDocument();
+    expect(screen.getByLabelText('Walter Cup Winner award details')).toBeInTheDocument();
     expect(screen.getAllByLabelText('1 win')).toHaveLength(2);
     expect(screen.getByText(/Awarded Apr 20, 2026/)).toBeInTheDocument();
+    expect(screen.getByText('2025-26').closest('li')).toHaveClass('itemPlain');
 
     await user.click(screen.getByRole('button', { name: 'Banner' }));
 
