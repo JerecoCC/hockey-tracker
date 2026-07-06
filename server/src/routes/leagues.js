@@ -38,6 +38,12 @@ const uploadBuffer = (file) => {
 // All league routes require the admin role
 router.use(requireAdmin);
 
+const parseOptionalNonNegativeInteger = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : Number.NaN;
+};
+
 // ---------------------------------------------------------------------------
 // POST /api/admin/leagues/upload  – upload a logo image to Vercel Blob
 // ---------------------------------------------------------------------------
@@ -65,7 +71,8 @@ router.get('/', async (_req, res) => {
     const leagues = await sql`
       SELECT
         l.id, l.name, l.code, l.logo, l.icon, l.primary_color, l.text_color,
-        l.best_of_playoff, l.best_of_shootout, l.scoring_system, l.playoff_format,
+        l.best_of_playoff, l.best_of_shootout, l.scoring_system,
+        l.goalie_min_regular_minutes, l.playoff_format,
         CASE
           WHEN cs.id IS NULL OR cs.is_ended THEN 'postseason'
           WHEN cs.playoffs_started THEN 'playoffs'
@@ -91,7 +98,8 @@ router.get('/:id', async (req, res) => {
     const rows = await sql`
       SELECT
         l.id, l.name, l.code, l.description, l.logo, l.icon, l.primary_color, l.text_color,
-        l.best_of_playoff, l.best_of_shootout, l.scoring_system, l.playoff_format,
+        l.best_of_playoff, l.best_of_shootout, l.scoring_system,
+        l.goalie_min_regular_minutes, l.playoff_format,
         CASE
           WHEN cs.id IS NULL OR cs.is_ended THEN 'postseason'
           WHEN cs.playoffs_started THEN 'playoffs'
@@ -150,7 +158,8 @@ router.get('/:id', async (req, res) => {
 // POST /api/admin/leagues  – create a league
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
-  const { name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format } = req.body;
+  const { name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes, playoff_format } = req.body;
+  const goalieMinRegularMinutes = parseOptionalNonNegativeInteger(goalie_min_regular_minutes);
 
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return res.status(400).json({ error: 'name is required' });
@@ -158,10 +167,15 @@ router.post('/', async (req, res) => {
   if (!code || typeof code !== 'string' || code.trim() === '') {
     return res.status(400).json({ error: 'code is required' });
   }
+  if (Number.isNaN(goalieMinRegularMinutes)) {
+    return res
+      .status(400)
+      .json({ error: 'goalie_min_regular_minutes must be a non-negative integer' });
+  }
 
   try {
     const rows = await sql`
-      INSERT INTO leagues (name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format)
+      INSERT INTO leagues (name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes, playoff_format)
       VALUES (
         ${name.trim()},
         ${code.trim().toUpperCase()},
@@ -173,9 +187,10 @@ router.post('/', async (req, res) => {
         ${best_of_playoff ?? 7},
         ${best_of_shootout ?? 3},
         ${scoring_system ?? '2-1-0'},
+        ${goalieMinRegularMinutes ?? 1500},
         ${playoff_format ? JSON.stringify(playoff_format) : null}
       )
-      RETURNING id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format, created_at
+      RETURNING id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes, playoff_format, created_at
     `;
     return res.status(201).json(rows[0]);
   } catch (err) {
@@ -192,7 +207,8 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format } = req.body;
+  const { name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes, playoff_format } = req.body;
+  const goalieMinRegularMinutes = parseOptionalNonNegativeInteger(goalie_min_regular_minutes);
   const logoInBody           = 'logo' in req.body;
   const iconInBody           = 'icon' in req.body;
   const playoffFormatInBody  = 'playoff_format' in req.body;
@@ -202,6 +218,11 @@ router.patch('/:id', async (req, res) => {
   }
   if (code !== undefined && (typeof code !== 'string' || code.trim() === '')) {
     return res.status(400).json({ error: 'code cannot be empty' });
+  }
+  if (Number.isNaN(goalieMinRegularMinutes)) {
+    return res
+      .status(400)
+      .json({ error: 'goalie_min_regular_minutes must be a non-negative integer' });
   }
 
   try {
@@ -218,9 +239,10 @@ router.patch('/:id', async (req, res) => {
         best_of_playoff  = COALESCE(${best_of_playoff ?? null}, best_of_playoff),
         best_of_shootout = COALESCE(${best_of_shootout ?? null}, best_of_shootout),
         scoring_system   = COALESCE(${scoring_system ?? null}, scoring_system),
+        goalie_min_regular_minutes = COALESCE(${goalieMinRegularMinutes}, goalie_min_regular_minutes),
         playoff_format   = CASE WHEN ${playoffFormatInBody} THEN ${playoff_format ? JSON.stringify(playoff_format) : null}::jsonb ELSE playoff_format END
       WHERE id = ${id}
-      RETURNING id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format, created_at
+      RETURNING id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes, playoff_format, created_at
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'League not found' });
     return res.json(rows[0]);

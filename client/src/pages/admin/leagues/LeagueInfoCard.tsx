@@ -60,7 +60,7 @@ export const LeagueInfoCardSkeleton = ({ className }: SkeletonProps) => (
     <Divider />
 
     <div className={cx(styles.infoGrid, styles.infoCardGrid)}>
-      {['playoff-format', 'shootout-rounds', 'scoring-system'].map((item) => (
+      {['playoff-format', 'shootout-rounds', 'goalie-minimum', 'scoring-system'].map((item) => (
         <div
           key={item}
           className={styles.infoSkeletonItem}
@@ -122,6 +122,10 @@ const LeagueInfoCard = ({ league, onEdit, className }: Props) => (
       <InfoItem
         label="Shootout Rounds"
         data={`${league.best_of_shootout} rounds`}
+      />
+      <InfoItem
+        label="Goalie Min TOI"
+        data={`${league.goalie_min_regular_minutes} min`}
       />
       <InfoItem
         label="Scoring System"

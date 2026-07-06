@@ -1364,6 +1364,25 @@ async function initSchema() {
         CHECK (scoring_system IN ('3-2-1-0', '2-1-0'))
   `;
 
+  // goalie_min_regular_minutes: league default for regular-season goalie leader eligibility.
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'leagues' AND column_name = 'goalie_min_regular_minutes'
+      ) THEN
+        ALTER TABLE leagues
+          ADD COLUMN goalie_min_regular_minutes SMALLINT NOT NULL DEFAULT 1500
+            CHECK (goalie_min_regular_minutes >= 0);
+
+        UPDATE leagues
+        SET goalie_min_regular_minutes = 240
+        WHERE UPPER(code) = 'PWHL';
+      END IF;
+    END $$
+  `;
+
   // ── Playoff series ────────────────────────────────────────────────────────
   // One row per best-of-N playoff matchup. Games reference this via FK.
   // round: 1=First Round / Wild Card, 2=Second Round, 3=Conference Finals, 4=Stanley Cup Final
@@ -2331,6 +2350,13 @@ async function initSchema() {
     ALTER TABLE seasons
       ADD COLUMN IF NOT EXISTS scoring_system TEXT
         CHECK (scoring_system IN ('2-1-0', '3-2-1-0'))
+  `;
+  // goalie_min_regular_minutes: regular-season goalie leaderboard eligibility.
+  // NULL falls back to a league-aware default; 0 disables the minimum.
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS goalie_min_regular_minutes SMALLINT
+        CHECK (goalie_min_regular_minutes >= 0)
   `;
 
   // playoffs_started: true once the admin has formally ended the regular season

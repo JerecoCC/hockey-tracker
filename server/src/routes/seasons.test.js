@@ -128,6 +128,44 @@ describe('GET /api/admin/seasons/:id/stats', () => {
     expect(sql.mock.calls[0][0].join('')).toContain('best_player_photo');
     expect(sql.mock.calls[1][0].join('')).toContain('best_player_photo');
   });
+
+  it('filters regular-season goalie leaders by configured minimum minutes', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        player_id: 'goalie-1',
+        first_name: 'Ann',
+        last_name: 'Goalie',
+        time_on_ice: 14400,
+        total: 1,
+      },
+    ]);
+
+    const res = await request(app).get(
+      '/api/admin/seasons/season-1/stats?group=goalies&competition=regular&sort_key=time_on_ice&sort_dir=desc',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      items: [
+        {
+          player_id: 'goalie-1',
+          first_name: 'Ann',
+          last_name: 'Goalie',
+          time_on_ice: 14400,
+        },
+      ],
+      total: 1,
+      page: 1,
+      page_size: 10,
+    });
+    const queryText = sql.mock.calls[0][0].join('');
+    expect(queryText).toContain('goalie_min_regular_minutes');
+    expect(queryText).toContain('league_goalie_min_regular_minutes');
+    expect(queryText).not.toContain("UPPER(l.code) = 'PWHL'");
+    expect(queryText).toContain('time_on_ice >= COALESCE');
+    expect(queryText).toContain("= 'time_on_ice'");
+    expect(queryText).not.toContain('WHERE gp >= 25');
+  });
 });
 
 // ---------------------------------------------------------------------------

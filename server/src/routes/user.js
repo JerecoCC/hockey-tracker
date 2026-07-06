@@ -2011,7 +2011,8 @@ router.get('/leagues', async (req, res) => {
     const leagues = await sql`
       SELECT
         l.id, l.name, l.code, l.logo, l.icon, l.primary_color, l.text_color,
-        l.best_of_playoff, l.best_of_shootout, l.scoring_system, l.playoff_format,
+        l.best_of_playoff, l.best_of_shootout, l.scoring_system,
+        l.goalie_min_regular_minutes, l.playoff_format,
         CASE
           WHEN cs.id IS NULL OR cs.is_ended THEN 'postseason'
           WHEN cs.playoffs_started THEN 'playoffs'
@@ -2037,7 +2038,8 @@ router.get('/leagues/:id', async (req, res) => {
     const rows = await sql`
       SELECT
         l.id, l.name, l.code, l.description, l.logo, l.icon, l.primary_color, l.text_color,
-        l.best_of_playoff, l.best_of_shootout, l.scoring_system, l.playoff_format,
+        l.best_of_playoff, l.best_of_shootout, l.scoring_system,
+        l.goalie_min_regular_minutes, l.playoff_format,
         CASE
           WHEN cs.id IS NULL OR cs.is_ended THEN 'postseason'
           WHEN cs.playoffs_started THEN 'playoffs'
@@ -2338,6 +2340,8 @@ router.get('/seasons', async (req, res) => {
         l.logo AS league_logo,
         s.start_date::text AS start_date,
         s.end_date::text AS end_date,
+        s.goalie_min_regular_minutes,
+        l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes,
         s.created_at,
         (l.current_season_id = s.id) AS is_current,
         s.best_of_playoff,

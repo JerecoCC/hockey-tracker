@@ -20,7 +20,8 @@ app.use('/api/admin/leagues', leaguesRouter);
 const LEAGUE = {
   id: 'league-1', name: 'NHL', code: 'NHL', description: null,
   logo: null, icon: null, primary_color: '#334155', text_color: '#ffffff',
-  best_of_playoff: 7, best_of_shootout: 3,
+  best_of_playoff: 7, best_of_shootout: 3, scoring_system: '2-1-0',
+  goalie_min_regular_minutes: 1500, playoff_format: null,
   season_phase: 'regular',
   created_at: new Date().toISOString(),
 };
@@ -64,6 +65,7 @@ describe('GET /api/admin/leagues', () => {
     expect(queryText).toContain('AS season_phase');
     expect(queryText).toContain('LEFT JOIN seasons cs');
     expect(queryText).toContain('cs.playoffs_started');
+    expect(queryText).toContain('l.goalie_min_regular_minutes');
   });
 
   it('returns 500 on DB error', async () => {
@@ -148,9 +150,18 @@ describe('POST /api/admin/leagues', () => {
   it('returns 201 on success', async () => {
     sql.mockResolvedValueOnce([LEAGUE]);
     const res = await request(app).post('/api/admin/leagues')
-      .send({ name: 'NHL', code: 'nhl' });
+      .send({ name: 'NHL', code: 'nhl', goalie_min_regular_minutes: 240 });
     expect(res.status).toBe(201);
     expect(res.body.code).toBe('NHL');
+    const queryValues = sql.mock.calls[0].slice(1);
+    expect(queryValues).toContain(240);
+  });
+
+  it('rejects negative goalie minimum minutes', async () => {
+    const res = await request(app).post('/api/admin/leagues')
+      .send({ name: 'NHL', code: 'nhl', goalie_min_regular_minutes: -1 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/goalie_min_regular_minutes/i);
   });
 
   it('returns 409 on duplicate code', async () => {
@@ -172,11 +183,20 @@ describe('PATCH /api/admin/leagues/:id', () => {
   });
 
   it('returns updated league on success', async () => {
-    sql.mockResolvedValueOnce([{ ...LEAGUE, name: 'New NHL' }]);
+    sql.mockResolvedValueOnce([{ ...LEAGUE, name: 'New NHL', goalie_min_regular_minutes: 240 }]);
     const res = await request(app).patch('/api/admin/leagues/league-1')
-      .send({ name: 'New NHL' });
+      .send({ name: 'New NHL', goalie_min_regular_minutes: 240 });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('New NHL');
+    expect(res.body.goalie_min_regular_minutes).toBe(240);
+    const queryValues = sql.mock.calls[0].slice(1);
+    expect(queryValues).toContain(240);
+  });
+
+  it('rejects invalid goalie minimum minutes on update', async () => {
+    const res = await request(app).patch('/api/admin/leagues/league-1')
+      .send({ goalie_min_regular_minutes: 'abc' });
+    expect(res.status).toBe(400);
   });
 
   it('returns 404 when not found', async () => {

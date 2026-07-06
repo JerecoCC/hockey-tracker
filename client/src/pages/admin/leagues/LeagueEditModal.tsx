@@ -35,6 +35,7 @@ interface FormValues {
   best_of_playoff: string;
   best_of_shootout: string;
   scoring_system: '3-2-1-0' | '2-1-0';
+  goalie_min_regular_minutes: string;
   description: string | null;
 }
 
@@ -58,6 +59,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       best_of_playoff: String(league.best_of_playoff),
       best_of_shootout: String(league.best_of_shootout),
       scoring_system: league.scoring_system,
+      goalie_min_regular_minutes: String(league.goalie_min_regular_minutes),
       description: descriptionHtmlToTextarea(league.description),
     }),
     [league],
@@ -104,6 +106,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       best_of_playoff: parseInt(data.best_of_playoff, 10),
       best_of_shootout: parseInt(data.best_of_shootout, 10),
       scoring_system: data.scoring_system,
+      goalie_min_regular_minutes: parseInt(data.goalie_min_regular_minutes, 10),
       description: textareaToDescriptionHtml(data.description) ?? undefined,
     };
     const ok = await updateLeague(league.id, payload);
@@ -192,6 +195,22 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
             control={control}
             name="best_of_shootout"
             options={SHOOTOUT_OPTIONS}
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Goalie Min TOI"
+            type="number"
+            control={control}
+            name="goalie_min_regular_minutes"
+            placeholder="e.g. 240"
+            suffix="min"
+            rules={{
+              required: 'Goalie minimum is required',
+              min: { value: 0, message: 'Must be 0 or higher' },
+              max: { value: 9999, message: 'Too many minutes' },
+              validate: (value) =>
+                Number.isInteger(Number(value)) || 'Must be a whole number',
+            }}
             disabled={isSubmitting}
           />
           <div className={styles.settingsGridFull}>

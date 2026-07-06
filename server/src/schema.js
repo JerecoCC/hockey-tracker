@@ -40,6 +40,7 @@ const leagues = pgTable('leagues', {
   bestOfPlayoff: smallint('best_of_playoff').notNull().default(7),
   bestOfShootout: smallint('best_of_shootout').notNull().default(3),
   scoringSystem: text('scoring_system').notNull().default('2-1-0'),
+  goalieMinRegularMinutes: smallint('goalie_min_regular_minutes').notNull().default(1500),
   playoffFormat: jsonb('playoff_format'),
   createdAt: createdAt(),
 });
@@ -75,6 +76,7 @@ const seasons = pgTable('seasons', {
   bestOfPlayoff: smallint('best_of_playoff'),
   bestOfShootout: smallint('best_of_shootout'),
   scoringSystem: text('scoring_system'),
+  goalieMinRegularMinutes: smallint('goalie_min_regular_minutes'),
   playoffsStarted: boolean('playoffs_started').notNull().default(false),
   createdAt: createdAt(),
 });

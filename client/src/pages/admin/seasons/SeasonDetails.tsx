@@ -81,9 +81,7 @@ const PAGE_SIZE = 10;
 const STATS_TABLE_TEAM_LOGO_SIZE = 28;
 const STATS_TABLE_PLAYER_AVATAR_SIZE = 32;
 const STANDINGS_TABLE_TEAM_LOGO_SIZE = 28;
-/** Goalie stats only include goalies who played at least this many games. */
-const GOALIE_MIN_GAMES = 25;
-const GOALIE_MIN_GAMES_TOOLTIP = 'Only show goalies who played for 25 or more games';
+const DEFAULT_GOALIE_MIN_REGULAR_MINUTES = 1500;
 
 const STATS_VIEW_OPTIONS = [
   { value: 'Summary', label: 'Summary' },
@@ -246,6 +244,18 @@ const SeasonDetailsPage = () => {
   });
 
   const hasUnfinishedRegularGames = season?.has_unfinished_regular_games ?? false;
+  const effectiveGoalieMinRegularMinutes =
+    season?.goalie_min_regular_minutes ??
+    season?.league_goalie_min_regular_minutes ??
+    DEFAULT_GOALIE_MIN_REGULAR_MINUTES;
+  const goalieMinRegularDisplay =
+    effectiveGoalieMinRegularMinutes > 0 ? `${effectiveGoalieMinRegularMinutes} min` : 'None';
+  const goalieEligibilityTooltip =
+    statsCompetition === 'regular'
+      ? effectiveGoalieMinRegularMinutes > 0
+        ? `Only show goalies with at least ${effectiveGoalieMinRegularMinutes} regular-season minutes`
+        : 'All regular-season goalies are shown'
+      : 'Regular-season goalie minimum does not apply to playoff stats';
 
   const clinchedIds = useMemo(
     () =>
@@ -587,7 +597,6 @@ const SeasonDetailsPage = () => {
   const summaryGoalies = useMemo(() => {
     const isAsc = summaryGoalieStat === 'gaa';
     return [...goalies]
-      .filter((g) => (g.gp ?? 0) >= GOALIE_MIN_GAMES)
       .sort((a, b) => {
         const av = (a[summaryGoalieStat] ?? (isAsc ? Infinity : -Infinity)) as number;
         const bv = (b[summaryGoalieStat] ?? (isAsc ? Infinity : -Infinity)) as number;
@@ -624,6 +633,12 @@ const SeasonDetailsPage = () => {
       return g.save_pct != null ? Number(g.save_pct).toFixed(3).replace(/^0/, '') : '—';
     if (stat === 'gaa') return g.gaa != null ? Number(g.gaa).toFixed(2) : '—';
     return String(g.shutouts ?? 0);
+  };
+  const formatGoalieToi = (seconds: number | null | undefined): string => {
+    const safeSeconds = Math.max(0, Number(seconds ?? 0));
+    const minutes = Math.floor(safeSeconds / 60);
+    const remainingSeconds = safeSeconds % 60;
+    return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
   };
 
   const STAT_OPTIONS: { value: SkaterStatType; label: string }[] = [
@@ -688,6 +703,14 @@ const SeasonDetailsPage = () => {
     { header: 'SA', key: 'shots_against', align: 'center', sortable: true },
     { header: 'SV', key: 'saves', align: 'center', sortable: true },
     { header: 'GA', key: 'goals_against', align: 'center', sortable: true },
+    {
+      type: 'custom',
+      header: 'TOI',
+      render: (row) => formatGoalieToi(row.time_on_ice),
+      sortable: true,
+      sortKey: 'time_on_ice',
+      align: 'center',
+    },
     {
       type: 'custom',
       header: 'SV%',
@@ -963,6 +986,14 @@ const SeasonDetailsPage = () => {
                       season.scoring_system ?? `${season.league_scoring_system} (league default)`
                     }
                   />
+                  <InfoItem
+                    label="Goalie Min TOI"
+                    data={
+                      season.goalie_min_regular_minutes != null
+                        ? goalieMinRegularDisplay
+                        : `${goalieMinRegularDisplay} (league default)`
+                    }
+                  />
                 </div>
               </Card>
             ),
@@ -1147,7 +1178,7 @@ const SeasonDetailsPage = () => {
                         <>
                           Goalies
                           <InfoTooltip
-                            text={GOALIE_MIN_GAMES_TOOLTIP}
+                            text={goalieEligibilityTooltip}
                             size="0.9rem"
                           />
                         </>
@@ -1483,6 +1514,7 @@ const SeasonDetailsPage = () => {
         showRegularSeasonSettings
         leagueBestOfShootout={season.league_best_of_shootout}
         leagueScoringSystem={season.league_scoring_system}
+        leagueGoalieMinRegularMinutes={season.league_goalie_min_regular_minutes}
         onClose={() => setShowEditModal(false)}
       />
     </>

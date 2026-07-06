@@ -28,6 +28,8 @@ export interface SeasonRecord {
   league_best_of_playoff: number;
   /** League-level default shootout rounds (used when season override is null). */
   league_best_of_shootout: number;
+  /** League-level default goalie leaderboard eligibility in minutes. */
+  league_goalie_min_regular_minutes: number;
   /** Season-level playoff qualification rules (overrides any league-level format). */
   playoff_format: PlayoffFormatRule[] | null;
   /** ID of the reusable playoff qualification format assigned to this season. */
@@ -40,6 +42,8 @@ export interface SeasonRecord {
   best_of_shootout: number | null;
   /** Season-level scoring system override. Null falls back to league default. */
   scoring_system: '2-1-0' | '3-2-1-0' | null;
+  /** Regular-season goalie leaderboard eligibility in minutes. Null falls back to league default. */
+  goalie_min_regular_minutes: number | null;
   /** ID of the bracket rule set assigned to this season. Null if none is assigned. */
   bracket_rule_set_id: string | null;
   /** ID of the team alignment set assigned to this season. Null uses legacy group fallback. */
@@ -62,6 +66,7 @@ export interface CreateSeasonData {
   best_of_playoff?: number | null;
   best_of_shootout?: number | null;
   scoring_system?: '2-1-0' | '3-2-1-0' | null;
+  goalie_min_regular_minutes?: number | null;
   bracket_rule_set_id?: string | null;
   group_alignment_set_id?: string | null;
 }

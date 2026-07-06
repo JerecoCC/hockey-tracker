@@ -237,6 +237,8 @@ beforeEach(() => {
       playoff_format: null,
       scoring_system: '2-1-0',
       league_scoring_system: '2-1-0',
+      goalie_min_regular_minutes: null,
+      league_goalie_min_regular_minutes: 1500,
     },
     groups: [],
     seasonTeams: [],
@@ -399,6 +401,8 @@ describe('SeasonDetails standings tab', () => {
         ],
         scoring_system: '2-1-0',
         league_scoring_system: '2-1-0',
+        goalie_min_regular_minutes: null,
+        league_goalie_min_regular_minutes: 1500,
       },
       groups: [
         makeGroup('east', 'Eastern', 'conference', null, [], teamNames),

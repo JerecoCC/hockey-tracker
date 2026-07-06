@@ -19,6 +19,7 @@ router.get('/', async (req, res) => {
                  s.is_ended, s.playoffs_started,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
+                 s.goalie_min_regular_minutes,
                  COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
                  s.group_alignment_set_id,
                  EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id) AS has_scheduled_games,
@@ -29,7 +30,8 @@ router.get('/', async (req, res) => {
                      AND g.status IN ('scheduled', 'in_progress')
                  ) AS has_unfinished_regular_games,
                  s.created_at,
-                 l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+                 l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+                 l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
           FROM seasons s
           JOIN leagues l ON l.id = s.league_id
           LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
@@ -42,6 +44,7 @@ router.get('/', async (req, res) => {
                  s.is_ended, s.playoffs_started,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
+                 s.goalie_min_regular_minutes,
                  COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
                  s.group_alignment_set_id,
                  EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id) AS has_scheduled_games,
@@ -52,7 +55,8 @@ router.get('/', async (req, res) => {
                      AND g.status IN ('scheduled', 'in_progress')
                  ) AS has_unfinished_regular_games,
                  s.created_at,
-                 l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+                 l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+                 l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
           FROM seasons s
           JOIN leagues l ON l.id = s.league_id
           LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
@@ -83,6 +87,7 @@ router.get('/:id', async (req, res) => {
              s.best_of_playoff,
              s.best_of_shootout,
              s.scoring_system,
+             s.goalie_min_regular_minutes,
              s.bracket_rule_set_id,
              s.group_alignment_set_id,
              EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id) AS has_scheduled_games,
@@ -96,7 +101,8 @@ router.get('/:id', async (req, res) => {
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
              l.scoring_system    AS league_scoring_system,
              l.best_of_playoff   AS league_best_of_playoff,
-             l.best_of_shootout  AS league_best_of_shootout
+             l.best_of_shootout  AS league_best_of_shootout,
+             l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
@@ -122,12 +128,23 @@ router.post('/', async (req, res) => {
     start_date,
     end_date,
     games_per_season,
+    goalie_min_regular_minutes,
     playoff_qualification_format_id,
     group_alignment_set_id,
   } = req.body;
 
   if (!league_id) return res.status(400).json({ error: 'league_id is required' });
   if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });
+  if (
+    goalie_min_regular_minutes !== undefined &&
+    goalie_min_regular_minutes !== null &&
+    (!Number.isInteger(Number(goalie_min_regular_minutes)) ||
+      Number(goalie_min_regular_minutes) < 0)
+  ) {
+    return res
+      .status(400)
+      .json({ error: 'goalie_min_regular_minutes must be a non-negative integer' });
+  }
 
   try {
     const leagueRows = await sql`SELECT id FROM leagues WHERE id = ${league_id}`;
@@ -160,6 +177,7 @@ router.post('/', async (req, res) => {
     const rows = await sql`
       INSERT INTO seasons (
         name, league_id, start_date, end_date, games_per_season,
+        goalie_min_regular_minutes,
         playoff_qualification_format_id, group_alignment_set_id
       )
       VALUES (
@@ -168,12 +186,14 @@ router.post('/', async (req, res) => {
         ${start_date ?? null},
         ${end_date ?? null},
         ${games_per_season ?? null},
+        ${goalie_min_regular_minutes ?? null},
         ${playoff_qualification_format_id || null},
         ${group_alignment_set_id || null}
       )
       RETURNING id, name, league_id, FALSE AS is_current,
                 start_date::text AS start_date, end_date::text AS end_date,
-                games_per_season, playoff_qualification_format_id, group_alignment_set_id,
+                games_per_season, goalie_min_regular_minutes,
+                playoff_qualification_format_id, group_alignment_set_id,
                 FALSE AS has_scheduled_games,
                 FALSE AS has_unfinished_regular_games,
                 created_at
@@ -204,6 +224,7 @@ router.patch('/:id', async (req, res) => {
     best_of_playoff,
     best_of_shootout,
     scoring_system,
+    goalie_min_regular_minutes,
     bracket_rule_set_id,
     group_alignment_set_id,
   } = req.body;
@@ -216,7 +237,7 @@ router.patch('/:id', async (req, res) => {
              playoffs_started,
              games_per_season, playoff_format,
              playoff_qualification_format_id,
-             best_of_playoff, best_of_shootout, scoring_system,
+             best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes,
              bracket_rule_set_id, group_alignment_set_id,
              EXISTS (SELECT 1 FROM games g WHERE g.season_id = seasons.id) AS has_scheduled_games
       FROM seasons WHERE id = ${id}
@@ -254,6 +275,12 @@ router.patch('/:id', async (req, res) => {
       best_of_shootout !== undefined ? best_of_shootout || null : cur.best_of_shootout;
     const mergedScoringSystem =
       scoring_system !== undefined ? scoring_system || null : cur.scoring_system;
+    const mergedGoalieMinRegularMinutes =
+      goalie_min_regular_minutes !== undefined
+        ? goalie_min_regular_minutes === null || goalie_min_regular_minutes === ''
+          ? null
+          : Number(goalie_min_regular_minutes)
+        : (cur.goalie_min_regular_minutes ?? null);
     const mergedBracketRuleSetId =
       bracket_rule_set_id !== undefined ? bracket_rule_set_id || null : cur.bracket_rule_set_id;
     const mergedGroupAlignmentSetId =
@@ -264,6 +291,15 @@ router.patch('/:id', async (req, res) => {
     const mergedIsEnded = mergedEndDate ? true : cur.is_ended;
 
     if (!mergedName) return res.status(400).json({ error: 'name is required' });
+    if (
+      mergedGoalieMinRegularMinutes != null &&
+      (!Number.isInteger(Number(mergedGoalieMinRegularMinutes)) ||
+        Number(mergedGoalieMinRegularMinutes) < 0)
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'goalie_min_regular_minutes must be a non-negative integer' });
+    }
 
     if (mergedLeagueId !== cur.league_id) {
       const leagueRows = await sql`SELECT id FROM leagues WHERE id = ${mergedLeagueId}`;
@@ -331,6 +367,7 @@ router.patch('/:id', async (req, res) => {
         best_of_playoff      = ${mergedBestOfPlayoff},
         best_of_shootout     = ${mergedBestOfShootout},
         scoring_system       = ${mergedScoringSystem},
+        goalie_min_regular_minutes = ${mergedGoalieMinRegularMinutes},
         bracket_rule_set_id  = ${mergedBracketRuleSetId},
         group_alignment_set_id = ${mergedGroupAlignmentSetId}
       WHERE id = ${id}
@@ -351,6 +388,7 @@ router.patch('/:id', async (req, res) => {
              s.is_ended, s.playoffs_started,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
+             s.goalie_min_regular_minutes,
              COALESCE(pqf.rules, s.playoff_format, l.playoff_format) AS playoff_format,
              COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
              pqf.name AS playoff_qualification_format_name,
@@ -364,7 +402,8 @@ router.patch('/:id', async (req, res) => {
                  AND g.status IN ('scheduled', 'in_progress')
              ) AS has_unfinished_regular_games,
              s.created_at,
-             l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+             l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+             l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
@@ -425,6 +464,7 @@ router.patch('/:id/current', async (req, res) => {
              (l.current_season_id = s.id) AS is_current,
              s.is_ended,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.goalie_min_regular_minutes,
              EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id) AS has_scheduled_games,
              EXISTS (
                SELECT 1 FROM games g
@@ -433,7 +473,8 @@ router.patch('/:id/current', async (req, res) => {
                  AND g.status IN ('scheduled', 'in_progress')
              ) AS has_unfinished_regular_games,
              s.created_at,
-             l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+             l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+             l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
       WHERE s.id = ${id}
@@ -467,6 +508,7 @@ router.patch('/:id/playoffs', async (req, res) => {
              s.is_ended, s.playoffs_started,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
+             s.goalie_min_regular_minutes,
              COALESCE(pqf.rules, s.playoff_format, l.playoff_format) AS playoff_format,
              COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
              pqf.name AS playoff_qualification_format_name,
@@ -484,7 +526,8 @@ router.patch('/:id/playoffs', async (req, res) => {
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
              l.scoring_system   AS league_scoring_system,
              l.best_of_playoff  AS league_best_of_playoff,
-             l.best_of_shootout AS league_best_of_shootout
+             l.best_of_shootout AS league_best_of_shootout,
+             l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
@@ -1671,7 +1714,15 @@ router.get('/:id/stats', async (req, res) => {
 
     if (group === 'goalies') {
       const rows = await sql`
-        WITH player_team AS (
+        WITH season_info AS (
+          SELECT
+            s.goalie_min_regular_minutes,
+            l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
+          FROM seasons s
+          JOIN leagues l ON l.id = s.league_id
+          WHERE s.id = ${id}
+        ),
+        player_team AS (
           SELECT DISTINCT ON (pt.player_id)
             pt.player_id, pt.team_id, pt.jersey_number, pt.photo
           FROM player_teams pt
@@ -1717,6 +1768,7 @@ router.get('/:id/stats', async (req, res) => {
             agg.shots_against,
             agg.saves,
             agg.goals_against,
+            agg.toi                                                AS time_on_ice,
             CASE WHEN agg.shots_against > 0
               THEN ROUND(agg.saves::numeric / agg.shots_against, 3)
               ELSE NULL END                                        AS save_pct,
@@ -1737,7 +1789,15 @@ router.get('/:id/stats', async (req, res) => {
         )
         SELECT stats.*, COUNT(*) OVER()::int AS total
         FROM stats
-        WHERE gp >= 25
+        WHERE ${gameType} != 'regular'
+           OR COALESCE(
+                (SELECT goalie_min_regular_minutes FROM season_info),
+                (SELECT league_goalie_min_regular_minutes FROM season_info)
+              ) <= 0
+           OR time_on_ice >= COALESCE(
+                (SELECT goalie_min_regular_minutes FROM season_info),
+                (SELECT league_goalie_min_regular_minutes FROM season_info)
+              ) * 60
         ORDER BY
           CASE WHEN ${sortKey} = 'last_name' AND ${sortDir} = 'asc' THEN last_name END ASC NULLS LAST,
           CASE WHEN ${sortKey} = 'last_name' AND ${sortDir} = 'desc' THEN last_name END DESC NULLS LAST,
@@ -1749,6 +1809,8 @@ router.get('/:id/stats', async (req, res) => {
           CASE WHEN ${sortKey} = 'saves' AND ${sortDir} = 'desc' THEN saves END DESC NULLS LAST,
           CASE WHEN ${sortKey} = 'goals_against' AND ${sortDir} = 'asc' THEN goals_against END ASC NULLS LAST,
           CASE WHEN ${sortKey} = 'goals_against' AND ${sortDir} = 'desc' THEN goals_against END DESC NULLS LAST,
+          CASE WHEN ${sortKey} = 'time_on_ice' AND ${sortDir} = 'asc' THEN time_on_ice END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'time_on_ice' AND ${sortDir} = 'desc' THEN time_on_ice END DESC NULLS LAST,
           CASE WHEN ${sortKey} = 'save_pct' AND ${sortDir} = 'asc' THEN save_pct END ASC NULLS LAST,
           CASE WHEN ${sortKey} = 'save_pct' AND ${sortDir} = 'desc' THEN save_pct END DESC NULLS LAST,
           CASE WHEN ${sortKey} = 'gaa' AND ${sortDir} = 'asc' THEN gaa END ASC NULLS LAST,
@@ -1825,6 +1887,14 @@ router.get('/:id/stats', async (req, res) => {
     const goalies = await sql`
       WITH period_vals (p, v) AS (
         VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
+      ),
+      season_info AS (
+        SELECT
+          s.goalie_min_regular_minutes,
+          l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
+        FROM seasons s
+        JOIN leagues l ON l.id = s.league_id
+        WHERE s.id = ${id}
       ),
       player_team AS (
         SELECT DISTINCT ON (pt.player_id)
@@ -1993,6 +2063,7 @@ router.get('/:id/stats', async (req, res) => {
         agg.shots_against,
         agg.saves,
         agg.goals_against,
+        agg.toi                                                 AS time_on_ice,
         CASE WHEN agg.shots_against > 0
           THEN ROUND(agg.saves::numeric / agg.shots_against, 3)
           ELSE NULL END                                        AS save_pct,
@@ -2010,6 +2081,15 @@ router.get('/:id/stats', async (req, res) => {
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ti ON true
+      WHERE ${gameType} != 'regular'
+         OR COALESCE(
+              (SELECT goalie_min_regular_minutes FROM season_info),
+              (SELECT league_goalie_min_regular_minutes FROM season_info)
+            ) <= 0
+         OR agg.toi >= COALESCE(
+              (SELECT goalie_min_regular_minutes FROM season_info),
+              (SELECT league_goalie_min_regular_minutes FROM season_info)
+            ) * 60
       ORDER BY save_pct DESC NULLS LAST, agg.saves DESC
     `;
 
