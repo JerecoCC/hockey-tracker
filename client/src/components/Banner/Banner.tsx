@@ -11,8 +11,11 @@ interface BannerProps {
   icon: string;
   title?: ReactNode;
   children: ReactNode;
-  onClose: () => void;
+  actions?: ReactNode;
+  closeable?: boolean;
+  onClose?: () => void;
   closeLabel?: string;
+  cancelLabel?: string;
   className?: string;
 }
 
@@ -21,36 +24,64 @@ const Banner = ({
   icon,
   title,
   children,
+  actions,
+  closeable,
   onClose,
   closeLabel = 'Dismiss banner',
+  cancelLabel = 'Cancel',
   className,
-}: BannerProps) => (
-  <Card
-    variant="border"
-    className={[styles.root, styles[intent], className].filter(Boolean).join(' ')}
-  >
-    <span className={styles.icon}>
-      <Icon
-        name={icon}
-        size="1.125rem"
-      />
-    </span>
-    <span className={styles.divider} />
-    <span className={styles.content}>
-      {title && <strong className={styles.title}>{title}</strong>}
-      <span className={styles.message}>{children}</span>
-    </span>
-    <Button
-      variant="ghost"
-      intent="neutral"
-      icon="close"
-      size="sm"
-      tooltip={closeLabel}
-      aria-label={closeLabel}
-      className={styles.close}
-      onClick={onClose}
-    />
-  </Card>
-);
+}: BannerProps) => {
+  const canClose = closeable ?? !!onClose;
+  const hasActions = !!actions;
+  const showCloseControl = canClose && !!onClose;
+
+  return (
+    <Card
+      variant="border"
+      className={[styles.root, styles[intent], className].filter(Boolean).join(' ')}
+    >
+      <span className={styles.icon}>
+        <Icon
+          name={icon}
+          size="1.125rem"
+        />
+      </span>
+      <span className={styles.divider} />
+      <span className={styles.content}>
+        {title && <strong className={styles.title}>{title}</strong>}
+        <span className={styles.message}>{children}</span>
+      </span>
+      {(hasActions || showCloseControl) && (
+        <div className={styles.actions}>
+          {actions}
+          {showCloseControl &&
+            (hasActions ? (
+              <Button
+                type="button"
+                variant="ghost"
+                intent="neutral"
+                size="sm"
+                onClick={onClose}
+              >
+                {cancelLabel}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                intent="neutral"
+                icon="close"
+                size="sm"
+                tooltip={closeLabel}
+                aria-label={closeLabel}
+                className={styles.close}
+                onClick={onClose}
+              />
+            ))}
+        </div>
+      )}
+    </Card>
+  );
+};
 
 export default Banner;

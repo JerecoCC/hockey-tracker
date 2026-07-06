@@ -10,6 +10,7 @@ import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Banner from '@/components/Banner/Banner';
 import { type PlayoffSeriesRecord, type SeriesStatus, usePlayoffSeries } from '@/hooks/useGames';
 import { type PlayoffFormatRule } from '@/hooks/useLeagues';
 import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
@@ -1174,28 +1175,29 @@ const SeasonPlayoffsTab = ({
   return (
     <>
       {canStartPlayoffs && !playoffsStarted && (
-        <div className={styles.playoffsCallout}>
-          <Icon
-            name="emoji_events"
-            size="1.1em"
-          />
-          <span>
-            Start playoffs when every regular-season game is final and every team has reached its
-            season game target.
-          </span>
-          <Button
-            type="button"
-            variant="filled"
-            intent="success"
-            icon="emoji_events"
-            size="sm"
-            className={styles.playoffsCalloutAction}
-            disabled={startPlayoffsDisabled}
-            onClick={onStartPlayoffs}
-          >
-            {startPlayoffsBusy ? 'Starting…' : 'Start Playoffs'}
-          </Button>
-        </div>
+        <Banner
+          intent="success"
+          icon="emoji_events"
+          title="Start Playoffs"
+          closeable={false}
+          className={styles.playoffsBanner}
+          actions={
+            <Button
+              type="button"
+              variant="filled"
+              intent="success"
+              icon="emoji_events"
+              size="sm"
+              disabled={startPlayoffsDisabled}
+              onClick={onStartPlayoffs}
+            >
+              {startPlayoffsBusy ? 'Starting…' : 'Start Playoffs'}
+            </Button>
+          }
+        >
+          Start playoffs when every regular-season game is final and every team has reached its
+          season game target.
+        </Banner>
       )}
       {playoffsStarted && !isEnded && series.length === 0 && !seriesLoading && (
         <div className={styles.playoffsCallout}>

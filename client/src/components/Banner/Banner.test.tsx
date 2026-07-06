@@ -37,4 +37,51 @@ describe('Banner', () => {
 
     expect(screen.getByText('Message only.')).toBeInTheDocument();
   });
+
+  it('can render without a close control', () => {
+    render(
+      <Banner
+        icon="info"
+        closeable={false}
+      >
+        Passive message.
+      </Banner>,
+    );
+
+    expect(screen.getByText('Passive message.')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('renders actions without requiring a close control', () => {
+    render(
+      <Banner
+        icon="info"
+        actions={<button type="button">Continue</button>}
+      >
+        Action message.
+      </Banner>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument();
+  });
+
+  it('adds a cancel action when an action banner is closeable', () => {
+    const onClose = jest.fn();
+    render(
+      <Banner
+        icon="info"
+        actions={<button type="button">Continue</button>}
+        onClose={onClose}
+      >
+        Action message.
+      </Banner>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });
