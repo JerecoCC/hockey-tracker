@@ -202,6 +202,42 @@ describe('GET /api/admin/seasons/:id/awards', () => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/admin/seasons/:id/awards/:seasonAwardId/recipients
+// ---------------------------------------------------------------------------
+describe('POST /api/admin/seasons/:id/awards/:seasonAwardId/recipients', () => {
+  it('rejects player recipients that do not match award eligibility', async () => {
+    sql
+      .mockResolvedValueOnce([
+        {
+          id: 'season-award-1',
+          recipient_type: 'player',
+          player_eligibility: { position_groups: ['goalie'], rookies_only: false },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'player-1',
+          position: 'C',
+          rookie_season_id: 'season-1',
+        },
+      ]);
+
+    const res = await request(app)
+      .post('/api/admin/seasons/season-1/awards/season-award-1/recipients')
+      .send({
+        recipient_type: 'player',
+        player_id: 'player-1',
+        role: 'winner',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Player is not eligible for this award');
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql.mock.calls[1][0].join('')).toContain('FROM players p');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // PUT /api/admin/seasons/:id/awards/:seasonAwardId/nominees
 // ---------------------------------------------------------------------------
 describe('PUT /api/admin/seasons/:id/awards/:seasonAwardId/nominees', () => {
@@ -226,8 +262,8 @@ describe('PUT /api/admin/seasons/:id/awards/:seasonAwardId/nominees', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ count: 2 });
     expect(sql).toHaveBeenCalledTimes(6);
-    expect(sql.mock.calls[1][0].join('')).toContain('SELECT id FROM players');
-    expect(sql.mock.calls[2][0].join('')).toContain('SELECT id FROM players');
+    expect(sql.mock.calls[1][0].join('')).toContain('FROM players p');
+    expect(sql.mock.calls[2][0].join('')).toContain('FROM players p');
     expect(sql.mock.calls[3][0].join('')).toContain("sar.role = 'nominee'");
     expect(sql.mock.calls[4][0].join('')).toContain('INSERT INTO season_award_recipients');
     expect(sql.mock.calls[4].slice(1)).toEqual([

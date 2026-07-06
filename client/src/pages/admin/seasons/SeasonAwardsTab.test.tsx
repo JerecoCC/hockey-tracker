@@ -105,11 +105,13 @@ const makeAward = (overrides: Partial<SeasonAwardRecord> = {}): SeasonAwardRecor
   description: null,
   recipient_type: 'player',
   selection_method: 'voted',
+  competition_scope: 'full_season',
   stat_key: null,
   awarded_after_playoffs: true,
   uses_nominees: false,
   allow_multiple_winners: false,
   uses_team_selection: false,
+  player_eligibility: null,
   sort_order: 0,
   season_award_id: 'season-award-1',
   awarded_at: null,
@@ -434,7 +436,8 @@ describe('SeasonAwardsTab', () => {
       makeAward({
         name: 'Walter Cup Winner',
         recipient_type: 'team',
-        selection_method: 'playoff',
+        selection_method: 'automatic',
+        competition_scope: 'playoffs',
         stat_key: 'playoff_champion',
         recipients: [
           {
@@ -450,10 +453,10 @@ describe('SeasonAwardsTab', () => {
 
     await user.click(screen.getByRole('button', { name: 'Update Awards' }));
 
-    expect(screen.getByText('Team | Automatic | Playoff Champion | Playoff award')).toBeInTheDocument();
+    expect(screen.getByText('Team | Automatic | Playoff Champion | Playoffs')).toBeInTheDocument();
     expect(screen.queryByText(/playoff_champion/i)).not.toBeInTheDocument();
     expect(
-      screen.queryByText('Team | Automatic | Playoff Champion | Playoff award | Recorded'),
+      screen.queryByText('Team | Automatic | Playoff Champion | Playoffs | Recorded'),
     ).not.toBeInTheDocument();
   });
 
@@ -496,7 +499,8 @@ describe('SeasonAwardsTab', () => {
       makeAward({
         name: 'Walter Cup Winner',
         recipient_type: 'team',
-        selection_method: 'playoff',
+        selection_method: 'automatic',
+        competition_scope: 'playoffs',
         stat_key: 'playoff_champion',
         recipients: [
           {
@@ -518,7 +522,8 @@ describe('SeasonAwardsTab', () => {
       makeAward({
         name: 'Walter Cup Winner',
         recipient_type: 'team',
-        selection_method: 'playoff',
+        selection_method: 'automatic',
+        competition_scope: 'playoffs',
         stat_key: 'playoff_champion',
         recipients: [
           {
@@ -669,7 +674,8 @@ describe('SeasonAwardsTab', () => {
       makeAward({
         name: 'Walter Cup Winner',
         recipient_type: 'team',
-        selection_method: 'playoff',
+        selection_method: 'automatic',
+        competition_scope: 'playoffs',
         stat_key: 'playoff_champion',
       }),
       addRecipient,

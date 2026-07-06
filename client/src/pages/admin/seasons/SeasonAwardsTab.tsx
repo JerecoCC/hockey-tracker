@@ -1,4 +1,4 @@
-import { type DragEvent, useMemo, useState } from 'react';
+import { type DragEvent, useCallback, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
@@ -33,11 +33,14 @@ import {
   buildTeamDetailsPath,
 } from '@/lib/routeSlugs';
 import {
+  awardCompetitionScopeLabel,
+  awardPlayerEligibilityLabel,
   awardSelectionSourceLabel,
   getAwardCompetitionScope,
   getAwardRecordingGate,
   getAwardSelectionSource,
   getAwardWinnerMode,
+  playerMatchesAwardEligibility,
 } from '@/lib/awardDefinitions';
 import PlayerCard, { formatPlayerPosition } from '@/components/PlayerCard/PlayerCard';
 import styles from './SeasonDetails.module.scss';
@@ -137,6 +140,7 @@ interface AwardPlayerRecord {
   team_primary_color: string | null;
   team_text_color: string | null;
   team_stint_created: string | null;
+  rookie_season_id: string | null;
 }
 
 interface AwardRecipientStatDisplay {
@@ -186,6 +190,10 @@ const statPlayerToAwardPlayer = (
   team_primary_color: player.team_primary_color,
   team_text_color: player.team_text_color,
   team_stint_created: player.team_stint_created,
+  rookie_season_id:
+    'rookie_season_id' in player && typeof player.rookie_season_id === 'string'
+      ? player.rookie_season_id
+      : null,
 });
 
 const rosterPlayerToAwardPlayer = (player: PlayerRecord): AwardPlayerRecord => ({
@@ -204,6 +212,7 @@ const rosterPlayerToAwardPlayer = (player: PlayerRecord): AwardPlayerRecord => (
   team_primary_color: player.primary_color ?? null,
   team_text_color: player.text_color ?? null,
   team_stint_created: player.start_date ?? player.created_at ?? null,
+  rookie_season_id: player.rookie_season_id ?? null,
 });
 
 const statLabel = (statKey: string | null | undefined) =>
@@ -216,8 +225,9 @@ const awardSelectionSubtitle = (award: SeasonAwardRecord) => {
   return [
     award.recipient_type === 'player' ? 'Player' : 'Team',
     awardSelectionSourceLabel(getAwardSelectionSource(award)),
+    awardPlayerEligibilityLabel(award),
     statLabel(award.stat_key),
-    competitionScope === 'playoffs' ? 'Playoff award' : null,
+    awardCompetitionScopeLabel(competitionScope),
     award.uses_nominees && winnerMode !== 'team_selection' ? 'Nominees' : null,
     winnerMode === 'team_selection'
       ? 'Team selection'
@@ -491,45 +501,39 @@ const SeasonAwardsTab = ({
     return sortAwardPlayersByName([...byId.values()]);
   }, [rosterAwardPlayers, statAwardPlayers]);
 
-  const playerOptions = awardPlayers.map((player) => ({
+  const awardPlayerById = useMemo(
+    () => new Map(awardPlayers.map((player) => [player.player_id, player])),
+    [awardPlayers],
+  );
+
+  const eligibleAwardPlayersForAward = (award: SeasonAwardRecord | null | undefined) =>
+    award
+      ? awardPlayers.filter((player) => playerMatchesAwardEligibility(award, player, seasonId))
+      : awardPlayers;
+
+  const playerToSelectOption = (player: AwardPlayerRecord): SelectOption => ({
     value: player.player_id,
     label: playerName(player),
     logo: player.team_logo,
     logoDark: player.team_logo_dark,
     logoLight: player.team_logo_light,
     code: player.team_code ?? undefined,
-  }));
+  });
 
-  const forwardOptions = dedupedSkaters
+  const playerOptions = awardPlayers.map(playerToSelectOption);
+  const eligibleTeamSelectionPlayers = eligibleAwardPlayersForAward(teamSelectionAward);
+
+  const forwardOptions = eligibleTeamSelectionPlayers
     .filter((player) => !isDefensePosition(player.position) && !isGoaliePosition(player.position))
-    .map((player) => ({
-      value: player.player_id,
-      label: playerName(player),
-      logo: player.team_logo,
-      logoDark: player.team_logo_dark,
-      logoLight: player.team_logo_light,
-      code: player.team_code ?? undefined,
-    }));
+    .map(playerToSelectOption);
 
-  const defenderOptions = dedupedSkaters
+  const defenderOptions = eligibleTeamSelectionPlayers
     .filter((player) => isDefensePosition(player.position))
-    .map((player) => ({
-      value: player.player_id,
-      label: playerName(player),
-      logo: player.team_logo,
-      logoDark: player.team_logo_dark,
-      logoLight: player.team_logo_light,
-      code: player.team_code ?? undefined,
-    }));
+    .map(playerToSelectOption);
 
-  const goalieOptions = dedupedGoalies.map((player) => ({
-    value: player.player_id,
-    label: playerName(player),
-    logo: player.team_logo,
-    logoDark: player.team_logo_dark,
-    logoLight: player.team_logo_light,
-    code: player.team_code ?? undefined,
-  }));
+  const goalieOptions = eligibleTeamSelectionPlayers
+    .filter((player) => isGoaliePosition(player.position))
+    .map(playerToSelectOption);
 
   const teamSelectionOptions = {
     Forward: forwardOptions,
@@ -642,7 +646,9 @@ const SeasonAwardsTab = ({
         .filter((option) => option.value);
     }
 
-    return award.recipient_type === 'player' ? playerOptions : teamOptions;
+    return award.recipient_type === 'player'
+      ? eligibleAwardPlayersForAward(award).map(playerToSelectOption)
+      : teamOptions;
   };
 
   const playerToWinnerOption = (player: AwardPlayerRecord): WinnerChecklistOption => {
@@ -721,6 +727,21 @@ const SeasonAwardsTab = ({
     };
   };
 
+  const statPlayerMatchesAwardEligibility = useCallback(
+    (award: SeasonAwardRecord, player: SkaterStatRecord | GoalieStatRecord) => {
+      const metadata = awardPlayerById.get(player.player_id);
+      return playerMatchesAwardEligibility(
+        award,
+        {
+          position: 'position' in player ? player.position : (metadata?.position ?? 'G'),
+          rookie_season_id: metadata?.rookie_season_id ?? null,
+        },
+        seasonId,
+      );
+    },
+    [awardPlayerById, seasonId],
+  );
+
   const suggestions = useMemo(() => {
     const byAward = new Map<string, SuggestedRecipient>();
     for (const award of awards) {
@@ -754,11 +775,13 @@ const SeasonAwardsTab = ({
       }
 
       if (['points', 'goals', 'assists'].includes(award.stat_key)) {
-        const top = [...dedupedSkaters].sort(
-          (a, b) =>
-            (numericFieldValue(b, award.stat_key) ?? 0) -
-            (numericFieldValue(a, award.stat_key) ?? 0),
-        )[0];
+        const top = dedupedSkaters
+          .filter((player) => statPlayerMatchesAwardEligibility(award, player))
+          .sort(
+            (a, b) =>
+              (numericFieldValue(b, award.stat_key) ?? 0) -
+              (numericFieldValue(a, award.stat_key) ?? 0),
+          )[0];
         if (top) {
           byAward.set(award.award_id, {
             id: top.player_id,
@@ -769,7 +792,9 @@ const SeasonAwardsTab = ({
       } else if (['save_pct', 'gaa', 'shutouts'].includes(award.stat_key)) {
         const ascending = award.stat_key === 'gaa';
         const candidates = dedupedGoalies.filter(
-          (goalie) => numericFieldValue(goalie, award.stat_key) !== null,
+          (goalie) =>
+            numericFieldValue(goalie, award.stat_key) !== null &&
+            statPlayerMatchesAwardEligibility(award, goalie),
         );
         const top = candidates.sort((a, b) => {
           const diff =
@@ -787,7 +812,15 @@ const SeasonAwardsTab = ({
       }
     }
     return byAward;
-  }, [awards, dedupedGoalies, dedupedSkaters, playoffSeries, seasonTeams, standings]);
+  }, [
+    awards,
+    dedupedGoalies,
+    dedupedSkaters,
+    playoffSeries,
+    seasonTeams,
+    standings,
+    statPlayerMatchesAwardEligibility,
+  ]);
 
   const trackedAwards = useMemo(
     () => awards.filter((award) => award.season_award_id),
@@ -827,7 +860,7 @@ const SeasonAwardsTab = ({
           .map(nomineeToWinnerOption)
           .filter((option): option is WinnerChecklistOption => option !== null)
       : activeRecipientAward.recipient_type === 'player'
-        ? awardPlayers.map(playerToWinnerOption)
+        ? eligibleAwardPlayersForAward(activeRecipientAward).map(playerToWinnerOption)
         : seasonTeams.map(teamToWinnerOption)
     : [];
   const activeRecipientWinnerIds = activeRecipientWinners
@@ -1257,7 +1290,11 @@ const SeasonAwardsTab = ({
   });
 
   const nomineeRecipientOptions =
-    activeNomineeAward?.recipient_type === 'team' ? teamOptions : playerOptions;
+    activeNomineeAward?.recipient_type === 'team'
+      ? teamOptions
+      : activeNomineeAward
+        ? eligibleAwardPlayersForAward(activeNomineeAward).map(playerToSelectOption)
+        : playerOptions;
   const nomineeOptionsForDraft = (draft: NomineeDraft) =>
     nomineeRecipientOptions.filter((option) => {
       if ('divider' in option) return true;

@@ -582,11 +582,13 @@ async function initSchema() {
       description             TEXT,
       recipient_type          TEXT NOT NULL DEFAULT 'player',
       selection_method        TEXT NOT NULL DEFAULT 'manual',
+      competition_scope       TEXT NOT NULL DEFAULT 'full_season',
       stat_key                TEXT,
       awarded_after_playoffs  BOOLEAN NOT NULL DEFAULT true,
       uses_nominees           BOOLEAN NOT NULL DEFAULT false,
       allow_multiple_winners  BOOLEAN NOT NULL DEFAULT false,
       uses_team_selection     BOOLEAN NOT NULL DEFAULT false,
+      player_eligibility      JSONB NOT NULL DEFAULT '{}'::jsonb,
       active                  BOOLEAN NOT NULL DEFAULT true,
       sort_order              INT NOT NULL DEFAULT 0,
       created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -596,16 +598,85 @@ async function initSchema() {
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS description TEXT`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS recipient_type TEXT NOT NULL DEFAULT 'player'`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS selection_method TEXT NOT NULL DEFAULT 'manual'`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS competition_scope TEXT NOT NULL DEFAULT 'full_season'`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS stat_key TEXT`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS awarded_after_playoffs BOOLEAN NOT NULL DEFAULT true`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS uses_nominees BOOLEAN NOT NULL DEFAULT false`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS allow_multiple_winners BOOLEAN NOT NULL DEFAULT false`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS uses_team_selection BOOLEAN NOT NULL DEFAULT false`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS player_eligibility JSONB NOT NULL DEFAULT '{}'::jsonb`;
   await sql`
     CREATE TABLE IF NOT EXISTS _migrations (
       name       TEXT PRIMARY KEY,
       applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations WHERE name = 'backfill_league_award_competition_scope_v1'
+      ) THEN
+        UPDATE league_awards
+        SET competition_scope = CASE
+              WHEN selection_method = 'playoff' OR stat_key = 'playoff_champion' THEN 'playoffs'
+              WHEN stat_key IN (
+                'points',
+                'goals',
+                'assists',
+                'save_pct',
+                'gaa',
+                'shutouts',
+                'standings_points',
+                'wins'
+              ) THEN 'regular_season'
+              ELSE competition_scope
+            END,
+            selection_method = CASE
+              WHEN selection_method = 'playoff' THEN 'manual'
+              ELSE selection_method
+            END;
+
+        INSERT INTO _migrations (name) VALUES ('backfill_league_award_competition_scope_v1');
+      END IF;
+    END $$
+  `;
+  // Keep legacy award rows normalized even if they were inserted after the one-time migration.
+  await sql`
+    UPDATE league_awards
+    SET competition_scope = CASE
+          WHEN selection_method = 'playoff' OR stat_key = 'playoff_champion' THEN 'playoffs'
+          WHEN stat_key IN (
+            'points',
+            'goals',
+            'assists',
+            'save_pct',
+            'gaa',
+            'shutouts',
+            'standings_points',
+            'wins'
+          ) THEN 'regular_season'
+          ELSE competition_scope
+        END,
+        selection_method = CASE
+          WHEN selection_method = 'playoff' THEN 'manual'
+          ELSE selection_method
+        END
+    WHERE selection_method = 'playoff'
+       OR stat_key = 'playoff_champion'
+       OR (
+        stat_key IN (
+          'points',
+          'goals',
+          'assists',
+          'save_pct',
+          'gaa',
+          'shutouts',
+          'standings_points',
+          'wins'
+        )
+        AND competition_scope <> 'regular_season'
+       )
   `;
   await sql`
     DO $$
@@ -639,6 +710,29 @@ async function initSchema() {
   `;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0`;
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations WHERE name = 'backfill_league_award_player_eligibility_v1'
+      ) THEN
+        UPDATE league_awards
+        SET player_eligibility = COALESCE(player_eligibility, '{}'::jsonb)
+          || CASE
+              WHEN stat_key IN ('save_pct', 'gaa', 'shutouts') THEN '{"position_groups":["goalie"]}'::jsonb
+              WHEN stat_key IN ('points', 'goals', 'assists') THEN '{"position_groups":["forward","defender"]}'::jsonb
+              ELSE '{}'::jsonb
+            END
+          || CASE
+              WHEN lower(name) LIKE '%rookie%' THEN '{"rookies_only":true}'::jsonb
+              ELSE '{}'::jsonb
+            END
+        WHERE recipient_type = 'player';
+
+        INSERT INTO _migrations (name) VALUES ('backfill_league_award_player_eligibility_v1');
+      END IF;
+    END $$
+  `;
 
   await sql`
     CREATE TABLE IF NOT EXISTS season_awards (

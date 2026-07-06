@@ -1,25 +1,34 @@
-import { useState } from 'react';
+import { type DragEvent, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '@/components/Button/Button';
-import CheckboxField from '@/components/CheckboxField/CheckboxField';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Divider from '@/components/Divider/Divider';
 import Field from '@/components/Field/Field';
-import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
+import GroupedFields from '@/components/GroupedFields/GroupedFields';
 import Modal from '@/components/Modal/Modal';
+import RadioList, { type RadioListOption } from '@/components/RadioList/RadioList';
+import ReorderableField from '@/components/ReorderableField/ReorderableField';
 import Section from '@/components/Section/Section';
-import Tag from '@/components/Tag/Tag';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
+import Tag, { type TagIntent } from '@/components/Tag/Tag';
 import useLeagueAwards, {
   type LeagueAwardPayload,
   type LeagueAwardRecord,
 } from '@/hooks/useLeagueAwards';
-import type { AwardRecipientType, AwardSelectionMethod } from '@/hooks/useSeasonAwards';
+import type { AwardRecipientType } from '@/hooks/useSeasonAwards';
 import {
+  awardCompetitionScopeLabel,
+  awardPlayerEligibilityLabel,
   awardSelectionSourceLabel,
+  type AwardCompetitionScope,
+  type AwardSelectionSource,
+  type AwardWinnerMode,
+  type AwardPlayerPositionGroup,
   getAwardCompetitionScope,
   getAwardRecordingGate,
   getAwardSelectionSource,
   getAwardWinnerMode,
+  normalizeAwardPlayerEligibility,
 } from '@/lib/awardDefinitions';
 import {
   LeagueListRowSkeleton,
@@ -28,11 +37,16 @@ import {
 } from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
 
-const METHOD_OPTIONS = [
+const SOURCE_OPTIONS = [
   { value: 'manual', label: 'Manual' },
   { value: 'voted', label: 'Voted' },
   { value: 'automatic', label: 'Automatic' },
-  { value: 'playoff', label: 'Playoff' },
+];
+
+const COMPETITION_SCOPE_OPTIONS = [
+  { value: 'full_season', label: 'Full Season' },
+  { value: 'regular_season', label: 'Regular Season' },
+  { value: 'playoffs', label: 'Playoffs' },
 ];
 
 const RECIPIENT_TYPE_OPTIONS = [
@@ -53,17 +67,221 @@ const STAT_OPTIONS = [
   { value: 'playoff_champion', label: 'Playoff Champion' },
 ];
 
+const PLAYER_STAT_OPTIONS = STAT_OPTIONS.filter((option) =>
+  ['', 'points', 'goals', 'assists', 'save_pct', 'gaa', 'shutouts'].includes(option.value),
+);
+
+const TEAM_STAT_OPTIONS = STAT_OPTIONS.filter((option) =>
+  ['', 'standings_points', 'wins', 'playoff_champion'].includes(option.value),
+);
+
+const REGULAR_SEASON_STAT_KEYS = new Set([
+  'points',
+  'goals',
+  'assists',
+  'save_pct',
+  'gaa',
+  'shutouts',
+  'standings_points',
+  'wins',
+]);
+
+const RESULT_MODE_OPTIONS = [
+  {
+    value: 'single',
+    name: 'Single Winner',
+    subtitle: 'Award one recipient for this definition.',
+    hideImage: true,
+  },
+  {
+    value: 'multiple',
+    name: 'Multiple Winners',
+    subtitle: 'Record more than one winner for the same award.',
+    hideImage: true,
+  },
+  {
+    value: 'team_selection',
+    name: 'Team Selection',
+    subtitle: 'Build a roster-style team using position slots.',
+    hideImage: true,
+  },
+] satisfies RadioListOption[];
+
+type EligibilityScope = 'all' | 'skaters' | 'forward' | 'defender' | 'goalie' | 'custom';
+
+const POSITION_ELIGIBILITY_OPTIONS = [
+  {
+    value: 'all',
+    name: 'All Positions',
+    subtitle: 'Any player position can be selected.',
+    hideImage: true,
+  },
+  {
+    value: 'skaters',
+    name: 'Skaters',
+    subtitle: 'Forwards and defenders only.',
+    hideImage: true,
+  },
+  {
+    value: 'forward',
+    name: 'Forwards',
+    subtitle: 'Only forwards are eligible.',
+    hideImage: true,
+  },
+  {
+    value: 'defender',
+    name: 'Defenders',
+    subtitle: 'Only defenders are eligible.',
+    hideImage: true,
+  },
+  {
+    value: 'goalie',
+    name: 'Goalies',
+    subtitle: 'Only goalies are eligible.',
+    hideImage: true,
+  },
+] satisfies RadioListOption[];
+
+const ROOKIE_ELIGIBILITY_OPTIONS = [
+  {
+    value: 'all',
+    name: 'All Players',
+    subtitle: 'No rookie restriction.',
+    hideImage: true,
+  },
+  {
+    value: 'rookies',
+    name: 'Rookies Only',
+    subtitle: 'Only players marked as rookies for this season.',
+    hideImage: true,
+  },
+] satisfies RadioListOption[];
+
+const ELIGIBILITY_SCOPE_GROUPS: Record<
+  Exclude<EligibilityScope, 'custom'>,
+  AwardPlayerPositionGroup[]
+> = {
+  all: [],
+  skaters: ['forward', 'defender'],
+  forward: ['forward'],
+  defender: ['defender'],
+  goalie: ['goalie'],
+};
+
+const CUSTOM_POSITION_ELIGIBILITY_OPTION = {
+  value: 'custom',
+  name: 'Custom Positions',
+  subtitle: 'This award uses a mixed eligibility set from older data.',
+  hideImage: true,
+} satisfies RadioListOption;
+
+const positionGroupsToEligibilityScope = (
+  groups: AwardPlayerPositionGroup[],
+): EligibilityScope => {
+  if (groups.length === 0) return 'all';
+  if (groups.length === 1) return groups[0];
+
+  const unique = new Set(groups);
+  if (unique.size === 2 && unique.has('forward') && unique.has('defender')) {
+    return 'skaters';
+  }
+
+  return 'custom';
+};
+
+const eligibilityScopeToPositionGroups = (
+  scope: EligibilityScope,
+): AwardPlayerPositionGroup[] | null => {
+  if (scope === 'custom') return null;
+  return ELIGIBILITY_SCOPE_GROUPS[scope];
+};
+
+const winnerModeFromValue = (value: string): AwardWinnerMode | null => {
+  if (value === 'single' || value === 'multiple' || value === 'team_selection') return value;
+  return null;
+};
+
+const eligibilityScopeFromValue = (value: string): EligibilityScope | null => {
+  if (
+    value === 'all' ||
+    value === 'skaters' ||
+    value === 'forward' ||
+    value === 'defender' ||
+    value === 'goalie' ||
+    value === 'custom'
+  ) {
+    return value;
+  }
+  return null;
+};
+
+const rookieEligibilityFromValue = (value: string) => {
+  if (value === 'all' || value === 'rookies') return value;
+  return null;
+};
+
+const awardSelectionSourceFromValue = (value: string): AwardSelectionSource | null => {
+  if (value === 'manual' || value === 'voted' || value === 'automatic') return value;
+  return null;
+};
+
+const awardCompetitionScopeFromValue = (value: string): AwardCompetitionScope | null => {
+  if (value === 'full_season' || value === 'regular_season' || value === 'playoffs') {
+    return value;
+  }
+  return null;
+};
+
+const competitionScopeForValues = (values: Pick<FormValues, 'competition_scope' | 'stat_key'>) => {
+  if (values.stat_key === 'playoff_champion') return 'playoffs';
+  if (REGULAR_SEASON_STAT_KEYS.has(values.stat_key)) return 'regular_season';
+  return values.competition_scope;
+};
+
+const statOptionsFor = (
+  recipientType: AwardRecipientType,
+  competitionScope: AwardCompetitionScope,
+) => {
+  if (competitionScope === 'full_season') {
+    return STAT_OPTIONS.filter((option) => option.value === '');
+  }
+  if (competitionScope === 'playoffs') {
+    return recipientType === 'team'
+      ? STAT_OPTIONS.filter((option) => ['', 'playoff_champion'].includes(option.value))
+      : STAT_OPTIONS.filter((option) => option.value === '');
+  }
+  return recipientType === 'team' ? TEAM_STAT_OPTIONS : PLAYER_STAT_OPTIONS;
+};
+
+const NOMINEE_WORKFLOW_OPTIONS = [
+  { value: 'direct', label: 'Direct Awarding' },
+  { value: 'nominees', label: 'Nominees First' },
+];
+
+const TIMING_OPTIONS = [
+  { value: 'anytime', label: 'Any Time' },
+  { value: 'after_playoffs_start', label: 'After Playoffs Start' },
+];
+
+const AWARD_FIELD_GROUP_TAG_INTENTS = {
+  selection: 'info',
+  result: 'accent',
+  eligibility: 'success',
+} satisfies Record<'selection' | 'result' | 'eligibility', TagIntent>;
+
 interface FormValues {
   name: string;
   description: string;
   recipient_type: AwardRecipientType;
-  selection_method: AwardSelectionMethod;
+  selection_method: AwardSelectionSource;
+  competition_scope: AwardCompetitionScope;
   stat_key: string;
   awarded_after_playoffs: boolean;
   uses_nominees: boolean;
   allow_multiple_winners: boolean;
   uses_team_selection: boolean;
-  sort_order: string;
+  eligible_position_groups: AwardPlayerPositionGroup[];
+  rookies_only: boolean;
 }
 
 interface Props {
@@ -76,12 +294,14 @@ const emptyValues: FormValues = {
   description: '',
   recipient_type: 'player',
   selection_method: 'manual',
+  competition_scope: 'full_season',
   stat_key: '',
   awarded_after_playoffs: true,
   uses_nominees: false,
   allow_multiple_winners: false,
   uses_team_selection: false,
-  sort_order: '',
+  eligible_position_groups: [],
+  rookies_only: false,
 };
 
 const statLabel = (statKey: string | null) =>
@@ -95,19 +315,49 @@ const toPayload = (values: FormValues): LeagueAwardPayload => ({
   description: values.description || null,
   recipient_type: values.recipient_type,
   selection_method: values.selection_method,
+  competition_scope: competitionScopeForValues(values),
   stat_key: values.stat_key || null,
   awarded_after_playoffs: values.awarded_after_playoffs,
   uses_nominees: values.uses_nominees,
   allow_multiple_winners: values.allow_multiple_winners,
   uses_team_selection: values.uses_team_selection,
-  sort_order: values.sort_order.trim() === '' ? null : Number(values.sort_order),
+  player_eligibility:
+    values.recipient_type === 'player'
+      ? {
+          position_groups: values.eligible_position_groups,
+          rookies_only: values.rookies_only,
+        }
+      : null,
 });
 
+const reorderItems = <T,>(items: T[], fromIndex: number, toIndex: number) => {
+  if (
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= items.length ||
+    toIndex >= items.length ||
+    fromIndex === toIndex
+  ) {
+    return items;
+  }
+
+  const next = [...items];
+  const [moved] = next.splice(fromIndex, 1);
+  next.splice(toIndex, 0, moved);
+  return next;
+};
+
 const LeagueAwardsTab = ({ leagueId, className }: Props) => {
-  const { awards, loading, createAward, updateAward, deleteAward } = useLeagueAwards(leagueId);
+  const { awards, loading, createAward, updateAward, reorderAwards, deleteAward } =
+    useLeagueAwards(leagueId);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<LeagueAwardRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<LeagueAwardRecord | null>(null);
+  const [orderedAwardIds, setOrderedAwardIds] = useState<string[] | null>(null);
+  const orderedAwardIdsRef = useRef<string[] | null>(null);
+  const dropHandledRef = useRef(false);
+  const [draggingAwardId, setDraggingAwardId] = useState<string | null>(null);
+  const [reorderingAwards, setReorderingAwards] = useState(false);
   const form = useForm<FormValues>({ defaultValues: emptyValues, mode: 'onChange' });
 
   const openCreate = () => {
@@ -117,18 +367,21 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
   };
 
   const openEdit = (award: LeagueAwardRecord) => {
+    const eligibility = normalizeAwardPlayerEligibility(award.player_eligibility);
     setEditTarget(award);
     form.reset({
       name: award.name,
       description: award.description ?? '',
       recipient_type: award.recipient_type,
-      selection_method: award.selection_method,
+      selection_method: getAwardSelectionSource(award),
+      competition_scope: getAwardCompetitionScope(award),
       stat_key: award.stat_key ?? '',
       awarded_after_playoffs: award.awarded_after_playoffs,
       uses_nominees: award.uses_nominees,
       allow_multiple_winners: award.allow_multiple_winners,
       uses_team_selection: award.uses_team_selection,
-      sort_order: award.sort_order ? String(award.sort_order) : '',
+      eligible_position_groups: eligibility.position_groups,
+      rookies_only: eligibility.rookies_only,
     });
     setModalOpen(true);
   };
@@ -145,22 +398,227 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
     if (ok) closeModal();
   });
 
-  const toggleBooleanField = (
-    field:
-      | 'awarded_after_playoffs'
-      | 'uses_nominees'
-      | 'allow_multiple_winners'
-      | 'uses_team_selection',
-  ) => {
-    form.setValue(field, !form.getValues(field), {
+  const setRecipientType = (value: string) => {
+    if (value !== 'player' && value !== 'team') return;
+    form.setValue('recipient_type', value, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    form.setValue('stat_key', '', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    if (value === 'team') {
+      form.setValue('uses_nominees', false, { shouldDirty: true, shouldValidate: true });
+      form.setValue('allow_multiple_winners', false, { shouldDirty: true, shouldValidate: true });
+      form.setValue('uses_team_selection', false, { shouldDirty: true, shouldValidate: true });
+      form.setValue('eligible_position_groups', [], { shouldDirty: true, shouldValidate: true });
+      form.setValue('rookies_only', false, { shouldDirty: true, shouldValidate: true });
+    }
+  };
+
+  const setSelectionMethod = (value: string) => {
+    const source = awardSelectionSourceFromValue(value);
+    if (!source) return;
+    form.setValue('selection_method', source, {
       shouldDirty: true,
       shouldValidate: true,
     });
   };
+
+  const setCompetitionScope = (value: string) => {
+    const scope = awardCompetitionScopeFromValue(value);
+    if (!scope) return;
+
+    form.setValue('competition_scope', scope, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+
+    const statKey = form.getValues('stat_key');
+    if (
+      (scope === 'full_season' && statKey) ||
+      (scope === 'regular_season' && statKey === 'playoff_champion') ||
+      (scope === 'playoffs' && REGULAR_SEASON_STAT_KEYS.has(statKey))
+    ) {
+      form.setValue('stat_key', '', {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  };
+
+  const setWinnerMode = (value: string) => {
+    const mode = winnerModeFromValue(value);
+    if (!mode) return;
+
+    const usesTeamSelection = mode === 'team_selection';
+    form.setValue('uses_team_selection', usesTeamSelection, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    form.setValue('allow_multiple_winners', mode === 'multiple', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    if (usesTeamSelection) {
+      form.setValue('uses_nominees', false, { shouldDirty: true, shouldValidate: true });
+    }
+  };
+
+  const setNomineeWorkflow = (value: string) => {
+    form.setValue('uses_nominees', value === 'nominees', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  const setTiming = (value: string) => {
+    form.setValue('awarded_after_playoffs', value === 'after_playoffs_start', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  const setEligibilityScope = (value: string) => {
+    const scope = eligibilityScopeFromValue(value);
+    if (!scope) return;
+
+    const next = eligibilityScopeToPositionGroups(scope);
+    if (!next) return;
+
+    form.setValue('eligible_position_groups', next, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  const setRookieEligibility = (value: string) => {
+    const eligibility = rookieEligibilityFromValue(value);
+    if (!eligibility) return;
+
+    form.setValue('rookies_only', eligibility === 'rookies', {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+
+  const awardsById = new Map(awards.map((award) => [award.id, award]));
+  const localOrderIds = orderedAwardIds ?? awards.map((award) => award.id);
+  const localOrderIdSet = new Set(localOrderIds);
+  const orderedAwards = [
+    ...localOrderIds
+      .map((awardId) => awardsById.get(awardId))
+      .filter((award): award is LeagueAwardRecord => !!award),
+    ...awards.filter((award) => !localOrderIdSet.has(award.id)),
+  ];
+
+  const setLocalAwardOrder = (awardIds: string[] | null) => {
+    orderedAwardIdsRef.current = awardIds;
+    setOrderedAwardIds(awardIds);
+  };
+
+  const persistAwardOrder = async (nextAwards: LeagueAwardRecord[]) => {
+    const nextAwardIds = nextAwards.map((award) => award.id);
+    setLocalAwardOrder(nextAwardIds);
+    setReorderingAwards(true);
+    const ok = await reorderAwards(nextAwardIds);
+    setReorderingAwards(false);
+    setLocalAwardOrder(null);
+    return ok;
+  };
+
+  const moveAward = (awardId: string, delta: number) => {
+    const fromIndex = orderedAwards.findIndex((award) => award.id === awardId);
+    void persistAwardOrder(reorderItems(orderedAwards, fromIndex, fromIndex + delta));
+  };
+
+  const moveAwardTo = (
+    awardId: string,
+    targetAwardId: string,
+    placement: 'before' | 'after',
+  ) => {
+    if (awardId === targetAwardId) return;
+
+    const fromIndex = orderedAwards.findIndex((award) => award.id === awardId);
+    const targetIndex = orderedAwards.findIndex((award) => award.id === targetAwardId);
+    if (fromIndex < 0 || targetIndex < 0) return;
+
+    const adjustedTargetIndex =
+      placement === 'after'
+        ? targetIndex + (fromIndex < targetIndex ? 0 : 1)
+        : targetIndex - (fromIndex < targetIndex ? 1 : 0);
+    const nextAwards = reorderItems(orderedAwards, fromIndex, adjustedTargetIndex);
+    setLocalAwardOrder(nextAwards.map((award) => award.id));
+  };
+
+  const handleAwardDragStart =
+    (awardId: string) => (event: DragEvent<HTMLDivElement>) => {
+      if (reorderingAwards) {
+        event.preventDefault();
+        return;
+      }
+      dropHandledRef.current = false;
+      setDraggingAwardId(awardId);
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/league-award-id', awardId);
+    };
+
+  const handleAwardDragOver =
+    (targetAwardId: string) => (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const draggedAwardId =
+        draggingAwardId || event.dataTransfer.getData('text/league-award-id');
+      if (!draggedAwardId || draggedAwardId === targetAwardId) return;
+
+      const rect = event.currentTarget.getBoundingClientRect();
+      const placement = event.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
+      moveAwardTo(draggedAwardId, targetAwardId, placement);
+    };
+
+  const handleAwardDrop = (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    dropHandledRef.current = true;
+    setDraggingAwardId(null);
+    const currentOrderIds = orderedAwardIdsRef.current;
+    if (!currentOrderIds) return;
+    const nextAwards = currentOrderIds
+      .map((awardId) => awardsById.get(awardId))
+      .filter((award): award is LeagueAwardRecord => !!award);
+    void persistAwardOrder(nextAwards);
+  };
+
+  const handleAwardDragEnd = () => {
+    setDraggingAwardId(null);
+    if (!dropHandledRef.current) {
+      setLocalAwardOrder(null);
+    }
+    dropHandledRef.current = false;
+  };
+
   const awardedAfterPlayoffs = form.watch('awarded_after_playoffs');
+  const awardName = form.watch('name');
+  const recipientType = form.watch('recipient_type');
+  const selectionMethod = form.watch('selection_method');
+  const competitionScope = form.watch('competition_scope');
+  const statOptions = statOptionsFor(recipientType, competitionScope);
   const usesNominees = form.watch('uses_nominees');
   const allowMultipleWinners = form.watch('allow_multiple_winners');
   const usesTeamSelection = form.watch('uses_team_selection');
+  const winnerMode = usesTeamSelection
+    ? 'team_selection'
+    : allowMultipleWinners
+      ? 'multiple'
+      : 'single';
+  const nomineeWorkflow = usesNominees ? 'nominees' : 'direct';
+  const timingValue = awardedAfterPlayoffs ? 'after_playoffs_start' : 'anytime';
+  const eligiblePositionGroups = form.watch('eligible_position_groups');
+  const rookiesOnly = form.watch('rookies_only');
+  const eligibilityScope = positionGroupsToEligibilityScope(eligiblePositionGroups);
+  const positionEligibilityOptions =
+    eligibilityScope === 'custom'
+      ? [...POSITION_ELIGIBILITY_OPTIONS, CUSTOM_POSITION_ELIGIBILITY_OPTION]
+      : POSITION_ELIGIBILITY_OPTIONS;
 
   if (loading) return <LeagueAwardsTabSkeleton className={className} />;
 
@@ -185,92 +643,132 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
               No award definitions yet. Create one to apply it across seasons.
             </p>
           ) : (
-            <ul className={styles.awardDefinitionList}>
-              {awards.map((award) => {
+            <ul
+              className={styles.awardDefinitionList}
+              aria-label="Award definitions"
+            >
+              {orderedAwards.map((award, index) => {
                 const stat = statLabel(award.stat_key);
                 const competitionScope = getAwardCompetitionScope(award);
                 const recordingGate = getAwardRecordingGate(award);
                 const selectionSource = getAwardSelectionSource(award);
                 const winnerMode = getAwardWinnerMode(award);
+                const eligibility = awardPlayerEligibilityLabel(award);
 
                 return (
-                  <ListItem
+                  <li
                     key={award.id}
-                    className={styles.awardDefinitionItem}
-                    hideImage
-                    name={award.name}
-                    subtitle={award.description ?? undefined}
-                    actions={
-                      [
-                        {
-                          icon: 'edit',
-                          intent: 'neutral',
-                          tooltip: 'Edit award',
-                          onClick: () => openEdit(award),
-                        },
-                        {
-                          icon: 'delete',
-                          intent: 'danger',
-                          tooltip: 'Remove award',
-                          onClick: () => setConfirmDelete(award),
-                        },
-                      ] satisfies ListItemAction[]
-                    }
+                    className={styles.awardDefinitionSortableItem}
                   >
-                    <div className={styles.awardDefinitionDetails}>
-                      <Divider
-                        variant="horizontal"
-                        className={styles.awardDefinitionDivider}
-                      />
-                      <div
-                        className={styles.awardDefinitionMeta}
-                        aria-label="Award details"
-                      >
-                        <Tag label={recipientTypeLabel(award.recipient_type)} />
-                        <Tag
-                          label={awardSelectionSourceLabel(selectionSource)}
-                          intent="info"
+                    <ReorderableField
+                      dragging={draggingAwardId === award.id}
+                      draggable={!reorderingAwards}
+                      disabled={reorderingAwards}
+                      moveUpDisabled={index === 0}
+                      moveDownDisabled={index === orderedAwards.length - 1}
+                      moveUpLabel={`Move ${award.name} up`}
+                      moveDownLabel={`Move ${award.name} down`}
+                      onMoveUp={() => moveAward(award.id, -1)}
+                      onMoveDown={() => moveAward(award.id, 1)}
+                      onDragStart={handleAwardDragStart(award.id)}
+                      onDragOver={handleAwardDragOver(award.id)}
+                      onDrop={handleAwardDrop}
+                      onDragEnd={handleAwardDragEnd}
+                      className={styles.awardDefinitionReorderable}
+                    >
+                      <div className={styles.awardDefinitionItem}>
+                        <div className={styles.awardDefinitionHeader}>
+                          <div className={styles.awardDefinitionMain}>
+                            <span className={styles.awardDefinitionName}>{award.name}</span>
+                            {award.description && (
+                              <span className={styles.awardDefinitionDescription}>
+                                {award.description}
+                              </span>
+                            )}
+                          </div>
+                          <div className={styles.awardDefinitionActions}>
+                            <Button
+                              variant="outlined"
+                              intent="neutral"
+                              icon="edit"
+                              size="sm"
+                              tooltip="Edit award"
+                              aria-label={`Edit ${award.name}`}
+                              disabled={reorderingAwards}
+                              onClick={() => openEdit(award)}
+                            />
+                            <Button
+                              variant="outlined"
+                              intent="danger"
+                              icon="delete"
+                              size="sm"
+                              tooltip="Remove award"
+                              aria-label={`Remove ${award.name}`}
+                              disabled={reorderingAwards}
+                              onClick={() => setConfirmDelete(award)}
+                            />
+                          </div>
+                        </div>
+                        <Divider
+                          variant="horizontal"
+                          className={styles.awardDefinitionDivider}
                         />
-                        {stat && (
+                        <div
+                          className={styles.awardDefinitionMeta}
+                          aria-label="Award details"
+                        >
                           <Tag
-                            label={stat}
-                            intent="accent"
+                            label={recipientTypeLabel(award.recipient_type)}
+                            intent={AWARD_FIELD_GROUP_TAG_INTENTS.selection}
                           />
-                        )}
-                        {competitionScope === 'playoffs' && (
                           <Tag
-                            label="Playoff award"
-                            intent="success"
+                            label={awardSelectionSourceLabel(selectionSource)}
+                            intent={AWARD_FIELD_GROUP_TAG_INTENTS.selection}
                           />
-                        )}
-                        {recordingGate === 'after_playoffs_start' &&
-                          competitionScope !== 'playoffs' && (
+                          {stat && (
                             <Tag
-                              label="After playoffs start"
-                              intent="success"
+                              label={stat}
+                              intent={AWARD_FIELD_GROUP_TAG_INTENTS.selection}
                             />
                           )}
-                        {award.uses_nominees && winnerMode !== 'team_selection' && (
+                          {eligibility && (
+                            <Tag
+                              label={eligibility}
+                              intent={AWARD_FIELD_GROUP_TAG_INTENTS.eligibility}
+                            />
+                          )}
                           <Tag
-                            label="Nominees"
-                            intent="info"
+                            label={awardCompetitionScopeLabel(competitionScope)}
+                            intent={AWARD_FIELD_GROUP_TAG_INTENTS.selection}
                           />
-                        )}
-                        {winnerMode === 'multiple' && (
-                          <Tag
-                            label="Multiple winners"
-                            intent="accent"
-                          />
-                        )}
-                        {winnerMode === 'team_selection' && (
-                          <Tag
-                            label="Team selection"
-                            intent="accent"
-                          />
-                        )}
+                          {recordingGate === 'after_playoffs_start' && (
+                            <Tag
+                              label="After playoffs start"
+                              intent={AWARD_FIELD_GROUP_TAG_INTENTS.result}
+                            />
+                          )}
+                          {award.uses_nominees && winnerMode !== 'team_selection' && (
+                            <Tag
+                              label="Nominees"
+                              intent={AWARD_FIELD_GROUP_TAG_INTENTS.result}
+                            />
+                          )}
+                          {winnerMode === 'multiple' && (
+                            <Tag
+                              label="Multiple winners"
+                              intent={AWARD_FIELD_GROUP_TAG_INTENTS.result}
+                            />
+                          )}
+                          {winnerMode === 'team_selection' && (
+                            <Tag
+                              label="Team selection"
+                              intent={AWARD_FIELD_GROUP_TAG_INTENTS.result}
+                            />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </ListItem>
+                    </ReorderableField>
+                  </li>
                 );
               })}
             </ul>
@@ -288,7 +786,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
         }
         confirmIcon="save"
         confirmDisabled={
-          form.formState.isSubmitting || !form.formState.isDirty || !form.formState.isValid
+          form.formState.isSubmitting || !form.formState.isDirty || awardName.trim() === ''
         }
         busy={form.formState.isSubmitting}
       >
@@ -297,74 +795,163 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
           className={styles.awardDefinitionForm}
           onSubmit={submit}
         >
-          <Field
-            control={form.control}
-            name="name"
-            label="Award Name"
-            required
-            rules={{ required: 'Award name is required' }}
-          />
-          <div className={styles.awardDefinitionFormGrid}>
+          <GroupedFields
+            legend="Definition"
+            fieldsClassName={styles.awardDefinitionGroupFields}
+          >
+            <Field
+              control={form.control}
+              name="name"
+              label="Award Name"
+              required
+              rules={{ required: 'Award name is required' }}
+            />
+            <Field
+              control={form.control}
+              name="description"
+              type="textarea"
+              label="Description"
+              rows={3}
+            />
+          </GroupedFields>
+
+          <GroupedFields
+            legend="Selection"
+            fieldsClassName={styles.awardDefinitionGroupFields}
+          >
             <Field
               control={form.control}
               name="recipient_type"
-              type="select"
+              type="custom"
               label="Recipient"
-              options={RECIPIENT_TYPE_OPTIONS}
-            />
+            >
+              <SegmentedControl
+                value={recipientType}
+                onChange={setRecipientType}
+                options={RECIPIENT_TYPE_OPTIONS}
+                variant="field"
+                className={styles.awardDefinitionSegmented}
+              />
+            </Field>
             <Field
               control={form.control}
               name="selection_method"
-              type="select"
-              label="Selection"
-              options={METHOD_OPTIONS}
-            />
-          </div>
-          <div className={styles.awardDefinitionFormGrid}>
+              type="custom"
+              label="Source"
+            >
+              <SegmentedControl
+                value={selectionMethod}
+                onChange={setSelectionMethod}
+                options={SOURCE_OPTIONS}
+                variant="field"
+                className={styles.awardDefinitionSegmented}
+              />
+            </Field>
+            <Field
+              control={form.control}
+              name="competition_scope"
+              type="custom"
+              label="Competition"
+            >
+              <SegmentedControl
+                value={competitionScope}
+                onChange={setCompetitionScope}
+                options={COMPETITION_SCOPE_OPTIONS}
+                variant="field"
+                className={styles.awardDefinitionSegmented}
+              />
+            </Field>
             <Field
               control={form.control}
               name="stat_key"
               type="select"
-              label="Stat"
-              options={STAT_OPTIONS}
+              label="Stat Resolver"
+              options={statOptions}
             />
+          </GroupedFields>
+
+          <GroupedFields
+            legend="Result"
+            fieldsClassName={styles.awardDefinitionGroupFields}
+          >
             <Field
               control={form.control}
-              name="sort_order"
-              type="number"
-              label="Sort Order"
-              min={0}
-            />
-          </div>
-          <Field
-            control={form.control}
-            name="description"
-            type="textarea"
-            label="Description"
-            rows={3}
-          />
-          <CheckboxField
-            checked={awardedAfterPlayoffs}
-            label="Lock until playoffs start"
-            onChange={() => toggleBooleanField('awarded_after_playoffs')}
-          />
-          <div className={styles.awardDefinitionCheckboxGrid}>
-            <CheckboxField
-              checked={usesNominees}
-              label="Uses nominees"
-              onChange={() => toggleBooleanField('uses_nominees')}
-            />
-            <CheckboxField
-              checked={allowMultipleWinners}
-              label="Multiple winners"
-              onChange={() => toggleBooleanField('allow_multiple_winners')}
-            />
-            <CheckboxField
-              checked={usesTeamSelection}
-              label="Team selection"
-              onChange={() => toggleBooleanField('uses_team_selection')}
-            />
-          </div>
+              name="uses_team_selection"
+              type="custom"
+              label="Winner Format"
+            >
+              <RadioList
+                value={winnerMode}
+                onChange={setWinnerMode}
+                options={RESULT_MODE_OPTIONS}
+                ariaLabel="Winner Format"
+                disabled={recipientType === 'team'}
+              />
+            </Field>
+            <Field
+              control={form.control}
+              name="uses_nominees"
+              type="custom"
+              label="Workflow"
+            >
+              <SegmentedControl
+                value={nomineeWorkflow}
+                onChange={setNomineeWorkflow}
+                options={NOMINEE_WORKFLOW_OPTIONS}
+                variant="field"
+                className={styles.awardDefinitionSegmented}
+                disabled={usesTeamSelection || recipientType === 'team'}
+              />
+            </Field>
+            <Field
+              control={form.control}
+              name="awarded_after_playoffs"
+              type="custom"
+              label="Recording Availability"
+            >
+              <SegmentedControl
+                value={timingValue}
+                onChange={setTiming}
+                options={TIMING_OPTIONS}
+                variant="field"
+                className={styles.awardDefinitionSegmented}
+              />
+            </Field>
+          </GroupedFields>
+
+          {recipientType === 'player' && (
+            <GroupedFields
+              legend="Eligible Players"
+              fieldsClassName={styles.awardDefinitionEligibility}
+            >
+              <Field
+                control={form.control}
+                name="eligible_position_groups"
+                type="custom"
+                label="Position Eligibility"
+              >
+                <RadioList
+                  value={eligibilityScope}
+                  onChange={setEligibilityScope}
+                  options={positionEligibilityOptions}
+                  ariaLabel="Position Eligibility"
+                />
+              </Field>
+              <Field
+                control={form.control}
+                name="rookies_only"
+                type="custom"
+                label="Rookie Eligibility"
+              >
+                <RadioList
+                  value={rookiesOnly ? 'rookies' : 'all'}
+                  onChange={setRookieEligibility}
+                  options={ROOKIE_ELIGIBILITY_OPTIONS}
+                  ariaLabel="Rookie Eligibility"
+                />
+              </Field>
+            </GroupedFields>
+          )}
         </form>
       </Modal>
 

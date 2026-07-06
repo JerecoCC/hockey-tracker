@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
+import type { AwardCompetitionScope, AwardPlayerEligibility } from '@/lib/awardDefinitions';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
@@ -42,11 +43,13 @@ export interface SeasonAwardRecord {
   description: string | null;
   recipient_type: AwardRecipientType;
   selection_method: AwardSelectionMethod;
+  competition_scope: AwardCompetitionScope;
   stat_key: string | null;
   awarded_after_playoffs: boolean;
   uses_nominees: boolean;
   allow_multiple_winners: boolean;
   uses_team_selection: boolean;
+  player_eligibility: AwardPlayerEligibility | null;
   sort_order: number;
   season_award_id: string | null;
   awarded_at: string | null;
@@ -60,11 +63,13 @@ export interface CreateSeasonAwardPayload {
   description?: string | null;
   recipient_type?: AwardRecipientType;
   selection_method?: AwardSelectionMethod;
+  competition_scope?: AwardCompetitionScope;
   stat_key?: string | null;
   awarded_after_playoffs?: boolean;
   uses_nominees?: boolean;
   allow_multiple_winners?: boolean;
   uses_team_selection?: boolean;
+  player_eligibility?: AwardPlayerEligibility | null;
   awarded_at?: string | null;
   notes?: string | null;
 }

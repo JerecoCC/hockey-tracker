@@ -93,7 +93,10 @@ const ReorderableField = ({
         className={styles.handle}
         aria-hidden="true"
       >
-        <Icon name="drag_handle" />
+        <Icon
+          name="drag_handle"
+          size="1.25rem"
+        />
       </span>
       <div className={styles.content}>{children}</div>
       <div className={styles.moveControls}>

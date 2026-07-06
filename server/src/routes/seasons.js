@@ -2,9 +2,39 @@ const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
 const { sql } = require('../db');
 const { normalizeSeasonBracketSlotKeys } = require('../lib/playoffBracketSlots');
+const {
+  playerMatchesAwardEligibility,
+} = require('../lib/awardEligibility');
 
 // All season routes require the admin role
 router.use(requireAdmin);
+
+const fetchAwardPlayerEligibilityRow = async (seasonId, playerId) => {
+  const rows = await sql`
+    SELECT
+      p.id,
+      COALESCE(ptr.position, p.position) AS position,
+      p.rookie_season_id::text AS rookie_season_id
+    FROM players p
+    LEFT JOIN LATERAL (
+      SELECT position
+      FROM player_teams
+      WHERE player_id = p.id AND season_id = ${seasonId}
+      ORDER BY end_date DESC NULLS FIRST, start_date DESC NULLS LAST, created_at DESC
+      LIMIT 1
+    ) ptr ON true
+    WHERE p.id = ${playerId}
+  `;
+  return rows[0] ?? null;
+};
+
+const validateAwardPlayerEligibility = async (seasonId, playerId, playerEligibility) => {
+  const player = await fetchAwardPlayerEligibilityRow(seasonId, playerId);
+  if (!player) return { ok: false, error: 'Invalid player, team, or award' };
+  return playerMatchesAwardEligibility(player, playerEligibility, seasonId)
+    ? { ok: true }
+    : { ok: false, error: 'Player is not eligible for this award' };
+};
 
 const fetchRegularSeasonTeamCompletion = async (seasonId) => {
   const rows = await sql`
@@ -2254,11 +2284,13 @@ router.get('/:id/awards', async (req, res) => {
         la.description,
         la.recipient_type,
         la.selection_method,
+        la.competition_scope,
         la.stat_key,
         la.awarded_after_playoffs,
         la.uses_nominees,
         la.allow_multiple_winners,
         la.uses_team_selection,
+        la.player_eligibility,
         la.sort_order,
         sa.id AS season_award_id,
         sa.awarded_at::text AS awarded_at,
@@ -2500,7 +2532,7 @@ router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
     }
 
     const awards = await sql`
-      SELECT sa.id, la.recipient_type
+      SELECT sa.id, la.recipient_type, la.player_eligibility
       FROM season_awards sa
       JOIN league_awards la ON la.id = sa.award_id
       WHERE sa.id = ${seasonAwardId} AND sa.season_id = ${id}
@@ -2508,6 +2540,16 @@ router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
     if (awards.length === 0) return res.status(404).json({ error: 'Award not found' });
     if (awards[0].recipient_type !== recipient_type) {
       return res.status(400).json({ error: 'recipient_type does not match award' });
+    }
+    if (recipient_type === 'player') {
+      const eligibility = await validateAwardPlayerEligibility(
+        id,
+        player_id,
+        awards[0].player_eligibility,
+      );
+      if (!eligibility.ok) {
+        return res.status(400).json({ error: eligibility.error });
+      }
     }
 
     const rows = await sql`
@@ -2546,7 +2588,7 @@ router.put('/:id/awards/:seasonAwardId/nominees', async (req, res) => {
 
   try {
     const awards = await sql`
-      SELECT sa.id, la.recipient_type
+      SELECT sa.id, la.recipient_type, la.player_eligibility
       FROM season_awards sa
       JOIN league_awards la ON la.id = sa.award_id
       WHERE sa.id = ${seasonAwardId} AND sa.season_id = ${id}
@@ -2595,10 +2637,19 @@ router.put('/:id/awards/:seasonAwardId/nominees', async (req, res) => {
     }
 
     for (const nominee of normalized) {
-      const recipientRows =
-        recipientType === 'player'
-          ? await sql`SELECT id FROM players WHERE id = ${nominee.player_id}`
-          : await sql`SELECT id FROM teams WHERE id = ${nominee.team_id}`;
+      if (recipientType === 'player') {
+        const eligibility = await validateAwardPlayerEligibility(
+          id,
+          nominee.player_id,
+          awards[0].player_eligibility,
+        );
+        if (!eligibility.ok) {
+          return res.status(400).json({ error: eligibility.error });
+        }
+        continue;
+      }
+
+      const recipientRows = await sql`SELECT id FROM teams WHERE id = ${nominee.team_id}`;
       if (recipientRows.length === 0) {
         return res.status(400).json({ error: 'Invalid player, team, or award' });
       }

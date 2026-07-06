@@ -1,4 +1,4 @@
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import BreadcrumbTitleRow from '@/components/Breadcrumbs/BreadcrumbTitleRow';
@@ -66,6 +66,7 @@ jest.mock('../../../hooks/useLeagueAwards', () => ({
     loading: false,
     createAward: jest.fn(async () => true),
     updateAward: jest.fn(async () => true),
+    reorderAwards: jest.fn(async () => true),
     deleteAward: jest.fn(async () => true),
   })),
 }));
@@ -169,6 +170,7 @@ const baseAwardsHook = {
   loading: false,
   createAward: jest.fn(async () => true),
   updateAward: jest.fn(async () => true),
+  reorderAwards: jest.fn(async () => true),
   deleteAward: jest.fn(async () => true),
 };
 
@@ -376,11 +378,13 @@ describe('LeagueDetailsPage – loading', () => {
       description: 'Top player',
       recipient_type: 'player',
       selection_method: 'manual',
+      competition_scope: 'full_season',
       stat_key: null,
       awarded_after_playoffs: true,
       uses_nominees: false,
       allow_multiple_winners: false,
       uses_team_selection: false,
+      player_eligibility: null,
       sort_order: 0,
       active: true,
       created_at: '2024-01-01T00:00:00Z',
@@ -406,7 +410,7 @@ describe('LeagueDetailsPage – loading', () => {
     expect(deleteAward).not.toHaveBeenCalled();
   });
 
-  it('does not label award definitions as regular season just because they are not playoff-gated', () => {
+  it('labels award definitions by competition scope separately from recording timing', () => {
     sessionStorage.setItem('tab:league-details', '6');
     const awards = [
       {
@@ -416,11 +420,13 @@ describe('LeagueDetailsPage – loading', () => {
         description: null,
         recipient_type: 'player',
         selection_method: 'automatic',
+        competition_scope: 'regular_season',
         stat_key: 'points',
         awarded_after_playoffs: false,
         uses_nominees: false,
         allow_multiple_winners: false,
         uses_team_selection: false,
+        player_eligibility: { position_groups: ['forward', 'defender'], rookies_only: false },
         sort_order: 0,
         active: true,
         created_at: '2024-01-01T00:00:00Z',
@@ -431,12 +437,14 @@ describe('LeagueDetailsPage – loading', () => {
         name: 'Conn Smythe Trophy',
         description: null,
         recipient_type: 'player',
-        selection_method: 'playoff',
+        selection_method: 'manual',
+        competition_scope: 'playoffs',
         stat_key: null,
         awarded_after_playoffs: true,
         uses_nominees: false,
         allow_multiple_winners: false,
         uses_team_selection: false,
+        player_eligibility: null,
         sort_order: 1,
         active: true,
         created_at: '2024-01-01T00:00:00Z',
@@ -446,9 +454,92 @@ describe('LeagueDetailsPage – loading', () => {
 
     expect(screen.getByText('Automatic')).toBeInTheDocument();
     expect(screen.getByText('Player Points')).toBeInTheDocument();
-    expect(screen.getByText('Playoff award')).toBeInTheDocument();
+    expect(screen.getByText('Forwards, Defenders')).toBeInTheDocument();
+    const awardDefinitions = within(screen.getByRole('list', { name: 'Award definitions' }));
+    expect(awardDefinitions.getByText('Regular season')).toBeInTheDocument();
+    expect(awardDefinitions.getByText('Playoffs')).toBeInTheDocument();
+    expect(awardDefinitions.getByText('After playoffs start')).toBeInTheDocument();
     expect(container.querySelector('.awardDefinitionDivider.divider.horizontal')).toBeInTheDocument();
-    expect(screen.queryByText('Regular season')).not.toBeInTheDocument();
+  });
+
+  it('reorders award definitions from the movable list controls', async () => {
+    sessionStorage.setItem('tab:league-details', '6');
+    const reorderAwards = jest.fn(async () => true);
+    const awards = [
+      {
+        id: 'award-1',
+        league_id: 'lg1',
+        name: 'Art Ross Trophy',
+        description: null,
+        recipient_type: 'player',
+        selection_method: 'automatic',
+        competition_scope: 'regular_season',
+        stat_key: 'points',
+        awarded_after_playoffs: false,
+        uses_nominees: false,
+        allow_multiple_winners: false,
+        uses_team_selection: false,
+        player_eligibility: { position_groups: ['forward', 'defender'], rookies_only: false },
+        sort_order: 0,
+        active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: 'award-2',
+        league_id: 'lg1',
+        name: 'Vezina Trophy',
+        description: null,
+        recipient_type: 'player',
+        selection_method: 'automatic',
+        competition_scope: 'regular_season',
+        stat_key: 'save_pct',
+        awarded_after_playoffs: false,
+        uses_nominees: false,
+        allow_multiple_winners: false,
+        uses_team_selection: false,
+        player_eligibility: { position_groups: ['goalie'], rookies_only: false },
+        sort_order: 1,
+        active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+    ];
+
+    setup({ league: mockLeague }, {}, null, {}, {}, { awards, reorderAwards });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move Art Ross Trophy down' }));
+
+    await waitFor(() => expect(reorderAwards).toHaveBeenCalledWith(['award-2', 'award-1']));
+  });
+
+  it('creates player award definitions with explicit eligibility criteria', async () => {
+    sessionStorage.setItem('tab:league-details', '6');
+    const createAward = jest.fn(async () => true);
+    setup({ league: mockLeague }, {}, null, {}, {}, { createAward });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create Award' }));
+    expect(screen.queryByLabelText('Sort Order')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Award Name/), {
+      target: { value: 'Goalie Rookie of the Year' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Automatic' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Goalies' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Rookies Only' }));
+
+    const createButtons = screen.getAllByRole('button', { name: 'Create Award' });
+    fireEvent.click(createButtons[createButtons.length - 1]);
+
+    await waitFor(() =>
+      expect(createAward).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Goalie Rookie of the Year',
+          selection_method: 'automatic',
+          player_eligibility: {
+            position_groups: ['goalie'],
+            rookies_only: true,
+          },
+        }),
+      ),
+    );
   });
 
   it('does not show the league name while loading', () => {

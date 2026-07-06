@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
+import type { AwardCompetitionScope, AwardPlayerEligibility } from '@/lib/awardDefinitions';
 import type { AwardRecipientType, AwardSelectionMethod } from './useSeasonAwards';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -16,11 +17,13 @@ export interface LeagueAwardRecord {
   description: string | null;
   recipient_type: AwardRecipientType;
   selection_method: AwardSelectionMethod;
+  competition_scope: AwardCompetitionScope;
   stat_key: string | null;
   awarded_after_playoffs: boolean;
   uses_nominees: boolean;
   allow_multiple_winners: boolean;
   uses_team_selection: boolean;
+  player_eligibility: AwardPlayerEligibility | null;
   sort_order: number;
   active: boolean;
   created_at: string;
@@ -31,11 +34,13 @@ export interface LeagueAwardPayload {
   description?: string | null;
   recipient_type: AwardRecipientType;
   selection_method: AwardSelectionMethod;
+  competition_scope: AwardCompetitionScope;
   stat_key?: string | null;
   awarded_after_playoffs: boolean;
   uses_nominees: boolean;
   allow_multiple_winners: boolean;
   uses_team_selection: boolean;
+  player_eligibility?: AwardPlayerEligibility | null;
   sort_order?: number | null;
 }
 
@@ -96,6 +101,31 @@ const useLeagueAwards = (leagueId: string | undefined) => {
     }
   };
 
+  const reorderAwards = async (orderedAwardIds: string[]): Promise<boolean> => {
+    try {
+      const sortOrderById = new Map(orderedAwardIds.map((awardId, index) => [awardId, index]));
+      const updates = data.filter(
+        (award) => sortOrderById.has(award.id) && sortOrderById.get(award.id) !== award.sort_order,
+      );
+
+      await Promise.all(
+        updates.map((award) =>
+          axios.patch(
+            `${API}/admin/leagues/${leagueId}/awards/${award.id}`,
+            { sort_order: sortOrderById.get(award.id) ?? award.sort_order },
+            { headers: authHeaders() },
+          ),
+        ),
+      );
+      toast.success('Award definitions reordered');
+      await refresh();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to reorder award definitions'));
+      return false;
+    }
+  };
+
   const deleteAward = async (awardId: string): Promise<boolean> => {
     try {
       await axios.delete(`${API}/admin/leagues/${leagueId}/awards/${awardId}`, {
@@ -115,6 +145,7 @@ const useLeagueAwards = (leagueId: string | undefined) => {
     loading: isLoading,
     createAward,
     updateAward,
+    reorderAwards,
     deleteAward,
   };
 };
