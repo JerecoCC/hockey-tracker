@@ -318,6 +318,12 @@ $scoreboard-stripe-overlap: 8px;
   &LogoResponsive {
     width: 60px !important;
     height: 60px !important;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.18));
+    transition: filter $scoreboard-logo-duration ease;
+
+    img {
+      filter: none;
+    }
 
     @media (max-width: 900px) {
       width: 40px !important;
@@ -374,6 +380,10 @@ $scoreboard-stripe-overlap: 8px;
 // A shadow is applied only when the JS-computed contrast ratio is too low
 // (--team-text-shadow is 'transparent' when contrast is sufficient).
 .scoreboardCardStuck {
+  .teamLogoResponsive {
+    filter: drop-shadow(0 0px 4px rgba(0, 0, 0, 0.45));
+  }
+
   .teamInfo {
     .teamFullName,
     .teamMobileCode,
