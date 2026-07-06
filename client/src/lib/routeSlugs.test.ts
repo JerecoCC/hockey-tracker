@@ -1,4 +1,5 @@
 import {
+  buildSeasonDayGamesPath,
   buildPlayerDetailsPath,
   buildGameDetailsPath,
   buildLeaguePlayerDetailsPath,
@@ -7,6 +8,7 @@ import {
   buildUserPlayerDetailsPath,
   buildUserTeamDetailsPath,
   buildUserWatchedTeamPath,
+  gameDateRouteSlugToDateKey,
   leaguePlayerRouteSlug,
   playerTeamRouteSlug,
   userWatchedTeamRouteSlug,
@@ -110,6 +112,25 @@ describe('buildUserGameDetailsPath', () => {
         scheduledAt: '2026-05-02T02:30:00.000Z',
       }),
     ).toBe('/games/game-1');
+  });
+});
+
+describe('season day game routes', () => {
+  it('builds a dated season day games route', () => {
+    expect(
+      buildSeasonDayGamesPath({
+        leagueCode: 'NHL',
+        seasonName: '2025-26',
+        dateKey: '2026-03-19',
+      }),
+    ).toBe('/admin/leagues/nhl/seasons/2025-26/games/03-19-2026');
+  });
+
+  it('parses dated route slugs back to date keys', () => {
+    expect(gameDateRouteSlugToDateKey('03-19-2026')).toBe('2026-03-19');
+    expect(gameDateRouteSlugToDateKey('2026-03-19')).toBe('2026-03-19');
+    expect(gameDateRouteSlugToDateKey('02-31-2026')).toBeNull();
+    expect(gameDateRouteSlugToDateKey('2026-02-31')).toBeNull();
   });
 });
 

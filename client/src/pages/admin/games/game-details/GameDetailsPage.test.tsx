@@ -208,9 +208,9 @@ describe('GameDetailsPage', () => {
       { label: 'Games', path: '/games' },
       { label: 'NHL' },
       { label: '2024-25' },
-      { label: expect.stringContaining('AWY @ HOM') },
+      { label: 'Oct 10, 2024' },
+      { label: 'AWY @ HOM' },
     ]);
-    expect(mockUsePageBreadcrumbs.mock.calls[0][0].items[3].label).toContain('Oct 10, 2024');
     expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'user' });
   });
 
@@ -233,6 +233,12 @@ describe('GameDetailsPage', () => {
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(false);
     expect(mockLineupsTab.mock.calls[0][0].isEditMode).toBe(true);
     expect(mockLineupsTab.mock.calls[0][0].showPlayerDataStatus).toBe(true);
+    expect(mockUsePageBreadcrumbs.mock.calls[0][0].items).toEqual([
+      { label: 'NHL', path: '/admin/leagues/nhl' },
+      { label: '2024-25', path: '/admin/leagues/nhl/seasons/2024-25' },
+      { label: 'Oct 10, 2024', path: '/admin/leagues/nhl/seasons/2024-25/games/10-10-2024' },
+      { label: 'AWY @ HOM' },
+    ]);
   });
 
   it('keeps game details visible and locked while NHL auto-fill progress is toasted', async () => {

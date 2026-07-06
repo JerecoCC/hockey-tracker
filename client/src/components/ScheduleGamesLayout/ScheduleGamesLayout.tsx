@@ -387,13 +387,16 @@ export const ScheduleCalendarDayCount = ({
 }: ScheduleCalendarDayCountProps) => {
   const countLabel = getScheduleCalendarDayCountLabel(count);
 
-  return count > 0 ? (
+  if (count <= 0) return null;
+
+  return (
     <Badge
+      className={styles.calendarDayCount}
       value={count}
       label={label ?? (showLabel ? countLabel : undefined)}
       aria-label={`${count} ${countLabel}`}
     />
-  ) : null;
+  );
 };
 
 export const scheduleViewSegmentedControlClassName = styles.viewSegmentedControl;

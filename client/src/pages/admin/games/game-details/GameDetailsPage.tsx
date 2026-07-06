@@ -21,10 +21,12 @@ import {
   buildGameDetailsPath,
   buildLeagueDetailsPath,
   buildPlayerDetailsPath,
+  buildSeasonDayGamesPath,
   buildSeasonDetailsPath,
   buildUserGameDetailsPath,
   buildUserPlayerDetailsPath,
   gameDateRouteSlug,
+  gameDateRouteSlugToDateKey,
   gameRouteSlug,
   UUID_PATTERN,
   toRouteSlug,
@@ -289,13 +291,11 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   });
   const leagueCrumbLabel = game?.league_code ?? 'League';
   const seasonName = game?.season_name ?? 'Season';
-  const gameCrumbLabel = game
-    ? [
-        `${game.away_team.code} @ ${game.home_team.code}`,
-        formatScheduledDate(game.scheduled_at, DATE_FMT_SHORT),
-      ]
-        .filter(Boolean)
-        .join(' · ')
+  const gameDateCrumbLabel = game
+    ? formatScheduledDate(game.scheduled_at, DATE_FMT_SHORT)
+    : null;
+  const gameMatchupCrumbLabel = game
+    ? `${game.away_team.code} @ ${game.home_team.code}`
     : 'Not Found';
   const canonicalGameSlug = game
     ? gameRouteSlug({
@@ -310,6 +310,17 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
         scheduledTime: game.scheduled_time,
       })
     : '';
+  const gameDateKey = gameDateRouteSlugToDateKey(canonicalDateSlug);
+  const gameDateHref =
+    game && gameDateKey
+      ? buildSeasonDayGamesPath({
+          leagueCode: game.league_code,
+          leagueId: game.league_id,
+          seasonName: game.season_name,
+          seasonId: game.season_id,
+          dateKey: gameDateKey,
+        })
+      : null;
   const adminCanonicalPath =
     game && gameId
       ? buildGameDetailsPath({
@@ -365,13 +376,17 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
             ? [
                 { label: leagueCrumbLabel, path: leagueHref },
                 { label: seasonName, path: seasonHref },
-                { label: gameCrumbLabel },
+                ...(gameDateCrumbLabel
+                  ? [{ label: gameDateCrumbLabel, path: gameDateHref ?? undefined }]
+                  : []),
+                { label: gameMatchupCrumbLabel },
               ]
             : [
                 { label: 'Games', path: '/games' },
                 { label: leagueCrumbLabel },
                 { label: seasonName },
-                { label: gameCrumbLabel },
+                ...(gameDateCrumbLabel ? [{ label: gameDateCrumbLabel }] : []),
+                { label: gameMatchupCrumbLabel },
               ],
         },
     [
@@ -381,7 +396,9 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
       seasonName,
       leagueHref,
       leagueCrumbLabel,
-      gameCrumbLabel,
+      gameDateCrumbLabel,
+      gameDateHref,
+      gameMatchupCrumbLabel,
     ],
   );
 

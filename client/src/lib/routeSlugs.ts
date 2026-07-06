@@ -222,6 +222,51 @@ export const gameDateRouteSlug = (
   return `${month}-${day}-${year}`;
 };
 
+export const dateKeyToGameDateRouteSlug = (dateKey: string | null | undefined) =>
+  gameDateRouteSlug(dateKey, { forceEastern: true });
+
+const isValidDateKey = (dateKey: string) => {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return (
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day
+  );
+};
+
+export const gameDateRouteSlugToDateKey = (dateSlug: string | null | undefined) => {
+  if (!dateSlug) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateSlug)) {
+    return isValidDateKey(dateSlug) ? dateSlug : null;
+  }
+
+  const match = dateSlug.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!match) return null;
+
+  const [, month, day, year] = match;
+  const dateKey = `${year}-${month}-${day}`;
+  return isValidDateKey(dateKey) ? dateKey : null;
+};
+
+export const buildSeasonDayGamesPath = ({
+  leagueCode,
+  leagueId,
+  seasonName,
+  seasonId,
+  dateKey,
+}: {
+  leagueCode: string | null | undefined;
+  leagueId?: string | null;
+  seasonName: string | null | undefined;
+  seasonId?: string | null;
+  dateKey: string;
+}) =>
+  `${buildSeasonDetailsPath({ leagueCode, leagueId, seasonName, seasonId })}/games/${dateKeyToGameDateRouteSlug(
+    dateKey,
+  )}`;
+
 export const buildGameDetailsPath = ({
   leagueCode,
   leagueId,

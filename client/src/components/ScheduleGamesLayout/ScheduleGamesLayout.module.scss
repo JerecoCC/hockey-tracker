@@ -269,6 +269,16 @@
   border-radius: $radius-md;
 }
 
+.calendarDayCount.calendarDayCount {
+  --calendar-day-count-color: var(--app-text-subtle, #{$text-light});
+  --badge-label-color: var(--calendar-day-count-color);
+  --badge-value-color: var(--calendar-day-count-color);
+  --badge-border-color: var(--calendar-day-count-color);
+  --badge-bg: transparent;
+  --badge-min-height: 1.35rem;
+  --badge-padding: 0.12rem 0.5rem;
+}
+
 @media (max-width: 768px) {
   .weekSummary {
     &Card {

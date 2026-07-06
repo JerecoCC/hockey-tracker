@@ -7,7 +7,7 @@ describe('ScheduleCalendarDayCount', () => {
 
     const badge = screen.getByLabelText('2 games');
     expect(badge).toHaveClass('badge');
-    expect(badge).not.toHaveClass('calendarDayCount');
+    expect(badge).toHaveClass('calendarDayCount');
     expect(badge).toHaveTextContent('2');
   });
 
@@ -40,4 +40,5 @@ describe('ScheduleCalendarDayCount', () => {
 
     expect(screen.queryByLabelText('0 games')).not.toBeInTheDocument();
   });
+
 });

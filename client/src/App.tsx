@@ -1,10 +1,11 @@
-import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Navigate, useParams } from 'react-router-dom';
 import { Suspense, lazy, type ReactNode } from 'react';
 import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTheme } from './context/ThemeContext';
 import { ThemeProvider } from './context/ThemeProvider';
 import LoadingSpinner from './components/LoadingSpinner/LoadingSpinner';
+import { gameDateRouteSlugToDateKey } from './lib/routeSlugs';
 
 const LoginPage = lazy(() => import('./pages/login/Login'));
 const SignupPage = lazy(() => import('./pages/signup/Signup'));
@@ -29,11 +30,17 @@ const LeagueDetailsPage = lazy(() => import('./pages/admin/leagues/LeagueDetails
 const UsersPage = lazy(() => import('./pages/admin/users/Users'));
 const TeamDetailsPage = lazy(() => import('./pages/admin/teams/TeamDetails'));
 const SeasonDetailsPage = lazy(() => import('./pages/admin/seasons/SeasonDetails'));
+const SeasonDayGamesPage = lazy(() => import('./pages/admin/seasons/SeasonDayGamesPage'));
 const PlayoffSeriesDetailsPage = lazy(
   () => import('./pages/admin/seasons/PlayoffSeriesDetailsPage'),
 );
 const GameDetailsPage = lazy(() => import('./pages/admin/games/game-details/GameDetailsPage'));
 const PlayerDetailsPage = lazy(() => import('./pages/admin/players/PlayerDetails'));
+
+const AdminSeasonSingleGameRoute = () => {
+  const { gameSlug = '' } = useParams<{ gameSlug?: string }>();
+  return gameDateRouteSlugToDateKey(gameSlug) ? <SeasonDayGamesPage /> : <GameDetailsPage />;
+};
 
 const PrivateRoute = (props: { children: ReactNode }) => {
   const { children } = props;
@@ -167,6 +174,10 @@ const router = createBrowserRouter([
       { path: '/admin/leagues/:leagueSlug/teams/:teamSlug', element: <TeamDetailsPage /> },
       { path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug', element: <SeasonDetailsPage /> },
       {
+        path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug/days/:dateSlug',
+        element: <SeasonDayGamesPage />,
+      },
+      {
         path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug/playoffs/:seriesSlug',
         element: <PlayoffSeriesDetailsPage />,
       },
@@ -176,7 +187,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug/games/:gameSlug',
-        element: <GameDetailsPage />,
+        element: <AdminSeasonSingleGameRoute />,
       },
       {
         path: '/admin/leagues/:leagueCode/teams/:teamCode/players/:playerSlug',

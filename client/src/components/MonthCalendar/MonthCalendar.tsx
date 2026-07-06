@@ -1,5 +1,6 @@
 import { forwardRef, useLayoutEffect, useRef, useState } from 'react';
 import type { HTMLAttributes, ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import Accordion from '@/components/Accordion/Accordion';
 import Chip from '@/components/Chip/Chip';
 import Skeleton from '@/components/Skeleton/Skeleton';
@@ -32,6 +33,11 @@ export interface MonthCalendarEmptyCellArgs {
   index: number;
 }
 
+export interface MonthCalendarDayNumberLink {
+  href: string;
+  ariaLabel?: string;
+}
+
 interface Props {
   month: Date;
   dayLabels?: string[];
@@ -47,6 +53,7 @@ interface Props {
   getDayClassName?: (args: MonthCalendarDayArgs) => string | undefined;
   getDayBodyClassName?: (args: MonthCalendarDayArgs) => string | undefined;
   getDayLabelSuffix?: (args: MonthCalendarDayArgs) => ReactNode;
+  getDayNumberLink?: (args: MonthCalendarDayArgs) => MonthCalendarDayNumberLink | undefined;
   getDayHeaderRight?: (args: MonthCalendarDayArgs) => ReactNode;
   getDayProps?: (args: MonthCalendarDayArgs) => HTMLAttributes<HTMLDivElement>;
   renderEmptyCellPlaceholder?: (args: MonthCalendarEmptyCellArgs) => ReactNode;
@@ -65,6 +72,7 @@ interface MonthCalendarDayProps {
   getDayClassName?: (args: MonthCalendarDayArgs) => string | undefined;
   getDayBodyClassName?: (args: MonthCalendarDayArgs) => string | undefined;
   labelSuffix?: ReactNode;
+  dayNumberLink?: MonthCalendarDayNumberLink;
   headerRight?: ReactNode;
 }
 
@@ -79,11 +87,13 @@ const MonthCalendarDay = ({
   getDayClassName,
   getDayBodyClassName,
   labelSuffix,
+  dayNumberLink,
   headerRight,
 }: MonthCalendarDayProps) => {
   const bodyRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [bodyScrollable, setBodyScrollable] = useState(false);
+  const dayNumberLabel = String(args.day).padStart(2, '0');
 
   useLayoutEffect(() => {
     let animationFrame = 0;
@@ -128,17 +138,31 @@ const MonthCalendarDay = ({
     };
   }, [content]);
 
+  const dayNumber = (
+    <Chip
+      size="small"
+      className={[styles.dayNumber, dayNumberClassName].filter(Boolean).join(' ')}
+    >
+      {dayNumberLabel}
+    </Chip>
+  );
+
   return (
     <Accordion
       {...rootProps}
       label={
         <span className={styles.dayLabel}>
-          <Chip
-            size="small"
-            className={[styles.dayNumber, dayNumberClassName].filter(Boolean).join(' ')}
-          >
-            {String(args.day).padStart(2, '0')}
-          </Chip>
+          {dayNumberLink ? (
+            <Link
+              to={dayNumberLink.href}
+              className={styles.dayNumberLink}
+              aria-label={dayNumberLink.ariaLabel ?? `View games on ${args.dateKey}`}
+            >
+              {dayNumber}
+            </Link>
+          ) : (
+            dayNumber
+          )}
           {labelSuffix}
         </span>
       }
@@ -196,6 +220,7 @@ const MonthCalendar = forwardRef<HTMLDivElement, Props>(
       getDayClassName,
       getDayBodyClassName,
       getDayLabelSuffix,
+      getDayNumberLink,
       getDayHeaderRight,
       getDayProps,
       renderEmptyCellPlaceholder,
@@ -316,6 +341,7 @@ const MonthCalendar = forwardRef<HTMLDivElement, Props>(
               getDayClassName={getDayClassName}
               getDayBodyClassName={getDayBodyClassName}
               labelSuffix={getDayLabelSuffix?.(args)}
+              dayNumberLink={getDayNumberLink?.(args)}
               headerRight={getDayHeaderRight?.(args)}
             />
           );

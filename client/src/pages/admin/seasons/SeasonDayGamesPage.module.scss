@@ -1,0 +1,53 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: $page-section-gap;
+}
+
+.gameList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  margin: 0;
+  padding: 0;
+}
+
+.gameCountBadge.gameCountBadge {
+  --badge-label-color: var(--app-text-subtle, #{$text-light});
+  --badge-value-color: var(--app-text-strong, #{$text-bright});
+  --badge-border-color: var(--app-border, #{$border});
+  --badge-bg: transparent;
+  --badge-min-height: 1.6rem;
+  --badge-padding: 0.16rem 0.55rem;
+}
+
+.sectionActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-sm;
+  flex-wrap: wrap;
+}
+
+.sectionActionButton.sectionActionButton {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+}
+
+.dayAutofillProgressBar.dayAutofillProgressBar {
+  background: $accent !important;
+  background-color: $accent !important;
+}
+
+.emptyState {
+  margin: 0;
+  padding: $space-lg 0;
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-sm;
+  font-style: italic;
+  text-align: center;
+}

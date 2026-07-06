@@ -157,4 +157,21 @@
     letter-spacing: 0;
     line-height: 1;
   }
+
+  &NumberLink {
+    display: inline-flex;
+    color: inherit;
+    text-decoration: none;
+    border-radius: $radius-sm;
+
+    &:hover .dayNumber {
+      border-color: var(--month-calendar-day-number-color);
+      background: color-mix(in srgb, var(--month-calendar-cell-bg) 68%, var(--month-calendar-day-number-color));
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--app-accent, #{$accent});
+      outline-offset: 2px;
+    }
+  }
 }

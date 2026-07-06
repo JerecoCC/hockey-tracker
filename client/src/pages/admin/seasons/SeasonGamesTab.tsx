@@ -41,7 +41,7 @@ import {
   type GameAutofillManualMoveReport,
 } from '@/pages/admin/games/game-details/gameAutofillTypes';
 import GameAutofillManualMoveReportModal from '@/pages/admin/games/game-details/GameAutofillManualMoveReportModal';
-import { buildGameDetailsPath } from '@/lib/routeSlugs';
+import { buildGameDetailsPath, buildSeasonDayGamesPath } from '@/lib/routeSlugs';
 import Icon from '@/components/Icon/Icon';
 import {
   firstWeekStartForMonth,
@@ -664,9 +664,19 @@ const SeasonGamesTab = ({
       awayTeamCode: game.away_team.code,
       homeTeamCode: game.home_team.code,
       scheduledAt: game.scheduled_at,
+      scheduledTime: game.scheduled_time,
     });
 
   const openGame = (game: GameRecord) => navigate(gameDetailsPath(game));
+
+  const dayGamesPath = (dateKey: string) =>
+    buildSeasonDayGamesPath({
+      leagueCode,
+      leagueId,
+      seasonName,
+      seasonId,
+      dateKey,
+    });
 
   const getDayAutofillCandidates = (dayGames: GameRecord[]) =>
     dayGames.filter((game) => isDayAutofillCandidate(game, leagueCode));
@@ -1192,6 +1202,18 @@ const SeasonGamesTab = ({
                       showLabel
                     />
                   ) : undefined;
+                }}
+                getDayNumberLink={({ dateKey }) => {
+                  const gameCount = calendarGamesByDate.get(dateKey)?.length ?? 0;
+                  return {
+                    href: dayGamesPath(dateKey),
+                    ariaLabel:
+                      gameCount > 0
+                        ? `View ${gameCount} ${gameCount === 1 ? 'game' : 'games'} on ${fmtDayHeading(
+                            dateKey,
+                          )}`
+                        : `View games on ${fmtDayHeading(dateKey)}`,
+                  };
                 }}
                 getDayHeaderRight={({ dateKey }) => {
                   if (isEnded) return undefined;

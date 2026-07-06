@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import MonthCalendar from './MonthCalendar';
 
 describe('MonthCalendar', () => {
@@ -30,5 +31,31 @@ describe('MonthCalendar', () => {
     expect(screen.getAllByLabelText(/^Loading (calendar slot|games for)/)).toHaveLength(35);
     expect(screen.queryByText('Loaded day')).not.toBeInTheDocument();
     expect(renderDayContent).not.toHaveBeenCalled();
+  });
+
+  it('can render a day number as a link', () => {
+    render(
+      <MemoryRouter>
+        <MonthCalendar
+          month={new Date(2026, 0, 1)}
+          getDayNumberLink={({ dateKey }) =>
+            dateKey === '2026-01-09'
+              ? {
+                  href: '/admin/leagues/nhl/seasons/2025-26/days/01-09-2026',
+                  ariaLabel: 'View games on January 9',
+                }
+              : undefined
+          }
+          renderDayContent={() => null}
+        />
+      </MemoryRouter>,
+    );
+
+    const link = screen.getByRole('link', { name: 'View games on January 9' });
+    expect(link).toHaveAttribute(
+      'href',
+      '/admin/leagues/nhl/seasons/2025-26/days/01-09-2026',
+    );
+    expect(link).toHaveTextContent('09');
   });
 });

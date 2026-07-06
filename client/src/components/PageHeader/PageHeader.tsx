@@ -23,6 +23,14 @@ const getTitle = (pathname: string): string => {
   if (/\/admin\/leagues\/[^/]+\/players\/[^/]+/.test(pathname)) return 'Player Details';
   if (/\/admin\/leagues\/[^/]+\/teams\//.test(pathname)) return 'Team Details';
   if (/\/admin\/leagues\/[^/]+\/seasons\/[^/]+\/playoffs\//.test(pathname)) return 'Series Details';
+  if (/\/admin\/leagues\/[^/]+\/seasons\/[^/]+\/days\/[^/]+$/.test(pathname))
+    return 'Season Games';
+  if (
+    /\/admin\/leagues\/[^/]+\/seasons\/[^/]+\/games\/(?:\d{2}-\d{2}-\d{4}|\d{4}-\d{2}-\d{2})$/.test(
+      pathname,
+    )
+  )
+    return 'Season Games';
   if (/\/admin\/leagues\/[^/]+\/seasons\/[^/]+\/games\//.test(pathname)) return 'Game Details';
   if (/\/admin\/leagues\/[^/]+\/seasons\//.test(pathname)) return 'Season Details';
   if (/\/admin\/leagues\/[^/]+/.test(pathname)) return 'League Details';
