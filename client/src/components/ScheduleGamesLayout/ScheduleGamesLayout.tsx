@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties, MutableRefObject, ReactNode, Ref } from 'react';
+import { Link } from 'react-router-dom';
 import Badge from '@/components/Badge/Badge';
 import Divider from '@/components/Divider/Divider';
 import Section from '@/components/Section/Section';
@@ -255,6 +256,16 @@ interface ScheduleWeekListProps<T> {
   loading?: boolean;
   dayRefs?: MutableRefObject<Record<string, HTMLDivElement | null>>;
   formatHeading: (dateKey: string) => string;
+  getDayTitleLink?: (
+    dateKey: string,
+    dayGames: T[],
+  ) =>
+    | {
+        href: string;
+        ariaLabel?: string;
+      }
+    | null
+    | undefined;
   renderDayAction?: (dateKey: string, dayGames: T[]) => ReactNode;
   renderDayContent: (dateKey: string, dayGames: T[]) => ReactNode;
   getEmptyMessage?: (dateKey: string, dayGames: T[]) => ReactNode;
@@ -266,34 +277,60 @@ export const ScheduleWeekList = <T,>({
   loading = false,
   dayRefs,
   formatHeading,
+  getDayTitleLink,
   renderDayAction,
   renderDayContent,
   getEmptyMessage = () => 'No games scheduled.',
   renderLoading,
 }: ScheduleWeekListProps<T>) => (
   <div className={styles.dayList}>
-    {days.map(([dateKey, dayGames]) => (
-      <div
-        key={dateKey}
-        ref={(node) => {
-          if (dayRefs) dayRefs.current[dateKey] = node;
-        }}
-        className={styles.dayCardAnchor}
-      >
-        <Section
-          title={formatHeading(dateKey)}
-          action={renderDayAction?.(dateKey, dayGames)}
+    {days.map(([dateKey, dayGames]) => {
+      const heading = formatHeading(dateKey);
+      const titleLink = getDayTitleLink?.(dateKey, dayGames);
+      const title = titleLink ? (
+        <Link
+          to={titleLink.href}
+          className={styles.dayTitleLink}
+          aria-label={titleLink.ariaLabel ?? `View games for ${heading}`}
         >
-          {loading ? (
-            (renderLoading?.(dateKey) ?? <ScheduleWeekDaySkeletons dateLabel={formatHeading(dateKey)} />)
-          ) : dayGames.length === 0 ? (
-            <p className={styles.dayEmpty}>{getEmptyMessage(dateKey, dayGames)}</p>
-          ) : (
-            renderDayContent(dateKey, dayGames)
-          )}
-        </Section>
-      </div>
-    ))}
+          <span>{heading}</span>
+          <span
+            className={styles.dayTitleLinkIndicator}
+            aria-hidden
+          >
+            <Icon
+              name="open_in_new"
+              size="0.85rem"
+            />
+          </span>
+        </Link>
+      ) : (
+        heading
+      );
+
+      return (
+        <div
+          key={dateKey}
+          ref={(node) => {
+            if (dayRefs) dayRefs.current[dateKey] = node;
+          }}
+          className={styles.dayCardAnchor}
+        >
+          <Section
+            title={title}
+            action={renderDayAction?.(dateKey, dayGames)}
+          >
+            {loading ? (
+              (renderLoading?.(dateKey) ?? <ScheduleWeekDaySkeletons dateLabel={heading} />)
+            ) : dayGames.length === 0 ? (
+              <p className={styles.dayEmpty}>{getEmptyMessage(dateKey, dayGames)}</p>
+            ) : (
+              renderDayContent(dateKey, dayGames)
+            )}
+          </Section>
+        </div>
+      );
+    })}
   </div>
 );
 

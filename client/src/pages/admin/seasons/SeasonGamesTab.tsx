@@ -1241,6 +1241,15 @@ const SeasonGamesTab = ({
               loading={loading}
               dayRefs={dayRefs}
               formatHeading={fmtDayHeading}
+              getDayTitleLink={(dateKey, dayGames) => ({
+                href: dayGamesPath(dateKey),
+                ariaLabel:
+                  dayGames.length > 0
+                    ? `View ${dayGames.length} ${
+                        dayGames.length === 1 ? 'game' : 'games'
+                      } on ${fmtDayHeading(dateKey)}`
+                    : `View games on ${fmtDayHeading(dateKey)}`,
+              })}
               renderDayAction={(dateKey, dayGames) =>
                 !isEnded && (
                   <MoreActionsMenu

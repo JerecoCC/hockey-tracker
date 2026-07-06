@@ -1,5 +1,29 @@
 import { render, screen } from '@testing-library/react';
-import { ScheduleCalendarDayCount } from './ScheduleGamesLayout';
+import { MemoryRouter } from 'react-router-dom';
+import { ScheduleCalendarDayCount, ScheduleWeekList } from './ScheduleGamesLayout';
+
+const renderWeekList = () =>
+  render(
+    <MemoryRouter>
+      <ScheduleWeekList
+        days={[
+          [
+            '2026-03-28',
+            [
+              { id: 'game-1' },
+              { id: 'game-2' },
+            ],
+          ],
+        ]}
+        formatHeading={() => 'Saturday, March 28'}
+        getDayTitleLink={(_, dayGames) => ({
+          href: '/admin/leagues/nhl/seasons/2025-26/games/03-28-2026',
+          ariaLabel: `View ${dayGames.length} games on Saturday, March 28`,
+        })}
+        renderDayContent={() => <div>Day games</div>}
+      />
+    </MemoryRouter>,
+  );
 
 describe('ScheduleCalendarDayCount', () => {
   it('renders positive game counts with the shared badge component', () => {
@@ -41,4 +65,20 @@ describe('ScheduleCalendarDayCount', () => {
     expect(screen.queryByLabelText('0 games')).not.toBeInTheDocument();
   });
 
+});
+
+describe('ScheduleWeekList', () => {
+  it('renders day titles as real links when a day title link is provided', () => {
+    renderWeekList();
+
+    expect(
+      screen.getByRole('link', { name: 'View 2 games on Saturday, March 28' }),
+    ).toHaveAttribute('href', '/admin/leagues/nhl/seasons/2025-26/games/03-28-2026');
+  });
+
+  it('renders an external-link indicator inside linked day titles', () => {
+    const { container } = renderWeekList();
+
+    expect(container.querySelector('.dayTitleLinkIndicator svg')).toBeInTheDocument();
+  });
 });
