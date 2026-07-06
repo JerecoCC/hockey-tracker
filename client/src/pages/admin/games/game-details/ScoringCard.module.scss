@@ -2,6 +2,8 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+$_goal-time-width: 4.25rem;
+
 // ── Period scoring list ────────────────────────────────────────────────────────
 
 .periodList {
@@ -117,7 +119,7 @@ $_active-period-light-border: color.mix($accent, #fff, 48%);
 // Period time (e.g. "12:34")
 .goalTimeGroup {
   display: inline-grid;
-  grid-template-columns: fit-content(100%) auto;
+  grid-template-columns: $_goal-time-width auto;
   align-self: stretch;
   align-items: center;
   flex: 0 0 auto;
@@ -138,8 +140,9 @@ $_active-period-light-border: color.mix($accent, #fff, 48%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: fit-content;
-  padding: $space-sm $space-lg;
+  width: $_goal-time-width;
+  box-sizing: border-box;
+  padding: $space-sm $space-md;
   line-height: 1;
   text-align: center;
 }
