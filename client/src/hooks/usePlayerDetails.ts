@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import type { AwardCompetitionScope } from '@/lib/awardDefinitions';
 import { type PlayerRecord } from './useLeaguePlayers';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -42,6 +43,8 @@ export interface PlayerAwardRecord {
   award_id: string;
   season_award_id: string;
   award_name: string;
+  competition_scope: AwardCompetitionScope | null;
+  stat_key: string | null;
   season_id: string;
   season_name: string;
   awarded_at: string | null;

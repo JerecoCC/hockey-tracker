@@ -1720,7 +1720,7 @@ describe('PlayerDetails info tab', () => {
 });
 
 describe('PlayerDetails awards tab', () => {
-  it('renders player awards with the winning team and season tag', () => {
+  it('groups player awards by award won with winning team rows and season tags', () => {
     mockUseTabState.mockReturnValue([3, jest.fn()]);
     mockUsePlayerAwards.mockReturnValue({
       awards: [
@@ -1741,8 +1741,23 @@ describe('PlayerDetails awards tab', () => {
         },
         {
           id: 'recipient-2',
-          award_id: 'award-2',
+          award_id: 'award-1',
           season_award_id: 'season-award-2',
+          award_name: 'Forward of the Year',
+          season_id: 'season-2',
+          season_name: '2024-25',
+          awarded_at: '2025-05-01',
+          team_id: 'team-2',
+          team_name: 'Montreal Victoire',
+          team_code: 'MTL',
+          team_logo: null,
+          team_primary_color: '#862633',
+          team_text_color: '#ffffff',
+        },
+        {
+          id: 'recipient-3',
+          award_id: 'award-2',
+          season_award_id: 'season-award-3',
           award_name: 'Walter Cup Winner',
           season_id: 'season-1',
           season_name: '2025-26',
@@ -1760,20 +1775,26 @@ describe('PlayerDetails awards tab', () => {
 
     render(<PlayerDetails />);
 
-    const awardItem = screen.getByText('Forward of the Year').closest('li');
+    const forwardGroup = screen.getByText('Forward of the Year').closest('.awardGroup');
+    const walterCupGroup = screen.getByText('Walter Cup Winner').closest('.awardGroup');
 
     expect(screen.getByText('Awards')).toBeInTheDocument();
-    expect(awardItem).not.toBeNull();
-    expect(awardItem).toHaveClass('item');
-    expect(awardItem).not.toHaveClass('itemPlain');
-    expect(within(awardItem as HTMLElement).getByText('Forward of the Year')).toBeInTheDocument();
-    expect(within(awardItem as HTMLElement).getByText('Toronto Maple Leafs')).toBeInTheDocument();
-    expect(within(awardItem as HTMLElement).getByText('2025-26')).toBeInTheDocument();
-    expect(screen.getByText('Walter Cup Winner')).toBeInTheDocument();
+    expect(forwardGroup).not.toBeNull();
+    expect(walterCupGroup).not.toBeNull();
+    expect(within(forwardGroup as HTMLElement).getByRole('button', { name: 'Collapse' }))
+      .toBeInTheDocument();
+    expect(within(forwardGroup as HTMLElement).getByLabelText('2 wins')).toBeInTheDocument();
+    expect(within(walterCupGroup as HTMLElement).getByLabelText('1 win')).toBeInTheDocument();
+    expect(within(forwardGroup as HTMLElement).getByText('Toronto Maple Leafs')).toBeInTheDocument();
+    expect(within(forwardGroup as HTMLElement).getByText('Montreal Victoire')).toBeInTheDocument();
+    expect(within(forwardGroup as HTMLElement).getByText('2025-26')).toBeInTheDocument();
+    expect(within(forwardGroup as HTMLElement).getByText('2024-25')).toBeInTheDocument();
+    expect(
+      within(walterCupGroup as HTMLElement).getByText('Toronto Maple Leafs'),
+    ).toBeInTheDocument();
   });
 
-  it('syncs the awards season select with the game logs season select', async () => {
-    const user = userEvent.setup();
+  it('always shows all player awards without a season filter', async () => {
     mockUseTabState.mockReturnValue([3, jest.fn()]);
     mockUseSeasons.mockReturnValue({
       seasons: [
@@ -1829,23 +1850,88 @@ describe('PlayerDetails awards tab', () => {
       loading: false,
     });
 
-    const { rerender } = render(<PlayerDetails />);
+    render(<PlayerDetails />);
 
     await waitFor(() => {
       expect(screen.getByText('Forward of the Year')).toBeInTheDocument();
     });
-    expect(screen.queryByText('Older Season Award')).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole('combobox'));
-    await user.click(screen.getByRole('button', { name: '2024-25' }));
-
     expect(screen.getByText('Older Season Award')).toBeInTheDocument();
-    expect(screen.queryByText('Forward of the Year')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
 
-    mockUseTabState.mockReturnValue([1, jest.fn()]);
-    rerender(<PlayerDetails />);
+  it('switches awards between grouped list and flat banner view', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUsePlayerAwards.mockReturnValue({
+      awards: [
+        {
+          id: 'recipient-1',
+          award_id: 'award-1',
+          season_award_id: 'season-award-1',
+          award_name: 'Forward of the Year',
+          competition_scope: 'regular_season',
+          stat_key: null,
+          season_id: 'season-1',
+          season_name: '2025-26',
+          awarded_at: '2026-05-01',
+          team_id: 'team-1',
+          team_name: 'Toronto Maple Leafs',
+          team_code: 'TOR',
+          team_logo: null,
+          team_primary_color: '#003e7e',
+          team_text_color: '#ffffff',
+        },
+        {
+          id: 'recipient-2',
+          award_id: 'award-2',
+          season_award_id: 'season-award-2',
+          award_name: 'Walter Cup Winner',
+          competition_scope: 'playoffs',
+          stat_key: 'playoff_champion',
+          season_id: 'season-2',
+          season_name: '2024-25',
+          awarded_at: null,
+          team_id: 'team-2',
+          team_name: 'Montreal Victoire',
+          team_code: 'MTL',
+          team_logo: null,
+          team_primary_color: '#862633',
+          team_text_color: '#ffffff',
+        },
+      ],
+      loading: false,
+    });
 
-    expect(screen.getByRole('combobox')).toHaveTextContent('2024-25');
+    const { container } = render(<PlayerDetails />);
+
+    expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('data-active', 'true');
+    expect(screen.queryByText('Awarded May 1, 2026')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Banner' }));
+
+    expect(screen.getByRole('button', { name: 'Banner' })).toHaveAttribute('data-active', 'true');
+    expect(container.querySelector('.awardGroup')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.awardArenaBanner')).toHaveLength(2);
+    expect(screen.queryByText('Awarded season result')).not.toBeInTheDocument();
+    const arenaBanner = screen.getByText('Awarded May 1, 2026').closest('.awardArenaBanner');
+    expect(arenaBanner).not.toBeNull();
+    expect((arenaBanner as HTMLElement).style.getPropertyValue('--award-banner-color')).toBe(
+      '#003e7e',
+    );
+    expect((arenaBanner as HTMLElement).style.getPropertyValue('--award-banner-text-color')).toBe(
+      '#ffffff',
+    );
+    const arenaBannerPanel = (arenaBanner as HTMLElement).querySelector('.awardBannerPanel');
+    expect(arenaBannerPanel?.lastElementChild).toHaveTextContent('2025-26');
+    expect(within(arenaBanner as HTMLElement).getByText('Forward of the Year'))
+      .toBeInTheDocument();
+    expect(within(arenaBanner as HTMLElement).getByText('Toronto Maple Leafs'))
+      .toBeInTheDocument();
+    expect(within(arenaBanner as HTMLElement).getByText('2025-26')).toBeInTheDocument();
+    expect(within(arenaBanner as HTMLElement).queryByText('Champions')).not.toBeInTheDocument();
+    const championshipBanner = screen.getByText('Walter Cup Winner').closest('.awardArenaBanner');
+    expect(championshipBanner).not.toBeNull();
+    expect(within(championshipBanner as HTMLElement).getByText('Champions')).toBeInTheDocument();
   });
 });
 

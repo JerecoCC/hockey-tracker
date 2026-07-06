@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast, type TypeOptions } from 'react-toastify';
 import Accordion from '@/components/Accordion/Accordion';
+import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Chip from '@/components/Chip/Chip';
@@ -30,6 +31,7 @@ import usePlayerDetails, {
   usePlayerGameLogs,
   usePlayerLastFiveGames,
   usePlayerRouteLookup,
+  type PlayerAwardRecord,
   type PlayerCareerStatRecord,
   type PlayerCurrentSeasonStats,
   type PlayerCurrentSeasonStatBlock,
@@ -91,6 +93,41 @@ const AUTOFILL_RESULT_TOAST_MS = 4000;
 const AUTOFILL_FAILURE_TOAST_MS = 12000;
 const PLAYER_AUTOFILL_PROGRESS_STEPS = 5;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+interface PlayerAwardGroup {
+  awardId: string;
+  awardName: string;
+  awards: PlayerAwardRecord[];
+}
+
+type AwardViewMode = 'list' | 'banner';
+
+const AWARD_VIEW_OPTIONS = [
+  {
+    value: 'list',
+    label: (
+      <span className={styles.awardViewOption}>
+        <Icon
+          name="view_list"
+          size="0.85rem"
+        />
+        List
+      </span>
+    ),
+  },
+  {
+    value: 'banner',
+    label: (
+      <span className={styles.awardViewOption}>
+        <Icon
+          name="flag"
+          size="0.85rem"
+        />
+        Banner
+      </span>
+    ),
+  },
+];
 
 interface NhlLocalizedText {
   default?: string;
@@ -567,6 +604,49 @@ export const collapseSameTeamStints = (stints: PlayerStintRecord[]): TeamHistory
 
 const teamCode = (code: string | null, name: string | null) =>
   code ?? (name ? name.slice(0, 3).toUpperCase() : 'TEAM');
+
+const sortPlayerAwards = (awards: PlayerAwardRecord[]) =>
+  [...awards].sort(
+    (a, b) =>
+      (b.awarded_at ?? '').localeCompare(a.awarded_at ?? '') ||
+      b.season_name.localeCompare(a.season_name) ||
+      a.award_name.localeCompare(b.award_name),
+  );
+
+const PLAYOFF_CHAMPIONSHIP_AWARD_NAME = /\b(champions?|championship|cup winners?)\b/i;
+const AWARD_NAME_HAS_CHAMPIONS_LABEL = /\b(champions?|championship)\b/i;
+
+const isPlayoffChampionshipAward = (award: PlayerAwardRecord) =>
+  award.stat_key === 'playoff_champion' ||
+  (award.competition_scope === 'playoffs' &&
+    PLAYOFF_CHAMPIONSHIP_AWARD_NAME.test(award.award_name));
+
+const shouldShowChampionsLabel = (award: PlayerAwardRecord) =>
+  isPlayoffChampionshipAward(award) && !AWARD_NAME_HAS_CHAMPIONS_LABEL.test(award.award_name);
+
+const groupPlayerAwards = (awards: PlayerAwardRecord[]): PlayerAwardGroup[] => {
+  const groups = new Map<string, PlayerAwardGroup>();
+
+  awards.forEach((award) => {
+    const groupKey = award.award_id || award.award_name;
+    const existing = groups.get(groupKey);
+    if (existing) {
+      existing.awards.push(award);
+      return;
+    }
+
+    groups.set(groupKey, {
+      awardId: groupKey,
+      awardName: award.award_name,
+      awards: [award],
+    });
+  });
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    awards: sortPlayerAwards(group.awards),
+  }));
+};
 
 const formatShortDate = (iso: string | null) => {
   if (!iso) return '—';
@@ -1083,6 +1163,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const [gameLogSeasonId, setGameLogSeasonId] = useState('all');
   const [gameLogType, setGameLogType] = useState('all');
   const [gameLogPage, setGameLogPage] = useState(1);
+  const [awardViewMode, setAwardViewMode] = useState<AwardViewMode>('list');
   const {
     gameLogs,
     total: gameLogsTotal,
@@ -1957,10 +2038,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const gameLogColumns = buildGameLogColumns(isGoalie);
   const gameLogPageCount = Math.max(1, Math.ceil(gameLogsTotal / GAME_LOG_PAGE_SIZE));
   const gameLogSeasons = seasons.filter((season) => !leagueId || season.league_id === leagueId);
-  const filteredPlayerAwards =
-    gameLogSeasonId === 'all'
-      ? playerAwards
-      : playerAwards.filter((award) => award.season_id === gameLogSeasonId);
+  const playerAwardGroups = groupPlayerAwards(playerAwards);
+  const sortedPlayerAwards = sortPlayerAwards(playerAwards);
   const handleSeasonChange = (value: string) => {
     setGameLogSeasonId(value);
     setGameLogPage(1);
@@ -2143,47 +2222,117 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     <Section
       title="Awards"
       action={
-        <div className={styles.awardSeasonSelect}>
-          <SeasonSelect
-            value={gameLogSeasonId}
-            seasons={gameLogSeasons}
-            onChange={handleSeasonChange}
-            placeholder="All seasons"
-            includeAllOption
+        <div className={styles.awardHeaderRight}>
+          <SegmentedControl
+            value={awardViewMode}
+            onChange={(value) => setAwardViewMode(value === 'banner' ? 'banner' : 'list')}
+            options={AWARD_VIEW_OPTIONS}
+            variant="field"
+            className={styles.awardViewControl}
           />
         </div>
       }
     >
       {playerAwardsLoading ? (
         <p className={styles.placeholder}>Loading awards...</p>
-      ) : filteredPlayerAwards.length === 0 ? (
-        <p className={styles.placeholder}>
-          {gameLogSeasonId === 'all'
-            ? 'No awards recorded yet.'
-            : 'No awards recorded for this season.'}
-        </p>
-      ) : (
-        <ul className={styles.awardList}>
-          {filteredPlayerAwards.map((award) => (
-            <ListItem
+      ) : playerAwardGroups.length === 0 ? (
+        <p className={styles.placeholder}>No awards recorded yet.</p>
+      ) : awardViewMode === 'banner' ? (
+        <div
+          className={styles.awardBannerRack}
+          aria-label="Award banners"
+        >
+          {sortedPlayerAwards.map((award) => (
+            <article
               key={award.id}
-              image={award.team_logo}
-              imageDark={award.team_logo_dark}
-              imageLight={award.team_logo_light}
-              image_shape="square"
-              name={award.award_name}
-              placeholder={teamCode(award.team_code, award.team_name)}
-              primaryColor={award.team_primary_color}
-              textColor={award.team_text_color}
-              subtitle={award.team_name ?? 'Team not recorded'}
-              rightContent={{
-                type: 'tag',
-                label: award.season_name,
-                intent: 'info',
-              }}
-            />
+              className={styles.awardArenaBanner}
+              style={
+                {
+                  '--award-banner-color': award.team_primary_color ?? undefined,
+                  '--award-banner-text-color': award.team_text_color ?? undefined,
+                } as CSSProperties
+              }
+            >
+              <span className={styles.awardBannerRail} />
+              <div className={styles.awardBannerPanel}>
+                <div className={styles.awardBannerContent}>
+                  <span className={styles.awardBannerAward}>
+                    <span>{award.award_name}</span>
+                    {shouldShowChampionsLabel(award) && (
+                      <span className={styles.awardBannerChampions}>Champions</span>
+                    )}
+                  </span>
+                  <span className={styles.awardBannerLogoSlot}>
+                    <TeamLogo
+                      logo={award.team_logo}
+                      logoDark={award.team_logo_dark}
+                      logoLight={award.team_logo_light}
+                      code={teamCode(award.team_code, award.team_name)}
+                      alt=""
+                      primaryColor={award.team_primary_color}
+                      textColor={award.team_text_color}
+                      size={64}
+                      className={styles.awardBannerLogo}
+                    />
+                  </span>
+                  <span className={styles.awardBannerTeam}>
+                    {award.team_name ?? 'Team not recorded'}
+                  </span>
+                  {award.awarded_at && (
+                    <span className={styles.awardBannerDate}>
+                      Awarded {formatShortDate(award.awarded_at)}
+                    </span>
+                  )}
+                </div>
+                <span className={styles.awardBannerSeason}>{award.season_name}</span>
+              </div>
+            </article>
           ))}
-        </ul>
+        </div>
+      ) : (
+        <div className={styles.awardGroups}>
+          {playerAwardGroups.map((group) => (
+            <Accordion
+              key={group.awardId}
+              label={group.awardName}
+              labelMeta={
+                <Badge
+                  value={group.awards.length}
+                  label={group.awards.length === 1 ? 'win' : 'wins'}
+                  aria-label={`${group.awards.length} ${
+                    group.awards.length === 1 ? 'win' : 'wins'
+                  }`}
+                  className={styles.awardCountBadge}
+                />
+              }
+              defaultOpen
+              headerType="light"
+              className={styles.awardGroup}
+              bodyClassName={styles.awardAccordionBody}
+            >
+              <ul className={styles.awardTeamList}>
+                {group.awards.map((award) => (
+                  <ListItem
+                    key={award.id}
+                    image={award.team_logo}
+                    imageDark={award.team_logo_dark}
+                    imageLight={award.team_logo_light}
+                    image_shape="square"
+                    name={award.team_name ?? 'Team not recorded'}
+                    placeholder={teamCode(award.team_code, award.team_name)}
+                    primaryColor={award.team_primary_color}
+                    textColor={award.team_text_color}
+                    rightContent={{
+                      type: 'tag',
+                      label: award.season_name,
+                      intent: 'info',
+                    }}
+                  />
+                ))}
+              </ul>
+            </Accordion>
+          ))}
+        </div>
       )}
     </Section>
   );
