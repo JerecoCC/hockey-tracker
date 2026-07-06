@@ -1018,6 +1018,10 @@ const SeasonPlayoffsTab = ({
       : canSimulateFirstRound
         ? 'Uses current standings from final regular-season games'
         : undefined;
+  const bracketActionLabel = canSeedMatchups ? 'Seed Matchups' : 'Simulate First Round';
+  const bracketActionTooltip = simulateTooltip
+    ? `${bracketActionLabel}: ${simulateTooltip}`
+    : bracketActionLabel;
   const seriesDetailsPath = (s: PlayoffSeriesRecord) =>
     buildPlayoffSeriesDetailsPath({
       leagueCode,
@@ -1196,15 +1200,16 @@ const SeasonPlayoffsTab = ({
                   </Button>
                 ) : (
                   <Button
+                    variant="outlined"
                     intent="success"
                     icon="play_arrow"
+                    iconHeight="button"
                     size="sm"
-                    tooltip={simulateTooltip}
+                    tooltip={bracketActionTooltip}
+                    aria-label={bracketActionLabel}
                     disabled={simulating || pickModalOpen || simulationStandingsUnavailable}
                     onClick={handleSimulate}
-                  >
-                    {canSeedMatchups ? 'Seed Matchups' : 'Simulate First Round'}
-                  </Button>
+                  />
                 )
               ) : null
             }
