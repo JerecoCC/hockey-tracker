@@ -17,6 +17,7 @@ $bracket-line: color-mix(
 .playoffsCallout {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: $space-sm;
   padding: $space-md $space-lg;
   margin-bottom: $space-lg;
@@ -27,9 +28,14 @@ $bracket-line: color-mix(
   color: var(--app-text, #{$text-body});
 
   > span {
-    flex: 1;
+    flex: 1 1 18rem;
     line-height: 1.4;
   }
+}
+
+.playoffsCalloutAction {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 // ── Two-column layout ────────────────────────────────────────────────────────

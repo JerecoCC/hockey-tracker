@@ -502,6 +502,10 @@ interface Props {
   leagueBestOfPlayoff: number;
   standings: TeamStandingRecord[];
   standingsLoading: boolean;
+  canStartPlayoffs?: boolean;
+  startPlayoffsDisabled?: boolean;
+  startPlayoffsBusy?: boolean;
+  onStartPlayoffs?: () => void;
   updateSeason: (id: string, payload: Partial<CreateSeasonData>) => Promise<boolean>;
 }
 
@@ -526,6 +530,10 @@ const SeasonPlayoffsTab = ({
   leagueBestOfPlayoff,
   standings,
   standingsLoading,
+  canStartPlayoffs = false,
+  startPlayoffsDisabled = false,
+  startPlayoffsBusy = false,
+  onStartPlayoffs,
   updateSeason,
 }: Props) => {
   const {
@@ -1165,6 +1173,30 @@ const SeasonPlayoffsTab = ({
 
   return (
     <>
+      {canStartPlayoffs && !playoffsStarted && (
+        <div className={styles.playoffsCallout}>
+          <Icon
+            name="emoji_events"
+            size="1.1em"
+          />
+          <span>
+            Start playoffs when every regular-season game is final and every team has reached its
+            season game target.
+          </span>
+          <Button
+            type="button"
+            variant="filled"
+            intent="success"
+            icon="emoji_events"
+            size="sm"
+            className={styles.playoffsCalloutAction}
+            disabled={startPlayoffsDisabled}
+            onClick={onStartPlayoffs}
+          >
+            {startPlayoffsBusy ? 'Starting…' : 'Start Playoffs'}
+          </Button>
+        </div>
+      )}
       {playoffsStarted && !isEnded && series.length === 0 && !seriesLoading && (
         <div className={styles.playoffsCallout}>
           <Icon

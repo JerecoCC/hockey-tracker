@@ -311,6 +311,10 @@ describe('SeasonDetails standings tab', () => {
       expect.objectContaining({
         standings,
         standingsLoading: false,
+        canStartPlayoffs: true,
+        startPlayoffsDisabled: false,
+        startPlayoffsBusy: false,
+        onStartPlayoffs: expect.any(Function),
       }),
     );
   });
@@ -498,7 +502,7 @@ describe('SeasonDetails info tab', () => {
     expect(mockMoreActionsMenu).toHaveBeenCalledWith(
       expect.objectContaining({
         items: expect.arrayContaining([
-          expect.objectContaining({ label: 'End Regular Season' }),
+          expect.objectContaining({ label: 'Start Playoffs' }),
         ]),
         iconHeight: 'button',
       }),
@@ -510,7 +514,7 @@ describe('SeasonDetails info tab', () => {
     expect(moreButton).toHaveAttribute('data-icon-height', 'button');
   });
 
-  it('hides the end regular season action while a team is short of games_per_season', () => {
+  it('keeps the start playoffs action visible but disabled while a team is short', () => {
     mockUseTabState.mockReturnValue([0, jest.fn()]);
     const details = mockUseSeasonDetails();
     mockUseSeasonDetails.mockClear();
@@ -526,11 +530,21 @@ describe('SeasonDetails info tab', () => {
 
     expect(mockMoreActionsMenu).toHaveBeenCalledWith(
       expect.objectContaining({
-        items: expect.not.arrayContaining([
-          expect.objectContaining({ label: 'End Regular Season' }),
+        items: expect.arrayContaining([
+          expect.objectContaining({ label: 'Start Playoffs', disabled: true }),
         ]),
       }),
     );
+  });
+
+  it('keeps season actions scoped to the info tab', () => {
+    mockUseTabState.mockReturnValue([2, jest.fn()]);
+
+    const { container } = render(<SeasonDetails />);
+
+    expect(container.querySelector('.seasonInfoHeader')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit season' })).not.toBeInTheDocument();
+    expect(mockMoreActionsMenu).not.toHaveBeenCalled();
   });
 });
 

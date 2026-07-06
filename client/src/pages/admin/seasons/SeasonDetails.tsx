@@ -865,6 +865,99 @@ const SeasonDetailsPage = () => {
     return <p style={{ color: 'var(--text-dim)' }}>Season not found.</p>;
   }
 
+  const regularSeasonEndBlocked = hasUnfinishedRegularGames || hasIncompleteRegularTeamGames;
+  const canStartPlayoffs = season.is_current && !season.playoffs_started;
+  const startPlayoffsDisabled = busy === 'start-playoffs' || regularSeasonEndBlocked;
+  const seasonMoreItems = [
+    ...(!season.is_current
+      ? [
+          {
+            label: 'Set as Current',
+            icon: 'stars',
+            disabled: busy === 'set-current',
+            onClick: () => setCurrentSeason(true),
+          },
+        ]
+      : []),
+    ...(canStartPlayoffs
+      ? [
+          {
+            label: 'Start Playoffs',
+            icon: 'emoji_events',
+            disabled: startPlayoffsDisabled,
+            onClick: () => setShowStartPlayoffsConfirm(true),
+          },
+        ]
+      : []),
+    ...(season.is_current
+      ? [
+          {
+            label: 'End Season',
+            icon: 'flag',
+            intent: 'danger' as const,
+            disabled: busy === 'end-season',
+            onClick: () => setShowEndModal(true),
+          },
+        ]
+      : []),
+  ];
+
+  const seasonHeader = (
+    <EntityHeader
+      className={styles.seasonInfoHeader}
+      actionsClassName={styles.seasonInfoActions}
+      logo={season.league_logo}
+      name={season.name}
+      code={season.league_code}
+      subtitle={formatDateRange(season.start_date, season.end_date, season.is_current)}
+      primaryColor="#334155"
+      textColor="#ffffff"
+      nameAccessory={
+        <>
+          {season.is_current && !season.playoffs_started && (
+            <Tag
+              label="Current"
+              intent="success"
+            />
+          )}
+          {season.is_current && season.playoffs_started && (
+            <Tag
+              label="Playoffs"
+              intent="accent"
+            />
+          )}
+          {season.is_ended && (
+            <Tag
+              label="Ended"
+              intent="neutral"
+            />
+          )}
+        </>
+      }
+      actions={
+        <>
+          <Button
+            type="button"
+            variant="outlined"
+            intent="neutral"
+            icon="edit"
+            size="sm"
+            iconHeight="button"
+            tooltip="Edit season"
+            aria-label="Edit season"
+            onClick={() => setShowEditModal(true)}
+          />
+          {seasonMoreItems.length > 0 && (
+            <MoreActionsMenu
+              items={seasonMoreItems}
+              iconHeight="button"
+            />
+          )}
+        </>
+      }
+    />
+  );
+
   return (
     <>
       <Tabs
@@ -876,97 +969,7 @@ const SeasonDetailsPage = () => {
             icon: 'info',
             content: (
               <Card>
-                <EntityHeader
-                  className={styles.seasonInfoHeader}
-                  actionsClassName={styles.seasonInfoActions}
-                  logo={season.league_logo}
-                  name={season.name}
-                  code={season.league_code}
-                  subtitle={formatDateRange(season.start_date, season.end_date, season.is_current)}
-                  primaryColor="#334155"
-                  textColor="#ffffff"
-                  nameAccessory={
-                    <>
-                      {season.is_current && !season.playoffs_started && (
-                        <Tag
-                          label="Current"
-                          intent="success"
-                        />
-                      )}
-                      {season.is_current && season.playoffs_started && (
-                        <Tag
-                          label="Playoffs"
-                          intent="accent"
-                        />
-                      )}
-                      {season.is_ended && (
-                        <Tag
-                          label="Ended"
-                          intent="neutral"
-                        />
-                      )}
-                    </>
-                  }
-                  actions={(() => {
-                    const moreItems = [
-                      ...(!season.is_current
-                        ? [
-                            {
-                              label: 'Set as Current',
-                              icon: 'stars',
-                              disabled: busy === 'set-current',
-                              onClick: () => setCurrentSeason(true),
-                            },
-                          ]
-                        : []),
-                      ...(season.is_current &&
-                      !season.playoffs_started &&
-                      !hasUnfinishedRegularGames &&
-                      !hasIncompleteRegularTeamGames
-                        ? [
-                            {
-                              label: 'End Regular Season',
-                              icon: 'emoji_events',
-                              disabled: busy === 'start-playoffs',
-                              onClick: () => setShowStartPlayoffsConfirm(true),
-                            },
-                          ]
-                        : []),
-                      ...(season.is_current
-                        ? [
-                            {
-                              label: 'End Season',
-                              icon: 'flag',
-                              intent: 'danger' as const,
-                              disabled: busy === 'end-season',
-                              onClick: () => setShowEndModal(true),
-                            },
-                          ]
-                        : []),
-                    ];
-                    return (
-                      <>
-                        <Button
-                          type="button"
-                          variant="outlined"
-                          intent="neutral"
-                          icon="edit"
-                          size="sm"
-                          iconHeight="button"
-                          tooltip="Edit season"
-                          aria-label="Edit season"
-                          onClick={() => setShowEditModal(true)}
-                        />
-                        {moreItems.length > 0 && (
-                          <MoreActionsMenu
-                            items={moreItems}
-                            iconHeight="button"
-                          />
-                        )}
-                      </>
-                    );
-                  })()}
-                />
+                {seasonHeader}
                 <div className={styles.infoGrid}>
                   <InfoItem
                     label="League"
@@ -1470,6 +1473,10 @@ const SeasonDetailsPage = () => {
                 leagueBestOfPlayoff={season.league_best_of_playoff}
                 standings={standings}
                 standingsLoading={standingsLoading}
+                canStartPlayoffs={canStartPlayoffs}
+                startPlayoffsDisabled={startPlayoffsDisabled}
+                startPlayoffsBusy={busy === 'start-playoffs'}
+                onStartPlayoffs={() => setShowStartPlayoffsConfirm(true)}
                 updateSeason={updateSeason}
               />
             ),
@@ -1479,7 +1486,7 @@ const SeasonDetailsPage = () => {
 
       <ConfirmModal
         open={showStartPlayoffsConfirm}
-        title="End Regular Season"
+        title="Start Playoffs"
         body={
           <>
             This will mark the regular season as complete and open the playoff matchup
