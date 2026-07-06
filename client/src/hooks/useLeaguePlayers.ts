@@ -87,6 +87,7 @@ interface UseLeaguePlayersOptions {
   inactiveOnly?: boolean;
   includeInactive?: boolean;
   includeProspects?: boolean;
+  enabled?: boolean;
 }
 
 interface PaginatedPlayersResponse {
@@ -143,6 +144,7 @@ const useLeaguePlayers = (
         return isPaginated ? { players: [], total: 0, page: options.page ?? 1, page_size: options.pageSize ?? 20 } : [];
       }
     },
+    enabled: options.enabled ?? true,
     placeholderData: keepPreviousData,
   });
 

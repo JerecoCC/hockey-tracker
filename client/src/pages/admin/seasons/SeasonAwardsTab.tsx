@@ -3,20 +3,21 @@ import { useForm } from 'react-hook-form';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import Checklist, { type ChecklistOption } from '@/components/Checklist/Checklist';
 import Divider from '@/components/Divider/Divider';
 import Section from '@/components/Section/Section';
 import Field from '@/components/Field/Field';
 import GroupedFields from '@/components/GroupedFields/GroupedFields';
 import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import Modal from '@/components/Modal/Modal';
+import RadioList, { type RadioListOption } from '@/components/RadioList/RadioList';
 import ReorderableField from '@/components/ReorderableField/ReorderableField';
-import SearchField from '@/components/SearchField/SearchField';
-import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import StatItem from '@/components/StatItem/StatItem';
 import Tag from '@/components/Tag/Tag';
 import { usePlayoffSeries, type PlayoffSeriesRecord } from '@/hooks/useGames';
+import useLeaguePlayers, { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import useSeasonAwards, {
   type AddAwardRecipientPayload,
   type AwardRecipientType,
@@ -120,29 +121,32 @@ interface SuggestedRecipient {
   label: string;
 }
 
+interface AwardPlayerRecord {
+  player_id: string;
+  first_name: string;
+  last_name: string;
+  photo: string | null;
+  position: string | null;
+  jersey_number: number | null;
+  team_id: string | null;
+  team_code: string | null;
+  team_name: string | null;
+  team_logo: string | null;
+  team_logo_dark?: string | null;
+  team_logo_light?: string | null;
+  team_primary_color: string | null;
+  team_text_color: string | null;
+  team_stint_created: string | null;
+}
+
 interface AwardRecipientStatDisplay {
   label: string;
   value: string;
 }
 
-interface WinnerChecklistOption {
+interface WinnerChecklistOption extends ChecklistOption {
   id: string;
-  name: string;
   recipient_type: AwardRecipientType;
-  leadingImage?: string | null;
-  leadingImageDark?: string | null;
-  leadingImageLight?: string | null;
-  leadingImagePlaceholder?: string;
-  leadingImagePrimaryColor?: string | null;
-  leadingImageTextColor?: string | null;
-  image?: string | null;
-  imageDark?: string | null;
-  imageLight?: string | null;
-  imagePlaceholder?: string;
-  imageShape?: 'square' | 'circle';
-  imagePrimaryColor?: string | null;
-  imageTextColor?: string | null;
-  subtitle?: string;
   searchText: string;
 }
 
@@ -158,8 +162,49 @@ interface Props {
   standings: TeamStandingRecord[];
 }
 
-const playerName = (player: Pick<SkaterStatRecord, 'first_name' | 'last_name'>) =>
+const playerName = (player: { first_name: string; last_name: string }) =>
   [player.first_name, player.last_name].filter(Boolean).join(' ');
+
+const sortAwardPlayersByName = (players: AwardPlayerRecord[]) =>
+  [...players].sort((a, b) => playerName(a).localeCompare(playerName(b)));
+
+const statPlayerToAwardPlayer = (
+  player: SkaterStatRecord | GoalieStatRecord,
+): AwardPlayerRecord => ({
+  player_id: player.player_id,
+  first_name: player.first_name,
+  last_name: player.last_name,
+  photo: player.photo,
+  position: 'position' in player ? player.position : 'G',
+  jersey_number: player.jersey_number,
+  team_id: player.team_id,
+  team_code: player.team_code,
+  team_name: player.team_name,
+  team_logo: player.team_logo,
+  team_logo_dark: player.team_logo_dark,
+  team_logo_light: player.team_logo_light,
+  team_primary_color: player.team_primary_color,
+  team_text_color: player.team_text_color,
+  team_stint_created: player.team_stint_created,
+});
+
+const rosterPlayerToAwardPlayer = (player: PlayerRecord): AwardPlayerRecord => ({
+  player_id: player.id,
+  first_name: player.first_name,
+  last_name: player.last_name,
+  photo: player.photo,
+  position: player.position,
+  jersey_number: player.jersey_number ?? null,
+  team_id: player.team_id ?? null,
+  team_code: player.team_code ?? null,
+  team_name: player.team_name ?? null,
+  team_logo: player.team_logo ?? null,
+  team_logo_dark: player.team_logo_dark,
+  team_logo_light: player.team_logo_light,
+  team_primary_color: player.primary_color ?? null,
+  team_text_color: player.text_color ?? null,
+  team_stint_created: player.start_date ?? player.created_at ?? null,
+});
 
 const statLabel = (statKey: string | null | undefined) =>
   statKey ? (STAT_LABELS[statKey] ?? statKey) : null;
@@ -384,6 +429,14 @@ const SeasonAwardsTab = ({
   const { awards, loading, updateTrackedAwards, addRecipient, saveNominees, deleteRecipient, refresh } =
     useSeasonAwards(seasonId);
   const { series: playoffSeries } = usePlayoffSeries(seasonId);
+  const { players: rosterPlayers } = useLeaguePlayers(
+    leagueId ?? undefined,
+    leagueId ? seasonId : undefined,
+    {
+      includeInactive: true,
+      enabled: !!leagueId,
+    },
+  );
   const [awardSelectionOpen, setAwardSelectionOpen] = useState(false);
   const [awardSelectionDraftIds, setAwardSelectionDraftIds] = useState<string[]>([]);
   const [awardSelectionQuery, setAwardSelectionQuery] = useState('');
@@ -417,16 +470,28 @@ const SeasonAwardsTab = ({
   const dedupedSkaters = useMemo(() => dedupePlayersByName(skaters), [skaters]);
   const dedupedGoalies = useMemo(() => dedupePlayersByName(goalies), [goalies]);
 
-  const players = useMemo(() => {
-    const byId = new Map<string, SkaterStatRecord | GoalieStatRecord>();
-    dedupedSkaters.forEach((player) => byId.set(player.player_id, player));
+  const statAwardPlayers = useMemo(() => {
+    const byId = new Map<string, AwardPlayerRecord>();
+    dedupedSkaters.forEach((player) => byId.set(player.player_id, statPlayerToAwardPlayer(player)));
     dedupedGoalies.forEach((player) => {
-      if (!byId.has(player.player_id)) byId.set(player.player_id, player);
+      if (!byId.has(player.player_id)) byId.set(player.player_id, statPlayerToAwardPlayer(player));
     });
-    return [...byId.values()].sort((a, b) => playerName(a).localeCompare(playerName(b)));
+    return sortAwardPlayersByName([...byId.values()]);
   }, [dedupedGoalies, dedupedSkaters]);
 
-  const playerOptions = players.map((player) => ({
+  const rosterAwardPlayers = useMemo(
+    () => rosterPlayers.map(rosterPlayerToAwardPlayer),
+    [rosterPlayers],
+  );
+
+  const awardPlayers = useMemo(() => {
+    const byId = new Map<string, AwardPlayerRecord>();
+    statAwardPlayers.forEach((player) => byId.set(player.player_id, player));
+    rosterAwardPlayers.forEach((player) => byId.set(player.player_id, player));
+    return sortAwardPlayersByName([...byId.values()]);
+  }, [rosterAwardPlayers, statAwardPlayers]);
+
+  const playerOptions = awardPlayers.map((player) => ({
     value: player.player_id,
     label: playerName(player),
     logo: player.team_logo,
@@ -580,11 +645,8 @@ const SeasonAwardsTab = ({
     return award.recipient_type === 'player' ? playerOptions : teamOptions;
   };
 
-  const playerToWinnerOption = (
-    player: SkaterStatRecord | GoalieStatRecord,
-  ): WinnerChecklistOption => {
-    const position = 'position' in player ? player.position : 'G';
-    const subtitle = formatPlayerPosition(position) ?? undefined;
+  const playerToWinnerOption = (player: AwardPlayerRecord): WinnerChecklistOption => {
+    const subtitle = formatPlayerPosition(player.position) ?? undefined;
     const name = playerName(player);
 
     return {
@@ -737,16 +799,6 @@ const SeasonAwardsTab = ({
   const awardSelectionHasChanges = sortedTrackedAwardIds !== sortedAwardSelectionDraftIds;
   const awardSelectionCountLabel =
     awardSelectionDraftIds.length === 1 ? '1 award selected' : `${awardSelectionDraftIds.length} awards selected`;
-  const filteredAwardSelectionAwards = awards.filter((award) => {
-    const query = awardSelectionQuery.trim().toLowerCase();
-    if (!query) return true;
-    return (
-      award.name.toLowerCase().includes(query) ||
-      award.description?.toLowerCase().includes(query) ||
-      award.selection_method.toLowerCase().includes(query) ||
-      award.recipient_type.toLowerCase().includes(query)
-    );
-  });
 
   const activeRecipientAward = recipientAward
     ? (awards.find((award) => award.award_id === recipientAward.award_id) ?? recipientAward)
@@ -756,6 +808,11 @@ const SeasonAwardsTab = ({
     : null;
   const recipientUsesWinnerChecklist =
     !!activeRecipientAward && usesWinnerChecklist(activeRecipientAward);
+  const recipientUsesNomineeRadioList =
+    !!activeRecipientAward &&
+    !recipientUsesWinnerChecklist &&
+    activeRecipientAward.recipient_type === 'player' &&
+    supportsNominees(activeRecipientAward);
   // Drive the simple-form confirm off the selected value rather than
   // isDirty/isValid, which can lag with a Controller-backed select after reset().
   const recipientSelectedId = recipientForm.watch('recipient_id');
@@ -770,7 +827,7 @@ const SeasonAwardsTab = ({
           .map(nomineeToWinnerOption)
           .filter((option): option is WinnerChecklistOption => option !== null)
       : activeRecipientAward.recipient_type === 'player'
-        ? players.map(playerToWinnerOption)
+        ? awardPlayers.map(playerToWinnerOption)
         : seasonTeams.map(teamToWinnerOption)
     : [];
   const activeRecipientWinnerIds = activeRecipientWinners
@@ -786,11 +843,26 @@ const SeasonAwardsTab = ({
       : `${recipientWinnerDraftIds.length} winners selected`;
   const activeRecipientWinnerSourceLabel =
     activeRecipientAward && supportsNominees(activeRecipientAward) ? 'nominees' : 'recipients';
-  const filteredRecipientWinnerOptions = activeRecipientWinnerOptions.filter((option) => {
-    const query = recipientWinnerQuery.trim().toLowerCase();
-    if (!query) return true;
-    return option.searchText.toLowerCase().includes(query);
-  });
+  const activeRecipientNomineeRadioOptions: RadioListOption[] = recipientUsesNomineeRadioList
+    ? activeRecipientWinnerOptions.map((option) => ({
+        value: option.id,
+        leadingImage: option.leadingImage,
+        leadingImageDark: option.leadingImageDark,
+        leadingImageLight: option.leadingImageLight,
+        leadingImagePlaceholder: option.leadingImagePlaceholder,
+        leadingImagePrimaryColor: option.leadingImagePrimaryColor,
+        leadingImageTextColor: option.leadingImageTextColor,
+        image: option.image,
+        imageDark: option.imageDark,
+        imageLight: option.imageLight,
+        imagePlaceholder: option.imagePlaceholder,
+        imageShape: option.imageShape,
+        imagePrimaryColor: option.imagePrimaryColor,
+        imageTextColor: option.imageTextColor,
+        name: option.name,
+        subtitle: option.subtitle,
+      }))
+    : [];
 
   const openAwardSelectionModal = () => {
     setAwardSelectionDraftIds(trackedAwardIds);
@@ -1399,40 +1471,44 @@ const SeasonAwardsTab = ({
         footerStart={<span>{awardSelectionCountLabel}</span>}
       >
         <div className={styles.awardSelectionModal}>
-          <SearchField
-            value={awardSelectionQuery}
-            onChange={setAwardSelectionQuery}
-            placeholder="Search awards"
-          />
-          <ul className={styles.awardSelectionList}>
-            {filteredAwardSelectionAwards.length === 0 ? (
-              <li className={styles.awardSelectionEmpty}>No awards found.</li>
-            ) : (
-              filteredAwardSelectionAwards.map((award) => {
-                const checked = awardSelectionDraftIds.includes(award.award_id);
-                const locked = checked && !!award.season_award_id && award.recipients.length > 0;
-                return (
-                  <SelectableListItem
-                    key={award.award_id}
-                    checked={checked}
-                    onToggle={() => toggleAwardSelection(award)}
-                    hideImage
-                    disabled={awardSelectionSaving || locked}
-                    name={award.name}
-                    subtitle={awardSelectionSubtitle(award)}
-                    rightContent={
-                      locked ? (
-                        <Tag
-                          label="Recorded"
-                          intent="success"
-                        />
-                      ) : undefined
-                    }
+          <Checklist
+            options={awards.map((award) => {
+              const checked = awardSelectionDraftIds.includes(award.award_id);
+              const locked = checked && !!award.season_award_id && award.recipients.length > 0;
+              return {
+                id: award.award_id,
+                award,
+                hideImage: true,
+                disabled: awardSelectionSaving || locked,
+                name: award.name,
+                subtitle: awardSelectionSubtitle(award),
+                searchText: [
+                  award.name,
+                  award.description,
+                  award.selection_method,
+                  award.recipient_type,
+                ]
+                  .filter(Boolean)
+                  .join(' '),
+                rightContent: locked ? (
+                  <Tag
+                    label="Recorded"
+                    intent="success"
                   />
-                );
-              })
-            )}
-          </ul>
+                ) : undefined,
+              };
+            })}
+            selectedIds={awardSelectionDraftIds}
+            onToggle={(option) => toggleAwardSelection(option.award)}
+            searchable
+            query={awardSelectionQuery}
+            onQueryChange={setAwardSelectionQuery}
+            placeholder="Search awards"
+            listClassName={styles.awardSelectionList}
+            emptyClassName={styles.awardSelectionEmpty}
+            emptyMessage="No awards found."
+            noResultsMessage={() => 'No awards found.'}
+          />
         </div>
       </Modal>
 
@@ -1471,69 +1547,74 @@ const SeasonAwardsTab = ({
         footerStart={recipientUsesWinnerChecklist ? <span>{recipientWinnerCountLabel}</span> : undefined}
       >
         {activeRecipientAward && recipientUsesWinnerChecklist ? (
-          <div className={styles.awardPlayerChecklist}>
-            <div className={styles.awardPlayerChecklistControls}>
-              <SearchField
-                className={styles.awardPlayerChecklistSearch}
-                value={recipientWinnerQuery}
-                onChange={setRecipientWinnerQuery}
-                placeholder={`Search ${activeRecipientWinnerSourceLabel}...`}
-                autoFocus
-              />
-            </div>
-
-            {filteredRecipientWinnerOptions.length === 0 ? (
-              <p className={styles.awardPlayerChecklistEmpty}>
-                {activeRecipientWinnerOptions.length === 0
-                  ? `No ${activeRecipientWinnerSourceLabel} are available for this award.`
-                  : `No ${activeRecipientWinnerSourceLabel} match "${recipientWinnerQuery}".`}
-              </p>
-            ) : (
-              <ul className={styles.awardPlayerChecklistList}>
-                {filteredRecipientWinnerOptions.map((option) => {
-                  return (
-                    <SelectableListItem
-                      key={option.id}
-                      checked={recipientWinnerDraftIds.includes(option.id)}
-                      onToggle={() => toggleRecipientWinner(option.id)}
-                      leadingImage={option.leadingImage}
-                      leadingImageDark={option.leadingImageDark}
-                      leadingImageLight={option.leadingImageLight}
-                      leadingImagePlaceholder={option.leadingImagePlaceholder}
-                      leadingImagePrimaryColor={option.leadingImagePrimaryColor}
-                      leadingImageTextColor={option.leadingImageTextColor}
-                      image={option.image}
-                      imageDark={option.imageDark}
-                      imageLight={option.imageLight}
-                      imageShape={option.imageShape}
-                      imagePlaceholder={option.imagePlaceholder}
-                      imagePrimaryColor={option.imagePrimaryColor}
-                      imageTextColor={option.imageTextColor}
-                      name={option.name}
-                      subtitle={option.subtitle}
-                      disabled={recipientWinnerSaving}
-                    />
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+          <Checklist
+            className={styles.awardPlayerChecklist}
+            listClassName={styles.awardPlayerChecklistList}
+            emptyClassName={styles.awardPlayerChecklistEmpty}
+            options={activeRecipientWinnerOptions}
+            selectedIds={recipientWinnerDraftIds}
+            onToggle={(option) => toggleRecipientWinner(option.id)}
+            searchable
+            query={recipientWinnerQuery}
+            onQueryChange={setRecipientWinnerQuery}
+            filterOption={(option, query) =>
+              option.searchText.toLowerCase().includes(query.toLowerCase())
+            }
+            placeholder={`Search ${activeRecipientWinnerSourceLabel}...`}
+            autoFocus
+            emptyMessage={`No ${activeRecipientWinnerSourceLabel} are available for this award.`}
+            noResultsMessage={(query) =>
+              `No ${activeRecipientWinnerSourceLabel} match "${query}".`
+            }
+            disabled={recipientWinnerSaving}
+          />
         ) : activeRecipientAward ? (
           <form
             id="season-award-recipient-form"
             className={styles.awardForm}
             onSubmit={submitRecipient}
           >
-            <Field
-              control={recipientForm.control}
-              name="recipient_id"
-              type="select"
-              label={activeRecipientAward.recipient_type === 'player' ? 'Player' : 'Team'}
-              options={recipientOptionsForAward(activeRecipientAward)}
-              searchable
-              required
-              rules={{ required: 'Recipient is required' }}
-            />
+            {recipientUsesNomineeRadioList ? (
+              <>
+                <input
+                  type="hidden"
+                  {...recipientForm.register('recipient_id', {
+                    required: 'Recipient is required',
+                  })}
+                />
+                {activeRecipientNomineeRadioOptions.length === 0 ? (
+                  <p className={styles.awardPlayerChecklistEmpty}>
+                    No nominees are available for this award.
+                  </p>
+                ) : (
+                  <RadioList
+                    value={recipientSelectedId || null}
+                    onChange={(value) =>
+                      recipientForm.setValue('recipient_id', value, {
+                        shouldDirty: true,
+                        shouldTouch: true,
+                        shouldValidate: true,
+                      })
+                    }
+                    options={activeRecipientNomineeRadioOptions}
+                    disabled={recipientForm.formState.isSubmitting}
+                    ariaLabel={`${activeRecipientAward.name} nominees`}
+                    className={styles.awardPlayerRadioList}
+                  />
+                )}
+              </>
+            ) : (
+              <Field
+                control={recipientForm.control}
+                name="recipient_id"
+                type="select"
+                label={activeRecipientAward.recipient_type === 'player' ? 'Player' : 'Team'}
+                options={recipientOptionsForAward(activeRecipientAward)}
+                searchable
+                required
+                rules={{ required: 'Recipient is required' }}
+              />
+            )}
           </form>
         ) : null}
       </Modal>

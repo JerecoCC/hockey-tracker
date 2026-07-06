@@ -3,9 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import Checklist from '@/components/Checklist/Checklist';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
-import SelectableList from '@/components/SelectableList/SelectableList';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { type PlayerRosterInput } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -156,19 +156,13 @@ const AddPlayersModal = ({
         </span>
       }
     >
-      <SelectableList
-        items={available}
-        getItemKey={(player) => player.id}
-        isSelected={(player) => player.id in selected}
-        onToggle={toggle}
-        filterItem={matchesPlayerSearch}
-        query={query}
-        onQueryChange={setQuery}
-        searchPlaceholder="Search players..."
-        searchAutoFocus
-        emptyMessage={`No unassigned ${playerLabel} are available for this league.`}
-        noResultsMessage={(searchQuery) => `No players match "${searchQuery}".`}
-        getItemProps={(player) => ({
+      <Checklist
+        options={available.map((player) => ({
+          id: player.id,
+          player,
+          searchText: `${player.first_name} ${player.last_name} ${player.position ?? ''} ${
+            player.jersey_number ?? ''
+          } ${player.team_name ?? ''} ${player.team_code ?? ''}`,
           leadingImage: player.team_logo,
           leadingImageDark: player.team_logo_dark,
           leadingImageLight: player.team_logo_light,
@@ -177,38 +171,47 @@ const AddPlayersModal = ({
           leadingImageTextColor: player.text_color,
           image: player.photo,
           imagePlaceholder: `${player.first_name[0] ?? ''}${player.last_name[0] ?? ''}`,
-          imageShape: 'circle',
+          imageShape: 'circle' as const,
           imagePrimaryColor: player.primary_color,
           imageTextColor: player.text_color,
           name: `${player.first_name} ${player.last_name}`,
           subtitle: formatPlayerPosition(player.position) ?? undefined,
-        })}
-        getItemRightContent={(player) =>
-          player.id in selected ? (
-            <div
-              className={styles.jerseyWrap}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span className={styles.jerseyLabel}>#</span>
-              <Field
-                control={control}
-                name={`jerseys.${player.id}`}
-                type="number"
-                wrapperClassName={styles.jerseyField}
-                className={styles.jerseyInput}
-                aria-label={`Jersey number for ${player.first_name} ${player.last_name}`}
-                placeholder="-"
-                min={1}
-                max={99}
-                inputMode="numeric"
-                transform={(value) => {
-                  setJersey(player.id, value);
-                  return value;
-                }}
-              />
-            </div>
-          ) : undefined
-        }
+          rightContent:
+            player.id in selected ? (
+              <div
+                className={styles.jerseyWrap}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className={styles.jerseyLabel}>#</span>
+                <Field
+                  control={control}
+                  name={`jerseys.${player.id}`}
+                  type="number"
+                  wrapperClassName={styles.jerseyField}
+                  className={styles.jerseyInput}
+                  aria-label={`Jersey number for ${player.first_name} ${player.last_name}`}
+                  placeholder="-"
+                  min={1}
+                  max={99}
+                  inputMode="numeric"
+                  transform={(value) => {
+                    setJersey(player.id, value);
+                    return value;
+                  }}
+                />
+              </div>
+            ) : undefined,
+        }))}
+        selectedIds={Object.keys(selected)}
+        onToggle={(option) => toggle(option.player)}
+        searchable
+        filterOption={(option, searchQuery) => matchesPlayerSearch(option.player, searchQuery)}
+        query={query}
+        onQueryChange={setQuery}
+        placeholder="Search players..."
+        autoFocus
+        emptyMessage={`No unassigned ${playerLabel} are available for this league.`}
+        noResultsMessage={(searchQuery) => `No players match "${searchQuery}".`}
       />
     </Modal>
   );

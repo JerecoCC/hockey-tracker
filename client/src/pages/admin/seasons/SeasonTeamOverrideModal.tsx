@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react';
 import Button from '@/components/Button/Button';
-import Icon from '@/components/Icon/Icon';
+import Checklist from '@/components/Checklist/Checklist';
 import Modal from '@/components/Modal/Modal';
-import SearchableList from '@/components/SearchableList/SearchableList';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type SeasonGroupRecord, type LeagueTeam } from '@/hooks/useSeasonDetails';
 import styles from './SeasonDetails.module.scss';
 
@@ -73,54 +71,26 @@ const SeasonTeamOverrideModal = (props: Props) => {
       confirmDisabled={saving || leagueTeams.length === 0}
       busy={saving}
     >
-      <SearchableList
+      <Checklist
         key={group?.id ?? 'none'}
-        items={availableTeams}
-        filterFn={(t, q) =>
-          t.name.toLowerCase().includes(q.toLowerCase()) ||
-          t.code.toLowerCase().includes(q.toLowerCase())
-        }
-        renderItems={(filtered) => (
-          <ul className={styles.teamSelectList}>
-            {filtered.map((t) => {
-              const checked = selectedIds.has(t.id);
-              return (
-                <li
-                  key={t.id}
-                  className={styles.teamSelectItem}
-                  data-selected={checked}
-                  onClick={() => toggle(t.id)}
-                >
-                  <span
-                    className={styles.teamCheckbox}
-                    data-checked={checked}
-                  >
-                    {checked && (
-                      <Icon
-                        name="check"
-                        size="0.7em"
-                      />
-                    )}
-                  </span>
-
-                  <TeamLogo
-                    logo={t.logo}
-                    logoDark={t.logo_dark}
-                    logoLight={t.logo_light}
-                    code={t.code}
-                    primaryColor={t.primary_color}
-                    textColor={t.text_color}
-                    size={32}
-                    shape="square"
-                  />
-
-                  <span className={styles.teamListName}>{t.name}</span>
-                  <span className={styles.teamCode}>{t.code}</span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        options={availableTeams.map((team) => ({
+          id: team.id,
+          searchText: `${team.name} ${team.code}`,
+          image: team.logo,
+          imageDark: team.logo_dark,
+          imageLight: team.logo_light,
+          imageBackground: false,
+          imagePlaceholder: team.code,
+          imagePrimaryColor: team.primary_color,
+          imageTextColor: team.text_color,
+          name: team.name,
+          rightContent: <span className={styles.teamCode}>{team.code}</span>,
+        }))}
+        selectedIds={selectedIds}
+        onToggle={(option) => toggle(option.id)}
+        searchable
+        listClassName={styles.teamSelectList}
+        emptyClassName={styles.teamsEmpty}
         placeholder="Search teams…"
         emptyMessage={emptyMessage}
         noResultsMessage={(q) => `No teams match "${q}".`}

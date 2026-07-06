@@ -11,6 +11,7 @@ interface Props<T> {
   /** Renders the matched items (e.g. a <ul>). Only called when there are results. */
   renderItems: (filtered: T[]) => ReactNode;
   placeholder?: string;
+  autoFocus?: boolean;
   /** Buttons / selects to place in the toolbar beside the search field. */
   actions?: ReactNode;
   query?: string;
@@ -35,6 +36,7 @@ function SearchableList<T>({
   filterFn,
   renderItems,
   placeholder = 'Search…',
+  autoFocus = false,
   actions,
   query: controlledQuery,
   onQueryChange,
@@ -117,6 +119,7 @@ function SearchableList<T>({
           placeholder={placeholder}
           value={query}
           onChange={setQuery}
+          autoFocus={autoFocus}
         />
         {actions}
       </div>

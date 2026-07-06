@@ -1073,34 +1073,26 @@
     flex-direction: column;
   }
 
-  &PlayerChecklistControls {
-    display: flex;
-    gap: $space-md;
-    align-items: center;
-    margin-bottom: $space-lg;
-
-    @media (max-width: $bp-tablet) {
-      flex-direction: column;
-      align-items: stretch;
-    }
-  }
-
-  &PlayerChecklistSearch {
-    flex: 1;
-  }
-
   &PlayerChecklistList {
     --selectable-list-item-image-size: 48px;
     --selectable-list-item-image-font-size: #{$font-base};
 
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: $space-sm;
     max-height: min(70vh, 680px);
     margin: 0;
     padding: 0;
     overflow-y: auto;
     list-style: none;
+  }
+
+  &PlayerRadioList {
+    --selectable-list-item-image-size: 48px;
+    --selectable-list-item-image-font-size: #{$font-base};
+
+    max-height: min(70vh, 680px);
+    overflow-y: auto;
   }
 
   &PlayerChecklistEmpty {

@@ -6,6 +6,7 @@ import useSeasonAwards, {
   type SeasonAwardRecord,
 } from '@/hooks/useSeasonAwards';
 import { usePlayoffSeries } from '@/hooks/useGames';
+import useLeaguePlayers from '@/hooks/useLeaguePlayers';
 import SeasonAwardsTab from './SeasonAwardsTab';
 
 jest.mock('@/hooks/useSeasonAwards', () => ({
@@ -18,8 +19,14 @@ jest.mock('@/hooks/useGames', () => ({
   usePlayoffSeries: jest.fn(),
 }));
 
+jest.mock('@/hooks/useLeaguePlayers', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
+
 const mockUseSeasonAwards = useSeasonAwards as jest.Mock;
 const mockUsePlayoffSeries = usePlayoffSeries as jest.Mock;
+const mockUseLeaguePlayers = useLeaguePlayers as jest.Mock;
 
 const skater = {
   player_id: 'player-1',
@@ -49,6 +56,34 @@ const secondSkater = {
   goals: 2,
   assists: 3,
   points: 5,
+};
+
+const rosterGoalie = {
+  id: 'goalie-1',
+  first_name: 'Marlène',
+  last_name: 'Boissonnault',
+  photo: null,
+  date_of_birth: null,
+  birth_city: null,
+  birth_country: null,
+  height_cm: null,
+  weight_lbs: null,
+  position: 'G',
+  shoots: null,
+  is_active: false,
+  created_at: '2026-01-01T00:00:00.000Z',
+  jersey_number: 35,
+  player_team_id: 'player-team-1',
+  team_id: 'team-1',
+  team_name: 'Toronto',
+  team_code: 'TOR',
+  team_logo: null,
+  team_logo_dark: null,
+  team_logo_light: null,
+  primary_color: '#003e7e',
+  text_color: '#ffffff',
+  is_prospect: false,
+  start_date: '2026-01-01',
 };
 
 const team = {
@@ -116,6 +151,7 @@ const renderTab = (
   options: {
     saveNominees?: jest.Mock;
     skaters?: (typeof skater)[];
+    rosterPlayers?: unknown[];
   } = {},
 ) => {
   mockUseSeasonAwards.mockReturnValue({
@@ -137,6 +173,17 @@ const renderTab = (
     startSeries: jest.fn(),
     advanceBracket: jest.fn(),
     forceAdvance: jest.fn(),
+  });
+  mockUseLeaguePlayers.mockReturnValue({
+    players: options.rosterPlayers ?? [],
+    total: options.rosterPlayers?.length ?? 0,
+    loading: false,
+    fetching: false,
+    busy: null,
+    addPlayer: jest.fn(),
+    bulkAddPlayers: jest.fn(),
+    updatePlayer: jest.fn(),
+    deletePlayer: jest.fn(),
   });
 
   return render(
@@ -257,6 +304,45 @@ describe('SeasonAwardsTab', () => {
     expect(metaItems[0]).toHaveTextContent('TOR');
     expect(metaItems[1]).toHaveTextContent('#19');
     expect(metaItems[2]).toHaveTextContent('Center');
+  });
+
+  it('uses season roster players when adding nominees', async () => {
+    const user = userEvent.setup();
+    const saveNominees = jest.fn(async () => true);
+    renderTab(
+      makeAward({
+        name: 'Intact Impact Award',
+        uses_nominees: true,
+      }),
+      undefined,
+      [],
+      true,
+      {
+        saveNominees,
+        skaters: [],
+        rosterPlayers: [rosterGoalie],
+      },
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Nominees' }));
+    await user.click(screen.getByLabelText('Nominee 1'));
+
+    expect(
+      await screen.findByRole('option', { name: /Marlène Boissonnault/ }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByText('Marlène Boissonnault'));
+    await user.click(screen.getByRole('button', { name: 'Save Nominees' }));
+
+    expect(saveNominees).toHaveBeenCalledWith('season-award-1', [
+      {
+        recipient_type: 'player',
+        player_id: 'goalie-1',
+        team_id: null,
+        role: 'nominee',
+        rank: 1,
+      },
+    ]);
   });
 
   it('reorders nominee drafts locally and saves the final order once', async () => {
@@ -482,8 +568,9 @@ describe('SeasonAwardsTab', () => {
     expect(screen.getByRole('button', { name: 'Award Player' })).toBeInTheDocument();
   });
 
-  it('fills the single-winner nominee select with the current winner', async () => {
+  it('uses a radio list when awarding a single player from nominees', async () => {
     const user = userEvent.setup();
+    const addRecipient = jest.fn(async () => true);
     renderTab(
       makeAward({
         uses_nominees: true,
@@ -492,14 +579,33 @@ describe('SeasonAwardsTab', () => {
             ...makeWinner('nominee-1', 'player-1', 'John Smith'),
             role: 'nominee',
           },
+          {
+            ...makeWinner('nominee-2', 'player-2', 'Jane Doe'),
+            role: 'nominee',
+          },
           makeWinner('winner-1', 'player-1', 'John Smith'),
         ],
       }),
+      addRecipient,
     );
 
     await user.click(screen.getByRole('button', { name: 'Award Player' }));
 
-    expect(screen.getByDisplayValue('John Smith')).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Ilana Kloss Playoff MVP nominees' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Player' })).not.toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'John Smith' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Jane Doe' })).toHaveAttribute('aria-checked', 'false');
+
+    await user.click(screen.getByRole('radio', { name: 'Jane Doe' }));
+    const awardPlayerButtons = screen.getAllByRole('button', { name: 'Award Player' });
+    await user.click(awardPlayerButtons[awardPlayerButtons.length - 1]);
+
+    expect(addRecipient).toHaveBeenCalledWith('season-award-1', {
+      recipient_type: 'player',
+      player_id: 'player-2',
+      team_id: null,
+      role: 'winner',
+    });
   });
 
   it('uses the checklist winner flow for multiple-winner awards without nominees', async () => {
@@ -526,6 +632,28 @@ describe('SeasonAwardsTab', () => {
         refresh: false,
       },
     );
+  });
+
+  it('places selected checklist winners at the start', async () => {
+    const user = userEvent.setup();
+    const { container } = renderTab(
+      makeAward({
+        allow_multiple_winners: true,
+        recipients: [makeWinner('winner-1', 'player-1', 'John Smith')],
+      }),
+      undefined,
+      [],
+      true,
+      {
+        skaters: [skater, secondSkater],
+      },
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Award Player' }));
+
+    const items = container.querySelectorAll('.awardPlayerChecklistList > li');
+    expect(items[0]).toHaveTextContent('John Smith');
+    expect(items[1]).toHaveTextContent('Jane Doe');
   });
 
   it('shows an awardee card skeleton while saving a suggested playoff champion winner', async () => {

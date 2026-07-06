@@ -5,11 +5,11 @@ import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 import Tag from '@/components/Tag/Tag';
 import Button from '@/components/Button/Button';
+import Checklist from '@/components/Checklist/Checklist';
 import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import Modal from '@/components/Modal/Modal';
-import SelectableList from '@/components/SelectableList/SelectableList';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -362,34 +362,16 @@ const LineupRosterModal = ({
         {loadingPlayers ? (
           <LoadingSpinner message="Loading players..." />
         ) : (
-          <SelectableList
-            items={available}
-            getItemKey={(player) => player.id}
-            isSelected={(player) => selected.has(player.id)}
-            onToggle={(player) => toggle(player.id)}
-            filterItem={matchesPlayerSearch}
-            query={query}
-            onQueryChange={(value) => setValue('query', value)}
-            searchPlaceholder="Search players..."
-            searchDisabled={controlsDisabled}
-            searchRightContent={
-              <ToggleButton
-                variant="switch"
-                active={showProspects}
-                onClick={() => setShowProspects((v) => !v)}
-                activeIcon="visibility"
-                inactiveIcon="visibility_off"
-                activeTooltip="Hide prospects"
-                inactiveTooltip="Show prospects"
-                disabled={controlsDisabled || !hasProspects}
-              />
-            }
-            emptyMessage="All team players are already in this lineup."
-            noResultsMessage={(searchQuery) => `No players match "${searchQuery}".`}
-            getItemProps={(player) => ({
+          <Checklist
+            options={available.map((player) => ({
+              id: player.id,
+              player,
+              searchText: `${player.first_name} ${player.last_name} ${player.position ?? ''} ${
+                player.jersey_number ?? ''
+              }`,
               image: player.photo,
               imagePlaceholder: `${player.first_name[0] ?? ''}${player.last_name[0] ?? ''}`,
-              imageShape: 'circle',
+              imageShape: 'circle' as const,
               imagePrimaryColor: player.primary_color,
               imageTextColor: player.text_color,
               chip:
@@ -403,6 +385,7 @@ const LineupRosterModal = ({
               subtitle: formatPlayerPosition(player.position) ?? undefined,
               name: `${player.first_name} ${player.last_name}`.trim(),
               disabled: controlsDisabled,
+              rightContent: player.is_prospect ? <Tag label="Prospect" /> : undefined,
               actions: [
                 player.is_prospect
                   ? {
@@ -418,10 +401,29 @@ const LineupRosterModal = ({
                       onClick: () => updateProspectStatus(player, true),
                     },
               ],
-            })}
-            getItemRightContent={(player) =>
-              player.is_prospect ? <Tag label="Prospect" /> : undefined
+            }))}
+            selectedIds={selected}
+            onToggle={(option) => toggle(option.id)}
+            searchable
+            filterOption={(option, searchQuery) => matchesPlayerSearch(option.player, searchQuery)}
+            query={query}
+            onQueryChange={(value) => setValue('query', value)}
+            placeholder="Search players..."
+            searchDisabled={controlsDisabled}
+            actions={
+              <ToggleButton
+                variant="switch"
+                active={showProspects}
+                onClick={() => setShowProspects((v) => !v)}
+                activeIcon="visibility"
+                inactiveIcon="visibility_off"
+                activeTooltip="Hide prospects"
+                inactiveTooltip="Show prospects"
+                disabled={controlsDisabled || !hasProspects}
+              />
             }
+            emptyMessage="All team players are already in this lineup."
+            noResultsMessage={(searchQuery) => `No players match "${searchQuery}".`}
           />
         )}
       </div>
