@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import Icon from '../Icon/Icon';
 import styles from './Breadcrumbs.module.scss';
 
@@ -28,6 +28,22 @@ const Breadcrumbs = (props: BreadcrumbsProps) => {
   const { items } = props;
   const navigate = useNavigate();
 
+  const handleLinkClick = (event: MouseEvent<HTMLAnchorElement>, path: string) => {
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.shiftKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    navigate(path);
+  };
+
   return (
     <nav
       className={styles.breadcrumbs}
@@ -47,12 +63,13 @@ const Breadcrumbs = (props: BreadcrumbsProps) => {
               />
             )}
             {!isLast && item.path ? (
-              <button
+              <a
+                href={item.path}
                 className={styles.link}
-                onClick={() => navigate(item.path!)}
+                onClick={(event) => handleLinkClick(event, item.path!)}
               >
                 {renderLabel(item)}
-              </button>
+              </a>
             ) : (
               <span className={isLast ? styles.current : styles.label}>{renderLabel(item)}</span>
             )}

@@ -31,6 +31,7 @@
   font-size: $font-base;
   font-family: inherit;
   color: $accent-light;
+  text-decoration: none;
   transition: color $transition-fast;
 
   &:hover {

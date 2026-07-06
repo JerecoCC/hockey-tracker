@@ -13,7 +13,7 @@ describe('Breadcrumbs', () => {
   it('renders a single item as plain text (not a link)', () => {
     render(<Breadcrumbs items={[{ label: 'Home' }]} />);
     expect(screen.getByText('Home')).toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
   it('renders the last item as plain text even when a path is provided', () => {
@@ -21,29 +21,39 @@ describe('Breadcrumbs', () => {
       <Breadcrumbs items={[{ label: 'Leagues', path: '/admin/leagues' }, { label: 'NHL' }]} />,
     );
     const lastItem = screen.getByText('NHL');
-    expect(lastItem.tagName).not.toBe('BUTTON');
+    expect(lastItem.tagName).not.toBe('A');
   });
 
-  it('renders non-last items with a path as clickable buttons', () => {
+  it('renders non-last items with a path as links', () => {
     render(
       <Breadcrumbs items={[{ label: 'Leagues', path: '/admin/leagues' }, { label: 'NHL' }]} />,
     );
-    expect(screen.getByRole('button', { name: 'Leagues' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Leagues' })).toHaveAttribute(
+      'href',
+      '/admin/leagues',
+    );
   });
 
   it('navigates to the correct path when a breadcrumb link is clicked', () => {
     render(
       <Breadcrumbs items={[{ label: 'Leagues', path: '/admin/leagues' }, { label: 'NHL' }]} />,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'Leagues' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Leagues' }));
     expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues');
     expect(mockNavigate).toHaveBeenCalledTimes(1);
   });
 
-  it('does not render a button for a non-last item without a path', () => {
+  it('leaves modified clicks to the browser', () => {
+    render(
+      <Breadcrumbs items={[{ label: 'Leagues', path: '/admin/leagues' }, { label: 'NHL' }]} />,
+    );
+    fireEvent.click(screen.getByRole('link', { name: 'Leagues' }), { ctrlKey: true });
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('does not render a link for a non-last item without a path', () => {
     render(<Breadcrumbs items={[{ label: 'Settings' }, { label: 'Profile' }]} />);
-    // 'Settings' has no path → should render as a plain span, not a button
-    expect(screen.queryByRole('button', { name: 'Settings' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Settings' })).not.toBeInTheDocument();
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
@@ -70,8 +80,8 @@ describe('Breadcrumbs', () => {
         ]}
       />,
     );
-    expect(screen.getByRole('button', { name: 'Admin' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Leagues' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Admin' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Leagues' })).toBeInTheDocument();
     expect(screen.getByText('NHL')).toBeInTheDocument();
   });
 
