@@ -1,9 +1,10 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast, type TypeOptions } from 'react-toastify';
 import Accordion from '@/components/Accordion/Accordion';
+import AwardBanner from '@/components/AwardBanner/AwardBanner';
 import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
@@ -604,6 +605,24 @@ export const collapseSameTeamStints = (stints: PlayerStintRecord[]): TeamHistory
 
 const teamCode = (code: string | null, name: string | null) =>
   code ?? (name ? name.slice(0, 3).toUpperCase() : 'TEAM');
+
+const awardTeamPlaceName = (award: PlayerAwardRecord) => {
+  const placeName = award.team_place_name?.trim();
+  return placeName || null;
+};
+
+const awardTeamDisplayName = (award: PlayerAwardRecord) => {
+  const splitName = award.team_team_name?.trim();
+  if (splitName) return splitName;
+
+  const fullName = award.team_name?.trim();
+  const placeName = awardTeamPlaceName(award);
+  if (fullName && placeName && fullName.toLowerCase().startsWith(placeName.toLowerCase())) {
+    return fullName.slice(placeName.length).trim() || fullName;
+  }
+
+  return fullName || 'Team not recorded';
+};
 
 const sortPlayerAwards = (awards: PlayerAwardRecord[]) =>
   [...awards].sort(
@@ -2243,50 +2262,47 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           aria-label="Award banners"
         >
           {sortedPlayerAwards.map((award) => (
-            <article
+            <AwardBanner
               key={award.id}
-              className={styles.awardArenaBanner}
-              style={
-                {
-                  '--award-banner-color': award.team_primary_color ?? undefined,
-                  '--award-banner-text-color': award.team_text_color ?? undefined,
-                } as CSSProperties
+              awardName={award.award_name}
+              champions={shouldShowChampionsLabel(award)}
+              dateText={award.awarded_at ? `Awarded ${formatShortDate(award.awarded_at)}` : null}
+              media={
+                award.recipient_type === 'player' ? (
+                  <PlayerAvatar
+                    photo={award.player_photo}
+                    initials={initials}
+                    primaryColor={award.team_primary_color}
+                    textColor={award.team_text_color}
+                    size={76}
+                  />
+                ) : (
+                  <TeamLogo
+                    logo={award.team_logo}
+                    logoDark={award.team_logo_dark}
+                    logoLight={award.team_logo_light}
+                    code={teamCode(award.team_code, award.team_name)}
+                    alt=""
+                    primaryColor={award.team_primary_color}
+                    textColor={award.team_text_color}
+                    size={76}
+                  />
+                )
               }
-            >
-              <span className={styles.awardBannerRail} />
-              <div className={styles.awardBannerPanel}>
-                <div className={styles.awardBannerContent}>
-                  <span className={styles.awardBannerAward}>
-                    <span>{award.award_name}</span>
-                    {shouldShowChampionsLabel(award) && (
-                      <span className={styles.awardBannerChampions}>Champions</span>
-                    )}
-                  </span>
-                  <span className={styles.awardBannerLogoSlot}>
-                    <TeamLogo
-                      logo={award.team_logo}
-                      logoDark={award.team_logo_dark}
-                      logoLight={award.team_logo_light}
-                      code={teamCode(award.team_code, award.team_name)}
-                      alt=""
-                      primaryColor={award.team_primary_color}
-                      textColor={award.team_text_color}
-                      size={64}
-                      className={styles.awardBannerLogo}
-                    />
-                  </span>
-                  <span className={styles.awardBannerTeam}>
-                    {award.team_name ?? 'Team not recorded'}
-                  </span>
-                  {award.awarded_at && (
-                    <span className={styles.awardBannerDate}>
-                      Awarded {formatShortDate(award.awarded_at)}
-                    </span>
-                  )}
-                </div>
-                <span className={styles.awardBannerSeason}>{award.season_name}</span>
-              </div>
-            </article>
+              placeName={awardTeamPlaceName(award)}
+              primaryColor={award.team_primary_color}
+              secondaryColor={award.team_secondary_color ?? award.team_primary_color}
+              seasonName={award.season_name}
+              shape={
+                isPlayoffChampionshipAward(award)
+                  ? 'pointed'
+                  : award.recipient_type === 'player'
+                    ? 'forked'
+                    : 'rounded'
+              }
+              teamName={awardTeamDisplayName(award)}
+              textColor={award.team_text_color}
+            />
           ))}
         </div>
       ) : (

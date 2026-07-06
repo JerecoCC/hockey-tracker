@@ -134,7 +134,9 @@ jest.mock('@/components/TitleRow/TitleRow', () => ({ left, right }: any) => (
     {right}
   </div>
 ));
-jest.mock('@/components/PlayerAvatar/PlayerAvatar', () => () => <span>avatar</span>);
+jest.mock('@/components/PlayerAvatar/PlayerAvatar', () => ({ photo }: any) => (
+  <span data-photo={photo ?? ''}>avatar</span>
+));
 jest.mock('@/components/TeamLogo/TeamLogo', () => ({ size }: any) => (
   <span data-size={size}>logo</span>
 ));
@@ -1732,11 +1734,16 @@ describe('PlayerDetails awards tab', () => {
           season_id: 'season-1',
           season_name: '2025-26',
           awarded_at: '2026-05-01',
+          recipient_type: 'player',
+          player_photo: 'forward-2026.png',
           team_id: 'team-1',
           team_name: 'Toronto Maple Leafs',
+          team_place_name: 'Toronto',
+          team_team_name: 'Maple Leafs',
           team_code: 'TOR',
           team_logo: null,
           team_primary_color: '#003e7e',
+          team_secondary_color: '#b9975b',
           team_text_color: '#ffffff',
         },
         {
@@ -1747,11 +1754,16 @@ describe('PlayerDetails awards tab', () => {
           season_id: 'season-2',
           season_name: '2024-25',
           awarded_at: '2025-05-01',
+          recipient_type: 'player',
+          player_photo: 'forward-2025.png',
           team_id: 'team-2',
           team_name: 'Montreal Victoire',
+          team_place_name: 'Montreal',
+          team_team_name: 'Victoire',
           team_code: 'MTL',
           team_logo: null,
           team_primary_color: '#862633',
+          team_secondary_color: '#c8102e',
           team_text_color: '#ffffff',
         },
         {
@@ -1762,11 +1774,16 @@ describe('PlayerDetails awards tab', () => {
           season_id: 'season-1',
           season_name: '2025-26',
           awarded_at: '2026-05-20',
+          recipient_type: 'team',
+          player_photo: null,
           team_id: 'team-1',
           team_name: 'Toronto Maple Leafs',
+          team_place_name: 'Toronto',
+          team_team_name: 'Maple Leafs',
           team_code: 'TOR',
           team_logo: null,
           team_primary_color: '#003e7e',
+          team_secondary_color: '#b9975b',
           team_text_color: '#ffffff',
         },
       ],
@@ -1824,11 +1841,16 @@ describe('PlayerDetails awards tab', () => {
           season_id: 'season-1',
           season_name: '2025-26',
           awarded_at: '2026-05-01',
+          recipient_type: 'player',
+          player_photo: 'forward-2026.png',
           team_id: 'team-1',
           team_name: 'Toronto Maple Leafs',
+          team_place_name: 'Toronto',
+          team_team_name: 'Maple Leafs',
           team_code: 'TOR',
           team_logo: null,
           team_primary_color: '#003e7e',
+          team_secondary_color: '#b9975b',
           team_text_color: '#ffffff',
         },
         {
@@ -1839,11 +1861,16 @@ describe('PlayerDetails awards tab', () => {
           season_id: 'season-2',
           season_name: '2024-25',
           awarded_at: '2025-05-01',
+          recipient_type: 'player',
+          player_photo: 'older-2025.png',
           team_id: 'team-1',
           team_name: 'Toronto Maple Leafs',
+          team_place_name: 'Toronto',
+          team_team_name: 'Maple Leafs',
           team_code: 'TOR',
           team_logo: null,
           team_primary_color: '#003e7e',
+          team_secondary_color: '#b9975b',
           team_text_color: '#ffffff',
         },
       ],
@@ -1874,11 +1901,16 @@ describe('PlayerDetails awards tab', () => {
           season_id: 'season-1',
           season_name: '2025-26',
           awarded_at: '2026-05-01',
+          recipient_type: 'player',
+          player_photo: 'keller-2025.png',
           team_id: 'team-1',
           team_name: 'Toronto Maple Leafs',
+          team_place_name: 'Toronto',
+          team_team_name: 'Maple Leafs',
           team_code: 'TOR',
           team_logo: null,
           team_primary_color: '#003e7e',
+          team_secondary_color: '#b9975b',
           team_text_color: '#ffffff',
         },
         {
@@ -1891,11 +1923,16 @@ describe('PlayerDetails awards tab', () => {
           season_id: 'season-2',
           season_name: '2024-25',
           awarded_at: null,
+          recipient_type: 'team',
+          player_photo: null,
           team_id: 'team-2',
           team_name: 'Montreal Victoire',
+          team_place_name: 'Montreal',
+          team_team_name: 'Victoire',
           team_code: 'MTL',
           team_logo: null,
           team_primary_color: '#862633',
+          team_secondary_color: '#c8102e',
           team_text_color: '#ffffff',
         },
       ],
@@ -1915,9 +1952,14 @@ describe('PlayerDetails awards tab', () => {
     expect(screen.queryByText('Awarded season result')).not.toBeInTheDocument();
     const arenaBanner = screen.getByText('Awarded May 1, 2026').closest('.awardArenaBanner');
     expect(arenaBanner).not.toBeNull();
+    expect(arenaBanner as HTMLElement).toHaveClass('awardArenaBannerIndividual');
+    expect(arenaBanner as HTMLElement).not.toHaveClass('awardArenaBannerChampionship');
     expect((arenaBanner as HTMLElement).style.getPropertyValue('--award-banner-color')).toBe(
       '#003e7e',
     );
+    expect(
+      (arenaBanner as HTMLElement).style.getPropertyValue('--award-banner-secondary-color'),
+    ).toBe('#b9975b');
     expect((arenaBanner as HTMLElement).style.getPropertyValue('--award-banner-text-color')).toBe(
       '#ffffff',
     );
@@ -1925,13 +1967,32 @@ describe('PlayerDetails awards tab', () => {
     expect(arenaBannerPanel?.lastElementChild).toHaveTextContent('2025-26');
     expect(within(arenaBanner as HTMLElement).getByText('Forward of the Year'))
       .toBeInTheDocument();
-    expect(within(arenaBanner as HTMLElement).getByText('Toronto Maple Leafs'))
-      .toBeInTheDocument();
+    expect(within(arenaBanner as HTMLElement).getByText('Toronto')).toHaveClass(
+      'awardBannerTeamPlace',
+    );
+    expect(within(arenaBanner as HTMLElement).getByText('Maple Leafs')).toHaveClass(
+      'awardBannerTeamName',
+    );
+    expect(within(arenaBanner as HTMLElement).getByText('avatar')).toHaveAttribute(
+      'data-photo',
+      'keller-2025.png',
+    );
     expect(within(arenaBanner as HTMLElement).getByText('2025-26')).toBeInTheDocument();
     expect(within(arenaBanner as HTMLElement).queryByText('Champions')).not.toBeInTheDocument();
     const championshipBanner = screen.getByText('Walter Cup Winner').closest('.awardArenaBanner');
     expect(championshipBanner).not.toBeNull();
+    expect(championshipBanner as HTMLElement).not.toHaveClass('awardArenaBannerIndividual');
+    expect(championshipBanner as HTMLElement).toHaveClass('awardArenaBannerChampionship');
+    expect(
+      (championshipBanner as HTMLElement).style.getPropertyValue('--award-banner-secondary-color'),
+    ).toBe('#c8102e');
     expect(within(championshipBanner as HTMLElement).getByText('Champions')).toBeInTheDocument();
+    expect(within(championshipBanner as HTMLElement).getByText('Montreal')).toHaveClass(
+      'awardBannerTeamPlace',
+    );
+    expect(within(championshipBanner as HTMLElement).getByText('Victoire')).toHaveClass(
+      'awardBannerTeamName',
+    );
   });
 });
 

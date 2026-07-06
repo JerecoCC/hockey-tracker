@@ -18,6 +18,7 @@ import {
 import TeamInfoTab from './TeamInfoTab';
 import TeamGamesTab from './TeamGamesTab';
 import TeamPlayersTab from './TeamPlayersTab';
+import TeamAwardsTab from './TeamAwardsTab';
 import TeamHistoryTab from './TeamHistoryTab';
 import styles from './TeamDetails.module.scss';
 
@@ -232,6 +233,16 @@ const TeamDetailsPage = ({ mode = 'admin' }: Props) => {
           teamCode={team.code}
           defaultSeasonId={routeSeasonId}
           readOnly={!isAdminView}
+          mode={mode}
+        />
+      ),
+    },
+    {
+      label: 'Awards',
+      icon: 'emoji_events',
+      content: (
+        <TeamAwardsTab
+          teamId={team.id}
           mode={mode}
         />
       ),

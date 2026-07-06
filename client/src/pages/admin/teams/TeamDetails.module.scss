@@ -107,6 +107,64 @@
   border-radius: $radius-md;
 }
 
+.award {
+  &Groups,
+  &TeamList,
+  &BannerRack {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &Groups {
+    gap: $space-md;
+  }
+
+  &Group {
+    min-width: 0;
+  }
+
+  &AccordionBody {
+    padding: $space-md;
+  }
+
+  &TeamList {
+    gap: $space-sm;
+    list-style: none;
+  }
+
+  &HeaderRight {
+    margin-left: auto;
+  }
+
+  &ViewControl {
+    min-width: 190px;
+  }
+
+  &ViewOption {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-xs;
+  }
+
+  &CountBadge {
+    --badge-bg: color-mix(in srgb, var(--app-info, #{$info}) 12%, transparent);
+    --badge-border-color: color-mix(in srgb, var(--app-info, #{$info}) 45%, var(--app-border, #{$border}));
+    --badge-value-color: var(--app-text-strong, #{$text-bright});
+    --badge-label-color: var(--app-text-muted, #{$text-dim});
+  }
+
+  &BannerRack {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: $space-lg;
+    align-items: start;
+  }
+
+}
+
 // ── Team history tab ───────────────────────────────────────────────────
 .history {
   &List {

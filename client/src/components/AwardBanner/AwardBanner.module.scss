@@ -1,0 +1,207 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.awardArenaBanner {
+  --award-banner-color: #{$accent};
+  --award-banner-secondary-color: var(--award-banner-color);
+  --award-banner-text-color: #{$text-bright};
+  --award-banner-height: 276px;
+
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  padding-top: $space-sm;
+  color: var(--award-banner-text-color);
+}
+
+.awardBannerRail {
+  width: min(112px, 76%);
+  height: 5px;
+  border-radius: $radius-pill;
+  background: color-mix(in srgb, var(--award-banner-color) 62%, var(--app-border, #{$border}));
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.22);
+}
+
+.awardBannerFrame {
+  position: relative;
+  width: 100%;
+  height: var(--award-banner-height);
+  min-width: 0;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.16));
+}
+
+.awardBannerShell {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.awardBannerBorderOverlay {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.awardBannerBandOverlay {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.awardBannerGradientStart {
+  stop-color: color-mix(in srgb, var(--award-banner-color) 88%, var(--award-banner-text-color) 12%);
+}
+
+.awardBannerGradientEnd {
+  stop-color: var(--award-banner-color);
+}
+
+.awardBannerAccent {
+  fill: var(--award-banner-secondary-color);
+}
+
+.awardBannerBand {
+  fill: var(--award-banner-text-color);
+}
+
+.awardBannerOuter,
+.awardBannerInner {
+  fill: none;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.awardBannerOuter {
+  stroke: var(--app-border, #{$border});
+  stroke-width: 1;
+}
+
+.awardBannerInner {
+  stroke: var(--award-banner-secondary-color);
+  stroke-width: 1;
+}
+
+.awardBannerPanel {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 276px;
+  min-width: 0;
+  align-items: center;
+  gap: 0.15rem;
+  padding: $space-md $space-md 1.05rem;
+  text-align: center;
+}
+
+.awardBannerContent {
+  display: grid;
+  grid-template-rows: minmax(4.2rem, auto) 5.35rem minmax(2rem, auto) auto;
+  justify-items: center;
+  align-items: center;
+  align-content: start;
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  gap: 0.12rem;
+  padding-top: 0.2rem;
+}
+
+.awardBannerAward {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.12rem;
+  max-width: 100%;
+  height: 100%;
+  padding: 0.35rem $space-xs;
+  color: var(--award-banner-text-color);
+  font-size: $font-sm;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.awardBannerChampions {
+  color: var(--award-banner-text-color);
+  font-size: $font-xs;
+  font-weight: 900;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.awardBannerLogoSlot {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.28));
+}
+
+.awardBannerTeam {
+  display: flex;
+  max-width: 100%;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.08rem;
+  color: var(--award-banner-text-color);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.awardBannerTeamPlace {
+  font-size: $font-xs;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.awardBannerTeamName {
+  font-size: $font-base;
+  font-weight: 900;
+  line-height: 1.05;
+}
+
+.awardBannerDate {
+  color: color-mix(in srgb, var(--award-banner-text-color) 72%, transparent);
+  font-size: $font-xs;
+  font-weight: 700;
+  line-height: 1.25;
+  opacity: 0.78;
+}
+
+.awardBannerSeason {
+  display: flex;
+  width: calc(100% + (#{$space-md} * 2));
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  margin-inline: calc(#{$space-md} * -1);
+  margin-top: auto;
+  padding: 0.45rem $space-sm 0.75rem;
+  color: var(--award-banner-color);
+  font-size: $font-xl;
+  font-weight: 900;
+  line-height: 1;
+}
