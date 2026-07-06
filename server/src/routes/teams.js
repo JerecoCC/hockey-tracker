@@ -208,6 +208,7 @@ router.get('/:id/awards', async (req, res) => {
         la.id AS award_id,
         sa.id AS season_award_id,
         la.name AS award_name,
+        la.description AS award_description,
         la.competition_scope,
         la.stat_key,
         s.id AS season_id,

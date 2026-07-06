@@ -470,10 +470,9 @@
   }
 
   &InfoTooltip {
-    display: flex;
-    min-width: 10rem;
-    flex-direction: column;
-    gap: $space-xs;
+    display: block;
+    max-width: 18rem;
+    line-height: 1.4;
   }
 
   &TeamList {
@@ -497,13 +496,6 @@
     align-items: center;
     justify-content: center;
     gap: $space-xs;
-  }
-
-  &CountBadge {
-    --badge-bg: color-mix(in srgb, var(--app-info, #{$info}) 12%, transparent);
-    --badge-border-color: color-mix(in srgb, var(--app-info, #{$info}) 45%, var(--app-border, #{$border}));
-    --badge-value-color: var(--app-text-strong, #{$text-bright});
-    --badge-label-color: var(--app-text-muted, #{$text-dim});
   }
 
   &BannerRack {

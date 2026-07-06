@@ -29,6 +29,7 @@ const TEAM_AWARD = {
   award_id: 'award-1',
   season_award_id: 'season-award-1',
   award_name: 'Walter Cup Winner',
+  award_description: 'Awarded to the playoff champion.',
   competition_scope: 'playoffs',
   stat_key: 'playoff_champion',
   season_id: 'season-1',
@@ -133,6 +134,7 @@ describe('GET /api/admin/teams/:id/awards', () => {
     expect(queryText).toContain("sar.recipient_type = 'team'");
     expect(queryText).toContain("sar.role = 'winner'");
     expect(queryText).toContain('sar.team_id');
+    expect(queryText).toContain('la.description AS award_description');
     expect(queryText).toContain('la.competition_scope');
     expect(queryText).toContain('la.stat_key');
     expect(queryText).toContain('ti.place_name AS team_place_name');

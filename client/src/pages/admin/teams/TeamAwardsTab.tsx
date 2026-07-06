@@ -9,7 +9,6 @@ import Section from '@/components/Section/Section';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { useTeamAwards, type TeamAwardRecord } from '@/hooks/useTeamDetails';
-import { awardCompetitionScopeLabel } from '@/lib/awardDefinitions';
 import styles from './TeamDetails.module.scss';
 
 interface Props {
@@ -132,30 +131,18 @@ const awardSubtitle = (award: TeamAwardRecord) =>
     .filter(Boolean)
     .join(' | ');
 
-const awardStatLabel = (statKey: string | null) =>
-  statKey ? statKey.replace(/_/g, ' ') : 'Manual or voted';
-
-const awardScopeLabel = (award: Pick<TeamAwardRecord, 'competition_scope'>) =>
-  award.competition_scope ? awardCompetitionScopeLabel(award.competition_scope) : 'Full season';
-
 const awardInfoLabel = (group: TeamAwardGroup) => {
-  const award = group.awards[0];
+  const description = group.awards[0]?.award_description?.trim();
 
   return (
     <span className={styles.awardGroupLabel}>
       <span>{group.awardName}</span>
-      {award && (
+      {description && (
         <span data-accordion-ignore-toggle>
           <InfoTooltip
             ariaLabel={`${group.awardName} award details`}
             size="0.85rem"
-            content={
-              <span className={styles.awardInfoTooltip}>
-                <span>Recipient: Team</span>
-                <span>Scope: {awardScopeLabel(award)}</span>
-                <span>Source: {awardStatLabel(award.stat_key)}</span>
-              </span>
-            }
+            content={<span className={styles.awardInfoTooltip}>{description}</span>}
           />
         </span>
       )}
@@ -234,7 +221,6 @@ const TeamAwardsTab = ({ teamId, mode = 'admin' }: Props) => {
                   aria-label={`${group.awards.length} ${
                     group.awards.length === 1 ? 'win' : 'wins'
                   }`}
-                  className={styles.awardCountBadge}
                 />
               }
               defaultOpen

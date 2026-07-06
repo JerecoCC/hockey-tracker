@@ -16,6 +16,7 @@ const awards = [
     award_id: 'award-1',
     season_award_id: 'season-award-1',
     award_name: 'Presidents Trophy',
+    award_description: 'Awarded to the top regular season team.',
     competition_scope: 'regular_season',
     stat_key: null,
     season_id: 'season-1',
@@ -38,6 +39,7 @@ const awards = [
     award_id: 'award-2',
     season_award_id: 'season-award-2',
     award_name: 'Walter Cup Winner',
+    award_description: 'Awarded to the playoff champion.',
     competition_scope: 'playoffs',
     stat_key: 'playoff_champion',
     season_id: 'season-2',
@@ -81,6 +83,8 @@ describe('TeamAwardsTab', () => {
     expect(screen.getByText('Walter Cup Winner')).toBeInTheDocument();
     expect(screen.getByLabelText('Presidents Trophy award details')).toBeInTheDocument();
     expect(screen.getByLabelText('Walter Cup Winner award details')).toBeInTheDocument();
+    expect(screen.getByText('Awarded to the top regular season team.')).toBeInTheDocument();
+    expect(screen.getByText('Awarded to the playoff champion.')).toBeInTheDocument();
     expect(screen.getAllByLabelText('1 win')).toHaveLength(2);
     expect(screen.getByText(/Awarded Apr 20, 2026/)).toBeInTheDocument();
     expect(screen.getByText('2025-26').closest('li')).toHaveClass('itemPlain');

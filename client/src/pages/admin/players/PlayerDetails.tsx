@@ -59,7 +59,6 @@ import {
 } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import { formatPlayerPosition } from '@/lib/playerPosition';
-import { awardCompetitionScopeLabel } from '@/lib/awardDefinitions';
 import { getPlayerStatus, PLAYER_STATUS_LABELS } from '@/lib/playerStatus';
 import {
   buildGameDetailsPath,
@@ -669,33 +668,18 @@ const groupPlayerAwards = (awards: PlayerAwardRecord[]): PlayerAwardGroup[] => {
   }));
 };
 
-const awardRecipientLabel = (recipientType: PlayerAwardRecord['recipient_type']) =>
-  recipientType === 'team' ? 'Team' : 'Player';
-
-const awardStatLabel = (statKey: string | null) =>
-  statKey ? statKey.replace(/_/g, ' ') : 'Manual or voted';
-
-const awardScopeLabel = (award: Pick<PlayerAwardRecord, 'competition_scope'>) =>
-  award.competition_scope ? awardCompetitionScopeLabel(award.competition_scope) : 'Full season';
-
 const awardInfoLabel = (group: PlayerAwardGroup) => {
-  const award = group.awards[0];
+  const description = group.awards[0]?.award_description?.trim();
 
   return (
     <span className={styles.awardGroupLabel}>
       <span>{group.awardName}</span>
-      {award && (
+      {description && (
         <span data-accordion-ignore-toggle>
           <InfoTooltip
             ariaLabel={`${group.awardName} award details`}
             size="0.85rem"
-            content={
-              <span className={styles.awardInfoTooltip}>
-                <span>Recipient: {awardRecipientLabel(award.recipient_type)}</span>
-                <span>Scope: {awardScopeLabel(award)}</span>
-                <span>Source: {awardStatLabel(award.stat_key)}</span>
-              </span>
-            }
+            content={<span className={styles.awardInfoTooltip}>{description}</span>}
           />
         </span>
       )}
@@ -2354,7 +2338,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                   aria-label={`${group.awards.length} ${
                     group.awards.length === 1 ? 'win' : 'wins'
                   }`}
-                  className={styles.awardCountBadge}
                 />
               }
               defaultOpen

@@ -44,6 +44,7 @@ export interface TeamAwardRecord {
   award_id: string;
   season_award_id: string;
   award_name: string;
+  award_description: string | null;
   competition_scope: AwardCompetitionScope | null;
   stat_key: string | null;
   season_id: string;

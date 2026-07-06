@@ -140,6 +140,11 @@ jest.mock('@/components/PlayerAvatar/PlayerAvatar', () => ({ photo }: any) => (
 jest.mock('@/components/TeamLogo/TeamLogo', () => ({ size }: any) => (
   <span data-size={size}>logo</span>
 ));
+jest.mock('@/components/InfoTooltip/InfoTooltip', () => ({
+  ariaLabel,
+  text,
+  content,
+}: any) => <span aria-label={ariaLabel ?? text ?? 'Information'}>{content ?? text}</span>);
 jest.mock('@/components/Table/Table', () => () => <div />);
 jest.mock('@/components/Tabs/Tabs', () => ({ tabs, activeIndex = 0 }: any) => (
   <div>{tabs[activeIndex].content}</div>
@@ -1731,6 +1736,7 @@ describe('PlayerDetails awards tab', () => {
           award_id: 'award-1',
           season_award_id: 'season-award-1',
           award_name: 'Forward of the Year',
+          award_description: 'Awarded to the top forward.',
           season_id: 'season-1',
           season_name: '2025-26',
           awarded_at: '2026-05-01',
@@ -1751,6 +1757,7 @@ describe('PlayerDetails awards tab', () => {
           award_id: 'award-1',
           season_award_id: 'season-award-2',
           award_name: 'Forward of the Year',
+          award_description: 'Awarded to the top forward.',
           season_id: 'season-2',
           season_name: '2024-25',
           awarded_at: '2025-05-01',
@@ -1771,6 +1778,7 @@ describe('PlayerDetails awards tab', () => {
           award_id: 'award-2',
           season_award_id: 'season-award-3',
           award_name: 'Walter Cup Winner',
+          award_description: 'Awarded to the playoff champion.',
           season_id: 'season-1',
           season_name: '2025-26',
           awarded_at: '2026-05-20',
@@ -1806,6 +1814,10 @@ describe('PlayerDetails awards tab', () => {
     expect(
       within(walterCupGroup as HTMLElement).getByLabelText('Walter Cup Winner award details'),
     ).toBeInTheDocument();
+    expect(within(forwardGroup as HTMLElement).getByText('Awarded to the top forward.'))
+      .toBeInTheDocument();
+    expect(within(walterCupGroup as HTMLElement).getByText('Awarded to the playoff champion.'))
+      .toBeInTheDocument();
     expect(within(forwardGroup as HTMLElement).getByLabelText('2 wins')).toBeInTheDocument();
     expect(within(walterCupGroup as HTMLElement).getByLabelText('1 win')).toBeInTheDocument();
     expect(within(forwardGroup as HTMLElement).getByText('Toronto Maple Leafs')).toBeInTheDocument();
@@ -1847,6 +1859,7 @@ describe('PlayerDetails awards tab', () => {
           award_id: 'award-1',
           season_award_id: 'season-award-1',
           award_name: 'Forward of the Year',
+          award_description: 'Awarded to the top forward.',
           season_id: 'season-1',
           season_name: '2025-26',
           awarded_at: '2026-05-01',
@@ -1867,6 +1880,7 @@ describe('PlayerDetails awards tab', () => {
           award_id: 'award-2',
           season_award_id: 'season-award-2',
           award_name: 'Older Season Award',
+          award_description: 'Awarded for an older season.',
           season_id: 'season-2',
           season_name: '2024-25',
           awarded_at: '2025-05-01',
@@ -1905,6 +1919,7 @@ describe('PlayerDetails awards tab', () => {
           award_id: 'award-1',
           season_award_id: 'season-award-1',
           award_name: 'Forward of the Year',
+          award_description: 'Awarded to the top forward.',
           competition_scope: 'regular_season',
           stat_key: null,
           season_id: 'season-1',
@@ -1927,6 +1942,7 @@ describe('PlayerDetails awards tab', () => {
           award_id: 'award-2',
           season_award_id: 'season-award-2',
           award_name: 'Walter Cup Winner',
+          award_description: 'Awarded to the playoff champion.',
           competition_scope: 'playoffs',
           stat_key: 'playoff_champion',
           season_id: 'season-2',
