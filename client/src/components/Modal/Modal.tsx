@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Button from '../Button/Button';
 import type { ButtonIntent } from '../Button/Button';
 import Divider from '../Divider/Divider';
@@ -76,6 +76,19 @@ const Modal = (props: Props) => {
   // isClosing stays true for the duration of the slide-down animation before
   // the parent's onClose is called and the component fully unmounts.
   const [isClosing, setIsClosing] = useState(false);
+  const [bodyCanScroll, setBodyCanScroll] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
+
+  const updateBodyCanScroll = useCallback(() => {
+    const body = bodyRef.current;
+    if (!body) {
+      setBodyCanScroll(false);
+      return;
+    }
+
+    const canScroll = body.scrollHeight - body.clientHeight > 1;
+    setBodyCanScroll((current) => (current === canScroll ? current : canScroll));
+  }, []);
 
   useEffect(() => {
     const shouldLock = open || isClosing;
@@ -83,6 +96,43 @@ const Modal = (props: Props) => {
     lockBackgroundScroll();
     return () => unlockBackgroundScroll();
   }, [open, isClosing]);
+
+  useLayoutEffect(() => {
+    if (!open && !isClosing) {
+      setBodyCanScroll(false);
+      return;
+    }
+
+    updateBodyCanScroll();
+  });
+
+  useEffect(() => {
+    const shouldWatch = open || isClosing;
+    const body = bodyRef.current;
+    if (!shouldWatch || !body) return;
+
+    const ownerWindow = body.ownerDocument.defaultView;
+    updateBodyCanScroll();
+    ownerWindow?.addEventListener('resize', updateBodyCanScroll);
+
+    const resizeObserver =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(updateBodyCanScroll);
+    resizeObserver?.observe(body);
+
+    const mutationObserver =
+      typeof MutationObserver === 'undefined' ? null : new MutationObserver(updateBodyCanScroll);
+    mutationObserver?.observe(body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    return () => {
+      ownerWindow?.removeEventListener('resize', updateBodyCanScroll);
+      resizeObserver?.disconnect();
+      mutationObserver?.disconnect();
+    };
+  }, [open, isClosing, updateBodyCanScroll]);
 
   if (!open && !isClosing) return null;
 
@@ -136,6 +186,13 @@ const Modal = (props: Props) => {
 
   const modalSizeClass =
     size === 'lg' ? ` ${styles.modalLg}` : size === 'xl' ? ` ${styles.modalXl}` : '';
+  const footerClassNames = [
+    styles.footer,
+    !bodyCanScroll && !footerDividerClassName && styles.footerPlain,
+    footerClassName,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <div
@@ -160,12 +217,20 @@ const Modal = (props: Props) => {
             className={styles.closeBtn}
           />
         </div>
-        <div className={`${styles.body} ${bodyClassName ?? ''}`}>{children}</div>
+        <div
+          ref={bodyRef}
+          className={`${styles.body} ${bodyClassName ?? ''}`}
+        >
+          {children}
+        </div>
         {!hideFooter && (
-          <div className={[styles.footer, footerClassName].filter(Boolean).join(' ')}>
-            <Divider
-              className={[styles.footerDivider, footerDividerClassName].filter(Boolean).join(' ')}
-            />
+          <div className={footerClassNames}>
+            {bodyCanScroll && (
+              <Divider
+                data-testid="modal-footer-divider"
+                className={[styles.footerDivider, footerDividerClassName].filter(Boolean).join(' ')}
+              />
+            )}
             {footer ?? builtInFooter}
           </div>
         )}

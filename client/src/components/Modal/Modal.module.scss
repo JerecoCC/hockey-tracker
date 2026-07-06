@@ -82,6 +82,10 @@
   flex-shrink: 0;
   margin-top: 0;
 
+  &Plain {
+    margin-top: $space-xl;
+  }
+
   &Divider {
     --divider-color: var(--app-border, #{$border});
 

@@ -30,6 +30,20 @@ beforeAll(() => {
 
 beforeEach(() => jest.clearAllMocks());
 
+const mockBodyOverflow = (scrollHeight: number, clientHeight: number) => {
+  const scrollHeightSpy = jest
+    .spyOn(HTMLElement.prototype, 'scrollHeight', 'get')
+    .mockReturnValue(scrollHeight);
+  const clientHeightSpy = jest
+    .spyOn(HTMLElement.prototype, 'clientHeight', 'get')
+    .mockReturnValue(clientHeight);
+
+  return () => {
+    scrollHeightSpy.mockRestore();
+    clientHeightSpy.mockRestore();
+  };
+};
+
 describe('Modal', () => {
   it('renders nothing when open is false', () => {
     render(
@@ -169,5 +183,33 @@ describe('Modal', () => {
       </Modal>,
     );
     expect(screen.getByPlaceholderText('Type here')).toBeInTheDocument();
+  });
+
+  it('hides the footer divider when the modal body does not overflow', () => {
+    const restoreOverflow = mockBodyOverflow(100, 100);
+
+    render(
+      <Modal
+        {...defaultProps}
+        onConfirm={jest.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId('modal-footer-divider')).not.toBeInTheDocument();
+    restoreOverflow();
+  });
+
+  it('shows the footer divider when the modal body can scroll', () => {
+    const restoreOverflow = mockBodyOverflow(200, 100);
+
+    render(
+      <Modal
+        {...defaultProps}
+        onConfirm={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('modal-footer-divider')).toBeInTheDocument();
+    restoreOverflow();
   });
 });
