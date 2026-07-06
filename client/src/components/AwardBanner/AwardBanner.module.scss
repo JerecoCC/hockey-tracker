@@ -70,12 +70,14 @@
   stop-color: var(--award-banner-color);
 }
 
-.awardBannerAccent {
-  fill: var(--award-banner-secondary-color);
-}
-
 .awardBannerBand {
   fill: var(--award-banner-text-color);
+}
+
+.awardBannerBandBorder {
+  stroke: var(--award-banner-secondary-color);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
 }
 
 .awardBannerOuter,
@@ -204,4 +206,21 @@
   font-size: $font-xl;
   font-weight: 900;
   line-height: 1;
+}
+
+.awardBannerTrophy {
+  position: absolute;
+  top: 264px;
+  left: 50%;
+  z-index: 4;
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  color: var(--award-banner-text-color);
+  opacity: 0.82;
+  pointer-events: none;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.22));
 }

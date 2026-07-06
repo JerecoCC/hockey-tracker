@@ -97,6 +97,20 @@ describe('TeamAwardsTab', () => {
     const regularBanner = screen.getByText('Presidents Trophy').closest('.awardArenaBanner');
     expect(regularBanner).not.toBeNull();
     expect(regularBanner as HTMLElement).not.toHaveClass('awardArenaBannerChampionship');
+    expect((regularBanner as HTMLElement).querySelector('.awardBannerAccent')).not
+      .toBeInTheDocument();
+    const regularBandBorders = (regularBanner as HTMLElement).querySelectorAll(
+      '.awardBannerBandBorder',
+    );
+    expect(regularBandBorders).toHaveLength(2);
+    expect(regularBandBorders[0]).toHaveAttribute('x1', '0');
+    expect(regularBandBorders[0]).toHaveAttribute('x2', '160');
+    expect(regularBandBorders[0]).toHaveAttribute('y1', '222');
+    expect(regularBandBorders[1]).toHaveAttribute('x1', '0');
+    expect(regularBandBorders[1]).toHaveAttribute('x2', '160');
+    expect(regularBandBorders[1]).toHaveAttribute('y1', '254');
+    expect((regularBanner as HTMLElement).querySelector('.awardBannerTrophy')).not
+      .toBeInTheDocument();
     expect((regularBanner as HTMLElement).style.getPropertyValue('--award-banner-color')).toBe(
       '#003e7e',
     );
@@ -122,6 +136,10 @@ describe('TeamAwardsTab', () => {
     const championshipBanner = screen.getByText('Walter Cup Winner').closest('.awardArenaBanner');
     expect(championshipBanner).not.toBeNull();
     expect(championshipBanner as HTMLElement).toHaveClass('awardArenaBannerChampionship');
+    expect((championshipBanner as HTMLElement).querySelectorAll('.awardBannerBandBorder'))
+      .toHaveLength(2);
+    expect((championshipBanner as HTMLElement).querySelector('.awardBannerTrophy'))
+      .toBeInTheDocument();
     expect(within(championshipBanner as HTMLElement).getByText('Champions')).toBeInTheDocument();
   });
 });

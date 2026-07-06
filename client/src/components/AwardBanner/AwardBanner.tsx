@@ -1,4 +1,5 @@
 import { useId, type CSSProperties, type ReactNode } from 'react';
+import Icon from '../Icon/Icon';
 import styles from './AwardBanner.module.scss';
 
 export type AwardBannerShape = 'rounded' | 'forked' | 'pointed';
@@ -37,6 +38,7 @@ type AwardBannerFrameStyle = CSSProperties & {
 const BODY_HEIGHT = 276;
 const SEASON_BAND_Y = 218;
 const SEASON_BAND_HEIGHT = 40;
+const SEASON_BAND_BORDER_INSET = 4;
 
 const SHAPES: Record<AwardBannerShape, AwardBannerShapeConfig> = {
   rounded: {
@@ -128,11 +130,6 @@ const AwardBanner = ({
               className={styles.awardBannerBase}
               fill={`url(#${gradientId})`}
             />
-            <rect
-              width="160"
-              height="5"
-              className={styles.awardBannerAccent}
-            />
           </g>
         </svg>
         <svg
@@ -170,6 +167,20 @@ const AwardBanner = ({
               height={SEASON_BAND_HEIGHT}
               className={styles.awardBannerBand}
             />
+            <line
+              x1="0"
+              x2="160"
+              y1={SEASON_BAND_Y + SEASON_BAND_BORDER_INSET}
+              y2={SEASON_BAND_Y + SEASON_BAND_BORDER_INSET}
+              className={styles.awardBannerBandBorder}
+            />
+            <line
+              x1="0"
+              x2="160"
+              y1={SEASON_BAND_Y + SEASON_BAND_HEIGHT - SEASON_BAND_BORDER_INSET}
+              y2={SEASON_BAND_Y + SEASON_BAND_HEIGHT - SEASON_BAND_BORDER_INSET}
+              className={styles.awardBannerBandBorder}
+            />
           </g>
         </svg>
         <div className={styles.awardBannerPanel}>
@@ -187,6 +198,17 @@ const AwardBanner = ({
           </div>
           <span className={styles.awardBannerSeason}>{seasonName}</span>
         </div>
+        {champions && (
+          <span
+            className={styles.awardBannerTrophy}
+            aria-hidden="true"
+          >
+            <Icon
+              name="trophy"
+              size="1.25rem"
+            />
+          </span>
+        )}
       </div>
     </article>
   );
