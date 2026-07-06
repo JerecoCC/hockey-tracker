@@ -9,18 +9,11 @@ interface LeaguePlayersContextValue {
   page: number;
   pageSize: number;
   search: string;
-  seasons: LeagueSeasonRecord[];
-  selectedSeasonId: string | null;
-  rookiesOnly: boolean;
-  includeInactivePlayers: boolean;
   loading: boolean;
   fetching: boolean;
   busy: string | null;
   onPageChange: (page: number) => void;
   onSearchChange: (query: string) => void;
-  onSeasonChange: (id: string) => void;
-  onRookiesOnlyChange: (active: boolean) => void;
-  onIncludeInactivePlayersChange: (active: boolean) => void;
   onAdd: () => void;
   onBulkAdd: () => void;
   onEdit: (player: PlayerRecord) => void;

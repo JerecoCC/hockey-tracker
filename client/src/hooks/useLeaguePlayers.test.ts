@@ -86,6 +86,33 @@ describe('useLeaguePlayers – fetch', () => {
     );
   });
 
+  it('passes recent season limit as a query param', async () => {
+    const { result } = renderHook(
+      () =>
+        useLeaguePlayers('league-1', undefined, {
+          page: 1,
+          pageSize: 15,
+          includeInactive: true,
+          recentSeasons: 5,
+        }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect.stringContaining('/admin/players'),
+      expect.objectContaining({
+        params: {
+          league_id: 'league-1',
+          page: '1',
+          page_size: '15',
+          include_inactive: 'true',
+          recent_seasons: '5',
+        },
+      }),
+    );
+  });
+
   it('passes paginated league player filters as query params', async () => {
     mockedAxios.get.mockResolvedValueOnce({
       data: { players: [PLAYER], total: 1, page: 1, page_size: 15 },

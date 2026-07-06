@@ -51,6 +51,8 @@ export interface PlayerRecord {
   start_date?: string | null;
   has_games?: boolean;
   season_points?: number | null;
+  last_season_id?: string | null;
+  last_season_name?: string | null;
 }
 
 export interface CreatePlayerData {
@@ -87,6 +89,7 @@ interface UseLeaguePlayersOptions {
   inactiveOnly?: boolean;
   includeInactive?: boolean;
   includeProspects?: boolean;
+  recentSeasons?: number;
   enabled?: boolean;
 }
 
@@ -120,6 +123,7 @@ const useLeaguePlayers = (
         inactive_only: options.inactiveOnly,
         include_inactive: options.includeInactive,
         include_prospects: options.includeProspects,
+        recent_seasons: options.recentSeasons,
       },
     ],
     queryFn: async () => {
@@ -134,6 +138,7 @@ const useLeaguePlayers = (
         if (options.inactiveOnly) params.inactive_only = 'true';
         else if (options.includeInactive) params.include_inactive = 'true';
         if (options.includeProspects) params.include_prospects = 'true';
+        if (options.recentSeasons !== undefined) params.recent_seasons = String(options.recentSeasons);
         const { data } = await axios.get<PlayerRecord[] | PaginatedPlayersResponse>(
           `${API}/admin/players`,
           { headers: authHeaders(), params: Object.keys(params).length ? params : undefined },

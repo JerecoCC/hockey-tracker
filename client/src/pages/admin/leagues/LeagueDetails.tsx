@@ -90,11 +90,8 @@ const LeagueDetailsPage = () => {
   const [playerModalOpen, setPlayerModalOpen] = useState(false);
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
   const [editTargetPlayer, setEditTargetPlayer] = useState<PlayerRecord | null>(null);
-  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
   const [playersPage, setPlayersPage] = useState(1);
   const [playersSearch, setPlayersSearch] = useState('');
-  const [playersRookiesOnly, setPlayersRookiesOnly] = useState(false);
-  const [playersInactiveOnly, setPlayersInactiveOnly] = useState(false);
 
   usePageBreadcrumbs(
     leagueLoading
@@ -136,13 +133,6 @@ const LeagueDetailsPage = () => {
     navigate('/admin/leagues', { replace: true });
   }, [league, leagueLoading, navigate]);
 
-  useEffect(() => {
-    if (selectedSeasonId === null && seasons.length > 0) {
-      const current = seasons.find((s) => s.is_current);
-      setSelectedSeasonId(current?.id ?? seasons[0].id);
-    }
-  }, [seasons.length]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const {
     players,
     total: playersTotal,
@@ -153,13 +143,13 @@ const LeagueDetailsPage = () => {
     bulkAddPlayers,
     updatePlayer,
     deletePlayer,
-  } = useLeaguePlayers(id, selectedSeasonId ?? undefined, {
+  } = useLeaguePlayers(id, undefined, {
     page: playersPage,
     pageSize: PLAYERS_PAGE_SIZE,
     search: playersSearch,
-    rookiesOnly: playersRookiesOnly,
-    inactiveOnly: playersInactiveOnly,
+    includeInactive: true,
     includeProspects: true,
+    recentSeasons: 5,
   });
   const leagueContextValue = useMemo(
     () =>
@@ -176,10 +166,6 @@ const LeagueDetailsPage = () => {
               page: playersPage,
               pageSize: PLAYERS_PAGE_SIZE,
               search: playersSearch,
-              seasons,
-              selectedSeasonId,
-              rookiesOnly: playersRookiesOnly,
-              includeInactivePlayers: playersInactiveOnly,
               loading: playersLoading,
               fetching: playersFetching,
               busy: playerBusy,
@@ -187,18 +173,6 @@ const LeagueDetailsPage = () => {
               onSearchChange: (query: string) => {
                 setPlayersPage(1);
                 setPlayersSearch(query);
-              },
-              onSeasonChange: (seasonId: string) => {
-                setPlayersPage(1);
-                setSelectedSeasonId(seasonId);
-              },
-              onRookiesOnlyChange: (active: boolean) => {
-                setPlayersPage(1);
-                setPlayersRookiesOnly(active);
-              },
-              onIncludeInactivePlayersChange: (active: boolean) => {
-                setPlayersPage(1);
-                setPlayersInactiveOnly(active);
               },
               onAdd: () => {
                 setEditTargetPlayer(null);
@@ -248,16 +222,13 @@ const LeagueDetailsPage = () => {
       loading,
       navigate,
       playerBusy,
-      playersInactiveOnly,
       players,
       playersFetching,
       playersLoading,
       playersPage,
-      playersRookiesOnly,
       playersSearch,
       playersTotal,
       seasons,
-      selectedSeasonId,
       teams,
     ],
   );

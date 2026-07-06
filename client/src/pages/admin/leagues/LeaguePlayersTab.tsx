@@ -1,17 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import Button from '@/components/Button/Button';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import Divider from '@/components/Divider/Divider';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Pagination from '@/components/Pagination/Pagination';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import { buildLeaguePlayerDetailsPath } from '@/lib/routeSlugs';
 import SearchableList from '@/components/SearchableList/SearchableList';
 import Section from '@/components/Section/Section';
-import Select from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import Tag from '@/components/Tag/Tag';
-import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { missingPlayerDataIndicator } from '@/lib/playerDataStatus';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -25,6 +22,33 @@ interface Props {
   className?: string;
 }
 
+interface PlayerListLeague {
+  id: string;
+  code: string;
+}
+
+interface LeaguePlayersListSectionProps {
+  className?: string;
+  title?: string;
+  titleAccessory?: ReactNode;
+  action?: ReactNode;
+  league: PlayerListLeague;
+  players: PlayerRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+  search: string;
+  fetching: boolean;
+  busy: string | null;
+  selectedSeasonId?: string | null;
+  showLastSeasonSubtitle?: boolean;
+  emptyMessage: ReactNode;
+  onPageChange: (page: number) => void;
+  onSearchChange: (query: string) => void;
+  onEdit?: (player: PlayerRecord) => void;
+  onDelete?: (playerId: string) => Promise<void>;
+}
+
 const PLAYER_SKELETON_ROW_COUNT = 15;
 const PLAYER_SEARCH_DEBOUNCE_MS = 350;
 const PLAYER_SEARCH_MIN_LENGTH = 3;
@@ -33,19 +57,6 @@ const PLAYER_STATUS_TAG_INTENTS: Record<PlayerStatus, 'success' | 'neutral' | 'w
   inactive: 'neutral',
   retired: 'warning',
 };
-
-const buildFilterFetchKey = ({
-  search,
-  rookiesOnly,
-  includeInactivePlayers,
-}: {
-  search: string;
-  rookiesOnly: boolean;
-  includeInactivePlayers: boolean;
-}) =>
-  `${search}|${rookiesOnly ? 'rookies' : 'all'}|${
-    includeInactivePlayers ? 'inactive' : 'active'
-  }`;
 
 const playerSkeletonRow = (key: number) => (
   <Skeleton
@@ -66,88 +77,80 @@ const LeaguePlayerRowsSkeleton = ({
   </ul>
 );
 
-const LeaguePlayersTab = ({ className }: Props) => {
-  const { league, players: playersContext } = useLeagueDetailsContext();
-  const {
-    players,
-    total,
-    page,
-    pageSize,
-    search,
-    seasons,
-    selectedSeasonId,
-    rookiesOnly,
-    includeInactivePlayers,
-    onPageChange,
-    onSearchChange,
-    onSeasonChange,
-    onRookiesOnlyChange,
-    onIncludeInactivePlayersChange,
-    loading,
-    fetching,
-    busy,
-    onAdd,
-    onBulkAdd,
-    onEdit,
-    onDelete,
-  } = playersContext;
+const playerDataIndicator = (player: PlayerRecord) => {
+  const hasMissingData = !player.date_of_birth || !player.start_date || !player.acquisition_type;
+  if (!hasMissingData) return '';
+  return ` ${missingPlayerDataIndicator}`;
+};
+
+const playerSubtitle = (player: PlayerRecord, showLastSeasonSubtitle: boolean) => {
+  const position = formatPlayerPosition(player.position);
+  const lastSeason =
+    showLastSeasonSubtitle && player.last_season_name
+      ? `Last played: ${player.last_season_name}`
+      : null;
+  return [position, lastSeason].filter(Boolean).join(' | ') || undefined;
+};
+
+const renderPlayerTags = (player: PlayerRecord, rookieSeasonId?: string | null) => {
+  const isRookie = !!rookieSeasonId && player.rookie_season_id === rookieSeasonId;
+  const status = getPlayerStatus(player);
+  const showStatusTag = status !== 'active';
+  if (!isRookie && !showStatusTag) return undefined;
+
+  return (
+    <span className={styles.playerRowTags}>
+      {isRookie && (
+        <Tag
+          label="Rookie"
+          intent="accent"
+        />
+      )}
+      {showStatusTag && (
+        <Tag
+          label={PLAYER_STATUS_LABELS[status]}
+          intent={PLAYER_STATUS_TAG_INTENTS[status]}
+        />
+      )}
+    </span>
+  );
+};
+
+export const LeaguePlayersListSection = ({
+  className,
+  title = 'Players',
+  titleAccessory,
+  action,
+  league,
+  players,
+  total,
+  page,
+  pageSize,
+  search,
+  fetching,
+  busy,
+  selectedSeasonId,
+  showLastSeasonSubtitle = false,
+  emptyMessage,
+  onPageChange,
+  onSearchChange,
+  onEdit,
+  onDelete,
+}: LeaguePlayersListSectionProps) => {
   const [confirmDelete, setConfirmDelete] = useState<PlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [paginationFetchPage, setPaginationFetchPage] = useState<number | null>(null);
-  const [seasonFetchId, setSeasonFetchId] = useState<string | null>(null);
-  const [filterFetchKey, setFilterFetchKey] = useState<string | null>(null);
+  const [searchFetchKey, setSearchFetchKey] = useState<string | null>(null);
   const paginationFetchStartedRef = useRef(false);
-  const seasonFetchStartedRef = useRef(false);
-  const filterFetchStartedRef = useRef(false);
+  const searchFetchStartedRef = useRef(false);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const emptyMessage = rookiesOnly
-    ? 'No rookies for this season.'
-    : includeInactivePlayers
-      ? 'No inactive or retired players in this league yet.'
-      : 'No active players in this league yet.';
   const showPaginationSkeleton = fetching && paginationFetchPage === page;
-  const showSeasonSkeleton =
-    fetching && seasonFetchId !== null && seasonFetchId === selectedSeasonId;
-  const currentFilterFetchKey = buildFilterFetchKey({
-    search,
-    rookiesOnly,
-    includeInactivePlayers,
-  });
-  const showFilterSkeleton =
-    fetching && filterFetchKey !== null && filterFetchKey === currentFilterFetchKey;
-  const showListSkeleton = showPaginationSkeleton || showSeasonSkeleton || showFilterSkeleton;
-  const playerDataIndicator = (player: PlayerRecord) => {
-    const hasMissingData = !player.date_of_birth || !player.start_date || !player.acquisition_type;
-    if (!hasMissingData) return '';
-    return ` ${missingPlayerDataIndicator}`;
-  };
-  const renderPlayerTags = (player: PlayerRecord) => {
-    const isRookie = !!selectedSeasonId && player.rookie_season_id === selectedSeasonId;
-    const status = getPlayerStatus(player);
-    const showStatusTag = status !== 'active';
-    if (!isRookie && !showStatusTag) return undefined;
-
-    return (
-      <span className={styles.playerRowTags}>
-        {isRookie && (
-          <Tag
-            label="Rookie"
-            intent="accent"
-          />
-        )}
-        {showStatusTag && (
-          <Tag
-            label={PLAYER_STATUS_LABELS[status]}
-            intent={PLAYER_STATUS_TAG_INTENTS[status]}
-          />
-        )}
-      </span>
-    );
-  };
+  const showSearchSkeleton = fetching && searchFetchKey !== null && searchFetchKey === search;
+  const showListSkeleton = showPaginationSkeleton || showSearchSkeleton;
 
   useEffect(() => {
-    if (!loading && total > 0 && page > pageCount) onPageChange(pageCount);
-  }, [loading, page, pageCount, total, onPageChange]);
+    if (total > 0 && page > pageCount) onPageChange(pageCount);
+  }, [page, pageCount, total, onPageChange]);
 
   useEffect(() => {
     if (showPaginationSkeleton) {
@@ -162,131 +165,43 @@ const LeaguePlayersTab = ({ className }: Props) => {
   }, [fetching, showPaginationSkeleton]);
 
   useEffect(() => {
-    if (showSeasonSkeleton) {
-      seasonFetchStartedRef.current = true;
+    if (showSearchSkeleton) {
+      searchFetchStartedRef.current = true;
       return;
     }
 
-    if (!fetching && seasonFetchStartedRef.current) {
-      seasonFetchStartedRef.current = false;
-      setSeasonFetchId(null);
+    if (!fetching && searchFetchStartedRef.current) {
+      searchFetchStartedRef.current = false;
+      setSearchFetchKey(null);
     }
-  }, [fetching, showSeasonSkeleton]);
-
-  useEffect(() => {
-    if (showFilterSkeleton) {
-      filterFetchStartedRef.current = true;
-      return;
-    }
-
-    if (!fetching && filterFetchStartedRef.current) {
-      filterFetchStartedRef.current = false;
-      setFilterFetchKey(null);
-    }
-  }, [fetching, showFilterSkeleton]);
+  }, [fetching, showSearchSkeleton]);
 
   const handlePageChange = (nextPage: number) => {
     if (nextPage !== page) setPaginationFetchPage(nextPage);
     onPageChange(nextPage);
   };
 
-  const handleSeasonChange = (seasonId: string) => {
-    if (seasonId !== selectedSeasonId) setSeasonFetchId(seasonId);
-    onSeasonChange(seasonId);
-  };
-
   const handleSearchChange = (query: string) => {
-    if (query !== search) {
-      setFilterFetchKey(
-        buildFilterFetchKey({
-          search: query,
-          rookiesOnly,
-          includeInactivePlayers,
-        }),
-      );
-    }
-
+    if (query !== search) setSearchFetchKey(query);
     onSearchChange(query);
   };
 
-  const handleRookiesOnlyToggle = () => {
-    const nextRookiesOnly = !rookiesOnly;
-    setFilterFetchKey(
-      buildFilterFetchKey({
-        search,
-        rookiesOnly: nextRookiesOnly,
-        includeInactivePlayers,
-      }),
-    );
-    onRookiesOnlyChange(nextRookiesOnly);
-  };
-
-  const handleIncludeInactiveToggle = () => {
-    const nextIncludeInactivePlayers = !includeInactivePlayers;
-    setFilterFetchKey(
-      buildFilterFetchKey({
-        search,
-        rookiesOnly,
-        includeInactivePlayers: nextIncludeInactivePlayers,
-      }),
-    );
-    onIncludeInactivePlayersChange(nextIncludeInactivePlayers);
-  };
-
   const handleConfirmDelete = async () => {
-    if (!confirmDelete) return;
+    if (!confirmDelete || !onDelete) return;
     setIsDeleting(true);
     await onDelete(confirmDelete.id);
     setIsDeleting(false);
     setConfirmDelete(null);
   };
 
-  if (loading) return <LeaguePlayersTabSkeleton className={className} />;
-
   return (
     <>
       <div className={styles.grid}>
         <Section
           className={[styles.col12, className].filter(Boolean).join(' ')}
-          title="Players"
-          titleAccessory={
-            seasons.length > 0 ? (
-              <div className={styles.playerHeaderSeasonGroup}>
-                <Divider variant="vertical" />
-                <div className={styles.playerHeaderSeasonSelect}>
-                  <Select
-                    value={selectedSeasonId}
-                    options={seasons.map((s) => ({
-                      value: s.id,
-                      label: s.is_current ? `${s.name} ✦` : s.name,
-                    }))}
-                    onChange={handleSeasonChange}
-                    width="content"
-                  />
-                </div>
-              </div>
-            ) : null
-          }
-          action={
-            <div className={styles.playerActionButtons}>
-              <Button
-                variant="outlined"
-                intent="accent"
-                icon="group_add"
-                size="sm"
-                onClick={onBulkAdd}
-              >
-                Bulk Create
-              </Button>
-              <Button
-                icon="add"
-                size="sm"
-                onClick={onAdd}
-              >
-                Create Player
-              </Button>
-            </div>
-          }
+          title={title}
+          titleAccessory={titleAccessory}
+          action={action}
         >
           <SearchableList
             items={[...players].sort((a, b) =>
@@ -315,6 +230,29 @@ const LeaguePlayersTab = ({ className }: Props) => {
                         firstName: p.first_name,
                         lastName: p.last_name,
                       });
+                      const rookieSeasonId = showLastSeasonSubtitle
+                        ? p.last_season_id
+                        : selectedSeasonId;
+                      const actions: (ListItemAction | null)[] = [
+                        onEdit
+                          ? {
+                              icon: 'edit',
+                              intent: 'neutral',
+                              tooltip: 'Edit player',
+                              disabled: busy === p.id,
+                              onClick: () => onEdit(p),
+                            }
+                          : null,
+                        onDelete
+                          ? {
+                              icon: 'delete',
+                              intent: 'danger',
+                              tooltip: 'Delete player',
+                              disabled: busy === p.id,
+                              onClick: () => setConfirmDelete(p),
+                            }
+                          : null,
+                      ];
 
                       return (
                         <ListItem
@@ -343,26 +281,9 @@ const LeaguePlayersTab = ({ className }: Props) => {
                           href={playerHref}
                           chip={p.jersey_number != null ? { label: p.jersey_number } : null}
                           variant="framed"
-                          subtitle={formatPlayerPosition(p.position) ?? undefined}
-                          rightContent={renderPlayerTags(p)}
-                          actions={
-                            [
-                              {
-                                icon: 'edit',
-                                intent: 'neutral',
-                                tooltip: 'Edit player',
-                                disabled: busy === p.id,
-                                onClick: () => onEdit(p),
-                              },
-                              {
-                                icon: 'delete',
-                                intent: 'danger',
-                                tooltip: 'Delete player',
-                                disabled: busy === p.id,
-                                onClick: () => setConfirmDelete(p),
-                              },
-                            ] satisfies ListItemAction[]
-                          }
+                          subtitle={playerSubtitle(p, showLastSeasonSubtitle)}
+                          rightContent={renderPlayerTags(p, rookieSeasonId)}
+                          actions={actions}
                         />
                       );
                     })}
@@ -377,7 +298,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
                 </>
               );
             }}
-            placeholder="Search players…"
+            placeholder="Search players..."
             onQueryChange={handleSearchChange}
             searchDebounceMs={PLAYER_SEARCH_DEBOUNCE_MS}
             minSearchLength={PLAYER_SEARCH_MIN_LENGTH}
@@ -391,28 +312,6 @@ const LeaguePlayersTab = ({ className }: Props) => {
                 total={total}
                 onPageChange={handlePageChange}
               />
-            }
-            actions={
-              <div className={styles.playerFilterToggles}>
-                <ToggleButton
-                  variant="switch"
-                  active={rookiesOnly}
-                  onClick={handleRookiesOnlyToggle}
-                  icon="stars"
-                  activeTooltip="Rookies only"
-                  inactiveTooltip="Rookies only"
-                  disabled={!selectedSeasonId}
-                />
-                <ToggleButton
-                  variant="switch"
-                  active={includeInactivePlayers}
-                  onClick={handleIncludeInactiveToggle}
-                  activeIcon="visibility"
-                  inactiveIcon="visibility_off"
-                  activeTooltip="Inactive only"
-                  inactiveTooltip="Inactive only"
-                />
-              </div>
             }
             emptyMessage={emptyMessage}
             noResultsMessage={(q) => `No players match "${q}".`}
@@ -447,22 +346,83 @@ const LeaguePlayersTab = ({ className }: Props) => {
   );
 };
 
-export const LeaguePlayersTabSkeleton = ({ className }: TabSkeletonProps) => (
+const LeaguePlayersTab = ({ className }: Props) => {
+  const { league, players: playersContext } = useLeagueDetailsContext();
+  const {
+    players,
+    total,
+    page,
+    pageSize,
+    search,
+    loading,
+    fetching,
+    busy,
+    onPageChange,
+    onSearchChange,
+    onAdd,
+    onBulkAdd,
+    onEdit,
+    onDelete,
+  } = playersContext;
+
+  if (loading) return <LeaguePlayersTabSkeleton className={className} />;
+
+  return (
+    <LeaguePlayersListSection
+      className={className}
+      league={league}
+      players={players}
+      total={total}
+      page={page}
+      pageSize={pageSize}
+      search={search}
+      fetching={fetching}
+      busy={busy}
+      showLastSeasonSubtitle
+      emptyMessage="No players from the last five seasons yet."
+      action={
+        <div className={styles.playerActionButtons}>
+          <Button
+            variant="outlined"
+            intent="accent"
+            icon="group_add"
+            size="sm"
+            onClick={onBulkAdd}
+          >
+            Bulk Create
+          </Button>
+          <Button
+            icon="add"
+            size="sm"
+            onClick={onAdd}
+          >
+            Create Player
+          </Button>
+        </div>
+      }
+      onPageChange={onPageChange}
+      onSearchChange={onSearchChange}
+      onEdit={onEdit}
+      onDelete={onDelete}
+    />
+  );
+};
+
+export const LeaguePlayersTabSkeleton = ({
+  className,
+  showActionSkeleton = true,
+}: TabSkeletonProps & { showActionSkeleton?: boolean }) => (
   <div className={styles.grid}>
     <Section
       className={[styles.col12, className].filter(Boolean).join(' ')}
       title="Players"
-      titleAccessory={
-        <div className={styles.playerHeaderSeasonGroup}>
-          <Divider variant="vertical" />
-          <TabActionSkeleton width="148px" />
-        </div>
-      }
       action={
-        <span className={styles.tabSkeletonActions}>
-          <TabActionSkeleton width="118px" />
-          <TabActionSkeleton width="124px" />
-        </span>
+        showActionSkeleton ? (
+          <span className={styles.tabSkeletonActions}>
+            <TabActionSkeleton width="118px" />
+            <TabActionSkeleton width="124px" />
+          </span>
+        ) : undefined
       }
       role="status"
       aria-busy="true"
@@ -473,10 +433,6 @@ export const LeaguePlayersTabSkeleton = ({ className }: TabSkeletonProps) => (
           type="text"
           className={[styles.tabSkeletonSearch, styles.tabSkeletonSearchFull].join(' ')}
         />
-        <span className={styles.tabSkeletonActions}>
-          <TabActionSkeleton width="66px" />
-          <TabActionSkeleton width="66px" />
-        </span>
       </div>
       <LeaguePlayerRowsSkeleton />
     </Section>

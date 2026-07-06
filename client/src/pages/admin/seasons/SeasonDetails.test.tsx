@@ -9,7 +9,8 @@ import useTabState from '@/hooks/useTabState';
 import SeasonDetails from './SeasonDetails';
 
 const mockNavigate = jest.fn();
-const mockSeasonPlayoffsTab = jest.fn(() => null);
+const mockSeasonPlayersTab = jest.fn((_props: any) => <div>Season players tab</div>);
+const mockSeasonPlayoffsTab = jest.fn((_props: any) => null);
 const mockMoreActionsMenu = jest.fn((props: any) => (
   <button
     type="button"
@@ -109,6 +110,7 @@ jest.mock('@/components/TeamLogo/TeamLogo', () => () => <span>logo</span>);
 jest.mock('./SeasonEndModal', () => () => null);
 jest.mock('./SeasonFormModal', () => () => null);
 jest.mock('./SeasonGamesTab', () => () => null);
+jest.mock('./SeasonPlayersTab', () => (props: any) => mockSeasonPlayersTab(props));
 jest.mock('./SeasonPlayoffsTab', () => (props: any) => mockSeasonPlayoffsTab(props));
 jest.mock('./SeasonTeamsCard', () => () => null);
 
@@ -169,7 +171,7 @@ const makeGroup = (
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUseTabState.mockReturnValue([4, jest.fn()]);
+  mockUseTabState.mockReturnValue([5, jest.fn()]);
   mockUseLeagues.mockReturnValue({ leagues: [], loading: false });
   mockUseLeagueDetails.mockReturnValue({
     seasons: [{ id: 'season-1', name: 'season-1' }],
@@ -261,9 +263,27 @@ beforeEach(() => {
   });
 });
 
+describe('SeasonDetails players tab', () => {
+  it('passes current season context to the players tab', () => {
+    mockUseTabState.mockReturnValue([2, jest.fn()]);
+
+    render(<SeasonDetails />);
+
+    expect(screen.getByText('Season players tab')).toBeInTheDocument();
+    expect(mockSeasonPlayersTab).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leagueId: 'league-1',
+        leagueCode: 'NHL',
+        seasonId: 'season-1',
+        seasonName: '2024-25',
+      }),
+    );
+  });
+});
+
 describe('SeasonDetails standings tab', () => {
   it('defers season stats and standings until their tabs need them', () => {
-    mockUseTabState.mockReturnValue([2, jest.fn()]);
+    mockUseTabState.mockReturnValue([3, jest.fn()]);
 
     render(<SeasonDetails />);
 
@@ -298,7 +318,7 @@ describe('SeasonDetails standings tab', () => {
 
   it('enables cached standings and passes them to playoffs when the playoffs tab is active', () => {
     const standings = [makeStanding('team-1', 'Toronto Maple Leafs', 112)];
-    mockUseTabState.mockReturnValue([6, jest.fn()]);
+    mockUseTabState.mockReturnValue([7, jest.fn()]);
     mockUseSeasonStandings.mockReturnValue({
       standings,
       loading: false,
@@ -538,7 +558,7 @@ describe('SeasonDetails info tab', () => {
   });
 
   it('keeps season actions scoped to the info tab', () => {
-    mockUseTabState.mockReturnValue([2, jest.fn()]);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
 
     const { container } = render(<SeasonDetails />);
 
@@ -550,7 +570,7 @@ describe('SeasonDetails info tab', () => {
 
 describe('SeasonDetails stats tab', () => {
   it('enables summary stats without enabling standings when the stats tab is active', () => {
-    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
 
     render(<SeasonDetails />);
 
@@ -574,7 +594,7 @@ describe('SeasonDetails stats tab', () => {
   });
 
   it('renders skeletons for the cards inside each summary section while stats load', () => {
-    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
     mockUseSeasonStats.mockReturnValue({
       skaters: [],
       goalies: [],
@@ -595,7 +615,7 @@ describe('SeasonDetails stats tab', () => {
 
   it('renders a bare card skeleton while a full stats list loads', async () => {
     const user = userEvent.setup();
-    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
     mockUseSeasonStats.mockReturnValue({
       skaters: [],
       goalies: [],
@@ -616,7 +636,7 @@ describe('SeasonDetails stats tab', () => {
 
   it('navigates to the player details page when a summary leader is clicked', async () => {
     const user = userEvent.setup();
-    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
     render(<SeasonDetails />);
 
     await user.click(screen.getByRole('button', { name: 'View John Smith' }));
@@ -626,7 +646,7 @@ describe('SeasonDetails stats tab', () => {
 
   it('opens full leader lists from the summary header icon buttons', async () => {
     const user = userEvent.setup();
-    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
     render(<SeasonDetails />);
 
     expect(screen.getByRole('button', { name: 'View all forward leaders' })).toBeInTheDocument();
@@ -640,7 +660,7 @@ describe('SeasonDetails stats tab', () => {
 
   it('navigates to the player details page when a stats table row is clicked', async () => {
     const user = userEvent.setup();
-    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
     render(<SeasonDetails />);
 
     await user.click(screen.getByRole('button', { name: 'Forwards' }));

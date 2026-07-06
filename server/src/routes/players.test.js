@@ -131,6 +131,38 @@ describe('GET /api/admin/players', () => {
     expectLatestStintStartBeforeOpenTieBreaker(queryText);
   });
 
+  it('returns paginated recent league players with last season metadata', async () => {
+    const recentPlayer = {
+      ...PLAYER_WITH_ROSTER,
+      last_season_id: 'season-1',
+      last_season_name: '2025-26',
+    };
+    sql
+      .mockResolvedValueOnce([recentPlayer])
+      .mockResolvedValueOnce([{ total: 1 }]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&page=1&page_size=15&recent_seasons=5&include_inactive=true');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(res.body).toEqual({
+      players: [recentPlayer],
+      total: 1,
+      page: 1,
+      page_size: 15,
+    });
+
+    const rowQueryText = sql.mock.calls[0][0].join(' ');
+    const countQueryText = sql.mock.calls[1][0].join(' ');
+    expect(rowQueryText).toContain('WITH recent_seasons AS');
+    expect(rowQueryText).toContain('last_season_name');
+    expect(rowQueryText).toContain('JOIN recent_seasons s ON s.id');
+    expect(countQueryText).toContain('WITH recent_seasons AS');
+    expect(sql.mock.calls[0]).toContain(5);
+    expect(sql.mock.calls[1]).toContain(5);
+  });
+
   it('normalizes Maksim and Maxim player name aliases in paginated search', async () => {
     sql
       .mockResolvedValueOnce([PLAYER_WITH_ROSTER])
@@ -347,6 +379,7 @@ describe('GET /api/admin/players/:id/awards', () => {
       award_id: 'award-1',
       season_award_id: 'season-award-1',
       award_name: 'Forward of the Year',
+      award_description: 'Awarded to the top forward.',
       season_id: 'season-1',
       season_name: '2025-26',
       awarded_at: '2026-05-01',
@@ -367,6 +400,7 @@ describe('GET /api/admin/players/:id/awards', () => {
       award_id: 'award-2',
       season_award_id: 'season-award-2',
       award_name: 'Walter Cup Winner',
+      award_description: 'Awarded to the playoff champion.',
       season_id: 'season-1',
       season_name: '2025-26',
       awarded_at: '2026-05-20',
@@ -403,6 +437,7 @@ describe('GET /api/admin/players/:id/awards', () => {
     expect(queryText).toContain('latest_pt.team_id = sar.team_id');
     expect(queryText).toContain('season_awards');
     expect(queryText).toContain('league_awards');
+    expect(queryText).toContain('la.description AS award_description');
     expect(queryText).toContain('la.competition_scope');
     expect(queryText).toContain('la.stat_key');
     expect(queryText).toContain('t.secondary_color AS team_secondary_color');

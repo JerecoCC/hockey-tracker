@@ -47,6 +47,7 @@ import SeasonEndModal from './SeasonEndModal';
 import SeasonAwardsTab from './SeasonAwardsTab';
 import SeasonFormModal from './SeasonFormModal';
 import SeasonGamesTab from './SeasonGamesTab';
+import SeasonPlayersTab from './SeasonPlayersTab';
 import SeasonPlayoffsTab from './SeasonPlayoffsTab';
 import SeasonTeamsCard from './SeasonTeamsCard';
 import StatsLeaderCard, { StatsLeaderCardSkeleton } from './StatsLeaderCard';
@@ -96,11 +97,12 @@ const STATS_COMPETITION_OPTIONS = [
 const SEASON_TAB_INDEX = {
   INFO: 0,
   TEAMS: 1,
-  GAMES: 2,
-  STATS: 3,
-  STANDINGS: 4,
-  AWARDS: 5,
-  PLAYOFFS: 6,
+  PLAYERS: 2,
+  GAMES: 3,
+  STATS: 4,
+  STANDINGS: 5,
+  AWARDS: 6,
+  PLAYOFFS: 7,
 } as const;
 const DEFAULT_WILDCARD_FORMAT: PlayoffFormatRule[] = [
   { scope: 'division', method: 'top', count: 3 },
@@ -1026,6 +1028,18 @@ const SeasonDetailsPage = () => {
                 hasScheduledGames={season.has_scheduled_games}
                 groupAlignmentSetId={season.group_alignment_set_id}
                 updateSeason={updateSeason}
+              />
+            ),
+          },
+          {
+            label: 'Players',
+            icon: 'groups',
+            content: (
+              <SeasonPlayersTab
+                leagueId={season.league_id}
+                leagueCode={season.league_code}
+                seasonId={id!}
+                seasonName={season.name}
               />
             ),
           },

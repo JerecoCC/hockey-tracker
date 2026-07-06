@@ -1237,10 +1237,10 @@ describe('LeagueDetailsPage – players tab', () => {
   it('shows empty state when no players are assigned', () => {
     setup({ league: mockLeague });
     clickPlayersTab();
-    expect(screen.getByText(/no active players in this league yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no players from the last five seasons yet/i)).toBeInTheDocument();
   });
 
-  it('passes rookie and inactive-only player filters to the players query', async () => {
+  it('loads recent five-season players without season or status filter controls', async () => {
     const seasons = [
       {
         id: 'season-1',
@@ -1257,51 +1257,22 @@ describe('LeagueDetailsPage – players tab', () => {
     const { container } = setup({ league: mockLeague, seasons });
     clickPlayersTab();
 
-    expect(container.querySelector('.playerHeaderSeasonGroup .divider.vertical')).toBeInTheDocument();
+    expect(container.querySelector('.playerHeaderSeasonGroup')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Rookies only' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Inactive only' })).not.toBeInTheDocument();
 
     await waitFor(() =>
       expect(useLeaguePlayers).toHaveBeenLastCalledWith(
         undefined,
-        'season-1',
+        undefined,
         expect.objectContaining({
           page: 1,
           pageSize: 15,
           search: '',
-          rookiesOnly: false,
-          inactiveOnly: false,
+          includeInactive: true,
           includeProspects: true,
-        }),
-      ),
-    );
-
-    const rookiesSwitch = screen.getByRole('switch', { name: 'Rookies only' });
-    const inactiveSwitch = screen.getByRole('switch', { name: 'Inactive only' });
-
-    expect(rookiesSwitch).toHaveAttribute('aria-checked', 'false');
-    expect(inactiveSwitch).toHaveAttribute('aria-checked', 'false');
-
-    fireEvent.click(rookiesSwitch);
-    await waitFor(() =>
-      expect(useLeaguePlayers).toHaveBeenLastCalledWith(
-        undefined,
-        'season-1',
-        expect.objectContaining({
-          rookiesOnly: true,
-          inactiveOnly: false,
-          includeProspects: true,
-        }),
-      ),
-    );
-
-    fireEvent.click(inactiveSwitch);
-    await waitFor(() =>
-      expect(useLeaguePlayers).toHaveBeenLastCalledWith(
-        undefined,
-        'season-1',
-        expect.objectContaining({
-          rookiesOnly: true,
-          inactiveOnly: true,
-          includeProspects: true,
+          recentSeasons: 5,
         }),
       ),
     );
@@ -1357,19 +1328,8 @@ describe('LeagueDetailsPage – players tab', () => {
     }
   });
 
-  it('shows player row skeletons while filters are fetching', async () => {
-    const seasons = [
-      {
-        id: 'season-1',
-        name: 'Spring 2024',
-        league_id: 'lg1',
-        start_date: '2024-01-01',
-        end_date: '2024-03-31',
-        is_current: true,
-        is_ended: false,
-        created_at: '',
-      },
-    ];
+  it('shows player row skeletons while search is fetching', async () => {
+    jest.useFakeTimers();
     const players = [
       {
         id: 'player-1',
@@ -1392,26 +1352,28 @@ describe('LeagueDetailsPage – players tab', () => {
       },
     ];
 
-    const { container } = setup({ league: mockLeague, seasons }, {}, null, {
-      players,
-      total: 1,
-      fetching: true,
-    });
-    clickPlayersTab();
+    try {
+      const { container } = setup({ league: mockLeague }, {}, null, {
+        players,
+        total: 1,
+        fetching: true,
+      });
+      clickPlayersTab();
 
-    await waitFor(() =>
-      expect(useLeaguePlayers).toHaveBeenLastCalledWith(
-        undefined,
-        'season-1',
-        expect.objectContaining({ rookiesOnly: false }),
-      ),
-    );
-    expect(container.querySelector('.loadingList')).not.toBeInTheDocument();
+      expect(container.querySelector('.loadingList')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('switch', { name: 'Rookies only' }));
+      fireEvent.change(screen.getByPlaceholderText(/search players/i), {
+        target: { value: 'wayne' },
+      });
+      await act(async () => {
+        jest.advanceTimersByTime(350);
+      });
 
-    expect(container.querySelector('.loadingList')).toBeInTheDocument();
-    expect(container.querySelectorAll('.loadingRow')).toHaveLength(15);
+      expect(container.querySelector('.loadingList')).toBeInTheDocument();
+      expect(container.querySelectorAll('.loadingRow')).toHaveLength(15);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('renders player rows as links to player details', () => {
@@ -1434,6 +1396,8 @@ describe('LeagueDetailsPage – players tab', () => {
           created_at: '2024-01-01T00:00:00Z',
           team_id: null,
           team_code: null,
+          last_season_id: 'season-1',
+          last_season_name: 'Spring 2024',
         },
       ],
       total: 1,
@@ -1442,6 +1406,7 @@ describe('LeagueDetailsPage – players tab', () => {
 
     const row = screen.getByText(/^John Smith/).closest('li');
     expect(row?.querySelector('a')).toHaveAttribute('href', '/admin/leagues/tl/players/1001');
+    expect(screen.getByText('Center | Last played: Spring 2024')).toBeInTheDocument();
   });
 
   it('shows rookie and player status row tags', async () => {
@@ -1477,6 +1442,8 @@ describe('LeagueDetailsPage – players tab', () => {
           created_at: '2024-01-01T00:00:00Z',
           team_id: null,
           team_code: null,
+          last_season_id: 'season-1',
+          last_season_name: 'Spring 2024',
         },
         {
           id: 'player-2',
@@ -1525,9 +1492,6 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.getByText('Inactive')).toBeInTheDocument();
     expect(screen.getByText('Retired')).toBeInTheDocument();
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('switch', { name: 'Inactive only' }));
-    expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
 
   it('shows player list skeleton rows only after pagination controls start fetching', () => {
@@ -1568,67 +1532,7 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.queryByLabelText('Loading players')).not.toBeInTheDocument();
   });
 
-  it('shows player list skeleton rows after changing the season while fetching', async () => {
-    const seasons = [
-      {
-        id: 'season-1',
-        name: 'Spring 2024',
-        league_id: 'lg1',
-        start_date: '2024-01-01',
-        end_date: '2024-03-31',
-        is_current: true,
-        is_ended: false,
-        created_at: '',
-      },
-      {
-        id: 'season-2',
-        name: 'Winter 2025',
-        league_id: 'lg1',
-        start_date: '2025-01-01',
-        end_date: '2025-03-31',
-        is_current: false,
-        is_ended: false,
-        created_at: '',
-      },
-    ];
-    const { container } = setup({ league: mockLeague, seasons }, {}, null, {
-      players: [
-        {
-          id: 'player-1',
-          first_name: 'John',
-          last_name: 'Smith',
-          photo: null,
-          date_of_birth: null,
-          birth_city: null,
-          birth_country: null,
-          height_cm: null,
-          weight_lbs: null,
-          position: 'C',
-          shoots: 'L',
-          is_active: true,
-          created_at: '2024-01-01T00:00:00Z',
-          team_id: null,
-          team_code: null,
-        },
-      ],
-      total: 1,
-      fetching: true,
-    });
-    clickPlayersTab();
-
-    expect(screen.getByText(/^John Smith/)).toBeInTheDocument();
-    expect(container.querySelectorAll('.loadingRow')).toHaveLength(0);
-
-    await waitFor(() => expect(screen.getByRole('combobox')).toHaveTextContent('Spring 2024'));
-    fireEvent.click(screen.getByRole('combobox'));
-    fireEvent.click(screen.getByRole('button', { name: 'Winter 2025' }));
-
-    expect(screen.queryByText(/^John Smith/)).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.loadingRow')).toHaveLength(15);
-    expect(screen.queryByLabelText('Loading players')).not.toBeInTheDocument();
-  });
-
-  it('shows missing data indicators for players missing selected-season data', () => {
+  it('shows missing data indicators for players missing roster data', () => {
     setup({ league: mockLeague }, {}, null, {
       players: [
         {
