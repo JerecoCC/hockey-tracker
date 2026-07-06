@@ -45,16 +45,21 @@ export interface PlayerAwardRecord {
   award_name: string;
   competition_scope: AwardCompetitionScope | null;
   stat_key: string | null;
+  recipient_type: 'player' | 'team';
   season_id: string;
   season_name: string;
   awarded_at: string | null;
+  player_photo?: string | null;
   team_id: string | null;
   team_name: string | null;
+  team_place_name?: string | null;
+  team_team_name?: string | null;
   team_code: string | null;
   team_logo: string | null;
   team_logo_dark?: string | null;
   team_logo_light?: string | null;
   team_primary_color: string | null;
+  team_secondary_color: string | null;
   team_text_color: string | null;
 }
 

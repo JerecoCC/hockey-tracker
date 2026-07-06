@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
+import type { AwardCompetitionScope } from '@/lib/awardDefinitions';
 import { type CreateTeamData } from './useTeams';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -38,6 +39,29 @@ export interface TeamDetailRecord {
   latest_season_end_date: string | null;
 }
 
+export interface TeamAwardRecord {
+  id: string;
+  award_id: string;
+  season_award_id: string;
+  award_name: string;
+  competition_scope: AwardCompetitionScope | null;
+  stat_key: string | null;
+  season_id: string;
+  season_name: string;
+  awarded_at: string | null;
+  team_id: string | null;
+  team_name: string | null;
+  team_place_name?: string | null;
+  team_team_name?: string | null;
+  team_code: string | null;
+  team_logo: string | null;
+  team_logo_dark?: string | null;
+  team_logo_light?: string | null;
+  team_primary_color: string | null;
+  team_secondary_color: string | null;
+  team_text_color: string | null;
+}
+
 const authHeaders = () => {
   const token = localStorage.getItem('token');
   return { Authorization: `Bearer ${token}` };
@@ -49,6 +73,33 @@ const apiError = (err: unknown, fallback: string) => {
 };
 
 type TeamDetailsMode = 'admin' | 'user';
+
+export const useTeamAwards = (
+  teamId: string | null | undefined,
+  options: { mode?: TeamDetailsMode } = {},
+) => {
+  const mode = options.mode ?? 'admin';
+  const basePath = mode === 'user' ? 'user' : 'admin';
+
+  const { data: awards = [], isLoading: loading } = useQuery<TeamAwardRecord[]>({
+    queryKey: [mode === 'user' ? 'user-team-awards' : 'team-awards', teamId],
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<TeamAwardRecord[]>(
+          `${API}/${basePath}/teams/${teamId}/awards`,
+          { headers: authHeaders() },
+        );
+        return data;
+      } catch (err) {
+        toast.error(apiError(err, 'Failed to load team awards'));
+        return [];
+      }
+    },
+    enabled: !!teamId,
+  });
+
+  return { awards, loading };
+};
 
 const useTeamDetails = (id: string | undefined, options: { mode?: TeamDetailsMode } = {}) => {
   const queryClient = useQueryClient();

@@ -350,11 +350,16 @@ describe('GET /api/admin/players/:id/awards', () => {
       season_id: 'season-1',
       season_name: '2025-26',
       awarded_at: '2026-05-01',
+      recipient_type: 'player',
+      player_photo: 'gretzky-2026.png',
       team_id: 'team-1',
       team_name: 'Oilers',
+      team_place_name: 'Edmonton',
+      team_team_name: 'Oilers',
       team_code: 'EDM',
       team_logo: 'oilers.png',
       team_primary_color: '#ff4500',
+      team_secondary_color: '#041e42',
       team_text_color: '#ffffff',
     };
     const teamAward = {
@@ -365,11 +370,16 @@ describe('GET /api/admin/players/:id/awards', () => {
       season_id: 'season-1',
       season_name: '2025-26',
       awarded_at: '2026-05-20',
+      recipient_type: 'team',
+      player_photo: null,
       team_id: 'team-1',
       team_name: 'Oilers',
+      team_place_name: 'Edmonton',
+      team_team_name: 'Oilers',
       team_code: 'EDM',
       team_logo: 'oilers.png',
       team_primary_color: '#ff4500',
+      team_secondary_color: '#041e42',
       team_text_color: '#ffffff',
     };
     sql.mockResolvedValueOnce([playerAward, teamAward]);
@@ -384,12 +394,18 @@ describe('GET /api/admin/players/:id/awards', () => {
     expect(queryText).toContain("sar.role = 'winner'");
     expect(queryText).toContain("sar.recipient_type = 'player'");
     expect(queryText).toContain("sar.recipient_type = 'team'");
+    expect(queryText).toContain("'player' AS recipient_type");
+    expect(queryText).toContain("'team' AS recipient_type");
+    expect(queryText).toContain('player_photo');
+    expect(queryText).toContain('ti.place_name AS team_place_name');
+    expect(queryText).toContain('ti.team_name AS team_team_name');
     expect(queryText).toContain('sar.player_id');
     expect(queryText).toContain('latest_pt.team_id = sar.team_id');
     expect(queryText).toContain('season_awards');
     expect(queryText).toContain('league_awards');
     expect(queryText).toContain('la.competition_scope');
     expect(queryText).toContain('la.stat_key');
+    expect(queryText).toContain('t.secondary_color AS team_secondary_color');
     const finalOrderBy = queryText.slice(queryText.lastIndexOf('ORDER BY'));
     expect(finalOrderBy).toContain('season_start_date DESC NULLS LAST');
     expect(finalOrderBy).toContain('sort_order ASC');

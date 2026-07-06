@@ -868,16 +868,21 @@ router.get('/:id/awards', async (req, res) => {
           la.name AS award_name,
           la.competition_scope,
           la.stat_key,
+          'player' AS recipient_type,
           s.id AS season_id,
           s.name AS season_name,
           sa.awarded_at::text AS awarded_at,
+          COALESCE(NULLIF(ptr.photo, ''), best_player_photo(sar.player_id, s.id, ptr.team_id), NULLIF(p.photo, '')) AS player_photo,
           t.id AS team_id,
           ti.name AS team_name,
+          ti.place_name AS team_place_name,
+          ti.team_name AS team_team_name,
           ti.code AS team_code,
           ti.logo AS team_logo,
           ti.logo_dark AS team_logo_dark,
           ti.logo_light AS team_logo_light,
           t.primary_color AS team_primary_color,
+          t.secondary_color AS team_secondary_color,
           t.text_color AS team_text_color,
           s.start_date AS season_start_date,
           s.created_at AS season_created_at,
@@ -888,8 +893,9 @@ router.get('/:id/awards', async (req, res) => {
         JOIN season_awards sa ON sa.id = sar.season_award_id
         JOIN league_awards la ON la.id = sa.award_id
         JOIN seasons s ON s.id = sa.season_id
+        JOIN players p ON p.id = sar.player_id
         LEFT JOIN LATERAL (
-          SELECT team_id, start_date, end_date, created_at
+          SELECT team_id, photo, start_date, end_date, created_at
           FROM player_teams pt
           WHERE pt.player_id = sar.player_id
             AND pt.season_id = s.id
@@ -911,6 +917,8 @@ router.get('/:id/awards', async (req, res) => {
         LEFT JOIN LATERAL (
           SELECT
             name,
+            place_name,
+            team_name,
             code,
             team_logo_default(logo_dark, logo_light) AS logo,
             team_logo_dark(logo_dark, logo_light) AS logo_dark,
@@ -942,16 +950,21 @@ router.get('/:id/awards', async (req, res) => {
           la.name AS award_name,
           la.competition_scope,
           la.stat_key,
+          'team' AS recipient_type,
           s.id AS season_id,
           s.name AS season_name,
           sa.awarded_at::text AS awarded_at,
+          NULL::text AS player_photo,
           t.id AS team_id,
           ti.name AS team_name,
+          ti.place_name AS team_place_name,
+          ti.team_name AS team_team_name,
           ti.code AS team_code,
           ti.logo AS team_logo,
           ti.logo_dark AS team_logo_dark,
           ti.logo_light AS team_logo_light,
           t.primary_color AS team_primary_color,
+          t.secondary_color AS team_secondary_color,
           t.text_color AS team_text_color,
           s.start_date AS season_start_date,
           s.created_at AS season_created_at,
@@ -978,6 +991,8 @@ router.get('/:id/awards', async (req, res) => {
         LEFT JOIN LATERAL (
           SELECT
             name,
+            place_name,
+            team_name,
             code,
             team_logo_default(logo_dark, logo_light) AS logo,
             team_logo_dark(logo_dark, logo_light) AS logo_dark,
@@ -1006,14 +1021,21 @@ router.get('/:id/awards', async (req, res) => {
         award_name,
         competition_scope,
         stat_key,
+        recipient_type,
         season_id,
         season_name,
         awarded_at,
+        player_photo,
         team_id,
         team_name,
+        team_place_name,
+        team_team_name,
         team_code,
         team_logo,
+        team_logo_dark,
+        team_logo_light,
         team_primary_color,
+        team_secondary_color,
         team_text_color
       FROM winning_awards
       ORDER BY
