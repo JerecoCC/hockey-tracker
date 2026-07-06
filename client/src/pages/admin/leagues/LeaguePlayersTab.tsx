@@ -103,7 +103,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
   const emptyMessage = rookiesOnly
     ? 'No rookies for this season.'
     : includeInactivePlayers
-      ? 'No players in this league yet.'
+      ? 'No inactive or retired players in this league yet.'
       : 'No active players in this league yet.';
   const showPaginationSkeleton = fetching && paginationFetchPage === page;
   const showSeasonSkeleton =
@@ -124,7 +124,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
   const renderPlayerTags = (player: PlayerRecord) => {
     const isRookie = !!selectedSeasonId && player.rookie_season_id === selectedSeasonId;
     const status = getPlayerStatus(player);
-    const showStatusTag = includeInactivePlayers || status !== 'active';
+    const showStatusTag = status !== 'active';
     if (!isRookie && !showStatusTag) return undefined;
 
     return (
@@ -409,8 +409,8 @@ const LeaguePlayersTab = ({ className }: Props) => {
                   onClick={handleIncludeInactiveToggle}
                   activeIcon="visibility"
                   inactiveIcon="visibility_off"
-                  activeTooltip="Show inactive players"
-                  inactiveTooltip="Show inactive players"
+                  activeTooltip="Inactive only"
+                  inactiveTooltip="Inactive only"
                 />
               </div>
             }

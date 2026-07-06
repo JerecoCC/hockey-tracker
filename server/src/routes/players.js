@@ -79,6 +79,7 @@ router.get('/', async (req, res) => {
   const includeProspects = prospectsOnly || req.query.include_prospects === 'true';
   const unassignedOnly = req.query.unassigned === 'true';
   const rookiesOnly = req.query.rookies_only === 'true';
+  const inactiveOnly = req.query.inactive_only === 'true';
   const includeInactive =
     req.query.include_inactive === 'true' || req.query.include_retired === 'true';
   const wantsPagination = req.query.page !== undefined || req.query.page_size !== undefined || req.query.search !== undefined;
@@ -286,7 +287,10 @@ router.get('/', async (req, res) => {
               OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
               OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
             )
-            AND (${includeInactive} OR is_active = TRUE)
+            AND (
+              (${inactiveOnly} AND is_active = FALSE)
+              OR (${!inactiveOnly} AND (${includeInactive} OR is_active = TRUE))
+            )
             AND (
               ${!rookiesOnly}
               OR (${season_id ?? null}::uuid IS NOT NULL AND rookie_season_id = ${season_id ?? null}::uuid)
@@ -384,7 +388,10 @@ router.get('/', async (req, res) => {
               OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
               OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
             )
-            AND (${includeInactive} OR is_active = TRUE)
+            AND (
+              (${inactiveOnly} AND is_active = FALSE)
+              OR (${!inactiveOnly} AND (${includeInactive} OR is_active = TRUE))
+            )
             AND (
               ${!rookiesOnly}
               OR (${season_id ?? null}::uuid IS NOT NULL AND rookie_season_id = ${season_id ?? null}::uuid)
@@ -429,7 +436,10 @@ router.get('/', async (req, res) => {
               OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
               OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
             )
-            AND (${includeInactive} OR is_active = TRUE)
+            AND (
+              (${inactiveOnly} AND is_active = FALSE)
+              OR (${!inactiveOnly} AND (${includeInactive} OR is_active = TRUE))
+            )
             AND (
               ${!rookiesOnly}
               OR (${season_id ?? null}::uuid IS NOT NULL AND rookie_season_id = ${season_id ?? null}::uuid)
@@ -471,7 +481,10 @@ router.get('/', async (req, res) => {
               OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
               OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
             )
-            AND (${includeInactive} OR is_active = TRUE)
+            AND (
+              (${inactiveOnly} AND is_active = FALSE)
+              OR (${!inactiveOnly} AND (${includeInactive} OR is_active = TRUE))
+            )
             AND (
               ${!rookiesOnly}
               OR (${season_id ?? null}::uuid IS NOT NULL AND rookie_season_id = ${season_id ?? null}::uuid)

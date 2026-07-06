@@ -1143,7 +1143,7 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.getByText(/no active players in this league yet/i)).toBeInTheDocument();
   });
 
-  it('passes rookie and inactive player filters to the players query', async () => {
+  it('passes rookie and inactive-only player filters to the players query', async () => {
     const seasons = [
       {
         id: 'season-1',
@@ -1171,14 +1171,14 @@ describe('LeagueDetailsPage – players tab', () => {
           pageSize: 15,
           search: '',
           rookiesOnly: false,
-          includeInactive: false,
+          inactiveOnly: false,
           includeProspects: true,
         }),
       ),
     );
 
     const rookiesSwitch = screen.getByRole('switch', { name: 'Rookies only' });
-    const inactiveSwitch = screen.getByRole('switch', { name: 'Show inactive players' });
+    const inactiveSwitch = screen.getByRole('switch', { name: 'Inactive only' });
 
     expect(rookiesSwitch).toHaveAttribute('aria-checked', 'false');
     expect(inactiveSwitch).toHaveAttribute('aria-checked', 'false');
@@ -1190,7 +1190,7 @@ describe('LeagueDetailsPage – players tab', () => {
         'season-1',
         expect.objectContaining({
           rookiesOnly: true,
-          includeInactive: false,
+          inactiveOnly: false,
           includeProspects: true,
         }),
       ),
@@ -1203,7 +1203,7 @@ describe('LeagueDetailsPage – players tab', () => {
         'season-1',
         expect.objectContaining({
           rookiesOnly: true,
-          includeInactive: true,
+          inactiveOnly: true,
           includeProspects: true,
         }),
       ),
@@ -1429,8 +1429,8 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.getByText('Retired')).toBeInTheDocument();
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('switch', { name: 'Show inactive players' }));
-    expect(screen.getByText('Active')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('switch', { name: 'Inactive only' }));
+    expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
 
   it('shows player list skeleton rows only after pagination controls start fetching', () => {

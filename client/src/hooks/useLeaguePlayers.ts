@@ -84,6 +84,7 @@ interface UseLeaguePlayersOptions {
   pageSize?: number;
   search?: string;
   rookiesOnly?: boolean;
+  inactiveOnly?: boolean;
   includeInactive?: boolean;
   includeProspects?: boolean;
 }
@@ -115,6 +116,7 @@ const useLeaguePlayers = (
         page_size: options.pageSize,
         search: options.search,
         rookies_only: options.rookiesOnly,
+        inactive_only: options.inactiveOnly,
         include_inactive: options.includeInactive,
         include_prospects: options.includeProspects,
       },
@@ -128,7 +130,8 @@ const useLeaguePlayers = (
         if (options.pageSize !== undefined) params.page_size = String(options.pageSize);
         if (options.search !== undefined) params.search = options.search;
         if (options.rookiesOnly) params.rookies_only = 'true';
-        if (options.includeInactive) params.include_inactive = 'true';
+        if (options.inactiveOnly) params.inactive_only = 'true';
+        else if (options.includeInactive) params.include_inactive = 'true';
         if (options.includeProspects) params.include_prospects = 'true';
         const { data } = await axios.get<PlayerRecord[] | PaginatedPlayersResponse>(
           `${API}/admin/players`,

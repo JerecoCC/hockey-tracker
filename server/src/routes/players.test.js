@@ -193,6 +193,23 @@ describe('GET /api/admin/players', () => {
     expect(sql.mock.calls[1]).toContain(true);
   });
 
+  it('filters paginated league player rows and counts to inactive or retired players only', async () => {
+    sql
+      .mockResolvedValueOnce([{ ...PLAYER_WITH_ROSTER, status: 'retired', is_active: false }])
+      .mockResolvedValueOnce([{ total: 1 }]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&season_id=season-1&page=1&page_size=20&inactive_only=true');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+
+    const rowQueryText = sql.mock.calls[0][0].join(' ');
+    const countQueryText = sql.mock.calls[1][0].join(' ');
+    expect(rowQueryText).toContain('is_active = FALSE');
+    expect(countQueryText).toContain('is_active = FALSE');
+  });
+
   it('filters by team_id and returns roster fields', async () => {
     sql.mockResolvedValueOnce([PLAYER_WITH_ROSTER]);
     const res = await request(app).get('/api/admin/players?team_id=team-1');
