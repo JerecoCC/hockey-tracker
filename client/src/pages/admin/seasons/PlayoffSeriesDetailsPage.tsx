@@ -104,6 +104,8 @@ const teamInfoFromSeries = (series: PlayoffSeriesRecord, side: 'home' | 'away'):
   const isHome = side === 'home';
   const id = isHome ? series.home_team_id : series.away_team_id;
   const name = isHome ? series.home_team_name : series.away_team_name;
+  const placeName = isHome ? series.home_team_place_name : series.away_team_place_name;
+  const teamName = isHome ? series.home_team_team_name : series.away_team_team_name;
   const code = isHome ? series.home_team_code : series.away_team_code;
   const logo = isHome ? series.home_team_logo : series.away_team_logo;
   const logoDark = isHome ? series.home_team_logo_dark : series.away_team_logo_dark;
@@ -115,6 +117,8 @@ const teamInfoFromSeries = (series: PlayoffSeriesRecord, side: 'home' | 'away'):
   return {
     id: id ?? `${side}-team`,
     name: name ?? code ?? 'TBD',
+    place_name: placeName ?? null,
+    team_name: teamName ?? null,
     code: code ?? 'TBD',
     logo: logo ?? null,
     logo_dark: logoDark ?? null,

@@ -607,6 +607,10 @@ describe('GET /api/admin/games/playoff-series', () => {
     expect(queryText).toContain('ss.start_date <= s.start_date');
     expect(queryText).toContain('ls.start_date >= s.start_date');
     expect(queryText).toContain('brs.matchup_names AS playoff_matchup_names');
+    expect(queryText).toContain('ht.place_name AS home_team_place_name');
+    expect(queryText).toContain('ht.team_name AS home_team_team_name');
+    expect(queryText).toContain('at.place_name AS away_team_place_name');
+    expect(queryText).toContain('at.team_name AS away_team_team_name');
   });
 });
 

@@ -178,6 +178,8 @@ export interface PlayoffSeriesRecord {
   /** Null when the team has not yet been determined (partial series shell). */
   home_team_id: string | null;
   home_team_name: string | null;
+  home_team_place_name?: string | null;
+  home_team_team_name?: string | null;
   home_team_code: string | null;
   home_team_logo: string | null;
   home_team_logo_dark?: string | null;
@@ -188,6 +190,8 @@ export interface PlayoffSeriesRecord {
   /** Null when the team has not yet been determined (partial series shell). */
   away_team_id: string | null;
   away_team_name: string | null;
+  away_team_place_name?: string | null;
+  away_team_team_name?: string | null;
   away_team_code: string | null;
   away_team_logo: string | null;
   away_team_logo_dark?: string | null;

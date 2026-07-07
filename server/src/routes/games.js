@@ -571,12 +571,18 @@ router.get('/playoff-series', async (req, res) => {
         ps.status, ps.winner_team_id, ps.bracket_slot_key, ps.created_at,
         brs.round_names AS playoff_round_names,
         brs.matchup_names AS playoff_matchup_names,
-        ht.name AS home_team_name, ht.code AS home_team_code,
+        ht.name AS home_team_name,
+        ht.place_name AS home_team_place_name,
+        ht.team_name AS home_team_team_name,
+        ht.code AS home_team_code,
         ht.logo AS home_team_logo, ht.logo_dark AS home_team_logo_dark, ht.logo_light AS home_team_logo_light,
         th.primary_color AS home_team_primary_color,
         th.secondary_color AS home_team_secondary_color,
         th.text_color AS home_team_text_color,
-        at.name AS away_team_name, at.code AS away_team_code,
+        at.name AS away_team_name,
+        at.place_name AS away_team_place_name,
+        at.team_name AS away_team_team_name,
+        at.code AS away_team_code,
         at.logo AS away_team_logo, at.logo_dark AS away_team_logo_dark, at.logo_light AS away_team_logo_light,
         ta.primary_color AS away_team_primary_color,
         ta.secondary_color AS away_team_secondary_color,
@@ -590,6 +596,8 @@ router.get('/playoff-series', async (req, res) => {
       LEFT JOIN LATERAL (
         (SELECT
             ti.name,
+            ti.place_name,
+            ti.team_name,
             ti.code,
             team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
             team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
@@ -605,6 +613,8 @@ router.get('/playoff-series', async (req, res) => {
         UNION ALL
         (SELECT
             ti.name,
+            ti.place_name,
+            ti.team_name,
             ti.code,
             team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
             team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
@@ -618,6 +628,8 @@ router.get('/playoff-series', async (req, res) => {
       LEFT JOIN LATERAL (
         (SELECT
             ti.name,
+            ti.place_name,
+            ti.team_name,
             ti.code,
             team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
             team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
@@ -633,6 +645,8 @@ router.get('/playoff-series', async (req, res) => {
         UNION ALL
         (SELECT
             ti.name,
+            ti.place_name,
+            ti.team_name,
             ti.code,
             team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
             team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
