@@ -353,7 +353,6 @@ const PoolEditor = ({ control, slotIndex, groups }: PoolEditorProps) => {
         variant="outlined"
         intent="neutral"
         icon="add"
-        size="small"
         onClick={() => append({ rank: '1', scope: 'league', groupId: '' })}
       >
         Add position

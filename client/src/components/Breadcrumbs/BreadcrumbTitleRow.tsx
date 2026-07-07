@@ -18,7 +18,6 @@ const BreadcrumbTitleRow = () => {
             variant="outlined"
             intent="neutral"
             icon="arrow_back"
-            size="small"
             tooltip={config.backLabel ?? 'Back'}
             aria-label={config.backLabel ?? 'Back'}
             onClick={() => navigate(config.backPath!)}

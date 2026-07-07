@@ -16,7 +16,7 @@ interface Props {
   items: MoreActionsMenuItem[];
   /** Disables the trigger button (e.g. while a mutation is in flight). */
   disabled?: boolean;
-  /** Size of the trigger button. Defaults to 'small'. */
+  /** Size of the trigger button. Defaults to 'medium'. */
   size?: ButtonSize;
   /** Optional trigger icon-size override for constrained header contexts. */
   iconSize?: string;
@@ -37,7 +37,7 @@ const VIEWPORT_MARGIN = 8;
 const MoreActionsMenu = ({
   items,
   disabled = false,
-  size = 'small',
+  size = 'medium',
   iconSize,
   iconHeight = 'default',
   wrapperClassName,

@@ -74,7 +74,7 @@ const SIZE: Record<ButtonSize, string> = {
  *   <Button icon="add">Add League</Button>               // filled accent, icon + label
  *   <Button variant="outlined" intent="danger">Cancel</Button> // outlined danger, label only
  *   <Button variant="ghost" intent="neutral" icon="edit" /> // ghost neutral, icon only
- *   <Button variant="filled" intent="danger" icon="delete" size="small" /> // compact icon-only
+ *   <Button variant="filled" intent="danger" icon="delete" iconHeight="field" /> // field-height icon-only
  */
 const Button = (props: ButtonProps) => {
   const {

@@ -266,7 +266,6 @@ const GroupNode = (props: GroupNodeProps) => {
             <div className={styles.groupFooter}>
               <Button
                 icon="add"
-                size="small"
                 variant="outlined"
                 intent="neutral"
                 onClick={() => onAddTeam(group)}
@@ -443,7 +442,6 @@ const LeagueGroupsCard = (props: Props) => {
             <div className={styles.emptyState}>
               <Button
                 icon="add"
-                size="small"
                 variant="outlined"
                 intent="neutral"
                 onClick={onCreateTeam}

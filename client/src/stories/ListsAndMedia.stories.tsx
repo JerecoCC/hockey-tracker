@@ -155,7 +155,6 @@ export const SearchAndDetails = {
           )}
           actions={
             <Button
-              size="small"
               icon="filter_list"
               variant="outlined"
               intent="neutral"

@@ -881,7 +881,6 @@ const GoalieStatsEditModal = ({
                         variant="outlined"
                         intent="danger"
                         icon="delete"
-                        size="small"
                         tooltip={
                           isPendingId(stintRow.id) ? 'Discard this stint' : 'Remove this stint'
                         }
@@ -930,7 +929,6 @@ const GoalieStatsEditModal = ({
                   variant="filled"
                   intent="accent"
                   icon="add"
-                  size="small"
                   tooltip="Add goalie"
                   disabled={busy || !addDraft.goalie_id}
                   onClick={handleAddGoalie}
@@ -939,7 +937,6 @@ const GoalieStatsEditModal = ({
                   variant="ghost"
                   intent="neutral"
                   icon="close"
-                  size="small"
                   tooltip="Cancel"
                   disabled={busy}
                   onClick={() => setAdding(false)}

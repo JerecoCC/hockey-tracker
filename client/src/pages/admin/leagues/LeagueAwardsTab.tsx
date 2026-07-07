@@ -768,7 +768,6 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                               variant="outlined"
                               intent="neutral"
                               icon="edit"
-                              size="small"
                               tooltip="Edit award"
                               aria-label={`Edit ${award.name}`}
                               disabled={reorderingAwards}
@@ -778,7 +777,6 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                               variant="outlined"
                               intent="danger"
                               icon="delete"
-                              size="small"
                               tooltip="Remove award"
                               aria-label={`Remove ${award.name}`}
                               disabled={reorderingAwards}

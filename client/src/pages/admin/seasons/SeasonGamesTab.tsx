@@ -1221,6 +1221,7 @@ const SeasonGamesTab = ({
                   const dayGames = calendarGamesByDate.get(dateKey) ?? [];
                   return (
                     <MoreActionsMenu
+                      size="small"
                       iconSize="0.85rem"
                       disabled={autofillDay === dateKey}
                       items={buildDayActions(dateKey, dayGames)}

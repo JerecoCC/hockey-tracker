@@ -305,7 +305,6 @@ const BracketSlot = ({
               variant="filled"
               intent="accent"
               icon="sync"
-              size="small"
               tooltip="Create next-round series"
               disabled={busy === 'advancing'}
               onClick={onAdvance}
@@ -408,7 +407,6 @@ const BracketSlot = ({
               variant="filled"
               intent="accent"
               icon="play_arrow"
-              size="small"
               tooltip="Start series"
               disabled={busy === series.id}
               onClick={() => onStart(series)}
@@ -419,7 +417,6 @@ const BracketSlot = ({
               variant="filled"
               intent="accent"
               icon="arrow_forward"
-              size="small"
               tooltip="Advance winner to next round"
               disabled={!!busy}
               onClick={onForceAdvance}
@@ -1187,7 +1184,6 @@ const SeasonPlayoffsTab = ({
               variant="filled"
               intent="success"
               icon="emoji_events"
-              size="small"
               disabled={startPlayoffsDisabled}
               onClick={onStartPlayoffs}
             >
@@ -1475,7 +1471,6 @@ const SeasonPlayoffsTab = ({
                                     variant="ghost"
                                     intent="accent"
                                     icon="play_arrow"
-                                    size="small"
                                     tooltip="Start series"
                                     disabled={seriesBusy === s.id}
                                     onClick={() => handleStartSeries(s)}

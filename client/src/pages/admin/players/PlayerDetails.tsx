@@ -2274,7 +2274,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             variant="outlined"
             intent="neutral"
             icon="chevron_left"
-            size="small"
             tooltip="Previous page"
             disabled={gameLogPage <= 1}
             onClick={() => setGameLogPage((page) => Math.max(1, page - 1))}
@@ -2286,7 +2285,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             variant="outlined"
             intent="neutral"
             icon="chevron_right"
-            size="small"
             tooltip="Next page"
             disabled={gameLogPage >= gameLogPageCount}
             onClick={() => setGameLogPage((page) => Math.min(gameLogPageCount, page + 1))}

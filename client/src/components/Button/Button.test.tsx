@@ -12,6 +12,11 @@ describe('Button', () => {
     expect(screen.getByText('Save Changes')).toBeInTheDocument();
   });
 
+  it('uses the medium size by default', () => {
+    render(<Button>Save Changes</Button>);
+    expect(screen.getByRole('button', { name: /save changes/i })).toHaveClass('medium');
+  });
+
   it('renders an icon when icon prop is provided', () => {
     const { container } = render(<Button icon="add">Add</Button>);
     expect(container.querySelector('svg')).toBeInTheDocument();

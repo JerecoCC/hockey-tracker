@@ -1488,7 +1488,6 @@ const SeasonAwardsTab = ({
                   <div className={styles.awardRecipientActions}>
                     {canManageNominees && (
                       <Button
-                        size="small"
                         variant="outlined"
                         intent="neutral"
                         icon="person_add"
@@ -1499,7 +1498,6 @@ const SeasonAwardsTab = ({
                     )}
                     {showAwardAction && isGroupedAward ? (
                       <Button
-                        size="small"
                         icon="groups"
                         tooltip="Set team"
                         aria-label="Set team"
@@ -1507,7 +1505,6 @@ const SeasonAwardsTab = ({
                       />
                     ) : showAwardAction ? (
                       <Button
-                        size="small"
                         icon="emoji_events"
                         tooltip="Set Winner"
                         aria-label={awardRecipientLabel}
@@ -1809,7 +1806,6 @@ const SeasonAwardsTab = ({
                     </ReorderableField>
                     <Button
                       type="button"
-                      size="small"
                       variant="outlined"
                       intent="danger"
                       icon="close"
@@ -1825,7 +1821,6 @@ const SeasonAwardsTab = ({
               <div className={styles.awardNomineeAddRow}>
                 <Button
                   type="button"
-                  size="small"
                   variant="outlined"
                   intent="accent"
                   icon="add"

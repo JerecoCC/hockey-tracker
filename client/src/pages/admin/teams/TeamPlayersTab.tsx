@@ -303,7 +303,6 @@ const TeamPlayersTab = ({
       <Button
         intent="accent"
         icon="group_add"
-        size="small"
         disabled={!selectedSeasonId}
         onClick={() => openAddPlayersModal()}
       >

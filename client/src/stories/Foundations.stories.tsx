@@ -88,10 +88,9 @@ export const ControlsAndStatus = {
             </Button>
             <Button
               icon="save"
-              size="small"
               onClick={noop}
             >
-              Small
+              Default
             </Button>
             <Button
               icon="download"

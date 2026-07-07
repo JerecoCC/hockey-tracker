@@ -198,7 +198,6 @@ export const CalendarAndSchedule = {
               picker={<Tag label="Jan 12 - Jan 18" />}
             />
             <Button
-              size="small"
               icon="download"
               onClick={noop}
             >

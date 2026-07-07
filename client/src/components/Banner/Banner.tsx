@@ -60,7 +60,6 @@ const Banner = ({
                 type="button"
                 variant="ghost"
                 intent="neutral"
-                size="small"
                 onClick={onClose}
               >
                 {cancelLabel}
@@ -71,7 +70,6 @@ const Banner = ({
                 variant="ghost"
                 intent="neutral"
                 icon="close"
-                size="small"
                 tooltip={closeLabel}
                 aria-label={closeLabel}
                 className={styles.close}

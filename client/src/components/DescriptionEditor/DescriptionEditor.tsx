@@ -34,7 +34,6 @@ const DescriptionEditor = (props: Props) => {
       />
       <div className={styles.actions}>
         <Button
-          size="small"
           intent="accent"
           disabled={saving || normalize(value) === (description ?? '')}
           onClick={async () => {
@@ -47,7 +46,6 @@ const DescriptionEditor = (props: Props) => {
           {saving ? 'Saving…' : 'Save'}
         </Button>
         <Button
-          size="small"
           variant="outlined"
           intent="neutral"
           disabled={saving}

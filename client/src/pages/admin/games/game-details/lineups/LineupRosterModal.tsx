@@ -318,7 +318,6 @@ const LineupRosterModal = ({
               autoFocus
             />
             <Button
-              size="small"
               variant="outlined"
               intent="info"
               onClick={handleApplyJerseys}
