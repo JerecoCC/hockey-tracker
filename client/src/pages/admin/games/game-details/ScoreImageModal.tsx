@@ -24,6 +24,7 @@ import Modal from '@/components/Modal/Modal';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Select, { type SelectOption } from '@/components/Select/Select';
+import Tooltip from '@/components/Tooltip/Tooltip';
 import type { GameRecord } from '@/hooks/useGames';
 import useLeagues, { type LeagueRecord } from '@/hooks/useLeagues';
 import { PERIOD_SUFFIX } from './constants';
@@ -2091,29 +2092,33 @@ const ScoreImageModal = ({
                   <strong className={awayScoreClassName}>{drawAwayScore}</strong>
                 </div>
 
-                <span
-                  className={`${styles.scoreCardResultBadge}${
-                    hasOvertimeBadge ? ` ${styles.scoreCardResultBadgeOvertime}` : ''
-                  }`}
-                  title={scoreBadgeTitle}
+                <Tooltip
+                  text={scoreBadgeTitle}
+                  className={styles.scoreCardResultTooltip}
                 >
-                  {scoreBadgeLabel && (
-                    <span className={styles.scoreCardResultLabel}>
-                      {hasOvertimeBadge
-                        ? scoreBadgeLabel.split('').map((letter, index) => (
-                            <span
-                              key={`${letter}-${index}`}
-                              className={`${styles.scoreCardResultLetter}${
-                                letter === 'S' ? ` ${styles.scoreCardResultLetterWide}` : ''
-                              }`}
-                            >
-                              {letter}
-                            </span>
-                          ))
-                        : scoreBadgeLabel}
-                    </span>
-                  )}
-                </span>
+                  <span
+                    className={`${styles.scoreCardResultBadge}${
+                      hasOvertimeBadge ? ` ${styles.scoreCardResultBadgeOvertime}` : ''
+                    }`}
+                  >
+                    {scoreBadgeLabel && (
+                      <span className={styles.scoreCardResultLabel}>
+                        {hasOvertimeBadge
+                          ? scoreBadgeLabel.split('').map((letter, index) => (
+                              <span
+                                key={`${letter}-${index}`}
+                                className={`${styles.scoreCardResultLetter}${
+                                  letter === 'S' ? ` ${styles.scoreCardResultLetterWide}` : ''
+                                }`}
+                              >
+                                {letter}
+                              </span>
+                            ))
+                          : scoreBadgeLabel}
+                      </span>
+                    )}
+                  </span>
+                </Tooltip>
                 <div className={styles.scoreCardScoreBlock}>
                   {homeWon && (
                     <span

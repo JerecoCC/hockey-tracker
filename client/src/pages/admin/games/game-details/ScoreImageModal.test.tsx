@@ -198,7 +198,7 @@ describe('ScoreImageModal', () => {
 
     await user.click(screen.getByRole('button', { name: 'SO' }));
 
-    expect(screen.getByTitle('Final in SO')).toBeInTheDocument();
+    expect(screen.getByRole('tooltip', { name: 'Final in SO' })).toBeInTheDocument();
 
     await user.click(playoffToggle);
 
@@ -238,7 +238,7 @@ describe('ScoreImageModal', () => {
 
     await user.click(screen.getByRole('button', { name: 'OT' }));
 
-    expect(screen.getByTitle('Final in OT')).toBeInTheDocument();
+    expect(screen.getByRole('tooltip', { name: 'Final in OT' })).toBeInTheDocument();
 
     await user.click(playoffToggle);
 

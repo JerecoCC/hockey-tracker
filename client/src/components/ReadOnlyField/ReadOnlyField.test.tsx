@@ -17,6 +17,7 @@ describe('ReadOnlyField', () => {
     expect(screen.getByText('Season')).toBeInTheDocument();
     expect(box).toBeInTheDocument();
     expect(box).toHaveAccessibleName('Season');
-    expect(box).toHaveAttribute('title', 'Already assigned');
+    expect(box).not.toHaveAttribute('title');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Already assigned');
   });
 });

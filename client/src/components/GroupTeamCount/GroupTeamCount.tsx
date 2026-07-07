@@ -1,3 +1,4 @@
+import Tooltip from '../Tooltip/Tooltip';
 import styles from './GroupTeamCount.module.scss';
 
 interface Props {
@@ -9,13 +10,14 @@ const GroupTeamCount = ({ count, label = 'team' }: Props) => {
   const text = `${count} ${count === 1 ? label : `${label}s`}`;
 
   return (
-    <span
-      className={styles.count}
-      title={text}
-      aria-label={text}
-    >
-      {count}
-    </span>
+    <Tooltip text={text}>
+      <span
+        className={styles.count}
+        aria-label={text}
+      >
+        {count}
+      </span>
+    </Tooltip>
   );
 };
 

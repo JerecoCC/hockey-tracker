@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Divider from '../Divider/Divider';
+import Tooltip from '../Tooltip/Tooltip';
 import styles from './RichTextEditor.module.scss';
 
 interface ToolbarButtonProps {
@@ -15,19 +16,24 @@ interface ToolbarButtonProps {
 const ToolbarButton = (props: ToolbarButtonProps) => {
   const { active, onClick, children, title, disabled } = props;
   return (
-    <button
-      type="button"
-      className={`${styles.toolbarBtn} ${active ? styles.toolbarBtnActive : ''}`}
-      onMouseDown={(e) => {
-        e.preventDefault(); // keep editor focus
-        onClick();
-      }}
-      tabIndex={-1}
-      title={title}
-      disabled={disabled}
+    <Tooltip
+      text={title}
+      className={styles.toolbarBtnTooltip}
     >
-      {children}
-    </button>
+      <button
+        type="button"
+        className={`${styles.toolbarBtn} ${active ? styles.toolbarBtnActive : ''}`}
+        onMouseDown={(e) => {
+          e.preventDefault(); // keep editor focus
+          onClick();
+        }}
+        tabIndex={-1}
+        aria-label={title}
+        disabled={disabled}
+      >
+        {children}
+      </button>
+    </Tooltip>
   );
 };
 

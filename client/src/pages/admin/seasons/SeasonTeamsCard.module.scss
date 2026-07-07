@@ -22,6 +22,11 @@
 }
 
 .readonlyAlignment {
+  &Tooltip {
+    width: 100%;
+    justify-content: stretch;
+  }
+
   &Box {
     display: inline-flex;
     align-items: center;

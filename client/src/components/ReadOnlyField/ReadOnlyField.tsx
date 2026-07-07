@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from 'react';
+import Tooltip from '../Tooltip/Tooltip';
 import styles from './ReadOnlyField.module.scss';
 
 interface ReadOnlyFieldProps {
@@ -10,6 +11,15 @@ interface ReadOnlyFieldProps {
 
 const ReadOnlyField = ({ label, value, title, className }: ReadOnlyFieldProps) => {
   const labelId = useId();
+  const box = (
+    <div
+      className={styles.box}
+      aria-disabled="true"
+      aria-labelledby={labelId}
+    >
+      <span className={styles.value}>{value}</span>
+    </div>
+  );
 
   return (
     <div className={[styles.root, className].filter(Boolean).join(' ')}>
@@ -19,14 +29,16 @@ const ReadOnlyField = ({ label, value, title, className }: ReadOnlyFieldProps) =
       >
         {label}
       </span>
-      <div
-        className={styles.box}
-        aria-disabled="true"
-        aria-labelledby={labelId}
-        title={title}
-      >
-        <span className={styles.value}>{value}</span>
-      </div>
+      {title ? (
+        <Tooltip
+          text={title}
+          className={styles.tooltip}
+        >
+          {box}
+        </Tooltip>
+      ) : (
+        box
+      )}
     </div>
   );
 };

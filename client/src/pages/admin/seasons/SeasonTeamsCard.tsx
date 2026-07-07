@@ -8,6 +8,7 @@ import ListItem from '@/components/ListItem/ListItem';
 import Select from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import Tag from '@/components/Tag/Tag';
+import Tooltip from '@/components/Tooltip/Tooltip';
 import { type AlignmentGroupRecord, type GroupAlignmentSet } from '@/hooks/useGroupAlignmentSets';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import { type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
@@ -322,6 +323,9 @@ const SeasonTeamsCard = ({
       ? `${selectedAlignment.name} (league-wide)`
       : selectedAlignment.name
     : 'No alignment assigned';
+  const alignmentLockedTooltip = hasScheduledGames
+    ? 'Alignment cannot be changed after games are scheduled.'
+    : 'Alignment cannot be changed after the season ends.';
   const handleSaveAlignment = async () => {
     if (!hasDraftAlignmentChange || !draftAlignmentSetId) return;
     await updateSeason(seasonId, {
@@ -331,16 +335,14 @@ const SeasonTeamsCard = ({
   const alignmentControl = (
     <div className={styles.alignmentHeaderControl}>
       {alignmentLocked ? (
-        <div
-          className={styles.readonlyAlignmentBox}
-          title={
-            hasScheduledGames
-              ? 'Alignment cannot be changed after games are scheduled.'
-              : 'Alignment cannot be changed after the season ends.'
-          }
+        <Tooltip
+          text={alignmentLockedTooltip}
+          className={styles.readonlyAlignmentTooltip}
         >
-          <span className={styles.readonlyAlignmentLabel}>{alignmentLabel}</span>
-        </div>
+          <div className={styles.readonlyAlignmentBox}>
+            <span className={styles.readonlyAlignmentLabel}>{alignmentLabel}</span>
+          </div>
+        </Tooltip>
       ) : (
         <>
           <div className={styles.alignmentSelectField}>

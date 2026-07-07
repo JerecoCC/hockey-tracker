@@ -34,6 +34,11 @@
   opacity: 0.4;
 }
 
+.tooltip {
+  width: 100%;
+  justify-content: stretch;
+}
+
 .value {
   min-width: 0;
   overflow: hidden;

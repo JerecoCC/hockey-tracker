@@ -624,6 +624,10 @@
     }
   }
 
+  &ResultTooltip {
+    justify-self: center;
+  }
+
   &ResultBadgeOvertime {
     &::after {
       display: none;

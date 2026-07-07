@@ -59,6 +59,10 @@
     background: $border;
     color: $accent-light;
   }
+
+  &BtnTooltip {
+    display: inline-flex;
+  }
 }
 
 .divider {
