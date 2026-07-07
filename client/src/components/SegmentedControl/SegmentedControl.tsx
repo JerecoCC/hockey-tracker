@@ -66,6 +66,8 @@ const SegmentedControl = ({
             .join(' ')}
           data-active={isActive ? 'true' : undefined}
           data-icon-only={isIconOnly ? 'true' : undefined}
+          data-first-option={i === 0 ? 'true' : undefined}
+          data-last-option={i === options.length - 1 ? 'true' : undefined}
           disabled={disabled}
           onClick={() => onChange(opt.value)}
           aria-label={opt.ariaLabel}

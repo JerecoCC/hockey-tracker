@@ -33,10 +33,7 @@
 }
 
 .field {
-  --segmented-control-option-bg: var(
-    --filter-field-background,
-    var(--app-field-bg, #{$bg-input})
-  );
+  --segmented-control-option-bg: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
 
   background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
   // Form-field usage fills the available width.
@@ -65,7 +62,7 @@
   padding: 0.375rem $space-md;
   background: var(--segmented-control-option-bg);
   border: none;
-  border-radius: $radius-md;
+  border-radius: 2px;
   color: var(--app-text-subtle, #{$text-light});
   font-size: $font-nav;
   font-weight: 400;
@@ -84,16 +81,26 @@
     height: 1em;
   }
 
-  &:not([data-icon-only='true']) {
-    margin-block: 0.125rem;
+  &:not([data-icon-only="true"]) {
+    margin: 0.125rem;
   }
 
-  &[data-icon-only='true'] {
+  &[data-icon-only="true"] {
     aspect-ratio: 1;
     padding-inline: 0;
   }
 
-  &:hover:not([data-active='true']):not(:disabled) {
+  &[data-first-option="true"] {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+  }
+
+  &[data-last-option="true"] {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+  }
+
+  &:hover:not([data-active="true"]):not(:disabled) {
     background: var(--segmented-control-option-hover-bg);
     color: var(--app-text, #{$text-body});
   }

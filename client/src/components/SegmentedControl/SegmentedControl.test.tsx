@@ -36,6 +36,31 @@ describe('SegmentedControl', () => {
     expect(onChange).toHaveBeenCalledWith('forwards');
   });
 
+  it('marks only the outer options for edge-specific corner styling', () => {
+    render(
+      <SegmentedControl
+        value="summary"
+        onChange={jest.fn()}
+        options={options}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Summary' })).toHaveAttribute(
+      'data-first-option',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Forwards' })).not.toHaveAttribute(
+      'data-first-option',
+    );
+    expect(screen.getByRole('button', { name: 'Forwards' })).not.toHaveAttribute(
+      'data-last-option',
+    );
+    expect(screen.getByRole('button', { name: 'Defense' })).toHaveAttribute(
+      'data-last-option',
+      'true',
+    );
+  });
+
   it('marks aria-labelled options as icon-only unless overridden', () => {
     render(
       <SegmentedControl
