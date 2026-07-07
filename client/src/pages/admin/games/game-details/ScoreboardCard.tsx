@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
-import FitText from '@/components/FitText/FitText';
 import Tag from '@/components/Tag/Tag';
+import Tooltip from '@/components/Tooltip/Tooltip';
 import StickyHeroCard from '@/components/StickyHeroCard/StickyHeroCard';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameStatus, TeamInfo } from '@/hooks/useGames';
@@ -12,7 +12,7 @@ import {
   formatScheduledDate,
   formatScheduledDateLocal,
 } from './formatUtils';
-import { getPlayoffScoreMetaLabel } from './playoffScoreMeta';
+import { getPlayoffScoreMetaDisplay } from './playoffScoreMeta';
 import styles from './ScoreboardCard.module.scss';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -114,6 +114,7 @@ const ScoreboardCard = ({
   useLocalTimezone = false,
 }: Props) => {
   const navigate = useNavigate();
+  const playoffScoreMeta = getPlayoffScoreMetaDisplay(game);
   const buildTeamPath = (team: TeamInfo) =>
     mode === 'user'
       ? buildUserTeamDetailsPath({
@@ -229,14 +230,22 @@ const ScoreboardCard = ({
             </span>
           )}
           <div className={styles.scoreBlock}>
-            {game.playoff_round != null && (
-              <FitText
-                className={styles.scoreMeta}
-                minFontSize={8}
-              >
-                {getPlayoffScoreMetaLabel(game)}
-              </FitText>
-            )}
+            {playoffScoreMeta &&
+              (playoffScoreMeta.tooltip ? (
+                <Tooltip
+                  text={playoffScoreMeta.tooltip}
+                  className={styles.scoreMetaTooltip}
+                >
+                  <span
+                    className={styles.scoreMeta}
+                    aria-label={playoffScoreMeta.tooltip}
+                  >
+                    {playoffScoreMeta.label}
+                  </span>
+                </Tooltip>
+              ) : (
+                <span className={styles.scoreMeta}>{playoffScoreMeta.label}</span>
+              ))}
             {isFinal ? (
               <Tag
                 label={`Final${overtimeSuffix}`}

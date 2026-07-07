@@ -1,4 +1,8 @@
-import { getPlayoffScoreMetaBaseLabel, getPlayoffScoreMetaLabel } from './playoffScoreMeta';
+import {
+  getPlayoffScoreMetaBaseLabel,
+  getPlayoffScoreMetaDisplay,
+  getPlayoffScoreMetaLabel,
+} from './playoffScoreMeta';
 
 describe('getPlayoffScoreMetaLabel', () => {
   it('prefers a custom matchup label over a custom round name', () => {
@@ -45,5 +49,46 @@ describe('getPlayoffScoreMetaLabel', () => {
         game_number_in_series: 6,
       }),
     ).toBe('Championship Matchup');
+  });
+
+  it('uses initials for custom matchup display labels and keeps the full label for the tooltip', () => {
+    expect(
+      getPlayoffScoreMetaDisplay({
+        playoff_round: 2,
+        playoff_round_names: { 2: 'Semifinal' },
+        playoff_matchup_names: { r2m0: 'Atlantic Division Semifinal' },
+        bracket_slot_key: 'r2m0',
+        game_number_in_series: 5,
+      }),
+    ).toEqual({
+      label: 'ADS · Game 5',
+      tooltip: 'Atlantic Division Semifinal · Game 5',
+    });
+  });
+
+  it('uses initials for custom round fallback display labels', () => {
+    expect(
+      getPlayoffScoreMetaDisplay({
+        playoff_round: 2,
+        playoff_round_names: { 2: 'Western Conference Final' },
+        playoff_matchup_names: { r2m1: 'Eastern Conference Final' },
+        bracket_slot_key: 'r2m0',
+      }),
+    ).toEqual({
+      label: 'WCF',
+      tooltip: 'Western Conference Final',
+    });
+  });
+
+  it('keeps default round labels readable without a tooltip', () => {
+    expect(
+      getPlayoffScoreMetaDisplay({
+        playoff_round: 2,
+        game_number_in_series: 3,
+      }),
+    ).toEqual({
+      label: 'Round 2 · Game 3',
+      tooltip: null,
+    });
   });
 });
