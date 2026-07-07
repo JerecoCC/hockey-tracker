@@ -401,7 +401,7 @@ describe('TeamGamesTab', () => {
 
     const gameDayCell = container.querySelector('.calendarDayGameCell');
     expect(gameDayCell).not.toBeNull();
-    expect(gameDayCell).toHaveTextContent(/^1/);
+    expect(gameDayCell).toHaveTextContent(/^01/);
   });
 
   it('keeps timezone-less midnight admin games on their stored calendar day', () => {
@@ -423,7 +423,7 @@ describe('TeamGamesTab', () => {
 
     const gameDayCell = container.querySelector('.calendarDayGameCell');
     expect(gameDayCell).not.toBeNull();
-    expect(gameDayCell).toHaveTextContent(/^2/);
+    expect(gameDayCell).toHaveTextContent(/^02/);
   });
 
   it('uses user game detail routes in user mode', async () => {

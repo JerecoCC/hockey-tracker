@@ -160,6 +160,8 @@
 
   &NumberLink {
     display: inline-flex;
+    align-items: center;
+    gap: $space-xs;
     color: inherit;
     text-decoration: none;
     border-radius: $radius-sm;
@@ -172,6 +174,109 @@
     &:focus-visible {
       outline: 2px solid var(--app-accent, #{$accent});
       outline-offset: 2px;
+    }
+  }
+}
+
+.mobileDayLabel {
+  display: none;
+}
+
+.emptyPlaceholderCell {
+  // Marker class for responsive layouts. Desktop keeps the same placeholder
+  // footprint as the regular calendar grid.
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: $space-md;
+    min-width: 0;
+  }
+
+  .dayName,
+  .emptyCell,
+  .emptyPlaceholderCell {
+    display: none;
+  }
+
+  .emptyCell,
+  .dayCell {
+    aspect-ratio: auto;
+    border-radius: $radius-md;
+  }
+
+  .dayCell {
+    min-height: 5.75rem;
+    border-width: 1px;
+  }
+
+  .day {
+    &Header {
+      min-height: 3rem;
+      padding: $space-sm $space-md;
+    }
+
+    &Body {
+      overflow: visible;
+      padding: $space-md;
+      scrollbar-gutter: auto;
+    }
+
+    &BodyScrollable {
+      padding-right: $space-md;
+    }
+
+    &Content {
+      min-height: 0;
+    }
+
+    &Label {
+      gap: $space-sm;
+    }
+
+    &Number {
+      --chip-size: 2rem;
+      --chip-font-size: #{$font-sm};
+    }
+
+    &NumberLink {
+      margin: -2px -4px;
+      padding: 2px 4px;
+      gap: $space-sm;
+    }
+  }
+
+  .mobileDayLabel {
+    display: inline-flex;
+    color: var(--app-text-strong, #{$text-bright});
+    font-size: $font-base;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .loadingSkeleton.loadingSkeleton {
+    min-height: 5.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid {
+    gap: $space-sm;
+  }
+
+  .day {
+    &Header {
+      padding-inline: $space-sm;
+    }
+
+    &Body {
+      padding: $space-sm;
+    }
+
+    &BodyScrollable {
+      padding-right: $space-sm;
     }
   }
 }

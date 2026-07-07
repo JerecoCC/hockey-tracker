@@ -367,3 +367,20 @@
   grid-column: 4 / span 2;
   justify-self: center;
 }
+
+@media (max-width: 768px) {
+  .item {
+    min-height: 3.75rem;
+    padding: $space-md;
+  }
+
+  .matchup,
+  .metaRow {
+    gap: $space-sm;
+  }
+
+  .topLabel,
+  .bottomLabel {
+    font-size: $font-xs;
+  }
+}

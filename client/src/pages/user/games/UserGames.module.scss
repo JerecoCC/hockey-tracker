@@ -216,6 +216,21 @@
   --calendar-game-actions-bg: color-mix(in srgb, var(--app-surface, #f8fafc) 94%, transparent);
 }
 
+@media (max-width: 768px) {
+  .gameActions {
+    position: static;
+    inset: auto;
+    width: 100%;
+    margin-top: $space-sm;
+    padding-top: $space-sm;
+    border-top: 1px solid var(--calendar-game-card-divider);
+    background: transparent;
+    box-shadow: none;
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
 // ── Schedule modal ────────────────────────────────────────────────────
 .scheduleModal {
   &Body {

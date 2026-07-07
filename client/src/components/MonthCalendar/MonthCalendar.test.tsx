@@ -17,6 +17,18 @@ describe('MonthCalendar', () => {
     expect(screen.queryByText('1')).not.toBeInTheDocument();
   });
 
+  it('renders full mobile day labels for responsive agenda layouts', () => {
+    render(
+      <MonthCalendar
+        month={new Date(2026, 0, 1)}
+        renderDayContent={() => null}
+      />,
+    );
+
+    expect(screen.getByText('Thu, Jan 1')).toBeInTheDocument();
+    expect(screen.getByText('Fri, Jan 9')).toBeInTheDocument();
+  });
+
   it('renders its built-in skeleton grid while loading', () => {
     const renderDayContent = jest.fn(() => <span>Loaded day</span>);
 

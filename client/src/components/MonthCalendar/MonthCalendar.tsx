@@ -16,6 +16,12 @@ const DEFAULT_DAY_LABELS = [
   'Saturday',
 ];
 
+const MOBILE_DAY_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
+  weekday: 'short',
+  month: 'short',
+  day: 'numeric',
+});
+
 const daysInMonth = (year: number, monthIndex: number) =>
   new Date(year, monthIndex + 1, 0).getDate();
 
@@ -23,6 +29,11 @@ const firstDayOfWeek = (year: number, monthIndex: number) => new Date(year, mont
 
 const monthDayKey = (month: Date, day: number) =>
   `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
+const mobileDayLabel = (dateKey: string) => {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  return MOBILE_DAY_LABEL_FMT.format(new Date(year, month - 1, day));
+};
 
 export interface MonthCalendarDayArgs {
   dateKey: string;
@@ -94,6 +105,9 @@ const MonthCalendarDay = ({
   const contentRef = useRef<HTMLDivElement>(null);
   const [bodyScrollable, setBodyScrollable] = useState(false);
   const dayNumberLabel = String(args.day).padStart(2, '0');
+  const mobileDateLabel = (
+    <span className={styles.mobileDayLabel}>{mobileDayLabel(args.dateKey)}</span>
+  );
 
   useLayoutEffect(() => {
     let animationFrame = 0;
@@ -159,9 +173,13 @@ const MonthCalendarDay = ({
               aria-label={dayNumberLink.ariaLabel ?? `View games on ${args.dateKey}`}
             >
               {dayNumber}
+              {mobileDateLabel}
             </Link>
           ) : (
-            dayNumber
+            <>
+              {dayNumber}
+              {mobileDateLabel}
+            </>
           )}
           {labelSuffix}
         </span>
@@ -256,7 +274,12 @@ const MonthCalendar = forwardRef<HTMLDivElement, Props>(
               return (
                 <div
                   key={`blank-${index}`}
-                  className={[styles.dayCell, styles.dayPlaceholderCell, emptyCellClassName]
+                  className={[
+                    styles.dayCell,
+                    styles.dayPlaceholderCell,
+                    styles.emptyPlaceholderCell,
+                    emptyCellClassName,
+                  ]
                     .filter(Boolean)
                     .join(' ')}
                   aria-label={`Loading calendar slot ${index + 1}`}
@@ -270,7 +293,12 @@ const MonthCalendar = forwardRef<HTMLDivElement, Props>(
               return (
                 <div
                   key={`blank-${index}`}
-                  className={[styles.dayCell, styles.dayPlaceholderCell, emptyCellClassName]
+                  className={[
+                    styles.dayCell,
+                    styles.dayPlaceholderCell,
+                    styles.emptyPlaceholderCell,
+                    emptyCellClassName,
+                  ]
                     .filter(Boolean)
                     .join(' ')}
                 >

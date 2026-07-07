@@ -340,4 +340,22 @@
   .dayCardAnchor {
     scroll-margin-top: 84px;
   }
+
+  .calendar {
+    &Scroll {
+      overflow-x: visible;
+    }
+
+    &GameList {
+      gap: $space-sm;
+
+      > :last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  .calendarDaySkeleton.calendarDaySkeleton {
+    min-height: 5.75rem;
+  }
 }

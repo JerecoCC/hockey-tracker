@@ -1631,19 +1631,21 @@ const UserGames = () => {
         </div>
       )}
 
-      <ScheduleWatchModal
-        open={!!scheduleTarget}
-        game={scheduleTarget}
-        value={scheduleDate}
-        busy={scheduleBusy}
-        onChange={setScheduleDate}
-        onClose={() => {
-          if (scheduleBusy) return;
-          setScheduleTarget(null);
-          setScheduleDate('');
-        }}
-        onSave={saveSchedule}
-      />
+      {scheduleTarget && (
+        <ScheduleWatchModal
+          open
+          game={scheduleTarget}
+          value={scheduleDate}
+          busy={scheduleBusy}
+          onChange={setScheduleDate}
+          onClose={() => {
+            if (scheduleBusy) return;
+            setScheduleTarget(null);
+            setScheduleDate('');
+          }}
+          onSave={saveSchedule}
+        />
+      )}
 
       {(scoreImageOpen || scoreCardTarget) && (
         <Suspense fallback={null}>

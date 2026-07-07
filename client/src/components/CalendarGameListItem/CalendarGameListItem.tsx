@@ -104,7 +104,6 @@ const CalendarGameListItem = ({
 
   const content = (
     <>
-      {children}
       {topLabel != null && <div className={styles.topLabel}>{topLabel}</div>}
       <div className={styles.matchup}>
         <span className={logoClassName(awayTeam.dimmed, 'away')}>
@@ -149,6 +148,7 @@ const CalendarGameListItem = ({
         </div>
       )}
       {bottomLabel != null && <div className={styles.bottomLabel}>{bottomLabel}</div>}
+      {children}
     </>
   );
 
