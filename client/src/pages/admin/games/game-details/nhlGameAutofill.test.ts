@@ -139,6 +139,7 @@ let createdPlayerStore: Map<string, Record<string, unknown>>;
 let skippedRosterPlayerIds: Set<string>;
 // League-wide roster returned for the cross-team duplicate check (league_id lookup).
 let leagueRosterPlayers: Array<Record<string, unknown>>;
+let seasonGamesData: GameRecord[];
 
 describe('autofillGameFromNhlGamecenter', () => {
   beforeEach(() => {
@@ -156,6 +157,7 @@ describe('autofillGameFromNhlGamecenter', () => {
     createdPlayerStore = new Map();
     skippedRosterPlayerIds = new Set();
     leagueRosterPlayers = [];
+    seasonGamesData = [game];
     mockedAxios.get.mockImplementation((url, config) => {
       if (String(url).endsWith('/admin/games/nhl-api')) {
         const targetUrl = String(config?.params?.url ?? '');
@@ -174,6 +176,9 @@ describe('autofillGameFromNhlGamecenter', () => {
           return Promise.resolve({ data: optionalGoalieToiReportHtml });
         }
         return Promise.reject(new Error('Optional report unavailable'));
+      }
+      if (String(url).includes('/admin/games?season_id=')) {
+        return Promise.resolve({ data: seasonGamesData });
       }
       if (String(url).endsWith('/admin/games/game-1/goals')) return Promise.resolve({ data: existingGoalsData });
       if (String(url).endsWith('/admin/games/game-1/shootout-attempts')) return Promise.resolve({ data: [] });
@@ -260,6 +265,28 @@ describe('autofillGameFromNhlGamecenter', () => {
     ).toBe(false);
     expect(
       mockedAxios.get.mock.calls.some(([url]) => String(url).endsWith('/admin/games/game-1/goals')),
+    ).toBe(false);
+  });
+
+  it('rejects before writing when the local regular season game number is not the NHL game number', async () => {
+    const numberedGame = {
+      ...game,
+      game_number: 318,
+    } as GameRecord;
+    seasonGamesData = [numberedGame];
+
+    await expect(autofillGameFromNhlGamecenter(numberedGame, '317')).rejects.toThrow(
+      /NHL game number 317 does not match local regular season game 318/i,
+    );
+
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+    expect(mockedAxios.patch).not.toHaveBeenCalled();
+    expect(mockedAxios.put).not.toHaveBeenCalled();
+    expect(
+      mockedAxios.get.mock.calls.some(([, config]) => {
+        const targetUrl = String(config?.params?.url ?? '');
+        return targetUrl.includes('/play-by-play') || targetUrl.includes('/RO020317.HTM');
+      }),
     ).toBe(false);
   });
 

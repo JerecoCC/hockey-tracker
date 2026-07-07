@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import type { GameRecord } from '@/hooks/useGames';
+import type { GameRecord, GameType } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { GoalRecord, PostGoalData } from '@/hooks/useGameGoals';
 import type { GoalieStatRecord } from '@/hooks/useGameGoalieStats';
@@ -10,6 +10,10 @@ import {
   type GameAutofillManualMoveReport,
   type GameAutofillProgress,
 } from './gameAutofillTypes';
+import {
+  validateAutofillGamePreflight,
+  type AutofillOfficialGameMeta,
+} from './gameAutofillPreflight';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const PWHL_BASE_URL = 'https://lscluster.hockeytech.com/feed/index.php';
@@ -76,6 +80,21 @@ interface PwhlGoal {
   scorerId: number;
   assist1Id?: number | null;
   assist2Id?: number | null;
+}
+
+interface PwhlAutofillSummaryMeta {
+  details?: {
+    gameNumber?: string | number | null;
+    GameNumber?: string | number | null;
+    game_number?: string | number | null;
+    round?: string | number | null;
+    Round?: string | number | null;
+    playoffRound?: string | number | null;
+    PlayoffRound?: string | number | null;
+    gameType?: string | null;
+    GameType?: string | null;
+    type?: string | null;
+  } | null;
 }
 
 interface PwhlGoalieLogRow {
@@ -184,6 +203,7 @@ export async function autofillGameFromPwhlGamecenter(
   });
 
   assertGameMatches(game, summary);
+  await validatePwhlAutofillPreflight(game, summary);
   const shootoutGame = isShootoutGame(summary);
   const playByPlay = shootoutGame
     ? await fetchPwhlJson<any[]>(pwhlFeedUrl('gameCenterPlayByPlay', gameId))
@@ -565,6 +585,13 @@ async function apiGet<T>(path: string): Promise<T> {
   return data;
 }
 
+async function validatePwhlAutofillPreflight(game: GameRecord, summary: PwhlAutofillSummaryMeta) {
+  const seasonGames = await apiGet<GameRecord[]>(
+    `/admin/games?season_id=${encodeURIComponent(game.season_id)}`,
+  );
+  validateAutofillGamePreflight(game, seasonGames, pwhlOfficialGameMeta(game, summary));
+}
+
 async function apiPost<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
   const { data } = await axios.post<TResponse>(`${API}${path}`, body, { headers: authHeaders() });
   return data;
@@ -658,6 +685,51 @@ function assertGameMatches(game: GameRecord, summary: any) {
       `PWHL game is ${awayCode || '?'} @ ${homeCode || '?'}, but this page is ${game.away_team.code} @ ${game.home_team.code}.`,
     );
   }
+}
+
+function pwhlOfficialGameMeta(
+  game: GameRecord,
+  summary: PwhlAutofillSummaryMeta,
+): AutofillOfficialGameMeta {
+  const gameNumber = positiveIntegerFromText(
+    summary?.details?.gameNumber ??
+    summary?.details?.GameNumber ??
+    summary?.details?.game_number,
+  );
+
+  return {
+    leagueLabel: 'PWHL',
+    gameType: pwhlGameType(summary),
+    regularGameNumber: game.game_type === 'regular' ? gameNumber : null,
+    playoffRound: positiveIntegerFromText(
+      summary?.details?.round ??
+      summary?.details?.Round ??
+      summary?.details?.playoffRound ??
+      summary?.details?.PlayoffRound,
+    ),
+    playoffGameNumberInSeries: game.game_type === 'playoff' ? gameNumber : null,
+  };
+}
+
+function pwhlGameType(summary: PwhlAutofillSummaryMeta): GameType | null {
+  const raw = String(
+    summary?.details?.gameType ??
+    summary?.details?.GameType ??
+    summary?.details?.type ??
+    '',
+  ).toLowerCase();
+
+  if (/\b(preseason|pre-season|exhibition)\b/.test(raw)) return 'preseason';
+  if (/\b(playoff|postseason|post-season)\b/.test(raw)) return 'playoff';
+  if (/\b(regular|season)\b/.test(raw)) return 'regular';
+  return null;
+}
+
+function positiveIntegerFromText(value: string | number | null | undefined) {
+  const text = String(value ?? '').trim();
+  if (!/^\d+$/.test(text)) return null;
+  const number = Number(text);
+  return Number.isInteger(number) && number > 0 ? number : null;
 }
 
 function getPwhlPlayers(summary: any, side: TeamSide): PwhlPlayer[] {

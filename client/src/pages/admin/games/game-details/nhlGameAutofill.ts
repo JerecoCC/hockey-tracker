@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import type { GameRecord } from '@/hooks/useGames';
+import type { GameRecord, GameType } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { GoalRecord, PostGoalData } from '@/hooks/useGameGoals';
 import type { GoalieStatRecord, UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
@@ -19,8 +19,17 @@ import {
   type GoaliesByTeam,
   type NhlGameIdContext,
 } from './nhlGoalieSwitchChecker';
+import {
+  validateAutofillGamePreflight,
+  type AutofillOfficialGameMeta,
+} from './gameAutofillPreflight';
 
 const API = import.meta.env.VITE_API_URL || '/api';
+const NHL_GAME_TYPE_BY_CODE: Record<string, GameType> = {
+  '01': 'preseason',
+  '02': 'regular',
+  '03': 'playoff',
+};
 
 const authHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -226,6 +235,7 @@ export async function autofillGameFromNhlGamecenter(
   });
 
   assertGameMatches(game, boxscore);
+  await validateNhlAutofillPreflight(game, gamecenterId);
 
   const [playByPlay, rosterReport, gameSummaryReport, shootoutReport, goalieToiReports] = await Promise.all([
     fetchNhlJson(`${base}/play-by-play`),
@@ -725,6 +735,13 @@ function buildGoalieToiReportUrls(gamecenterId: string) {
 async function apiGet<T>(path: string): Promise<T> {
   const { data } = await axios.get<T>(`${API}${path}`, { headers: authHeaders() });
   return data;
+}
+
+async function validateNhlAutofillPreflight(game: GameRecord, gamecenterId: string) {
+  const seasonGames = await apiGet<GameRecord[]>(
+    `/admin/games?season_id=${encodeURIComponent(game.season_id)}`,
+  );
+  validateAutofillGamePreflight(game, seasonGames, nhlOfficialGameMeta(gamecenterId));
 }
 
 async function apiPost<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
@@ -2726,6 +2743,42 @@ function validIsoOrUndefined(value: string | null | undefined) {
 
 function extractLeagueGameNumber(gamecenterId: string) {
   return gamecenterId.match(/(\d{4})$/)?.[1] ?? gamecenterId;
+}
+
+function nhlOfficialGameMeta(gamecenterId: string): AutofillOfficialGameMeta {
+  const gameType = NHL_GAME_TYPE_BY_CODE[gamecenterId.slice(4, 6)] ?? null;
+  const suffix = gamecenterId.slice(6);
+  const meta: AutofillOfficialGameMeta = {
+    leagueLabel: 'NHL',
+    gameType,
+  };
+
+  const gameNumber = positiveIntegerFromText(suffix);
+  if (gameType === 'playoff') {
+    const playoffNumber = parseNhlPlayoffGameNumber(suffix);
+    meta.playoffRound = playoffNumber?.round ?? null;
+    meta.playoffGameNumberInSeries = playoffNumber?.gameNumber ?? gameNumber;
+  } else {
+    meta.regularGameNumber = gameNumber;
+  }
+
+  return meta;
+}
+
+function parseNhlPlayoffGameNumber(value: string) {
+  const match = value.match(/^0([1-9])(\d)([1-9])$/);
+  if (!match) return null;
+  return {
+    round: Number(match[1]),
+    gameNumber: Number(match[3]),
+  };
+}
+
+function positiveIntegerFromText(value: string | number | null | undefined) {
+  const text = String(value ?? '').trim();
+  if (!/^\d+$/.test(text)) return null;
+  const number = Number(text);
+  return Number.isInteger(number) && number > 0 ? number : null;
 }
 
 const REPORT_TIMEZONE_OFFSETS: Record<string, string> = {

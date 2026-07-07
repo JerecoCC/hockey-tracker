@@ -196,6 +196,7 @@ describe('autofillGameFromPwhlGamecenter', () => {
   let createdPlayerStore: Map<string, Record<string, unknown>>;
   let leagueRosterPlayers: Array<Record<string, unknown>>;
   let currentSummary: typeof summary;
+  let seasonGamesData: GameRecord[];
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -204,6 +205,7 @@ describe('autofillGameFromPwhlGamecenter', () => {
     createdPlayerStore = new Map();
     leagueRosterPlayers = [];
     currentSummary = summary;
+    seasonGamesData = [game];
 
     mockedAxios.get.mockImplementation((url, config) => {
       const u = String(url);
@@ -212,6 +214,7 @@ describe('autofillGameFromPwhlGamecenter', () => {
         if (targetUrl.includes('view=gameSummary')) return Promise.resolve({ data: currentSummary });
         if (targetUrl.includes('view=gameCenterPlayByPlay')) return Promise.resolve({ data: [] });
       }
+      if (u.includes('/admin/games?season_id=')) return Promise.resolve({ data: seasonGamesData });
       if (u.endsWith('/admin/games/game-1/goals')) return Promise.resolve({ data: [] });
       if (u.endsWith('/admin/games/game-1/goalie-stints')) return Promise.resolve({ data: [] });
       if (u.endsWith('/admin/games/game-1/roster')) return Promise.resolve({ data: [] });
@@ -264,6 +267,25 @@ describe('autofillGameFromPwhlGamecenter', () => {
     mockedAxios.put.mockResolvedValue({ data: {} });
     mockedAxios.patch.mockResolvedValue({ data: {} });
     mockedAxios.delete.mockResolvedValue({ data: {} });
+  });
+
+  it('rejects before writing when the local regular season game number is not the PWHL game number', async () => {
+    const numberedGame = {
+      ...game,
+      game_number: 2,
+    } as GameRecord;
+    seasonGamesData = [numberedGame];
+
+    await expect(autofillGameFromPwhlGamecenter(numberedGame, '210')).rejects.toThrow(
+      /PWHL game number 1 does not match local regular season game 2/i,
+    );
+
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+    expect(mockedAxios.patch).not.toHaveBeenCalled();
+    expect(mockedAxios.put).not.toHaveBeenCalled();
+    expect(
+      mockedAxios.get.mock.calls.some(([url]) => String(url).endsWith('/admin/games/game-1/goals')),
+    ).toBe(false);
   });
 
   it('fills a PWHL game and creates missing players with league player numbers', async () => {
