@@ -91,7 +91,7 @@ jest.mock(
       tooltip,
       variant: _variant,
       intent: _intent,
-      size: _size,
+      size = 'medium',
       iconSize: _iconSize,
       iconHeight,
       tooltipClassName: _tooltipClassName,
@@ -103,6 +103,7 @@ jest.mock(
         onClick={onClick}
         disabled={disabled}
         aria-label={tooltip ?? (icon === 'edit' ? 'Edit' : icon)}
+        data-size={size}
         data-icon-height={iconHeight ?? 'default'}
         {...rest}
       >
@@ -153,7 +154,9 @@ jest.mock('@/components/Table/Table', () => () => <div />);
 jest.mock('@/components/Tabs/Tabs', () => ({ tabs, activeIndex = 0 }: any) => (
   <div>{tabs[activeIndex].content}</div>
 ));
-jest.mock('@/components/Tooltip/Tooltip', () => ({ children }: any) => <>{children}</>);
+jest.mock('@/components/Tooltip/Tooltip', () => ({ children, className }: any) => (
+  <span className={className}>{children}</span>
+));
 jest.mock('../teams/TeamPlayerEditModal', () => () => null);
 jest.mock('../teams/MovePlayerModal', () => ({ open }: any) =>
   open ? <div>Move Player Modal</div> : null,
@@ -509,7 +512,10 @@ describe('PlayerDetails info tab', () => {
 
     render(<PlayerDetails />);
 
-    await user.click(screen.getByRole('button', { name: 'Copy league player number 8478402' }));
+    const copyButton = screen.getByRole('button', { name: 'Copy league player number 8478402' });
+    expect(copyButton.parentElement).toHaveClass('infoCellCopyTooltip');
+
+    await user.click(copyButton);
 
     expect(writeText).toHaveBeenCalledWith('8478402');
     expect(mockedToast.success).toHaveBeenCalledWith('League player number copied.');
@@ -533,11 +539,13 @@ describe('PlayerDetails info tab', () => {
     ]);
   });
 
-  it('shows the active or retired tag in the hero status area', () => {
+  it('shows the active or retired icon in the hero status area', () => {
     const { container, rerender } = render(<PlayerDetails />);
 
     expect(screen.getByRole('heading', { name: 'John Smith' })).toBeInTheDocument();
-    expect(container.querySelector('.heroStatus')).toHaveTextContent('Active');
+    expect(within(container.querySelector('.heroStatus') as HTMLElement).getByRole('img', {
+      name: 'Active',
+    })).toBeInTheDocument();
     expect(
       within(container.querySelector('.heroTitleRow') as HTMLElement).queryByText('Active'),
     ).not.toBeInTheDocument();
@@ -564,8 +572,64 @@ describe('PlayerDetails info tab', () => {
 
     rerender(<PlayerDetails />);
 
-    expect(container.querySelector('.heroStatus')).toHaveTextContent('Retired');
+    expect(within(container.querySelector('.heroStatus') as HTMLElement).getByRole('img', {
+      name: 'Retired',
+    })).toBeInTheDocument();
     expect(screen.queryByText('Inactive')).not.toBeInTheDocument();
+  });
+
+  it('colors the hero position tag by position group', () => {
+    const mockLatestPosition = (position: 'C' | 'D' | 'G') => {
+      mockUsePlayerTradeHistory.mockReturnValue({
+        stints: [
+          {
+            id: 'stint-1',
+            team_id: 'team-1',
+            season_id: 'season-1',
+            team: {
+              id: 'team-1',
+              name: 'Toronto Maple Leafs',
+              code: 'TOR',
+              logo: null,
+              primary_color: '#003e7e',
+              text_color: '#ffffff',
+            },
+            jersey_number: 19,
+            is_prospect: false,
+            position,
+            acquisition_type: 'trade',
+            start_date: '2024-10-01',
+            end_date: null,
+            photo: null,
+            has_stats: false,
+            can_delete: true,
+          },
+        ],
+      });
+    };
+
+    const { rerender } = render(<PlayerDetails />);
+
+    expect(screen.getByText('Center')).toHaveClass('tag', 'accent');
+
+    mockLatestPosition('D');
+    rerender(<PlayerDetails />);
+
+    expect(screen.getByText('Defense')).toHaveClass('tag', 'info');
+
+    mockLatestPosition('G');
+    rerender(<PlayerDetails />);
+
+    expect(screen.getByText('Goalie')).toHaveClass('tag', 'warning');
+  });
+
+  it('links the hero team logo and name to the team details page', () => {
+    render(<PlayerDetails />);
+
+    expect(screen.getByRole('link', { name: 'View Toronto Maple Leafs details' })).toHaveAttribute(
+      'href',
+      '/admin/leagues/nhl/teams/tor',
+    );
   });
 
   it('labels the team history tab as history and renders stint history accordions', async () => {
@@ -1316,9 +1380,11 @@ describe('PlayerDetails info tab', () => {
     const heroActions = container.querySelector('.heroActions') as HTMLElement;
     const actionButtons = within(heroActions).getAllByRole('button');
     expect(actionButtons[0]).toHaveAccessibleName('Edit player');
+    expect(actionButtons[0]).toHaveAttribute('data-size', 'large');
     expect(actionButtons[0]).toHaveAttribute('data-icon-height', 'button');
     expect(actionButtons[1]).toHaveAccessibleName('More actions');
     expect(actionButtons[1]).toHaveClass('trigger');
+    expect(actionButtons[1]).toHaveAttribute('data-size', 'large');
     expect(actionButtons[1]).toHaveAttribute('data-icon-height', 'button');
 
     await user.click(screen.getByRole('button', { name: 'More actions' }));

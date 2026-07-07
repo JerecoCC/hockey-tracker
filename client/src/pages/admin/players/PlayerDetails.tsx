@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -23,7 +23,7 @@ import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import StatItem from '@/components/StatItem/StatItem';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
-import Tag from '@/components/Tag/Tag';
+import Tag, { type TagIntent } from '@/components/Tag/Tag';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
@@ -59,7 +59,7 @@ import {
 } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import { formatPlayerPosition } from '@/lib/playerPosition';
-import { getPlayerStatus, PLAYER_STATUS_LABELS } from '@/lib/playerStatus';
+import { getPlayerStatus, PLAYER_STATUS_LABELS, type PlayerStatus } from '@/lib/playerStatus';
 import { getLatestEndedSeasonId } from '@/lib/seasonSelection';
 import {
   buildGameDetailsPath,
@@ -95,7 +95,23 @@ const GAME_LOG_PAGE_SIZE = 20;
 const AUTOFILL_RESULT_TOAST_MS = 4000;
 const AUTOFILL_FAILURE_TOAST_MS = 12000;
 const PLAYER_AUTOFILL_PROGRESS_STEPS = 5;
+const HERO_AVATAR_SIZE = 88;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const PLAYER_STATUS_ICONS: Record<PlayerStatus, string> = {
+  active: 'check_circle',
+  inactive: 'remove_circle_outline',
+  retired: 'event_busy',
+};
+const PLAYER_POSITION_TAG_INTENTS: Record<PlayerPosition, TagIntent> = {
+  F: 'accent',
+  C: 'accent',
+  LW: 'accent',
+  RW: 'accent',
+  D: 'info',
+  LD: 'info',
+  RD: 'info',
+  G: 'warning',
+};
 
 interface PlayerAwardGroup {
   awardId: string;
@@ -1966,6 +1982,22 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             text_color: player.text_color ?? null,
           }
         : null);
+  const heroTeamHref =
+    heroTeam && (heroTeam.code || heroTeam.id)
+      ? isAdminView
+        ? buildTeamDetailsPath({
+            leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
+            leagueId,
+            teamCode: heroTeam.code,
+            teamId: heroTeam.id,
+          })
+        : buildUserTeamDetailsPath({
+            leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
+            leagueId,
+            teamCode: heroTeam.code,
+            teamId: heroTeam.id,
+          })
+      : null;
   const jerseyNumber = latestStint?.jersey_number ?? player.jersey_number ?? null;
   // Use the first stint (active) photo; if that's missing, fall back to the most-recent
   // historical stint that does have a photo; then fall back to the global player photo.
@@ -2049,6 +2081,9 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       : []),
   ];
   const positionLabel = formatPlayerPosition(effectivePosition);
+  const positionTagIntent = effectivePosition
+    ? PLAYER_POSITION_TAG_INTENTS[effectivePosition]
+    : 'neutral';
   const isGoalie = effectivePosition === 'G';
   const buildGamePath = (row: PlayerLastFiveGameRecord) =>
     isAdminView
@@ -2369,7 +2404,79 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   return (
     <>
       {/* Hero card */}
-      <Card>
+      <Card className={styles.heroCard}>
+        <div className={styles.heroHeader}>
+          <div className={styles.heroHeaderIdentity}>
+            <Chip
+              className={styles.heroJerseyChip}
+              primaryColor={heroTeam?.primary_color}
+              textColor={heroTeam?.text_color}
+            >
+              {jerseyNumber ?? '-'}
+            </Chip>
+            {heroTeamHref ? (
+              <InlineAction
+                className={styles.heroHeaderTeamLink}
+                tooltipClassName={styles.heroHeaderTeamTooltip}
+                href={heroTeamHref}
+                ariaLabel={`View ${heroTeam?.name ?? 'team'} details`}
+                tooltip={`View ${heroTeam?.name ?? 'team'} details`}
+                indicatorClassName={styles.heroHeaderTeamActionIndicator}
+                icon="open_in_new"
+              >
+                <TeamLogo
+                  logo={heroTeam?.logo}
+                  logoDark={heroTeam?.logo_dark}
+                  logoLight={heroTeam?.logo_light}
+                  code={heroTeam?.code ?? 'TEAM'}
+                  primaryColor={heroTeam?.primary_color}
+                  textColor={heroTeam?.text_color}
+                  size={32}
+                  shape="square"
+                />
+                <span className={styles.heroHeaderTeamName}>
+                  {heroTeam?.name ?? 'No team assigned'}
+                </span>
+              </InlineAction>
+            ) : (
+              <span className={styles.heroHeaderTeamStatic}>
+                <TeamLogo
+                  logo={heroTeam?.logo}
+                  logoDark={heroTeam?.logo_dark}
+                  logoLight={heroTeam?.logo_light}
+                  code={heroTeam?.code ?? 'TEAM'}
+                  primaryColor={heroTeam?.primary_color}
+                  textColor={heroTeam?.text_color}
+                  size={32}
+                  shape="square"
+                />
+                <span className={styles.heroHeaderTeamName}>
+                  {heroTeam?.name ?? 'No team assigned'}
+                </span>
+              </span>
+            )}
+          </div>
+          {isAdminView && (
+            <div className={styles.heroActions}>
+              <Button
+                variant="outlined"
+                intent="neutral"
+                icon="edit"
+                size="large"
+                iconHeight="button"
+                tooltip="Edit player"
+                onClick={() => setEditPlayerOpen(true)}
+              />
+              {playerActionItems.length > 0 && (
+                <MoreActionsMenu
+                  items={playerActionItems}
+                  size="large"
+                  iconHeight="button"
+                />
+              )}
+            </div>
+          )}
+        </div>
         <div className={styles.hero}>
           {photo ? (
             <button
@@ -2383,7 +2490,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                 initials={initials}
                 primaryColor={avatarBg}
                 textColor={avatarColor}
-                size={80}
+                size={HERO_AVATAR_SIZE}
               />
             </button>
           ) : (
@@ -2392,59 +2499,48 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
               initials={initials}
               primaryColor={avatarBg}
               textColor={avatarColor}
-              size={80}
+              size={HERO_AVATAR_SIZE}
             />
           )}
           <div className={styles.heroInfo}>
             <div className={styles.heroTitleRow}>
-              <h2 className={styles.heroName}>{fullName}</h2>
-            </div>
-            <div className={styles.heroMeta}>
-              {heroTeam?.name && (
-                <span className={styles.heroTeamMeta}>
-                  <TeamLogo
-                    logo={heroTeam.logo}
-                    logoDark={heroTeam.logo_dark}
-                    logoLight={heroTeam.logo_light}
-                    code={heroTeam.code ?? '?'}
-                    primaryColor={heroTeam.primary_color}
-                    textColor={heroTeam.text_color}
-                    size={18}
-                    shape="square"
-                  />
-                  {heroTeam.name}
-                </span>
+              <h2
+                className={styles.heroName}
+                aria-label={fullName}
+              >
+                <span className={styles.heroFirstName}>{player.first_name}</span>
+                <span className={styles.heroLastName}>{player.last_name}</span>
+              </h2>
+              {positionLabel && (
+                <Tag
+                  className={styles.heroPositionTag}
+                  label={positionLabel}
+                  intent={positionTagIntent}
+                />
               )}
-              {jerseyNumber != null && <span>#{jerseyNumber}</span>}
-              {positionLabel && <span>{positionLabel}</span>}
             </div>
           </div>
           <div className={styles.heroRightCol}>
-            {isAdminView && (
-              <div className={styles.heroActions}>
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="edit"
-                  size="large"
-                  iconHeight="button"
-                  tooltip="Edit player"
-                  onClick={() => setEditPlayerOpen(true)}
-                />
-                {playerActionItems.length > 0 && (
-                  <MoreActionsMenu
-                    items={playerActionItems}
-                    size="large"
-                    iconHeight="button"
-                  />
-                )}
-              </div>
-            )}
             <div className={styles.heroStatus}>
-              <Tag
-                label={PLAYER_STATUS_LABELS[playerStatus]}
-                intent={playerStatus === 'active' ? 'success' : 'neutral'}
-              />
+              <Tooltip text={PLAYER_STATUS_LABELS[playerStatus]}>
+                <span
+                  className={[
+                    styles.heroStatusIcon,
+                    playerStatus === 'active'
+                      ? styles.heroStatusActive
+                      : playerStatus === 'inactive'
+                        ? styles.heroStatusInactive
+                        : styles.heroStatusRetired,
+                  ].join(' ')}
+                  role="img"
+                  aria-label={PLAYER_STATUS_LABELS[playerStatus]}
+                >
+                  <Icon
+                    name={PLAYER_STATUS_ICONS[playerStatus]}
+                    size="1rem"
+                  />
+                </span>
+              </Tooltip>
             </div>
           </div>
         </div>
@@ -2826,31 +2922,93 @@ interface InfoCellProps {
   onCopy?: () => void | Promise<void>;
 }
 
+interface InlineActionProps {
+  ariaLabel: string;
+  children: ReactNode;
+  className: string;
+  icon: string;
+  href?: string;
+  indicatorClassName?: string;
+  onClick?: () => void | Promise<void>;
+  tooltip?: string;
+  tooltipClassName?: string;
+}
+
+const InlineAction = ({
+  ariaLabel,
+  children,
+  className,
+  href,
+  icon,
+  indicatorClassName,
+  onClick,
+  tooltip,
+  tooltipClassName,
+}: InlineActionProps) => {
+  const content = (
+    <>
+      {children}
+      <span
+        className={indicatorClassName ?? styles.inlineActionIndicator}
+        aria-hidden
+      >
+        <Icon
+          name={icon}
+          size="0.85rem"
+        />
+      </span>
+    </>
+  );
+
+  const action = href ? (
+    <a
+      className={className}
+      href={href}
+      aria-label={ariaLabel}
+    >
+      {content}
+    </a>
+  ) : (
+    <button
+      type="button"
+      className={className}
+      onClick={() => {
+        void onClick?.();
+      }}
+      aria-label={ariaLabel}
+    >
+      {content}
+    </button>
+  );
+
+  return tooltip ? (
+    <Tooltip
+      text={tooltip}
+      className={tooltipClassName}
+    >
+      {action}
+    </Tooltip>
+  ) : (
+    action
+  );
+};
+
 const InfoCell = ({ label, value, onCopy }: InfoCellProps) => (
   <div className={styles.infoCell}>
     <span className={styles.infoCellLabel}>{label}</span>
     {value ? (
       onCopy ? (
-        <button
-          type="button"
+        <InlineAction
           className={styles.infoCellCopyButton}
-          onClick={() => {
-            void onCopy();
-          }}
-          aria-label={`Copy ${label.toLowerCase()} ${value}`}
-          title={`Copy ${label.toLowerCase()}`}
+          onClick={onCopy}
+          ariaLabel={`Copy ${label.toLowerCase()} ${value}`}
+          tooltip={`Copy ${label.toLowerCase()}`}
+          tooltipClassName={styles.infoCellCopyTooltip}
+          indicatorClassName={styles.infoCellCopyIndicator}
+          icon="clone"
         >
           <span className={styles.infoCellValue}>{value}</span>
-          <span
-            className={styles.infoCellCopyIndicator}
-            aria-hidden
-          >
-            <Icon
-              name="clone"
-              size="0.85rem"
-            />
-          </span>
-        </button>
+        </InlineAction>
       ) : (
         <span className={styles.infoCellValue}>{value}</span>
       )
