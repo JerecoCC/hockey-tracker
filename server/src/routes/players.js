@@ -2242,7 +2242,7 @@ router.get('/:id', async (req, res) => {
         p.league_player_number,
         p.first_name,
         p.last_name,
-        p.photo,
+        best_player_photo(p.id, latest_pt.season_id, latest_pt.team_id) AS photo,
         p.date_of_birth::text AS date_of_birth,
         p.birth_city,
         p.birth_country,

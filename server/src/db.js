@@ -2152,11 +2152,10 @@ async function initSchema() {
     WHERE watched_on IS NULL AND watched_at IS NOT NULL
   `;
 
-  // ── Helper function: best available photo for a player ───────────────────
-  // Returns the best team/season photo. Exact team-season photo wins; otherwise
-  // inherit the latest photo from the same season, then the latest overall.
-  // across roster, lineup, goalie, and shootout queries so the logic lives
-  // in one place rather than being repeated as a LEFT JOIN LATERAL everywhere.
+  // ── Helper function: best displayable avatar for a player ────────────────
+  // Stored DB photos win first: exact team-season photo, latest same-season
+  // photo, latest overall photo, then the generic player photo. If no stored
+  // image exists, league-specific public avatar providers can fill the gap.
   await sql`DROP FUNCTION IF EXISTS best_player_photo(uuid)`;
   await sql`DROP FUNCTION IF EXISTS best_player_photo(uuid, uuid, uuid)`;
   await sql`
@@ -2165,22 +2164,95 @@ async function initSchema() {
     LANGUAGE sql
     STABLE
     AS $$
-      SELECT NULLIF(photo, '')
-      FROM   player_photos
-      WHERE  player_id = pid
-        AND  NULLIF(photo, '') IS NOT NULL
-        AND  (sid IS NULL OR season_id = sid OR NOT EXISTS (
-          SELECT 1 FROM player_photos pp_same
-          WHERE pp_same.player_id = pid AND pp_same.season_id = sid
-        ))
-      ORDER  BY
+      WITH stored_photo AS (
+        SELECT NULLIF(photo, '') AS photo
+        FROM   player_photos
+        WHERE  player_id = pid
+          AND  NULLIF(photo, '') IS NOT NULL
+          AND  (sid IS NULL OR season_id = sid OR NOT EXISTS (
+            SELECT 1 FROM player_photos pp_same
+            WHERE pp_same.player_id = pid AND pp_same.season_id = sid
+          ))
+        ORDER  BY
+          CASE
+            WHEN sid IS NOT NULL AND tid IS NOT NULL AND season_id = sid AND team_id = tid THEN 0
+            WHEN sid IS NOT NULL AND season_id = sid THEN 1
+            ELSE 2
+          END,
+          created_at DESC
+        LIMIT  1
+      ),
+      avatar_context AS (
+        SELECT
+          NULLIF(p.photo, '') AS generic_photo,
+          NULLIF(TRIM(p.league_player_number), '') AS league_player_number,
+          UPPER(NULLIF(TRIM(l.code), '')) AS league_code,
+          s.start_date,
+          s.end_date,
+          UPPER(NULLIF(TRIM(ti.code), '')) AS team_code
+        FROM players p
+        LEFT JOIN seasons s ON s.id = sid
+        LEFT JOIN teams t ON t.id = tid
+        LEFT JOIN leagues l ON l.id = COALESCE(s.league_id, t.league_id)
+        LEFT JOIN LATERAL (
+          SELECT code
+          FROM team_iterations
+          WHERE team_id = tid
+            AND NULLIF(TRIM(code), '') IS NOT NULL
+          ORDER BY
+            CASE
+              WHEN sid IS NOT NULL AND season_id = sid THEN 0
+              WHEN s.start_date IS NOT NULL
+                AND (start_date IS NULL OR start_date <= COALESCE(s.end_date, s.start_date))
+                AND (end_date IS NULL OR end_date >= s.start_date)
+              THEN 1
+              WHEN end_date IS NULL THEN 2
+              ELSE 3
+            END,
+            start_date DESC NULLS LAST,
+            recorded_at DESC
+          LIMIT 1
+        ) ti ON true
+        WHERE p.id = pid
+      )
+      SELECT COALESCE(
+        (SELECT photo FROM stored_photo),
+        avatar_context.generic_photo,
         CASE
-          WHEN sid IS NOT NULL AND tid IS NOT NULL AND season_id = sid AND team_id = tid THEN 0
-          WHEN sid IS NOT NULL AND season_id = sid THEN 1
-          ELSE 2
-        END,
-        created_at DESC
-      LIMIT  1
+          WHEN avatar_context.league_code = 'NHL'
+            AND avatar_context.league_player_number IS NOT NULL
+          THEN
+            CASE
+              WHEN sid IS NOT NULL
+                AND tid IS NOT NULL
+                AND avatar_context.start_date IS NOT NULL
+                AND avatar_context.team_code IS NOT NULL
+              THEN
+                'https://assets.nhle.com/mugs/nhl/'
+                || EXTRACT(YEAR FROM avatar_context.start_date)::int::text
+                || (
+                  CASE
+                    WHEN avatar_context.end_date IS NOT NULL
+                      AND EXTRACT(YEAR FROM avatar_context.end_date)::int
+                        > EXTRACT(YEAR FROM avatar_context.start_date)::int
+                    THEN EXTRACT(YEAR FROM avatar_context.end_date)::int
+                    ELSE EXTRACT(YEAR FROM avatar_context.start_date)::int + 1
+                  END
+                )::text
+                || '/'
+                || avatar_context.team_code
+                || '/'
+                || avatar_context.league_player_number
+                || '.png'
+              ELSE
+                'https://assets.nhle.com/mugs/nhl/latest/'
+                || avatar_context.league_player_number
+                || '.png'
+            END
+          ELSE NULL
+        END
+      )
+      FROM avatar_context
     $$
   `;
 
