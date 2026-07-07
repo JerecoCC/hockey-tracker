@@ -372,6 +372,40 @@ describe('PlayerDetails info tab', () => {
     expect(document.title).toBe('Hockey Tracker');
   });
 
+  it('defaults season stats to the latest ended season the player was part of', () => {
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-15',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+        {
+          id: 'season-1',
+          league_id: 'league-1',
+          name: '2024-25',
+          start_date: '2024-10-01',
+          end_date: '2025-06-15',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+    });
+
+    render(<PlayerDetails />);
+
+    expect(mockUsePlayerCurrentSeasonStats).toHaveBeenCalledWith(
+      'player-1',
+      expect.objectContaining({
+        mode: 'admin',
+        seasonId: 'season-1',
+        requireSeasonId: true,
+      }),
+    );
+  });
+
   it("uses the player's team logo as the favicon on league-scoped player routes", () => {
     mockUsePlayerRouteLookup.mockReturnValue({
       routeLookup: {

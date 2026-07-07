@@ -1,4 +1,14 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type SyntheticEvent,
+} from 'react';
 import useGameGoals from '@/hooks/useGameGoals';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import { useNavigate } from 'react-router-dom';
@@ -96,6 +106,7 @@ interface Props {
   updatePeriodShots: (period: string, home_shots: number, away_shots: number) => Promise<boolean>;
   deleteGame: () => Promise<boolean>;
   onGameAutofillChange?: (progress: GameAutofillProgress | null) => void;
+  onGoalScoringChange?: (active: boolean) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -140,6 +151,7 @@ const GameSummaryTab = ({
   updatePeriodShots,
   deleteGame,
   onGameAutofillChange,
+  onGoalScoringChange,
 }: Props) => {
   const navigate = useNavigate();
 
@@ -300,6 +312,12 @@ const GameSummaryTab = ({
   }, [goals]);
   const lockGoalTimingFields =
     !!editGoal && (editGoal.id !== lastRecordedGoalId || attempts.length > 0);
+  const isGoalScoring = editable && goalPeriod !== null && !isFinal;
+
+  useEffect(() => {
+    onGoalScoringChange?.(isGoalScoring);
+    return () => onGoalScoringChange?.(false);
+  }, [isGoalScoring, onGoalScoringChange]);
 
   // ── Shootout Attempt modal state ─────────────────────────────────────────
   const [attemptModalMode, setAttemptModalMode] = useState<null | 'add' | string>(null);
@@ -542,10 +560,32 @@ const GameSummaryTab = ({
     (game.current_period as CurrentPeriod | null) ??
     PERIOD_PRIORITY.find((p) => game.period_scores.some((ps) => ps.period === p)) ??
     '3';
+  const summaryContentClassName = [
+    styles.tabContent,
+    isGoalScoring ? styles.gameAutofillLockedRegion : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const stopLockedInteraction = (event: SyntheticEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const stopLockedKeyInteraction = (event: KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      stopLockedInteraction(event);
+    }
+  };
 
   return (
     <>
-      <div className={styles.tabContent}>
+      <div
+        className={summaryContentClassName}
+        aria-disabled={isGoalScoring || undefined}
+        data-goal-scoring-locked={isGoalScoring || undefined}
+        inert={isGoalScoring ? '' : undefined}
+        onClickCapture={isGoalScoring ? stopLockedInteraction : undefined}
+        onKeyDownCapture={isGoalScoring ? stopLockedKeyInteraction : undefined}
+      >
         <div className={styles.summaryGrid}>
           {/* ── Left column: Three Stars + Scoring + Goalie Stats + Previous Meetings + Last 5 ── */}
           <div className={styles.summaryLeft}>

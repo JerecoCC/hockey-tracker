@@ -60,6 +60,7 @@ import {
 import useTabState from '@/hooks/useTabState';
 import { formatPlayerPosition } from '@/lib/playerPosition';
 import { getPlayerStatus, PLAYER_STATUS_LABELS } from '@/lib/playerStatus';
+import { getLatestEndedSeasonId } from '@/lib/seasonSelection';
 import {
   buildGameDetailsPath,
   buildLeagueDetailsPath,
@@ -1158,11 +1159,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const { player, stats, loading: playerDetailsLoading } = usePlayerDetails(id, { mode });
   const loading = routeLookupLoading || playerDetailsLoading;
   const { awards: playerAwards, loading: playerAwardsLoading } = usePlayerAwards(id, { mode });
-  const [seasonStatsSeasonId, setSeasonStatsSeasonId] = useState<string | null>(null);
-  const {
-    currentSeasonStats: seasonStats,
-    loading: seasonStatsLoading,
-  } = usePlayerCurrentSeasonStats(id, { mode, seasonId: seasonStatsSeasonId });
   const { lastFiveGames, loading: lastFiveGamesLoading } = usePlayerLastFiveGames(id, { mode });
   const { team: teamDetails } = useTeamDetails(teamId, { mode });
   const documentIcon =
@@ -1193,6 +1189,32 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   } = useStintActions(adminPlayerId);
   const { teams } = useTeams({ mode });
   const { seasons } = useSeasons(leagueId, { mode });
+  const gameLogSeasons = seasons.filter((season) => !leagueId || season.league_id === leagueId);
+  const playerSeasonIds = new Set<string>();
+  stats.forEach((row) => {
+    if (row.season_id) playerSeasonIds.add(row.season_id);
+  });
+  stints.forEach((stint) => {
+    if (stint.season_id) playerSeasonIds.add(stint.season_id);
+  });
+  const playerSeasonOptions = gameLogSeasons.filter((season) => playerSeasonIds.has(season.id));
+  const defaultPlayerSeasonId = getLatestEndedSeasonId(playerSeasonOptions);
+  const [seasonStatsSeasonId, setSeasonStatsSeasonId] = useState<string | null>(null);
+  const effectiveSeasonStatsSeasonId = seasonStatsSeasonId ?? defaultPlayerSeasonId;
+  const {
+    currentSeasonStats: seasonStats,
+    loading: seasonStatsLoading,
+  } = usePlayerCurrentSeasonStats(id, {
+    mode,
+    seasonId: effectiveSeasonStatsSeasonId,
+    requireSeasonId: true,
+  });
+  const renderedPlayerSeasonOptions =
+    seasonStats?.season_id && !playerSeasonOptions.some((season) => season.id === seasonStats.season_id)
+      ? gameLogSeasons.filter(
+          (season) => playerSeasonIds.has(season.id) || season.id === seasonStats.season_id,
+        )
+      : playerSeasonOptions;
   const queryClient = useQueryClient();
   const [activeTab, handleTabChange] = useTabState(
     isAdminView ? 'tab:player-details' : 'tab:user-player-details',
@@ -2093,7 +2115,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   ];
   const gameLogColumns = buildGameLogColumns(isGoalie);
   const gameLogPageCount = Math.max(1, Math.ceil(gameLogsTotal / GAME_LOG_PAGE_SIZE));
-  const gameLogSeasons = seasons.filter((season) => !leagueId || season.league_id === leagueId);
   const playerAwardGroups = groupPlayerAwards(playerAwards);
   const sortedPlayerAwards = sortPlayerAwards(playerAwards);
   const handleSeasonChange = (value: string) => {
@@ -2176,8 +2197,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     <SeasonStatsSection
       stats={seasonStats}
       isGoalie={isGoalie}
-      seasons={gameLogSeasons}
-      selectedSeasonId={seasonStatsSeasonId ?? seasonStats?.season_id ?? null}
+      seasons={renderedPlayerSeasonOptions}
+      selectedSeasonId={effectiveSeasonStatsSeasonId ?? seasonStats?.season_id ?? null}
       loading={seasonStatsLoading}
       onSeasonChange={setSeasonStatsSeasonId}
     />
@@ -2207,10 +2228,11 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           <div className={styles.gameLogSeasonSelect}>
             <SeasonSelect
               value={gameLogSeasonId}
-              seasons={gameLogSeasons}
+              seasons={renderedPlayerSeasonOptions}
               onChange={handleSeasonChange}
               placeholder="All seasons"
               includeAllOption
+              defaultSeasonMode="latest-ended"
             />
           </div>
           <SegmentedControl
@@ -2908,6 +2930,7 @@ const SeasonStatsSection = ({
             seasons={seasons}
             onChange={onSeasonChange}
             placeholder="Select season..."
+            defaultSeasonMode="latest-ended"
           />
         </div>
       ) : null

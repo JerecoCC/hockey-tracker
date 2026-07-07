@@ -15,6 +15,7 @@ type PlayerDetailsMode = 'admin' | 'user';
 interface PlayerDetailsOptions {
   mode?: PlayerDetailsMode;
   seasonId?: string | null;
+  requireSeasonId?: boolean;
 }
 
 const getPlayerEndpoint = (mode: PlayerDetailsMode) =>
@@ -248,6 +249,7 @@ export const usePlayerCurrentSeasonStats = (
 ) => {
   const mode = options.mode ?? 'admin';
   const seasonId = options.seasonId ?? null;
+  const requireSeasonId = options.requireSeasonId ?? false;
   const { data: currentSeasonStats = null, isLoading: loading } =
     useQuery<PlayerCurrentSeasonStats | null>({
       queryKey: [
@@ -270,7 +272,7 @@ export const usePlayerCurrentSeasonStats = (
           return null;
         }
       },
-      enabled: !!playerId,
+      enabled: !!playerId && (!requireSeasonId || !!seasonId),
     });
   return { currentSeasonStats, loading };
 };

@@ -280,6 +280,36 @@ describe('GameDetailsPage', () => {
     );
   });
 
+  it('keeps the game details page locked during the goal scoring process', async () => {
+    mockUseParams.mockReturnValue({ leagueId: 'league-1', seasonId: 'season-1', id: 'game-1' });
+    render(<GameDetailsPage />);
+    await waitForGameTabs();
+
+    act(() => {
+      mockSummaryTab.mock.calls[0][0].onGoalScoringChange(true);
+    });
+
+    expect(screen.getByText('scoreboard')).toBeVisible();
+    expect(screen.getByText('summary')).toBeVisible();
+    expect(screen.getByText('lineups')).toBeVisible();
+    expect(
+      mockScoreboardCard.mock.calls[mockScoreboardCard.mock.calls.length - 1]?.[0].disabled,
+    ).toBe(true);
+    expect(screen.getByText('lineups').closest('[data-game-details-locked="true"]')).toBeTruthy();
+    expect(screen.getByText('summary').closest('[data-game-details-locked="true"]')).toBeFalsy();
+    expect(mockTabs.mock.calls[mockTabs.mock.calls.length - 1]?.[0].keepMounted).toBe(true);
+
+    act(() => {
+      mockSummaryTab.mock.calls[mockSummaryTab.mock.calls.length - 1][0].onGoalScoringChange(false);
+    });
+
+    expect(
+      mockScoreboardCard.mock.calls[mockScoreboardCard.mock.calls.length - 1]?.[0].disabled,
+    ).toBe(false);
+    expect(screen.getByText('lineups').closest('[data-game-details-locked="true"]')).toBeFalsy();
+    expect(mockTabs.mock.calls[mockTabs.mock.calls.length - 1]?.[0].keepMounted).toBe(false);
+  });
+
   it('uses nickname-only team names in the document title', () => {
     mockUseParams.mockReturnValue({ id: 'game-1' });
     mockUseGameDetails.mockReturnValue({

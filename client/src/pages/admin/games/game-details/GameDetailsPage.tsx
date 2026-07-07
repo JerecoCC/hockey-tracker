@@ -181,6 +181,8 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     null,
   );
   const isGameAutofilling = !!gameAutofillProgress;
+  const [isGoalScoring, setIsGoalScoring] = useState(false);
+  const isGameInteractionLocked = isGameAutofilling || isGoalScoring;
   const isEditMode = isAdminView;
 
   /**
@@ -522,14 +524,15 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
       ? [{ id: PERIOD.SHOOTOUT, label: PERIOD.SHOOTOUT, shortLabel: PERIOD.SHOOTOUT }]
       : []),
   ];
-  const lockTabContent = (content: ReactNode) => (
+  const lockTabContent = (content: ReactNode, locked = isGameAutofilling) => (
     <div
-      className={isGameAutofilling ? styles.gameAutofillLockedRegion : undefined}
-      aria-disabled={isGameAutofilling || undefined}
-      data-autofill-locked={isGameAutofilling || undefined}
-      inert={isGameAutofilling ? '' : undefined}
+      className={locked ? styles.gameAutofillLockedRegion : undefined}
+      aria-disabled={locked || undefined}
+      data-autofill-locked={isGameAutofilling && locked ? true : undefined}
+      data-game-details-locked={locked || undefined}
+      inert={locked ? '' : undefined}
       onClickCapture={
-        isGameAutofilling
+        locked
           ? (event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -537,7 +540,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
           : undefined
       }
       onKeyDownCapture={
-        isGameAutofilling
+        locked
           ? (event) => {
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
@@ -566,7 +569,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
           leagueId={leagueId}
           leagueCode={game.league_code}
           mode={mode}
-          disabled={isGameAutofilling}
+          disabled={isGameInteractionLocked}
           useLocalTimezone={!isAdminView}
         />
 
@@ -575,7 +578,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
           className={styles.gameDetailsTabs}
           activeIndex={activeTab}
           onTabChange={handleTabChange}
-          keepMounted={isGameAutofilling}
+          keepMounted={isGameInteractionLocked}
           tabs={[
             {
               label: 'Summary',
@@ -630,8 +633,10 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                     updatePeriodShots={updatePeriodShots}
                     deleteGame={deleteGame}
                     onGameAutofillChange={setGameAutofillProgress}
+                    onGoalScoringChange={setIsGoalScoring}
                   />
                 </Suspense>,
+                isGameAutofilling,
               ),
             },
             {
@@ -666,6 +671,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                     removeFromRoster={removeFromRoster}
                   />
                 </Suspense>,
+                isGameInteractionLocked,
               ),
             },
           ]}

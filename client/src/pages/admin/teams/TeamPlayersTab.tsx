@@ -341,6 +341,7 @@ const TeamPlayersTab = ({
                   value={selectedSeasonId}
                   seasons={leagueSeasons}
                   onChange={setSelectedSeasonId}
+                  defaultSeasonMode="latest-ended"
                   width="content"
                 />
               </div>
