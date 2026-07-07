@@ -74,14 +74,15 @@ export interface JerseyHistoryEntry {
 }
 
 export interface PlayerPhotoEntry {
-  id: string;
+  id: string | null;
   player_id: string;
   team_id: string;
   season_id: string;
-  photo: string;
-  created_at: string;
+  photo: string | null;
+  created_at: string | null;
   season_name: string | null;
   team_name: string | null;
+  has_saved_photo?: boolean;
 }
 
 /**

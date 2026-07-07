@@ -2152,39 +2152,19 @@ async function initSchema() {
     WHERE watched_on IS NULL AND watched_at IS NOT NULL
   `;
 
-  // ── Helper function: best displayable avatar for a player ────────────────
-  // Stored DB photos win first: exact team-season photo, latest same-season
-  // photo, latest overall photo, then the generic player photo. If no stored
-  // image exists, league-specific public avatar providers can fill the gap.
-  await sql`DROP FUNCTION IF EXISTS best_player_photo(uuid)`;
-  await sql`DROP FUNCTION IF EXISTS best_player_photo(uuid, uuid, uuid)`;
+  // ── Helper functions: displayable player avatars ─────────────────────────
+  // The provider helper intentionally returns only public league-sourced URLs
+  // so season/team photo history can show generated rows without treating them
+  // as saved DB photos.
+  await sql`DROP FUNCTION IF EXISTS player_provider_photo(uuid, uuid, uuid)`;
   await sql`
-    CREATE OR REPLACE FUNCTION best_player_photo(pid uuid, sid uuid DEFAULT NULL, tid uuid DEFAULT NULL)
+    CREATE OR REPLACE FUNCTION player_provider_photo(pid uuid, sid uuid DEFAULT NULL, tid uuid DEFAULT NULL)
     RETURNS text
     LANGUAGE sql
     STABLE
     AS $$
-      WITH stored_photo AS (
-        SELECT NULLIF(photo, '') AS photo
-        FROM   player_photos
-        WHERE  player_id = pid
-          AND  NULLIF(photo, '') IS NOT NULL
-          AND  (sid IS NULL OR season_id = sid OR NOT EXISTS (
-            SELECT 1 FROM player_photos pp_same
-            WHERE pp_same.player_id = pid AND pp_same.season_id = sid
-          ))
-        ORDER  BY
-          CASE
-            WHEN sid IS NOT NULL AND tid IS NOT NULL AND season_id = sid AND team_id = tid THEN 0
-            WHEN sid IS NOT NULL AND season_id = sid THEN 1
-            ELSE 2
-          END,
-          created_at DESC
-        LIMIT  1
-      ),
-      avatar_context AS (
+      WITH avatar_context AS (
         SELECT
-          NULLIF(p.photo, '') AS generic_photo,
           NULLIF(TRIM(p.league_player_number), '') AS league_player_number,
           UPPER(NULLIF(TRIM(l.code), '')) AS league_code,
           s.start_date,
@@ -2215,9 +2195,7 @@ async function initSchema() {
         ) ti ON true
         WHERE p.id = pid
       )
-      SELECT COALESCE(
-        (SELECT photo FROM stored_photo),
-        avatar_context.generic_photo,
+      SELECT
         CASE
           WHEN avatar_context.league_code = 'NHL'
             AND avatar_context.league_player_number IS NOT NULL
@@ -2251,8 +2229,50 @@ async function initSchema() {
             END
           ELSE NULL
         END
-      )
       FROM avatar_context
+    $$
+  `;
+
+  // Stored DB photos win first: exact team-season photo, latest same-season
+  // photo, latest overall photo, then the generic player photo. If no stored
+  // image exists, league-specific public avatar providers can fill the gap.
+  await sql`DROP FUNCTION IF EXISTS best_player_photo(uuid)`;
+  await sql`DROP FUNCTION IF EXISTS best_player_photo(uuid, uuid, uuid)`;
+  await sql`
+    CREATE OR REPLACE FUNCTION best_player_photo(pid uuid, sid uuid DEFAULT NULL, tid uuid DEFAULT NULL)
+    RETURNS text
+    LANGUAGE sql
+    STABLE
+    AS $$
+      WITH stored_photo AS (
+        SELECT NULLIF(photo, '') AS photo
+        FROM   player_photos
+        WHERE  player_id = pid
+          AND  NULLIF(photo, '') IS NOT NULL
+          AND  (sid IS NULL OR season_id = sid OR NOT EXISTS (
+            SELECT 1 FROM player_photos pp_same
+            WHERE pp_same.player_id = pid AND pp_same.season_id = sid
+          ))
+        ORDER  BY
+          CASE
+            WHEN sid IS NOT NULL AND tid IS NOT NULL AND season_id = sid AND team_id = tid THEN 0
+            WHEN sid IS NOT NULL AND season_id = sid THEN 1
+            ELSE 2
+          END,
+          created_at DESC
+        LIMIT  1
+      ),
+      generic_photo AS (
+        SELECT
+          NULLIF(p.photo, '') AS photo
+        FROM players p
+        WHERE p.id = pid
+      )
+      SELECT COALESCE(
+        (SELECT photo FROM stored_photo),
+        (SELECT photo FROM generic_photo),
+        player_provider_photo(pid, sid, tid)
+      )
     $$
   `;
 

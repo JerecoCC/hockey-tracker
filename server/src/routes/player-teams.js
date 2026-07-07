@@ -583,26 +583,57 @@ router.delete('/history/jerseys/:id', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/player-teams/history/:playerId/photos
-// Returns player photo rows, independent from player_teams stints.
+// Returns one photo row per season/team membership, with saved photos when
+// present and provider-generated season URLs as display fallbacks.
 // ---------------------------------------------------------------------------
 router.get('/history/:playerId/photos', async (req, res) => {
   const { playerId } = req.params;
   try {
     const rows = await sql`
+      WITH season_membership AS (
+        SELECT DISTINCT ON (pt.player_id, pt.team_id, pt.season_id)
+          pt.player_id,
+          pt.team_id,
+          pt.season_id,
+          pt.start_date,
+          pt.end_date,
+          pt.created_at
+        FROM player_teams pt
+        WHERE pt.player_id = ${playerId}
+        ORDER BY
+          pt.player_id,
+          pt.team_id,
+          pt.season_id,
+          CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+          COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+          COALESCE(pt.start_date, pt.created_at::date) DESC NULLS LAST,
+          pt.created_at DESC
+      )
       SELECT
         pp.id,
-        pp.player_id,
-        pp.team_id,
-        pp.season_id,
-        pp.photo,
+        sm.player_id,
+        sm.team_id,
+        sm.season_id,
+        COALESCE(pp.photo, player_provider_photo(sm.player_id, sm.season_id, sm.team_id)) AS photo,
         pp.created_at,
         s.name AS season_name,
-        ti.name AS team_name
-      FROM player_photos pp
-      JOIN seasons s ON s.id = pp.season_id
+        ti.name AS team_name,
+        (pp.id IS NOT NULL) AS has_saved_photo
+      FROM season_membership sm
+      JOIN seasons s ON s.id = sm.season_id
+      LEFT JOIN LATERAL (
+        SELECT id, NULLIF(photo, '') AS photo, created_at
+        FROM player_photos
+        WHERE player_id = sm.player_id
+          AND team_id = sm.team_id
+          AND season_id = sm.season_id
+          AND NULLIF(photo, '') IS NOT NULL
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) pp ON true
       LEFT JOIN LATERAL (
         SELECT name FROM team_iterations
-        WHERE team_id = pp.team_id
+        WHERE team_id = sm.team_id
         ORDER BY
           CASE
             WHEN (start_date IS NULL OR start_date <= COALESCE(s.end_date, CURRENT_DATE))
@@ -615,8 +646,11 @@ router.get('/history/:playerId/photos', async (req, res) => {
           recorded_at DESC
         LIMIT 1
       ) ti ON true
-      WHERE pp.player_id = ${playerId}
-      ORDER BY s.start_date DESC NULLS LAST, pp.created_at DESC
+      ORDER BY
+        s.start_date DESC NULLS LAST,
+        s.created_at DESC,
+        COALESCE(sm.start_date, sm.created_at::date) DESC NULLS LAST,
+        pp.created_at DESC NULLS LAST
     `;
     return res.json(rows);
   } catch (err) {

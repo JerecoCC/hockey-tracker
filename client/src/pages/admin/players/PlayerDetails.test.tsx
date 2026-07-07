@@ -726,6 +726,75 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getByRole('img', { name: 'John Smith' })).toHaveAttribute('src', '/photo.jpg');
   });
 
+  it('shows generated season photo rows without delete actions', async () => {
+    const user = userEvent.setup();
+    const generatedPhoto = 'https://assets.nhle.com/mugs/nhl/20252026/TOR/8478402.png';
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerPhotoHistory.mockReturnValue({
+      photos: [
+        {
+          id: null,
+          player_id: 'player-1',
+          team_id: 'team-1',
+          season_id: 'season-1',
+          photo: generatedPhoto,
+          created_at: null,
+          season_name: '2025-26',
+          team_name: 'Toronto Maple Leafs',
+          has_saved_photo: false,
+        },
+      ],
+      byTeam: {
+        'team-1': [
+          {
+            id: null,
+            player_id: 'player-1',
+            team_id: 'team-1',
+            season_id: 'season-1',
+            photo: generatedPhoto,
+            created_at: null,
+            season_name: '2025-26',
+            team_name: 'Toronto Maple Leafs',
+            has_saved_photo: false,
+          },
+        ],
+      },
+    });
+
+    const { container } = render(<PlayerDetails />);
+    const historyList = container.querySelector('.stintList') as HTMLElement;
+    const stintAccordion = within(historyList)
+      .getByText('Toronto Maple Leafs')
+      .closest('.stintAccordion') as HTMLElement;
+
+    await user.click(within(stintAccordion).getByRole('button', { name: 'Expand' }));
+
+    const photoItem = within(stintAccordion).getByRole('button', {
+      name: 'Preview 2025-26 photo',
+    });
+    expect(within(photoItem).getByText('avatar')).toHaveAttribute('data-photo', generatedPhoto);
+    expect(within(photoItem).queryByRole('button', { name: 'Delete season photo' })).toBeNull();
+
+    await user.click(within(photoItem).getByRole('button', { name: 'Set season photo' }));
+
+    expect(mockChangePhotoModal).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        open: true,
+        stint: expect.objectContaining({ id: 'stint-1' }),
+        initialSeasonId: 'season-1',
+        mode: 'set',
+      }),
+    );
+
+    await user.click(photoItem);
+
+    expect(screen.getByRole('dialog', { name: 'Image Preview' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'John Smith' })).toHaveAttribute(
+      'src',
+      generatedPhoto,
+    );
+  });
+
   it('does not add an assumed current jersey row when saved history exists', async () => {
     const user = userEvent.setup();
     mockUseTabState.mockReturnValue([4, jest.fn()]);

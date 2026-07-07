@@ -33,6 +33,9 @@ interface Props {
   ) => Promise<boolean>;
 }
 
+const isSavedPhotoEntry = (entry: PlayerPhotoEntry | undefined) =>
+  Boolean(entry?.has_saved_photo ?? entry?.id);
+
 const ChangePhotoModal = ({
   open,
   stint,
@@ -48,12 +51,12 @@ const ChangePhotoModal = ({
   const formValues = useMemo<FormValues>(
     () => {
       const seasonId = initialSeasonId ?? stint?.season_id ?? '';
+      const teamSeasonPhoto = history.find(
+        (entry) => entry.team_id === stint?.team_id && entry.season_id === seasonId,
+      );
       return {
         season_id: seasonId,
-        photo:
-          history.find(
-            (entry) => entry.team_id === stint?.team_id && entry.season_id === seasonId,
-          )?.photo ?? null,
+        photo: teamSeasonPhoto?.photo ?? null,
       };
     },
     [history, initialSeasonId, stint],
@@ -71,17 +74,21 @@ const ChangePhotoModal = ({
 
   const selectedSeasonId = useWatch({ control, name: 'season_id' });
   const isEditMode = mode === 'edit';
-  const explicitPhoto = history.find(
+  const teamSeasonPhoto = history.find(
     (entry) => entry.team_id === stint?.team_id && entry.season_id === selectedSeasonId,
   );
+  const explicitPhoto = isSavedPhotoEntry(teamSeasonPhoto) ? teamSeasonPhoto : undefined;
   const inheritedSeasonPhoto = history.find(
-    (entry) => entry.season_id === selectedSeasonId && entry.team_id !== stint?.team_id,
+    (entry) =>
+      entry.season_id === selectedSeasonId &&
+      entry.team_id !== stint?.team_id &&
+      isSavedPhotoEntry(entry),
   );
   const inheritedPhoto = !explicitPhoto ? (inheritedSeasonPhoto?.photo ?? stint?.photo ?? null) : null;
   const inheritedTeamName = inheritedSeasonPhoto?.team_name ?? 'another team';
   const selectedSeasonName =
     seasons.find((season) => season.id === selectedSeasonId)?.name ??
-    explicitPhoto?.season_name ??
+    teamSeasonPhoto?.season_name ??
     'Season unavailable';
   const showInheritedBanner = Boolean(inheritedPhoto) && !inheritedBannerDismissed;
 
@@ -96,8 +103,8 @@ const ChangePhotoModal = ({
 
   useEffect(() => {
     if (!open || !selectedSeasonId) return;
-    setValue('photo', explicitPhoto?.photo ?? null, { shouldValidate: true });
-  }, [open, selectedSeasonId, explicitPhoto, setValue]);
+    setValue('photo', teamSeasonPhoto?.photo ?? null, { shouldValidate: true });
+  }, [open, selectedSeasonId, teamSeasonPhoto, setValue]);
 
   useEffect(() => {
     setInheritedBannerDismissed(false);

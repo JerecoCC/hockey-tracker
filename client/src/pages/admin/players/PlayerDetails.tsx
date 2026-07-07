@@ -749,6 +749,12 @@ const getCollapsedJerseyHistory = (
 
 const dateKey = (date: string | null | undefined) => date?.slice(0, 10) ?? null;
 
+const photoHistoryKey = (entry: PlayerPhotoEntry) =>
+  entry.id ?? `${entry.team_id}:${entry.season_id}`;
+
+const hasSavedPhoto = (entry: PlayerPhotoEntry) =>
+  Boolean(entry.has_saved_photo ?? entry.id);
+
 const seasonOverlapsStint = (season: SeasonRecord, stint: PlayerStintRecord) => {
   if (season.id === stint.season_id) return true;
 
@@ -773,7 +779,7 @@ const findMissingPhotoSeason = (
   const leagueId = teamLeagueId ?? fallbackLeagueId ?? null;
   const photoSeasonIds = new Set(
     photoHistory
-      .filter((entry) => entry.team_id === stint.team_id)
+      .filter((entry) => entry.team_id === stint.team_id && hasSavedPhoto(entry))
       .map((entry) => entry.season_id),
   );
 
@@ -787,6 +793,24 @@ const findMissingPhotoSeason = (
         (dateKey(b.start_date) ?? '').localeCompare(dateKey(a.start_date) ?? '') ||
         b.name.localeCompare(a.name),
     )[0];
+};
+
+const getStintPhotoHistory = (
+  stint: PlayerStintRecord,
+  seasons: SeasonRecord[],
+  photoHistory: PlayerPhotoEntry[],
+  teamLeagueId?: string | null,
+) => {
+  const fallbackLeagueId = seasons.find((season) => season.id === stint.season_id)?.league_id;
+  const leagueId = teamLeagueId ?? fallbackLeagueId ?? null;
+
+  return photoHistory.filter((entry) => {
+    if (entry.team_id !== stint.team_id) return false;
+    const season = seasons.find((candidate) => candidate.id === entry.season_id);
+    if (!season) return true;
+    if (leagueId && season.league_id !== leagueId) return false;
+    return seasonOverlapsStint(season, stint);
+  });
 };
 
 type PhotoModalMode = 'set' | 'edit';
@@ -871,7 +895,7 @@ const StintHistoryDetails = ({
   photoHistory,
   currentJerseyNumber,
   currentJerseyStintKey,
-  currentPhotoHistoryId,
+  currentPhotoHistoryKey,
   initials,
   onPreviewPhoto,
   onChangePhoto,
@@ -884,7 +908,7 @@ const StintHistoryDetails = ({
   photoHistory: PlayerPhotoEntry[];
   currentJerseyNumber: number | null;
   currentJerseyStintKey: string | null;
-  currentPhotoHistoryId: string | null;
+  currentPhotoHistoryKey: string | null;
   initials: string;
   onPreviewPhoto: (photo: string) => void;
   onChangePhoto: (
@@ -912,11 +936,13 @@ const StintHistoryDetails = ({
         ) : (
           <ul className={styles.stintHistoryList}>
             {photoHistory.map((entry) => {
-              const current = entry.id === currentPhotoHistoryId;
+              const savedPhoto = hasSavedPhoto(entry);
+              const current = photoHistoryKey(entry) === currentPhotoHistoryKey;
+              const photo = entry.photo;
 
               return (
                 <ListItem
-                  key={entry.id}
+                  key={photoHistoryKey(entry)}
                   size="compact"
                   className={styles.stintHistoryListItem}
                   name={entry.season_name ?? 'Season'}
@@ -940,11 +966,12 @@ const StintHistoryDetails = ({
                   actions={[
                     {
                       icon: 'image',
-                      tooltip: 'Edit season photo',
-                      ariaLabel: 'Edit season photo',
-                      onClick: () => onChangePhoto(stint, entry.season_id, 'edit'),
+                      tooltip: savedPhoto ? 'Edit season photo' : 'Set season photo',
+                      ariaLabel: savedPhoto ? 'Edit season photo' : 'Set season photo',
+                      onClick: () =>
+                        onChangePhoto(stint, entry.season_id, savedPhoto ? 'edit' : 'set'),
                     },
-                    {
+                    savedPhoto && {
                       icon: 'delete',
                       intent: 'danger' as const,
                       tooltip: 'Delete season photo',
@@ -953,7 +980,7 @@ const StintHistoryDetails = ({
                     },
                   ]}
                   ariaLabel={`Preview ${entry.season_name ?? 'season'} photo`}
-                  onClick={() => onPreviewPhoto(entry.photo)}
+                  onClick={photo ? () => onPreviewPhoto(photo) : undefined}
                 />
               );
             })}
@@ -1361,7 +1388,10 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   };
 
   const handleDeletePhotoEntry = async () => {
-    if (!deletingPhotoEntry) return;
+    if (!deletingPhotoEntry?.id) {
+      setDeletingPhotoEntry(null);
+      return;
+    }
     const ok = await deletePlayerPhoto(deletingPhotoEntry.id);
     if (ok) setDeletingPhotoEntry(null);
   };
@@ -1909,14 +1939,17 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   // historical stint that does have a photo; then fall back to the global player photo.
   const heroPhotoStint = stints.find((s) => s.photo);
   const photo = heroPhotoStint?.photo ?? player.photo;
-  const currentPhotoHistoryId =
+  const currentPhotoHistoryEntry =
     photo == null
       ? null
       : (photoHistoryEntries.find(
           (entry) =>
             entry.photo === photo &&
             (heroPhotoStint == null || entry.team_id === heroPhotoStint.team_id),
-        )?.id ?? null);
+        ) ?? null);
+  const currentPhotoHistoryKey = currentPhotoHistoryEntry
+    ? photoHistoryKey(currentPhotoHistoryEntry)
+    : null;
   const currentJerseyStintKey = latestStint ? stintHistoryKey(latestStint) : null;
   const avatarBg = heroTeam?.primary_color ?? undefined;
   const avatarColor = heroTeam?.text_color ?? undefined;
@@ -2557,8 +2590,13 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                               s,
                               jerseyHistoryByStint,
                             );
-                            const photoHistory = photoHistoryByTeam[s.team_id] ?? [];
                             const teamLeagueId = teams.find((team) => team.id === s.team_id)?.league_id;
+                            const photoHistory = getStintPhotoHistory(
+                              s,
+                              seasons,
+                              photoHistoryByTeam[s.team_id] ?? [],
+                              teamLeagueId,
+                            );
                             const missingPhotoSeason = findMissingPhotoSeason(
                               s,
                               seasons,
@@ -2657,7 +2695,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                                     photoHistory={photoHistory}
                                     currentJerseyNumber={jerseyNumber}
                                     currentJerseyStintKey={currentJerseyStintKey}
-                                    currentPhotoHistoryId={currentPhotoHistoryId}
+                                    currentPhotoHistoryKey={currentPhotoHistoryKey}
                                     initials={initials}
                                     onPreviewPhoto={(src) => setPhotoPreviewSrc(src)}
                                     onChangePhoto={openChangePhotoModal}

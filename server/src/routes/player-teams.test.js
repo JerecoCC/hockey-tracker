@@ -726,23 +726,40 @@ describe('DELETE /api/admin/player-teams/history/jerseys/:id', () => {
 });
 
 describe('GET /api/admin/player-teams/history/:playerId/photos', () => {
-  it('returns player photo history rows unchanged', async () => {
-    const rows = [{
-      id: 'photo-1',
-      player_id: 'player-1',
-      team_id: 'team-1',
-      season_id: 'season-1',
-      photo: 'https://example.com/player.png',
-      created_at: '2024-10-01T00:00:00.000Z',
-      season_name: '2024-25',
-      team_name: 'Toronto Maple Leafs',
-    }];
+  it('returns season membership photo rows with generated fallbacks', async () => {
+    const rows = [
+      {
+        id: 'photo-1',
+        player_id: 'player-1',
+        team_id: 'team-1',
+        season_id: 'season-1',
+        photo: 'https://example.com/player.png',
+        created_at: '2024-10-01T00:00:00.000Z',
+        season_name: '2024-25',
+        team_name: 'Toronto Maple Leafs',
+        has_saved_photo: true,
+      },
+      {
+        id: null,
+        player_id: 'player-1',
+        team_id: 'team-1',
+        season_id: 'season-2',
+        photo: 'https://assets.nhle.com/mugs/nhl/20252026/TOR/8478402.png',
+        created_at: null,
+        season_name: '2025-26',
+        team_name: 'Toronto Maple Leafs',
+        has_saved_photo: false,
+      },
+    ];
     sql.mockResolvedValueOnce(rows);
 
     const res = await request(app).get('/api/admin/player-teams/history/player-1/photos');
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(rows);
+    expect(sql).toHaveBeenCalledTimes(1);
+    expect(sql.mock.calls[0][0].join(' ')).toContain('FROM player_teams pt');
+    expect(sql.mock.calls[0][0].join(' ')).toContain('player_provider_photo');
   });
 });
 
