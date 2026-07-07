@@ -969,9 +969,10 @@ const AlignmentPanel = ({
             disabled={busy === alignmentSet.id || detailsLoading}
             onChange={handleStructureTypeChange}
           />
+        </div>
+        <div className={styles.alignmentEditActionRow}>
           <Button
             type="button"
-            size="small"
             variant="outlined"
             intent="accent"
             icon={alignmentActionIcon}
@@ -1367,10 +1368,11 @@ const CreateAlignmentModal = ({
                 required
                 onChange={handleStructureTypeChange}
               />
-              {selectedStructure && (
+            </div>
+            {selectedStructure && (
+              <div className={styles.alignmentEditActionRow}>
                 <Button
                   type="button"
-                  size="small"
                   variant="outlined"
                   intent="accent"
                   icon={alignmentActionIcon}
@@ -1379,8 +1381,8 @@ const CreateAlignmentModal = ({
                 >
                   {alignmentActionLabel}
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
             <Button
               type="submit"
               size="small"

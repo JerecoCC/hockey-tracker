@@ -35,8 +35,10 @@
 .medium {
   padding: $space-md $space-md;
   font-size: $font-sm;
+  border-radius: $radius-md;
   &.iconOnly {
     padding: $space-sm;
+    border-radius: $radius-md;
   }
   &.iconOnlyButton {
     padding: $space-md;
@@ -46,6 +48,7 @@
 .large {
   padding: $space-md $space-xl;
   font-size: $font-lg;
+  border-radius: $radius-md;
   &.iconOnly {
     padding: $space-sm;
   }

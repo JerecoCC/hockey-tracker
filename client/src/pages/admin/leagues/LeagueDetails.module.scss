@@ -823,6 +823,19 @@ $league-tab-list-gap: $space-md;
     }
   }
 
+  &EditActionRow {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: $space-sm;
+
+    @media (max-width: 640px) {
+      align-items: stretch;
+      flex-direction: column;
+    }
+  }
+
   &EditLabel {
     display: flex;
     flex-direction: column;
