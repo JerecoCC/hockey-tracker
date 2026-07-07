@@ -1082,9 +1082,18 @@
     gap: $space-sm;
     max-height: min(70vh, 680px);
     margin: 0;
-    padding: 0;
+    padding: $space-sm 0;
     overflow-y: auto;
     list-style: none;
+  }
+
+  &PlayerChecklistFooter {
+    border-top: 1px solid var(--app-border, #{$border});
+    padding-top: $space-xl;
+  }
+
+  &PlayerChecklistFooterDivider {
+    display: none;
   }
 
   &PlayerRadioList {

@@ -777,10 +777,11 @@ describe('SeasonAwardsTab', () => {
   it('uses the checklist winner flow for multiple-winner awards without nominees', async () => {
     const user = userEvent.setup();
     const addRecipient = jest.fn(async () => true);
-    renderTab(makeAward({ allow_multiple_winners: true }), addRecipient);
+    const { container } = renderTab(makeAward({ allow_multiple_winners: true }), addRecipient);
 
     await user.click(screen.getByRole('button', { name: 'Award Player' }));
     expect(screen.getByPlaceholderText('Search recipients...')).toBeInTheDocument();
+    expect(container.querySelector('.awardPlayerChecklistFooter')).toBeInTheDocument();
 
     await user.click(screen.getByText('John Smith'));
     await user.click(screen.getByRole('button', { name: 'Save Winners' }));

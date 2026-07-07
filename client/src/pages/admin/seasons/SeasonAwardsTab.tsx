@@ -1672,8 +1672,16 @@ const SeasonAwardsTab = ({
             ? recipientWinnerSaving || !recipientWinnerHasChanges
             : recipientForm.formState.isSubmitting || !recipientSelectedId
         }
-        busy={recipientUsesWinnerChecklist ? recipientWinnerSaving : recipientForm.formState.isSubmitting}
-        footerStart={recipientUsesWinnerChecklist ? <span>{recipientWinnerCountLabel}</span> : undefined}
+        busy={
+          recipientUsesWinnerChecklist ? recipientWinnerSaving : recipientForm.formState.isSubmitting
+        }
+        footerStart={
+          recipientUsesWinnerChecklist ? <span>{recipientWinnerCountLabel}</span> : undefined
+        }
+        footerClassName={recipientUsesWinnerChecklist ? styles.awardPlayerChecklistFooter : undefined}
+        footerDividerClassName={
+          recipientUsesWinnerChecklist ? styles.awardPlayerChecklistFooterDivider : undefined
+        }
       >
         {activeRecipientAward && recipientUsesWinnerChecklist ? (
           <Checklist
