@@ -7,6 +7,7 @@ import useSeasonAwards, {
 } from '@/hooks/useSeasonAwards';
 import { usePlayoffSeries } from '@/hooks/useGames';
 import useLeaguePlayers from '@/hooks/useLeaguePlayers';
+import type { TeamStandingRecord } from '@/hooks/useSeasonStandings';
 import SeasonAwardsTab from './SeasonAwardsTab';
 
 jest.mock('@/hooks/useSeasonAwards', () => ({
@@ -98,6 +99,37 @@ const team = {
   inherited: false,
 };
 
+const westTeam = {
+  ...team,
+  id: 'team-2',
+  name: 'Vancouver',
+  code: 'VAN',
+};
+
+const eastGroup = {
+  id: 'conference-east',
+  league_id: 'league-1',
+  stable_key: 'conference:east',
+  parent_id: null,
+  name: 'Eastern Conference',
+  sort_order: 0,
+  created_at: '2026-01-01T00:00:00.000Z',
+  role: 'conference' as const,
+  teams: [team],
+  has_season_override: false,
+  is_inherited: false,
+  is_auto: false,
+};
+
+const westGroup = {
+  ...eastGroup,
+  id: 'conference-west',
+  stable_key: 'conference:west',
+  name: 'Western Conference',
+  sort_order: 1,
+  teams: [westTeam],
+};
+
 const makeAward = (overrides: Partial<SeasonAwardRecord> = {}): SeasonAwardRecord => ({
   award_id: 'award-1',
   league_id: 'league-1',
@@ -112,6 +144,7 @@ const makeAward = (overrides: Partial<SeasonAwardRecord> = {}): SeasonAwardRecor
   allow_multiple_winners: false,
   uses_team_selection: false,
   player_eligibility: null,
+  team_eligibility: null,
   sort_order: 0,
   season_award_id: 'season-award-1',
   awarded_at: null,
@@ -154,6 +187,9 @@ const renderTab = (
     saveNominees?: jest.Mock;
     skaters?: (typeof skater)[];
     rosterPlayers?: unknown[];
+    seasonTeams?: (typeof team)[];
+    groups?: typeof eastGroup[];
+    standings?: TeamStandingRecord[];
   } = {},
 ) => {
   mockUseSeasonAwards.mockReturnValue({
@@ -196,10 +232,11 @@ const renderTab = (
         leagueId="league-1"
         seasonName="2025-26"
         playoffsStarted={playoffsStarted}
-        seasonTeams={[team]}
+        seasonTeams={options.seasonTeams ?? [team]}
+        groups={options.groups ?? []}
         skaters={options.skaters ?? [skater]}
         goalies={[]}
-        standings={[]}
+        standings={options.standings ?? []}
       />
     </MemoryRouter>,
   );
@@ -223,6 +260,23 @@ describe('SeasonAwardsTab', () => {
   it('hides winner actions for post-playoff awards before playoffs start', () => {
     renderTab(makeAward({ awarded_after_playoffs: true }), undefined, [], false);
 
+    expect(screen.queryByRole('button', { name: 'Award Player' })).not.toBeInTheDocument();
+  });
+
+  it('does not automatically record post-playoff awards before playoffs start', () => {
+    const addRecipient = jest.fn(async () => true);
+    renderTab(
+      makeAward({
+        awarded_after_playoffs: true,
+        selection_method: 'automatic',
+        stat_key: 'points',
+      }),
+      addRecipient,
+      [],
+      false,
+    );
+
+    expect(addRecipient).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Award Player' })).not.toBeInTheDocument();
   });
 
@@ -460,6 +514,31 @@ describe('SeasonAwardsTab', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('limits team winner options to the configured conference', async () => {
+    const user = userEvent.setup();
+    renderTab(
+      makeAward({
+        name: 'Eastern Conference Champion',
+        recipient_type: 'team',
+        selection_method: 'manual',
+        team_eligibility: { conference_names: ['Eastern Conference'] },
+      }),
+      undefined,
+      [],
+      true,
+      {
+        seasonTeams: [team, westTeam],
+        groups: [eastGroup, westGroup],
+      },
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Award Team' }));
+    await user.click(screen.getByRole('textbox', { name: /Team/ }));
+
+    expect(await screen.findByRole('option', { name: /Toronto/ })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /Vancouver/ })).not.toBeInTheDocument();
+  });
+
   it('hides the set winner action for automatic awards after a winner is recorded', () => {
     renderTab(
       makeAward({
@@ -472,8 +551,7 @@ describe('SeasonAwardsTab', () => {
     expect(screen.queryByRole('button', { name: 'Award Player' })).not.toBeInTheDocument();
   });
 
-  it('saves the stat value when recording a suggested stat winner', async () => {
-    const user = userEvent.setup();
+  it('automatically records stat winners with the stat value', async () => {
     const addRecipient = jest.fn(async () => true);
     renderTab(
       makeAward({
@@ -483,15 +561,98 @@ describe('SeasonAwardsTab', () => {
       addRecipient,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Award Player' }));
+    expect(screen.queryByRole('button', { name: 'Award Player' })).not.toBeInTheDocument();
 
-    expect(addRecipient).toHaveBeenCalledWith('season-award-1', {
-      recipient_type: 'player',
-      player_id: 'player-1',
-      team_id: null,
-      role: 'winner',
-      stat_value: '10',
-    });
+    await waitFor(() =>
+      expect(addRecipient).toHaveBeenCalledWith(
+        'season-award-1',
+        {
+          recipient_type: 'player',
+          player_id: 'player-1',
+          team_id: null,
+          role: 'winner',
+          stat_value: '10',
+        },
+        {
+          silent: true,
+          refresh: false,
+        },
+      ),
+    );
+  });
+
+  it('uses team conference eligibility when automatically recording a stat winner', async () => {
+    const addRecipient = jest.fn(async () => true);
+    renderTab(
+      makeAward({
+        name: 'Eastern Team Points Leader',
+        recipient_type: 'team',
+        selection_method: 'automatic',
+        competition_scope: 'regular_season',
+        stat_key: 'standings_points',
+        team_eligibility: { conference_names: ['Eastern Conference'] },
+      }),
+      addRecipient,
+      [],
+      true,
+      {
+        seasonTeams: [team, westTeam],
+        groups: [eastGroup, westGroup],
+        standings: [
+          {
+            team_id: 'team-1',
+            team_name: 'Toronto',
+            team_code: 'TOR',
+            team_logo: null,
+            team_primary_color: '#003e7e',
+            team_text_color: '#ffffff',
+            gp: 10,
+            wins: 5,
+            reg_wins: 5,
+            ot_wins: 0,
+            losses: 3,
+            otl: 2,
+            points: 12,
+            games_remaining: 0,
+          },
+          {
+            team_id: 'team-2',
+            team_name: 'Vancouver',
+            team_code: 'VAN',
+            team_logo: null,
+            team_primary_color: '#003e7e',
+            team_text_color: '#ffffff',
+            gp: 10,
+            wins: 9,
+            reg_wins: 9,
+            ot_wins: 0,
+            losses: 1,
+            otl: 0,
+            points: 18,
+            games_remaining: 0,
+          },
+        ],
+      },
+    );
+
+    expect(screen.queryByRole('button', { name: 'Award Team' })).not.toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(addRecipient).toHaveBeenCalledWith(
+        'season-award-1',
+        {
+          recipient_type: 'team',
+          player_id: null,
+          team_id: 'team-1',
+          role: 'winner',
+          stat_value: '12',
+        },
+        {
+          silent: true,
+          refresh: false,
+        },
+      ),
+    );
   });
 
   it('hides the set winner action for recorded playoff champion awards', () => {
@@ -661,8 +822,7 @@ describe('SeasonAwardsTab', () => {
     expect(items[1]).toHaveTextContent('Jane Doe');
   });
 
-  it('shows an awardee card skeleton while saving a suggested playoff champion winner', async () => {
-    const user = userEvent.setup();
+  it('shows an awardee card skeleton while automatically saving a playoff champion winner', async () => {
     let resolveAddRecipient: (value: boolean) => void = () => {};
     const addRecipient = jest.fn(
       () =>
@@ -726,16 +886,24 @@ describe('SeasonAwardsTab', () => {
     expect(
       screen.queryByRole('button', { name: 'Use suggested winner: Toronto' }),
     ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Award Team' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Award Team' }));
-
-    expect(container.querySelector('.awardWinnerSkeleton')).toBeInTheDocument();
-    expect(addRecipient).toHaveBeenCalledWith('season-award-1', {
-      recipient_type: 'team',
-      player_id: null,
-      team_id: 'team-1',
-      role: 'winner',
-    });
+    await waitFor(() =>
+      expect(container.querySelector('.awardWinnerSkeleton')).toBeInTheDocument(),
+    );
+    expect(addRecipient).toHaveBeenCalledWith(
+      'season-award-1',
+      {
+        recipient_type: 'team',
+        player_id: null,
+        team_id: 'team-1',
+        role: 'winner',
+      },
+      {
+        silent: true,
+        refresh: false,
+      },
+    );
 
     resolveAddRecipient(true);
     await waitFor(() =>

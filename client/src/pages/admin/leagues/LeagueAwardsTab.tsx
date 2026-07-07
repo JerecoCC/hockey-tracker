@@ -1,4 +1,4 @@
-import { type DragEvent, useRef, useState } from 'react';
+import { type DragEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '@/components/Button/Button';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
@@ -6,6 +6,7 @@ import Divider from '@/components/Divider/Divider';
 import Field from '@/components/Field/Field';
 import GroupedFields from '@/components/GroupedFields/GroupedFields';
 import Modal from '@/components/Modal/Modal';
+import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
 import RadioList, { type RadioListOption } from '@/components/RadioList/RadioList';
 import ReorderableField from '@/components/ReorderableField/ReorderableField';
 import Section from '@/components/Section/Section';
@@ -15,11 +16,14 @@ import useLeagueAwards, {
   type LeagueAwardPayload,
   type LeagueAwardRecord,
 } from '@/hooks/useLeagueAwards';
+import useGroupAlignmentSets, { type GroupAlignmentSet } from '@/hooks/useGroupAlignmentSets';
+import useLeagueGroups from '@/hooks/useLeagueGroups';
 import type { AwardRecipientType } from '@/hooks/useSeasonAwards';
 import {
   awardCompetitionScopeLabel,
   awardPlayerEligibilityLabel,
   awardSelectionSourceLabel,
+  awardTeamEligibilityLabel,
   type AwardCompetitionScope,
   type AwardSelectionSource,
   type AwardWinnerMode,
@@ -29,6 +33,7 @@ import {
   getAwardSelectionSource,
   getAwardWinnerMode,
   normalizeAwardPlayerEligibility,
+  normalizeAwardTeamEligibility,
 } from '@/lib/awardDefinitions';
 import {
   LeagueListRowSkeleton,
@@ -282,6 +287,7 @@ interface FormValues {
   uses_team_selection: boolean;
   eligible_position_groups: AwardPlayerPositionGroup[];
   rookies_only: boolean;
+  eligible_conference_names: string[];
 }
 
 interface Props {
@@ -302,6 +308,7 @@ const emptyValues: FormValues = {
   uses_team_selection: false,
   eligible_position_groups: [],
   rookies_only: false,
+  eligible_conference_names: [],
 };
 
 const statLabel = (statKey: string | null) =>
@@ -328,6 +335,12 @@ const toPayload = (values: FormValues): LeagueAwardPayload => ({
           rookies_only: values.rookies_only,
         }
       : null,
+  team_eligibility:
+    values.recipient_type === 'team'
+      ? {
+          conference_names: values.eligible_conference_names,
+        }
+      : null,
 });
 
 const reorderItems = <T,>(items: T[], fromIndex: number, toIndex: number) => {
@@ -350,9 +363,14 @@ const reorderItems = <T,>(items: T[], fromIndex: number, toIndex: number) => {
 const LeagueAwardsTab = ({ leagueId, className }: Props) => {
   const { awards, loading, createAward, updateAward, reorderAwards, deleteAward } =
     useLeagueAwards(leagueId);
+  const { groups: leagueGroups } = useLeagueGroups(leagueId);
+  const { alignmentSets, fetchAlignmentSet } = useGroupAlignmentSets(leagueId);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<LeagueAwardRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<LeagueAwardRecord | null>(null);
+  const [alignmentDetails, setAlignmentDetails] = useState<
+    Record<string, GroupAlignmentSet | null>
+  >({});
   const [orderedAwardIds, setOrderedAwardIds] = useState<string[] | null>(null);
   const orderedAwardIdsRef = useRef<string[] | null>(null);
   const dropHandledRef = useRef(false);
@@ -368,6 +386,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
 
   const openEdit = (award: LeagueAwardRecord) => {
     const eligibility = normalizeAwardPlayerEligibility(award.player_eligibility);
+    const teamEligibility = normalizeAwardTeamEligibility(award.team_eligibility);
     setEditTarget(award);
     form.reset({
       name: award.name,
@@ -382,6 +401,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
       uses_team_selection: award.uses_team_selection,
       eligible_position_groups: eligibility.position_groups,
       rookies_only: eligibility.rookies_only,
+      eligible_conference_names: teamEligibility.conference_names,
     });
     setModalOpen(true);
   };
@@ -414,6 +434,8 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
       form.setValue('uses_team_selection', false, { shouldDirty: true, shouldValidate: true });
       form.setValue('eligible_position_groups', [], { shouldDirty: true, shouldValidate: true });
       form.setValue('rookies_only', false, { shouldDirty: true, shouldValidate: true });
+    } else {
+      form.setValue('eligible_conference_names', [], { shouldDirty: true, shouldValidate: true });
     }
   };
 
@@ -614,11 +636,65 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
   const timingValue = awardedAfterPlayoffs ? 'after_playoffs_start' : 'anytime';
   const eligiblePositionGroups = form.watch('eligible_position_groups');
   const rookiesOnly = form.watch('rookies_only');
+  const eligibleConferenceNames = form.watch('eligible_conference_names');
   const eligibilityScope = positionGroupsToEligibilityScope(eligiblePositionGroups);
   const positionEligibilityOptions =
     eligibilityScope === 'custom'
       ? [...POSITION_ELIGIBILITY_OPTIONS, CUSTOM_POSITION_ELIGIBILITY_OPTION]
       : POSITION_ELIGIBILITY_OPTIONS;
+  useEffect(() => {
+    if (!modalOpen || recipientType !== 'team') return;
+
+    const setsToFetch = alignmentSets.filter(
+      (set) =>
+        set.structure_type === 'groups' &&
+        (set.conference_count ?? 0) > 0 &&
+        !(set.id in alignmentDetails),
+    );
+    if (setsToFetch.length === 0) return;
+
+    let cancelled = false;
+    void Promise.all(
+      setsToFetch.map(async (set) => [set.id, await fetchAlignmentSet(set.id)] as const),
+    ).then((entries) => {
+      if (cancelled) return;
+      setAlignmentDetails((current) => {
+        const next = { ...current };
+        entries.forEach(([setId, details]) => {
+          next[setId] = details;
+        });
+        return next;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [alignmentDetails, alignmentSets, fetchAlignmentSet, modalOpen, recipientType]);
+
+  const conferenceOptions = useMemo<MultiSelectOption[]>(() => {
+    const optionsByName = new Map<string, MultiSelectOption>();
+    const addConference = (name?: string | null) => {
+      const trimmed = name?.trim();
+      if (!trimmed) return;
+      const key = trimmed.toLowerCase();
+      if (!optionsByName.has(key)) {
+        optionsByName.set(key, { value: trimmed, label: trimmed });
+      }
+    };
+
+    leagueGroups
+      .filter((group) => group.role === 'conference')
+      .forEach((group) => addConference(group.name));
+    Object.values(alignmentDetails).forEach((details) => {
+      details?.groups
+        ?.filter((group) => group.role === 'conference')
+        .forEach((group) => addConference(group.name));
+    });
+    eligibleConferenceNames.forEach(addConference);
+
+    return [...optionsByName.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [alignmentDetails, eligibleConferenceNames, leagueGroups]);
 
   if (loading) return <LeagueAwardsTabSkeleton className={className} />;
 
@@ -654,6 +730,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                 const selectionSource = getAwardSelectionSource(award);
                 const winnerMode = getAwardWinnerMode(award);
                 const eligibility = awardPlayerEligibilityLabel(award);
+                const teamEligibility = awardTeamEligibilityLabel(award);
 
                 return (
                   <li
@@ -734,6 +811,12 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                           {eligibility && (
                             <Tag
                               label={eligibility}
+                              intent={AWARD_FIELD_GROUP_TAG_INTENTS.eligibility}
+                            />
+                          )}
+                          {teamEligibility && (
+                            <Tag
+                              label={teamEligibility}
                               intent={AWARD_FIELD_GROUP_TAG_INTENTS.eligibility}
                             />
                           )}
@@ -948,6 +1031,34 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                   onChange={setRookieEligibility}
                   options={ROOKIE_ELIGIBILITY_OPTIONS}
                   ariaLabel="Rookie Eligibility"
+                />
+              </Field>
+            </GroupedFields>
+          )}
+
+          {recipientType === 'team' && (
+            <GroupedFields
+              legend="Eligible Teams"
+              fieldsClassName={styles.awardDefinitionEligibility}
+            >
+              <Field
+                control={form.control}
+                name="eligible_conference_names"
+                type="custom"
+                label="Conference Eligibility"
+              >
+                <MultiSelect
+                  value={eligibleConferenceNames}
+                  options={conferenceOptions}
+                  placeholder="All conferences"
+                  emptyMessage="No conferences found"
+                  searchable
+                  onChange={(values) =>
+                    form.setValue('eligible_conference_names', values, {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
                 />
               </Field>
             </GroupedFields>

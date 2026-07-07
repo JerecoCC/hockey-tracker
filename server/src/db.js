@@ -589,6 +589,7 @@ async function initSchema() {
       allow_multiple_winners  BOOLEAN NOT NULL DEFAULT false,
       uses_team_selection     BOOLEAN NOT NULL DEFAULT false,
       player_eligibility      JSONB NOT NULL DEFAULT '{}'::jsonb,
+      team_eligibility        JSONB NOT NULL DEFAULT '{}'::jsonb,
       active                  BOOLEAN NOT NULL DEFAULT true,
       sort_order              INT NOT NULL DEFAULT 0,
       created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -605,6 +606,7 @@ async function initSchema() {
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS allow_multiple_winners BOOLEAN NOT NULL DEFAULT false`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS uses_team_selection BOOLEAN NOT NULL DEFAULT false`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS player_eligibility JSONB NOT NULL DEFAULT '{}'::jsonb`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS team_eligibility JSONB NOT NULL DEFAULT '{}'::jsonb`;
   await sql`
     CREATE TABLE IF NOT EXISTS _migrations (
       name       TEXT PRIMARY KEY,

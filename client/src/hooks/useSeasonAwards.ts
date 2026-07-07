@@ -1,7 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
-import type { AwardCompetitionScope, AwardPlayerEligibility } from '@/lib/awardDefinitions';
+import type {
+  AwardCompetitionScope,
+  AwardPlayerEligibility,
+  AwardTeamEligibility,
+} from '@/lib/awardDefinitions';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
@@ -50,6 +54,7 @@ export interface SeasonAwardRecord {
   allow_multiple_winners: boolean;
   uses_team_selection: boolean;
   player_eligibility: AwardPlayerEligibility | null;
+  team_eligibility: AwardTeamEligibility | null;
   sort_order: number;
   season_award_id: string | null;
   awarded_at: string | null;
@@ -70,6 +75,7 @@ export interface CreateSeasonAwardPayload {
   allow_multiple_winners?: boolean;
   uses_team_selection?: boolean;
   player_eligibility?: AwardPlayerEligibility | null;
+  team_eligibility?: AwardTeamEligibility | null;
   awarded_at?: string | null;
   notes?: string | null;
 }

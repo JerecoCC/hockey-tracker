@@ -542,6 +542,58 @@ describe('LeagueDetailsPage – loading', () => {
     );
   });
 
+  it('creates team award definitions with conference eligibility criteria', async () => {
+    sessionStorage.setItem('tab:league-details', '6');
+    const createAward = jest.fn(async () => true);
+    setup(
+      { league: mockLeague },
+      {
+        groups: [
+          {
+            id: 'conference-east',
+            league_id: 'lg1',
+            season_id: null,
+            parent_id: null,
+            name: 'Eastern Conference',
+            role: 'conference',
+            sort_order: 0,
+            created_at: '2024-01-01T00:00:00Z',
+            is_auto: false,
+            teams: [],
+          },
+        ],
+      },
+      null,
+      {},
+      {},
+      { createAward },
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create Award' }));
+    fireEvent.change(screen.getByLabelText(/Award Name/), {
+      target: { value: 'Eastern Conference Champion' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Team' }));
+    fireEvent.click(screen.getByText('All conferences'));
+    fireEvent.click(screen.getByRole('button', { name: 'Eastern Conference' }));
+
+    const createButtons = screen.getAllByRole('button', { name: 'Create Award' });
+    fireEvent.click(createButtons[createButtons.length - 1]);
+
+    await waitFor(() =>
+      expect(createAward).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Eastern Conference Champion',
+          recipient_type: 'team',
+          player_eligibility: null,
+          team_eligibility: {
+            conference_names: ['Eastern Conference'],
+          },
+        }),
+      ),
+    );
+  });
+
   it('does not show the league name while loading', () => {
     setup({ loading: true });
     expect(screen.queryByRole('heading', { name: 'Test League' })).not.toBeInTheDocument();

@@ -7,7 +7,9 @@ const { sql } = require('../db');
 const { normalizeIcoBuffer } = require('../lib/ico');
 const {
   DEFAULT_PLAYER_ELIGIBILITY,
+  DEFAULT_TEAM_ELIGIBILITY,
   normalizeAwardPlayerEligibility,
+  normalizeAwardTeamEligibility,
 } = require('../lib/awardEligibility');
 
 // ---------------------------------------------------------------------------
@@ -293,7 +295,7 @@ router.get('/:id/awards', async (req, res) => {
     const awards = await sql`
       SELECT id, league_id, name, description, recipient_type, selection_method, competition_scope,
              stat_key, awarded_after_playoffs, uses_nominees, allow_multiple_winners,
-             uses_team_selection, player_eligibility, active, sort_order, created_at
+             uses_team_selection, player_eligibility, team_eligibility, active, sort_order, created_at
       FROM league_awards
       WHERE league_id = ${id} AND active = true
       ORDER BY sort_order ASC, name ASC
@@ -322,6 +324,7 @@ router.post('/:id/awards', async (req, res) => {
     allow_multiple_winners = false,
     uses_team_selection = false,
     player_eligibility,
+    team_eligibility,
     sort_order = 0,
   } = req.body;
 
@@ -351,15 +354,21 @@ router.post('/:id/awards', async (req, res) => {
   if (parsedEligibility.error) {
     return res.status(400).json({ error: parsedEligibility.error });
   }
-  const normalizedEligibility =
+  const parsedTeamEligibility = normalizeAwardTeamEligibility(team_eligibility);
+  if (parsedTeamEligibility.error) {
+    return res.status(400).json({ error: parsedTeamEligibility.error });
+  }
+  const normalizedPlayerEligibility =
     recipient_type === 'player' ? parsedEligibility.value : DEFAULT_PLAYER_ELIGIBILITY;
+  const normalizedTeamEligibility =
+    recipient_type === 'team' ? parsedTeamEligibility.value : DEFAULT_TEAM_ELIGIBILITY;
 
   try {
     const rows = await sql`
       INSERT INTO league_awards (
         league_id, name, description, recipient_type, selection_method, competition_scope, stat_key,
         awarded_after_playoffs, uses_nominees, allow_multiple_winners, uses_team_selection,
-        player_eligibility, sort_order, active
+        player_eligibility, team_eligibility, sort_order, active
       )
       VALUES (
         ${id},
@@ -373,7 +382,8 @@ router.post('/:id/awards', async (req, res) => {
         ${!!uses_nominees},
         ${!!allow_multiple_winners},
         ${!!uses_team_selection},
-        ${JSON.stringify(normalizedEligibility)}::jsonb,
+        ${JSON.stringify(normalizedPlayerEligibility)}::jsonb,
+        ${JSON.stringify(normalizedTeamEligibility)}::jsonb,
         ${Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0},
         true
       )
@@ -388,6 +398,7 @@ router.post('/:id/awards', async (req, res) => {
         allow_multiple_winners = EXCLUDED.allow_multiple_winners,
         uses_team_selection = EXCLUDED.uses_team_selection,
         player_eligibility = EXCLUDED.player_eligibility,
+        team_eligibility = EXCLUDED.team_eligibility,
         sort_order = EXCLUDED.sort_order,
         active = true
       RETURNING *
@@ -417,6 +428,7 @@ router.patch('/:id/awards/:awardId', async (req, res) => {
     allow_multiple_winners,
     uses_team_selection,
     player_eligibility,
+    team_eligibility,
     sort_order,
   } = req.body;
 
@@ -452,8 +464,17 @@ router.patch('/:id/awards/:awardId', async (req, res) => {
   if (parsedEligibility.error) {
     return res.status(400).json({ error: parsedEligibility.error });
   }
-  const normalizedEligibility =
+  const teamEligibilityInBody = 'team_eligibility' in req.body;
+  const parsedTeamEligibility = teamEligibilityInBody
+    ? normalizeAwardTeamEligibility(team_eligibility)
+    : { value: DEFAULT_TEAM_ELIGIBILITY };
+  if (parsedTeamEligibility.error) {
+    return res.status(400).json({ error: parsedTeamEligibility.error });
+  }
+  const normalizedPlayerEligibility =
     recipient_type === 'team' ? DEFAULT_PLAYER_ELIGIBILITY : parsedEligibility.value;
+  const normalizedTeamEligibility =
+    recipient_type === 'player' ? DEFAULT_TEAM_ELIGIBILITY : parsedTeamEligibility.value;
 
   const descriptionInBody = 'description' in req.body;
   const competitionScopeInBody =
@@ -463,7 +484,8 @@ router.patch('/:id/awards/:awardId', async (req, res) => {
   const usesNomineesInBody = 'uses_nominees' in req.body;
   const allowMultipleWinnersInBody = 'allow_multiple_winners' in req.body;
   const usesTeamSelectionInBody = 'uses_team_selection' in req.body;
-  const updateEligibility = playerEligibilityInBody || recipient_type === 'team';
+  const updatePlayerEligibility = playerEligibilityInBody || recipient_type === 'team';
+  const updateTeamEligibility = teamEligibilityInBody || recipient_type === 'player';
   const sortOrderInBody = 'sort_order' in req.body;
 
   try {
@@ -480,7 +502,8 @@ router.patch('/:id/awards/:awardId', async (req, res) => {
         uses_nominees = CASE WHEN ${usesNomineesInBody} THEN ${!!uses_nominees} ELSE uses_nominees END,
         allow_multiple_winners = CASE WHEN ${allowMultipleWinnersInBody} THEN ${!!allow_multiple_winners} ELSE allow_multiple_winners END,
         uses_team_selection = CASE WHEN ${usesTeamSelectionInBody} THEN ${!!uses_team_selection} ELSE uses_team_selection END,
-        player_eligibility = CASE WHEN ${updateEligibility} THEN ${JSON.stringify(normalizedEligibility)}::jsonb ELSE player_eligibility END,
+        player_eligibility = CASE WHEN ${updatePlayerEligibility} THEN ${JSON.stringify(normalizedPlayerEligibility)}::jsonb ELSE player_eligibility END,
+        team_eligibility = CASE WHEN ${updateTeamEligibility} THEN ${JSON.stringify(normalizedTeamEligibility)}::jsonb ELSE team_eligibility END,
         sort_order = CASE WHEN ${sortOrderInBody} THEN ${Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0} ELSE sort_order END,
         active = true
       WHERE id = ${awardId} AND league_id = ${id}

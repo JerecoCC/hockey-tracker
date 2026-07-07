@@ -9,6 +9,11 @@ export interface AwardPlayerEligibility {
   rookies_only?: boolean;
 }
 
+export interface AwardTeamEligibility {
+  conference_names?: string[];
+  conference_keys?: string[];
+}
+
 export interface AwardDefinitionMetadata {
   recipient_type?: string;
   selection_method: string;
@@ -18,6 +23,7 @@ export interface AwardDefinitionMetadata {
   uses_team_selection: boolean;
   allow_multiple_winners: boolean;
   player_eligibility?: AwardPlayerEligibility | null;
+  team_eligibility?: AwardTeamEligibility | null;
 }
 
 const REGULAR_SEASON_RESOLVERS = new Set([
@@ -58,6 +64,26 @@ export const normalizeAwardPlayerEligibility = (
   };
 };
 
+const normalizeStringList = (values?: string[] | null) => {
+  const seen = new Set<string>();
+  return (values ?? [])
+    .map((value) => value.trim())
+    .filter((value) => {
+      if (!value) return false;
+      const key = value.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+};
+
+export const normalizeAwardTeamEligibility = (
+  eligibility?: AwardTeamEligibility | null,
+): Required<AwardTeamEligibility> => ({
+  conference_names: normalizeStringList(eligibility?.conference_names),
+  conference_keys: normalizeStringList(eligibility?.conference_keys),
+});
+
 export const awardPlayerPositionGroup = (
   position?: string | null,
 ): AwardPlayerPositionGroup | null => {
@@ -96,6 +122,25 @@ export const playerMatchesAwardEligibility = (
   return group ? eligibility.position_groups.includes(group) : false;
 };
 
+export const teamMatchesAwardEligibility = (
+  award: Pick<AwardDefinitionMetadata, 'recipient_type' | 'team_eligibility'>,
+  team: { conference_names?: string[] | null; conference_keys?: string[] | null },
+) => {
+  if (award.recipient_type !== 'team') return true;
+
+  const eligibility = normalizeAwardTeamEligibility(award.team_eligibility);
+  if (eligibility.conference_names.length === 0 && eligibility.conference_keys.length === 0) {
+    return true;
+  }
+
+  const eligibleNames = new Set(eligibility.conference_names.map((name) => name.toLowerCase()));
+  const eligibleKeys = new Set(eligibility.conference_keys.map((key) => key.toLowerCase()));
+  const teamNames = (team.conference_names ?? []).map((name) => name.toLowerCase());
+  const teamKeys = (team.conference_keys ?? []).map((key) => key.toLowerCase());
+
+  return teamNames.some((name) => eligibleNames.has(name)) || teamKeys.some((key) => eligibleKeys.has(key));
+};
+
 export const awardPlayerEligibilityLabel = (
   award: Pick<AwardDefinitionMetadata, 'recipient_type' | 'player_eligibility'>,
 ) => {
@@ -112,6 +157,23 @@ export const awardPlayerEligibilityLabel = (
   ].filter(Boolean);
 
   return parts.join(' | ');
+};
+
+export const awardTeamEligibilityLabel = (
+  award: Pick<AwardDefinitionMetadata, 'recipient_type' | 'team_eligibility'>,
+) => {
+  if (award.recipient_type !== 'team') return null;
+
+  const eligibility = normalizeAwardTeamEligibility(award.team_eligibility);
+  if (eligibility.conference_names.length === 0 && eligibility.conference_keys.length === 0) {
+    return null;
+  }
+
+  const conferences =
+    eligibility.conference_names.length > 0
+      ? eligibility.conference_names
+      : eligibility.conference_keys;
+  return `Conferences: ${conferences.join(', ')}`;
 };
 
 export const getAwardWinnerMode = (award: AwardDefinitionMetadata): AwardWinnerMode => {

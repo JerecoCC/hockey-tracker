@@ -4,6 +4,7 @@ const { sql } = require('../db');
 const { normalizeSeasonBracketSlotKeys } = require('../lib/playoffBracketSlots');
 const {
   playerMatchesAwardEligibility,
+  teamMatchesAwardEligibility,
 } = require('../lib/awardEligibility');
 
 // All season routes require the admin role
@@ -34,6 +35,204 @@ const validateAwardPlayerEligibility = async (seasonId, playerId, playerEligibil
   return playerMatchesAwardEligibility(player, playerEligibility, seasonId)
     ? { ok: true }
     : { ok: false, error: 'Player is not eligible for this award' };
+};
+
+const fetchAwardTeamEligibilityRow = async (seasonId, teamId) => {
+  const rows = await sql`
+    WITH RECURSIVE season_info AS (
+      SELECT id, league_id, group_alignment_set_id
+      FROM seasons
+      WHERE id = ${seasonId}
+    ),
+    prev_season AS (
+      SELECT id
+      FROM seasons
+      WHERE league_id = (SELECT league_id FROM season_info)
+        AND id <> ${seasonId}
+      ORDER BY start_date DESC NULLS LAST, created_at DESC
+      LIMIT 1
+    ),
+    alignment_group_overrides AS (
+      SELECT DISTINCT alignment_group_id
+      FROM season_alignment_group_teams
+      WHERE season_id = ${seasonId}
+    ),
+    legacy_auto_group AS (
+      SELECT id
+      FROM groups
+      WHERE season_id = ${seasonId} AND is_auto = true
+      LIMIT 1
+    ),
+    legacy_prev_auto_group AS (
+      SELECT id
+      FROM groups
+      WHERE season_id = (SELECT id FROM prev_season) AND is_auto = true
+      LIMIT 1
+    ),
+    legacy_group_overrides AS (
+      SELECT DISTINCT group_id
+      FROM season_group_teams
+      WHERE season_id = ${seasonId}
+    ),
+    legacy_prev_group_overrides AS (
+      SELECT DISTINCT group_id
+      FROM season_group_teams
+      WHERE season_id = (SELECT id FROM prev_season)
+        AND group_id NOT IN (SELECT group_id FROM legacy_group_overrides)
+    ),
+    all_groups AS (
+      SELECT
+        ag.id,
+        ag.parent_id,
+        ag.name,
+        ag.stable_key,
+        ag.role
+      FROM group_alignment_groups ag
+      WHERE ag.alignment_set_id = (SELECT group_alignment_set_id FROM season_info)
+        AND (SELECT group_alignment_set_id FROM season_info) IS NOT NULL
+
+      UNION ALL
+
+      SELECT
+        g.id,
+        g.parent_id,
+        g.name,
+        NULL::text AS stable_key,
+        g.role
+      FROM groups g
+      WHERE (SELECT group_alignment_set_id FROM season_info) IS NULL
+        AND (
+          (
+            g.league_id = (SELECT league_id FROM season_info)
+            AND g.season_id IS NULL
+          )
+          OR g.id IN (SELECT id FROM legacy_auto_group)
+          OR (
+            g.id IN (SELECT id FROM legacy_prev_auto_group)
+            AND NOT EXISTS (SELECT 1 FROM legacy_auto_group)
+          )
+        )
+    ),
+    memberships AS (
+      SELECT sagt.alignment_group_id AS group_id, sagt.team_id
+      FROM season_alignment_group_teams sagt
+      JOIN group_alignment_groups ag ON ag.id = sagt.alignment_group_id
+      WHERE sagt.season_id = ${seasonId}
+        AND ag.alignment_set_id = (SELECT group_alignment_set_id FROM season_info)
+        AND (SELECT group_alignment_set_id FROM season_info) IS NOT NULL
+
+      UNION ALL
+
+      SELECT gat.alignment_group_id AS group_id, gat.team_id
+      FROM group_alignment_teams gat
+      JOIN group_alignment_groups ag ON ag.id = gat.alignment_group_id
+      WHERE ag.alignment_set_id = (SELECT group_alignment_set_id FROM season_info)
+        AND (SELECT group_alignment_set_id FROM season_info) IS NOT NULL
+        AND gat.alignment_group_id NOT IN (
+          SELECT alignment_group_id FROM alignment_group_overrides
+        )
+
+      UNION ALL
+
+      SELECT sgt.group_id, sgt.team_id
+      FROM season_group_teams sgt
+      WHERE sgt.season_id = ${seasonId}
+        AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+
+      UNION ALL
+
+      SELECT sgt.group_id, sgt.team_id
+      FROM season_group_teams sgt
+      WHERE sgt.season_id = (SELECT id FROM prev_season)
+        AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+        AND sgt.group_id NOT IN (
+          SELECT group_id FROM legacy_group_overrides
+        )
+
+      UNION ALL
+
+      SELECT gt.group_id, gt.team_id
+      FROM group_teams gt
+      WHERE (SELECT group_alignment_set_id FROM season_info) IS NULL
+        AND gt.group_id NOT IN (
+          SELECT group_id FROM legacy_group_overrides
+        )
+        AND gt.group_id NOT IN (
+          SELECT group_id FROM legacy_prev_group_overrides
+        )
+        AND gt.group_id NOT IN (SELECT id FROM legacy_auto_group)
+        AND gt.group_id NOT IN (SELECT id FROM legacy_prev_auto_group)
+
+      UNION ALL
+
+      SELECT gt.group_id, gt.team_id
+      FROM group_teams gt
+      WHERE (SELECT group_alignment_set_id FROM season_info) IS NULL
+        AND gt.group_id IN (SELECT id FROM legacy_auto_group)
+
+      UNION ALL
+
+      SELECT gt.group_id, gt.team_id
+      FROM group_teams gt
+      WHERE (SELECT group_alignment_set_id FROM season_info) IS NULL
+        AND gt.group_id IN (SELECT id FROM legacy_prev_auto_group)
+        AND NOT EXISTS (SELECT 1 FROM legacy_auto_group)
+    ),
+    group_ancestors AS (
+      SELECT
+        m.team_id,
+        g.id,
+        g.parent_id,
+        g.name,
+        g.stable_key,
+        g.role
+      FROM memberships m
+      JOIN all_groups g ON g.id = m.group_id
+
+      UNION ALL
+
+      SELECT
+        ga.team_id,
+        parent.id,
+        parent.parent_id,
+        parent.name,
+        parent.stable_key,
+        parent.role
+      FROM group_ancestors ga
+      JOIN all_groups parent ON parent.id = ga.parent_id
+    ),
+    conference_memberships AS (
+      SELECT DISTINCT
+        team_id,
+        name,
+        stable_key
+      FROM group_ancestors
+      WHERE role = 'conference'
+    )
+    SELECT
+      t.id,
+      COALESCE(
+        json_agg(DISTINCT cm.name) FILTER (WHERE cm.name IS NOT NULL),
+        '[]'::json
+      ) AS conference_names,
+      COALESCE(
+        json_agg(DISTINCT cm.stable_key) FILTER (WHERE cm.stable_key IS NOT NULL),
+        '[]'::json
+      ) AS conference_keys
+    FROM teams t
+    LEFT JOIN conference_memberships cm ON cm.team_id = t.id
+    WHERE t.id = ${teamId}
+    GROUP BY t.id
+  `;
+  return rows[0] ?? null;
+};
+
+const validateAwardTeamEligibility = async (seasonId, teamId, teamEligibility) => {
+  const team = await fetchAwardTeamEligibilityRow(seasonId, teamId);
+  if (!team) return { ok: false, error: 'Invalid player, team, or award' };
+  return teamMatchesAwardEligibility(team, teamEligibility)
+    ? { ok: true }
+    : { ok: false, error: 'Team is not eligible for this award' };
 };
 
 const fetchRegularSeasonTeamCompletion = async (seasonId) => {
@@ -2291,6 +2490,7 @@ router.get('/:id/awards', async (req, res) => {
         la.allow_multiple_winners,
         la.uses_team_selection,
         la.player_eligibility,
+        la.team_eligibility,
         la.sort_order,
         sa.id AS season_award_id,
         sa.awarded_at::text AS awarded_at,
@@ -2532,7 +2732,7 @@ router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
     }
 
     const awards = await sql`
-      SELECT sa.id, la.recipient_type, la.player_eligibility
+      SELECT sa.id, la.recipient_type, la.player_eligibility, la.team_eligibility
       FROM season_awards sa
       JOIN league_awards la ON la.id = sa.award_id
       WHERE sa.id = ${seasonAwardId} AND sa.season_id = ${id}
@@ -2546,6 +2746,15 @@ router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
         id,
         player_id,
         awards[0].player_eligibility,
+      );
+      if (!eligibility.ok) {
+        return res.status(400).json({ error: eligibility.error });
+      }
+    } else {
+      const eligibility = await validateAwardTeamEligibility(
+        id,
+        team_id,
+        awards[0].team_eligibility,
       );
       if (!eligibility.ok) {
         return res.status(400).json({ error: eligibility.error });
@@ -2588,7 +2797,7 @@ router.put('/:id/awards/:seasonAwardId/nominees', async (req, res) => {
 
   try {
     const awards = await sql`
-      SELECT sa.id, la.recipient_type, la.player_eligibility
+      SELECT sa.id, la.recipient_type, la.player_eligibility, la.team_eligibility
       FROM season_awards sa
       JOIN league_awards la ON la.id = sa.award_id
       WHERE sa.id = ${seasonAwardId} AND sa.season_id = ${id}
@@ -2649,9 +2858,13 @@ router.put('/:id/awards/:seasonAwardId/nominees', async (req, res) => {
         continue;
       }
 
-      const recipientRows = await sql`SELECT id FROM teams WHERE id = ${nominee.team_id}`;
-      if (recipientRows.length === 0) {
-        return res.status(400).json({ error: 'Invalid player, team, or award' });
+      const eligibility = await validateAwardTeamEligibility(
+        id,
+        nominee.team_id,
+        awards[0].team_eligibility,
+      );
+      if (!eligibility.ok) {
+        return res.status(400).json({ error: eligibility.error });
       }
     }
 

@@ -1,4 +1,4 @@
-import { type DragEvent, useCallback, useMemo, useState } from 'react';
+import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
@@ -24,7 +24,7 @@ import useSeasonAwards, {
   type SeasonAwardRecipient,
   type SeasonAwardRecord,
 } from '@/hooks/useSeasonAwards';
-import type { SeasonTeam } from '@/hooks/useSeasonDetails';
+import type { SeasonGroupRecord, SeasonTeam } from '@/hooks/useSeasonDetails';
 import type { TeamStandingRecord } from '@/hooks/useSeasonStandings';
 import type { GoalieStatRecord, SkaterStatRecord } from '@/hooks/useSeasonStats';
 import {
@@ -36,11 +36,13 @@ import {
   awardCompetitionScopeLabel,
   awardPlayerEligibilityLabel,
   awardSelectionSourceLabel,
+  awardTeamEligibilityLabel,
   getAwardCompetitionScope,
   getAwardRecordingGate,
   getAwardSelectionSource,
   getAwardWinnerMode,
   playerMatchesAwardEligibility,
+  teamMatchesAwardEligibility,
 } from '@/lib/awardDefinitions';
 import PlayerCard, { formatPlayerPosition } from '@/components/PlayerCard/PlayerCard';
 import styles from './SeasonDetails.module.scss';
@@ -143,6 +145,11 @@ interface AwardPlayerRecord {
   rookie_season_id: string | null;
 }
 
+interface AwardTeamRecord extends SeasonTeam {
+  conference_names: string[];
+  conference_keys: string[];
+}
+
 interface AwardRecipientStatDisplay {
   label: string;
   value: string;
@@ -161,6 +168,7 @@ interface Props {
   seasonName: string | null;
   playoffsStarted: boolean;
   seasonTeams: SeasonTeam[];
+  groups: SeasonGroupRecord[];
   skaters: SkaterStatRecord[];
   goalies: GoalieStatRecord[];
   standings: TeamStandingRecord[];
@@ -226,6 +234,7 @@ const awardSelectionSubtitle = (award: SeasonAwardRecord) => {
     award.recipient_type === 'player' ? 'Player' : 'Team',
     awardSelectionSourceLabel(getAwardSelectionSource(award)),
     awardPlayerEligibilityLabel(award),
+    awardTeamEligibilityLabel(award),
     statLabel(award.stat_key),
     awardCompetitionScopeLabel(competitionScope),
     award.uses_nominees && winnerMode !== 'team_selection' ? 'Nominees' : null,
@@ -298,6 +307,9 @@ const usesWinnerChecklist = (award: SeasonAwardRecord) =>
 const canAwardWinners = (award: SeasonAwardRecord, playoffsStarted: boolean) =>
   getAwardRecordingGate(award) === 'anytime' || playoffsStarted;
 
+const isAutomaticWinnerAward = (award: SeasonAwardRecord) =>
+  award.selection_method === 'automatic' || award.stat_key === 'playoff_champion';
+
 // A player who changed teams mid-season can appear as more than one stat row
 // (multiple team stints, or split duplicate records that share only a name).
 // Collapse them to a single entry — their most-recent stint (the latest
@@ -321,6 +333,7 @@ const dedupePlayersByName = <
 const playoffChampionSuggestion = (
   series: PlayoffSeriesRecord[],
   seasonTeams: SeasonTeam[],
+  eligibleTeamIds?: Set<string>,
 ): SuggestedRecipient | null => {
   const maxRound = series.reduce((round, item) => Math.max(round, item.round), 0);
   if (maxRound <= 0) return null;
@@ -331,6 +344,7 @@ const playoffChampionSuggestion = (
   const finalSeries = finalWinners[0];
   const id = finalSeries.winner_team_id;
   if (!id) return null;
+  if (eligibleTeamIds && !eligibleTeamIds.has(id)) return null;
 
   const seasonTeam = seasonTeams.find((team) => team.id === id);
   const seriesTeam =
@@ -432,6 +446,7 @@ const SeasonAwardsTab = ({
   seasonName,
   playoffsStarted,
   seasonTeams,
+  groups,
   skaters,
   goalies,
   standings,
@@ -460,9 +475,11 @@ const SeasonAwardsTab = ({
   const [nomineesSaving, setNomineesSaving] = useState(false);
   const [draggingNomineeDraftId, setDraggingNomineeDraftId] = useState<string | null>(null);
   const [teamSelectionAward, setTeamSelectionAward] = useState<SeasonAwardRecord | null>(null);
-  const [suggestedWinnerSavingAwardId, setSuggestedWinnerSavingAwardId] = useState<string | null>(
-    null,
-  );
+  const [automaticWinnerSavingAwardIds, setAutomaticWinnerSavingAwardIds] = useState<string[]>([]);
+  const automaticWinnerRecordKeysRef = useRef(new Set<string>());
+  const mountedRef = useRef(true);
+  const addRecipientRef = useRef(addRecipient);
+  const refreshRef = useRef(refresh);
 
   const recipientForm = useForm<RecipientFormValues>({
     defaultValues: {
@@ -474,6 +491,17 @@ const SeasonAwardsTab = ({
     defaultValues: emptyTeamSelectionValues,
     mode: 'onChange',
   });
+
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+    },
+    [],
+  );
+  useEffect(() => {
+    addRecipientRef.current = addRecipient;
+    refreshRef.current = refresh;
+  }, [addRecipient, refresh]);
 
   // Collapse multi-team / split-record players to a single option (most-played
   // team) so the select fields below never list the same player twice.
@@ -501,6 +529,49 @@ const SeasonAwardsTab = ({
     return sortAwardPlayersByName([...byId.values()]);
   }, [rosterAwardPlayers, statAwardPlayers]);
 
+  const seasonTeamConferenceMap = useMemo(() => {
+    const byTeamId = new Map<string, { conference_names: Set<string>; conference_keys: Set<string> }>();
+    const groupsByParent = new Map<string | null, SeasonGroupRecord[]>();
+
+    groups.forEach((group) => {
+      const list = groupsByParent.get(group.parent_id) ?? [];
+      list.push(group);
+      groupsByParent.set(group.parent_id, list);
+    });
+
+    const addConferenceTeam = (teamId: string, conference: SeasonGroupRecord) => {
+      const entry =
+        byTeamId.get(teamId) ?? { conference_names: new Set<string>(), conference_keys: new Set<string>() };
+      entry.conference_names.add(conference.name);
+      if (conference.stable_key) entry.conference_keys.add(conference.stable_key);
+      byTeamId.set(teamId, entry);
+    };
+
+    const addGroupTeams = (conference: SeasonGroupRecord, group: SeasonGroupRecord) => {
+      group.teams.forEach((team) => addConferenceTeam(team.id, conference));
+      (groupsByParent.get(group.id) ?? []).forEach((child) => addGroupTeams(conference, child));
+    };
+
+    groups
+      .filter((group) => group.role === 'conference')
+      .forEach((conference) => addGroupTeams(conference, conference));
+
+    return byTeamId;
+  }, [groups]);
+
+  const awardTeams = useMemo<AwardTeamRecord[]>(
+    () =>
+      seasonTeams.map((team) => {
+        const conferences = seasonTeamConferenceMap.get(team.id);
+        return {
+          ...team,
+          conference_names: conferences ? [...conferences.conference_names] : [],
+          conference_keys: conferences ? [...conferences.conference_keys] : [],
+        };
+      }),
+    [seasonTeamConferenceMap, seasonTeams],
+  );
+
   const awardPlayerById = useMemo(
     () => new Map(awardPlayers.map((player) => [player.player_id, player])),
     [awardPlayers],
@@ -510,6 +581,12 @@ const SeasonAwardsTab = ({
     award
       ? awardPlayers.filter((player) => playerMatchesAwardEligibility(award, player, seasonId))
       : awardPlayers;
+
+  const eligibleAwardTeamsForAward = useCallback(
+    (award: SeasonAwardRecord | null | undefined) =>
+      award ? awardTeams.filter((team) => teamMatchesAwardEligibility(award, team)) : awardTeams,
+    [awardTeams],
+  );
 
   const playerToSelectOption = (player: AwardPlayerRecord): SelectOption => ({
     value: player.player_id,
@@ -545,39 +622,42 @@ const SeasonAwardsTab = ({
   const teamSelectionComplete = teamSelectionIds.length === TEAM_SELECTION_SLOTS.length;
   const teamSelectionHasDuplicates = new Set(teamSelectionIds).size !== teamSelectionIds.length;
 
-  const teamOptions = seasonTeams.map((team) => ({
+  const teamToSelectOption = (team: AwardTeamRecord): SelectOption => ({
     value: team.id,
     label: team.name,
     logo: team.logo,
     logoDark: team.logo_dark,
     logoLight: team.logo_light,
     code: team.code,
-  }));
+  });
 
-  const selectedStatValue = (
-    award: SeasonAwardRecord,
-    recipientType: AwardRecipientType,
-    recipientId: string | null | undefined,
-  ) => {
-    const value = statValueForSelection(
-      award,
-      recipientType,
-      recipientId,
-      dedupedSkaters,
-      dedupedGoalies,
-      standings,
-    );
-    return value === null ? null : String(value);
-  };
+  const selectedStatValue = useCallback(
+    (
+      award: SeasonAwardRecord,
+      recipientType: AwardRecipientType,
+      recipientId: string | null | undefined,
+    ) => {
+      const value = statValueForSelection(
+        award,
+        recipientType,
+        recipientId,
+        dedupedSkaters,
+        dedupedGoalies,
+        standings,
+      );
+      return value === null ? null : String(value);
+    },
+    [dedupedGoalies, dedupedSkaters, standings],
+  );
 
-  const withAwardStatValue = (
-    award: SeasonAwardRecord,
-    payload: AddAwardRecipientPayload,
-  ): AddAwardRecipientPayload => {
-    const recipientId = payload.recipient_type === 'team' ? payload.team_id : payload.player_id;
-    const statValue = selectedStatValue(award, payload.recipient_type, recipientId);
-    return statValue === null ? payload : { ...payload, stat_value: statValue };
-  };
+  const withAwardStatValue = useCallback(
+    (award: SeasonAwardRecord, payload: AddAwardRecipientPayload): AddAwardRecipientPayload => {
+      const recipientId = payload.recipient_type === 'team' ? payload.team_id : payload.player_id;
+      const statValue = selectedStatValue(award, payload.recipient_type, recipientId);
+      return statValue === null ? payload : { ...payload, stat_value: statValue };
+    },
+    [selectedStatValue],
+  );
 
   const recipientStatDisplay = (
     award: SeasonAwardRecord,
@@ -648,7 +728,7 @@ const SeasonAwardsTab = ({
 
     return award.recipient_type === 'player'
       ? eligibleAwardPlayersForAward(award).map(playerToSelectOption)
-      : teamOptions;
+      : eligibleAwardTeamsForAward(award).map(teamToSelectOption);
   };
 
   const playerToWinnerOption = (player: AwardPlayerRecord): WinnerChecklistOption => {
@@ -751,15 +831,17 @@ const SeasonAwardsTab = ({
       if (award.selection_method !== 'automatic' && !isPlayoffChampionAward) continue;
 
       if (award.recipient_type === 'team') {
+        const eligibleTeams = eligibleAwardTeamsForAward(award);
+        const eligibleTeamIds = new Set(eligibleTeams.map((team) => team.id));
         if (award.stat_key === 'playoff_champion') {
-          const suggestion = playoffChampionSuggestion(playoffSeries, seasonTeams);
+          const suggestion = playoffChampionSuggestion(playoffSeries, awardTeams, eligibleTeamIds);
           if (suggestion) byAward.set(award.award_id, suggestion);
           continue;
         }
 
         const field = award.stat_key === 'standings_points' ? 'points' : award.stat_key;
-        const candidates = standings.filter((team) =>
-          numericFieldValue(team, field) !== null,
+        const candidates = standings.filter(
+          (team) => eligibleTeamIds.has(team.team_id) && numericFieldValue(team, field) !== null,
         );
         const top = candidates.sort(
           (a, b) => (numericFieldValue(b, field) ?? 0) - (numericFieldValue(a, field) ?? 0),
@@ -814,10 +896,11 @@ const SeasonAwardsTab = ({
     return byAward;
   }, [
     awards,
+    awardTeams,
     dedupedGoalies,
     dedupedSkaters,
+    eligibleAwardTeamsForAward,
     playoffSeries,
-    seasonTeams,
     standings,
     statPlayerMatchesAwardEligibility,
   ]);
@@ -861,7 +944,7 @@ const SeasonAwardsTab = ({
           .filter((option): option is WinnerChecklistOption => option !== null)
       : activeRecipientAward.recipient_type === 'player'
         ? eligibleAwardPlayersForAward(activeRecipientAward).map(playerToWinnerOption)
-        : seasonTeams.map(teamToWinnerOption)
+        : eligibleAwardTeamsForAward(activeRecipientAward).map(teamToWinnerOption)
     : [];
   const activeRecipientWinnerIds = activeRecipientWinners
     .map(recipientValueId)
@@ -1207,44 +1290,64 @@ const SeasonAwardsTab = ({
     }
   };
 
-  const addSuggestedWinner = async (award: SeasonAwardRecord, suggestion: SuggestedRecipient) => {
-    if (!award.season_award_id) return;
-    if (!canAwardWinners(award, playoffsStarted)) return;
-    const existingWinners = award.recipients.filter((recipient) => recipient.role === 'winner');
-    const suggestionAlreadyRecorded = existingWinners.some(
-      (recipient) =>
-        recipient.recipient_type === suggestion.type && recipientValueId(recipient) === suggestion.id,
-    );
-    if (suggestionAlreadyRecorded) return;
+  useEffect(() => {
+    const recordAutomaticWinners = async () => {
+      let recordedAny = false;
 
-    setSuggestedWinnerSavingAwardId(award.award_id);
-    if (!award.allow_multiple_winners) {
-      for (const recipient of existingWinners) {
-        const ok = await deleteRecipient(award.season_award_id, recipient.id, {
-          silent: true,
-          refresh: false,
-        });
-        if (!ok) {
-          setSuggestedWinnerSavingAwardId(null);
-          return;
+      for (const award of trackedAwards) {
+        if (!isAutomaticWinnerAward(award) || isTeamSelectionAward(award)) continue;
+        if (!award.season_award_id || !canAwardWinners(award, playoffsStarted)) continue;
+
+        const suggestion = suggestions.get(award.award_id);
+        if (!suggestion) continue;
+
+        const existingWinners = award.recipients.filter(
+          (recipient) => recipient.role === 'winner',
+        );
+        const suggestionAlreadyRecorded = existingWinners.some(
+          (recipient) =>
+            recipient.recipient_type === suggestion.type &&
+            recipientValueId(recipient) === suggestion.id,
+        );
+        if (suggestionAlreadyRecorded) continue;
+        if (!award.allow_multiple_winners && existingWinners.length > 0) continue;
+
+        const recordKey = `${award.season_award_id}:${suggestion.type}:${suggestion.id}`;
+        if (automaticWinnerRecordKeysRef.current.has(recordKey)) continue;
+        automaticWinnerRecordKeysRef.current.add(recordKey);
+
+        setAutomaticWinnerSavingAwardIds((awardIds) =>
+          awardIds.includes(award.award_id) ? awardIds : [...awardIds, award.award_id],
+        );
+
+        const ok = await addRecipientRef.current(
+          award.season_award_id,
+          withAwardStatValue(award, {
+            recipient_type: suggestion.type,
+            player_id: suggestion.type === 'player' ? suggestion.id : null,
+            team_id: suggestion.type === 'team' ? suggestion.id : null,
+            role: 'winner',
+          }),
+          {
+            silent: true,
+            refresh: false,
+          },
+        );
+
+        recordedAny = recordedAny || ok;
+
+        if (mountedRef.current) {
+          setAutomaticWinnerSavingAwardIds((awardIds) =>
+            awardIds.filter((awardId) => awardId !== award.award_id),
+          );
         }
       }
-    }
 
-    try {
-      await addRecipient(
-        award.season_award_id,
-        withAwardStatValue(award, {
-          recipient_type: suggestion.type,
-          player_id: suggestion.type === 'player' ? suggestion.id : null,
-          team_id: suggestion.type === 'team' ? suggestion.id : null,
-          role: 'winner',
-        }),
-      );
-    } finally {
-      setSuggestedWinnerSavingAwardId(null);
-    }
-  };
+      if (recordedAny) refreshRef.current();
+    };
+
+    void recordAutomaticWinners();
+  }, [playoffsStarted, suggestions, trackedAwards, withAwardStatValue]);
 
   const submitTeamSelection = teamSelectionForm.handleSubmit(async (values) => {
     if (
@@ -1291,7 +1394,7 @@ const SeasonAwardsTab = ({
 
   const nomineeRecipientOptions =
     activeNomineeAward?.recipient_type === 'team'
-      ? teamOptions
+      ? eligibleAwardTeamsForAward(activeNomineeAward).map(teamToSelectOption)
       : activeNomineeAward
         ? eligibleAwardPlayersForAward(activeNomineeAward).map(playerToSelectOption)
         : playerOptions;
@@ -1342,7 +1445,6 @@ const SeasonAwardsTab = ({
                 const recipientId = recipientValueId(recipient);
                 return !recipientId || !winnerRecipientIds.has(recipientId);
               });
-              const suggestion = suggestions.get(award.award_id);
               const isGroupedAward = isTeamSelectionAward(award);
               const canManageNominees = supportsNominees(award);
               const awardRequiresNominees = canManageNominees && nominees.length === 0;
@@ -1356,13 +1458,12 @@ const SeasonAwardsTab = ({
                 award.stat_key === 'playoff_champion'
                   ? playoffChampionFinalSubtitle(playoffSeries)
                   : null;
-              const isSuggestedWinnerSaving = suggestedWinnerSavingAwardId === award.award_id;
-              const hasAutomaticWinnerAction =
-                award.selection_method === 'automatic' || award.stat_key === 'playoff_champion';
-              const hideRecordedAutomaticAction =
-                hasAutomaticWinnerAction && !award.allow_multiple_winners && winners.length > 0;
+              const isAutomaticWinnerSaving = automaticWinnerSavingAwardIds.includes(
+                award.award_id,
+              );
+              const isAutomaticAward = isAutomaticWinnerAward(award);
               const showAwardAction =
-                !hideRecordedAutomaticAction && canAwardWinners(award, playoffsStarted);
+                !isAutomaticAward && canAwardWinners(award, playoffsStarted);
               const rendersColumnList =
                 isGroupedAward || (!canManageNominees && award.allow_multiple_winners);
               const getAwardRecipientStat = (recipient: SeasonAwardRecipient) =>
@@ -1410,14 +1511,8 @@ const SeasonAwardsTab = ({
                         icon="emoji_events"
                         tooltip="Set Winner"
                         aria-label={awardRecipientLabel}
-                        disabled={awardRequiresNominees || isSuggestedWinnerSaving}
-                        onClick={() => {
-                          if (suggestion) {
-                            void addSuggestedWinner(award, suggestion);
-                            return;
-                          }
-                          openRecipientModal(award);
-                        }}
+                        disabled={awardRequiresNominees}
+                        onClick={() => openRecipientModal(award)}
                       />
                     ) : null}
                   </div>
@@ -1450,7 +1545,7 @@ const SeasonAwardsTab = ({
                       .filter(Boolean)
                       .join(' ')}
                   >
-                    {isSuggestedWinnerSaving ? (
+                    {isAutomaticWinnerSaving ? (
                       <AwardWinnerListSkeleton />
                     ) : isGroupedAward ? (
                       <AwardPlayerList

@@ -1,7 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
-import type { AwardCompetitionScope, AwardPlayerEligibility } from '@/lib/awardDefinitions';
+import type {
+  AwardCompetitionScope,
+  AwardPlayerEligibility,
+  AwardTeamEligibility,
+} from '@/lib/awardDefinitions';
 import type { AwardRecipientType, AwardSelectionMethod } from './useSeasonAwards';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -24,6 +28,7 @@ export interface LeagueAwardRecord {
   allow_multiple_winners: boolean;
   uses_team_selection: boolean;
   player_eligibility: AwardPlayerEligibility | null;
+  team_eligibility: AwardTeamEligibility | null;
   sort_order: number;
   active: boolean;
   created_at: string;
@@ -41,6 +46,7 @@ export interface LeagueAwardPayload {
   allow_multiple_winners: boolean;
   uses_team_selection: boolean;
   player_eligibility?: AwardPlayerEligibility | null;
+  team_eligibility?: AwardTeamEligibility | null;
   sort_order?: number | null;
 }
 

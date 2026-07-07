@@ -177,6 +177,7 @@ const leagueAwards = pgTable('league_awards', {
   allowMultipleWinners: boolean('allow_multiple_winners').notNull().default(false),
   usesTeamSelection: boolean('uses_team_selection').notNull().default(false),
   playerEligibility: jsonb('player_eligibility').notNull().default({}),
+  teamEligibility: jsonb('team_eligibility').notNull().default({}),
   active: boolean('active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: createdAt(),

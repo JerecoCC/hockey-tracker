@@ -235,6 +235,38 @@ describe('POST /api/admin/seasons/:id/awards/:seasonAwardId/recipients', () => {
     expect(sql).toHaveBeenCalledTimes(2);
     expect(sql.mock.calls[1][0].join('')).toContain('FROM players p');
   });
+
+  it('rejects team recipients that do not match award conference eligibility', async () => {
+    sql
+      .mockResolvedValueOnce([
+        {
+          id: 'season-award-1',
+          recipient_type: 'team',
+          player_eligibility: null,
+          team_eligibility: { conference_names: ['Eastern Conference'] },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'team-1',
+          conference_names: ['Western Conference'],
+          conference_keys: [],
+        },
+      ]);
+
+    const res = await request(app)
+      .post('/api/admin/seasons/season-1/awards/season-award-1/recipients')
+      .send({
+        recipient_type: 'team',
+        team_id: 'team-1',
+        role: 'winner',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Team is not eligible for this award');
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql.mock.calls[1][0].join('')).toContain('conference_memberships');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -303,6 +335,36 @@ describe('PUT /api/admin/seasons/:id/awards/:seasonAwardId/nominees', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('nominees must be unique');
     expect(sql).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects team nominees that do not match award conference eligibility', async () => {
+    sql
+      .mockResolvedValueOnce([
+        {
+          id: 'season-award-1',
+          recipient_type: 'team',
+          player_eligibility: null,
+          team_eligibility: { conference_names: ['Eastern Conference'] },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'team-1',
+          conference_names: ['Western Conference'],
+          conference_keys: [],
+        },
+      ]);
+
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/awards/season-award-1/nominees')
+      .send({
+        nominees: [{ recipient_type: 'team', team_id: 'team-1' }],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Team is not eligible for this award');
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql.mock.calls[1][0].join('')).toContain('conference_memberships');
   });
 });
 
