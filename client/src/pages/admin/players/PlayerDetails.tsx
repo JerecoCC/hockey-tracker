@@ -61,7 +61,7 @@ import {
 } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import { formatPlayerPosition } from '@/lib/playerPosition';
-import { getPlayerStatus, PLAYER_STATUS_LABELS, type PlayerStatus } from '@/lib/playerStatus';
+import { getPlayerStatus, PLAYER_STATUS_LABELS } from '@/lib/playerStatus';
 import { getLatestEndedSeasonId } from '@/lib/seasonSelection';
 import {
   buildGameDetailsPath,
@@ -99,11 +99,6 @@ const AUTOFILL_FAILURE_TOAST_MS = 12000;
 const PLAYER_AUTOFILL_PROGRESS_STEPS = 5;
 const HERO_AVATAR_SIZE = 88;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const PLAYER_STATUS_ICONS: Record<PlayerStatus, string> = {
-  active: 'check_circle',
-  inactive: 'remove_circle_outline',
-  retired: 'event_busy',
-};
 const PLAYER_POSITION_TAG_INTENTS: Record<PlayerPosition, TagIntent> = {
   F: 'accent',
   C: 'accent',
@@ -301,6 +296,20 @@ const NHL_DRAFT_DATES: Record<number, { roundOne: string; laterRounds?: string }
 };
 
 const NHL_KNOWN_PLAYER_MOVEMENTS: Record<string, NhlKnownMovement[]> = {
+  '8477971': [
+    {
+      teamCode: 'NSH',
+      date: '2025-02-10',
+      acquisitionType: 'waivers',
+      seasonName: '2025-26',
+    },
+    {
+      teamCode: 'CGY',
+      date: '2026-07-01',
+      acquisitionType: 'free_agency',
+      seasonName: '2026-27',
+    },
+  ],
   '8477444': [
     {
       teamCode: 'CHI',
@@ -3049,29 +3058,24 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
               )}
             </div>
           </div>
-          <div className={styles.heroRightCol}>
-            <div className={styles.heroStatus}>
-              <Tooltip text={PLAYER_STATUS_LABELS[playerStatus]}>
-                <span
-                  className={[
-                    styles.heroStatusIcon,
-                    playerStatus === 'active'
-                      ? styles.heroStatusActive
-                      : playerStatus === 'inactive'
-                        ? styles.heroStatusInactive
-                        : styles.heroStatusRetired,
-                  ].join(' ')}
-                  role="img"
-                  aria-label={PLAYER_STATUS_LABELS[playerStatus]}
-                >
-                  <Icon
-                    name={PLAYER_STATUS_ICONS[playerStatus]}
-                    size="1rem"
-                  />
-                </span>
-              </Tooltip>
-            </div>
-          </div>
+          <Tooltip
+            text={PLAYER_STATUS_LABELS[playerStatus]}
+            className={styles.heroStatusTooltip}
+          >
+            <span
+              className={[
+                styles.heroStatusBookmark,
+                playerStatus === 'active'
+                  ? styles.heroStatusActive
+                  : playerStatus === 'inactive'
+                    ? styles.heroStatusInactive
+                    : styles.heroStatusRetired,
+              ].join(' ')}
+              aria-label={PLAYER_STATUS_LABELS[playerStatus]}
+            >
+              {PLAYER_STATUS_LABELS[playerStatus].toUpperCase()}
+            </span>
+          </Tooltip>
         </div>
       </Card>
 

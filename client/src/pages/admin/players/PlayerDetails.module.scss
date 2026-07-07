@@ -44,6 +44,7 @@
 
 // ── Hero card ──────────────────────────────────────────────────────────────
 .heroCard.heroCard {
+  position: relative;
   padding: 0;
   overflow: hidden;
 }
@@ -52,6 +53,7 @@
   --hero-header-bg: var(--app-surface-subtle, rgba(255, 255, 255, 0.03));
 
   position: relative;
+  z-index: 2;
   min-height: 58px;
   display: flex;
   align-items: center;
@@ -136,14 +138,17 @@
 }
 
 .hero {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: $space-2xl;
-  padding: $space-2xl;
+  padding: $space-2xl calc(#{$space-2xl} + 2.75rem) $space-2xl $space-2xl;
 
   @media (max-width: 640px) {
     align-items: flex-start;
     flex-direction: column;
+    padding-right: calc(#{$space-lg} + 2.75rem);
   }
 }
 
@@ -221,20 +226,6 @@
 }
 
 // ── Status badge ──────────────────────────────────────────────────────────
-.heroRightCol {
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-left: auto;
-  flex-shrink: 0;
-
-  @media (max-width: 640px) {
-    align-self: auto;
-    margin-left: 0;
-  }
-}
-
 .heroActions {
   flex-shrink: 0;
   margin-left: auto;
@@ -249,40 +240,48 @@
   color: $accent;
 }
 
-.heroStatus {
-  display: flex;
-  justify-content: flex-end;
+.heroStatusTooltip {
+  position: absolute;
+  top: -1px;
+  right: $space-xl;
+  z-index: 0;
+  display: inline-flex;
 }
 
-.heroStatusIcon {
-  width: 2.5rem;
-  height: 2.5rem;
+.heroStatusBookmark {
+  min-height: 1.5rem;
+  box-sizing: border-box;
   display: inline-flex;
+  position: relative;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--hero-status-color);
-  border-radius: 50%;
+  padding: 2px $space-sm;
+  border: 0;
+  border-radius: 0 0 $radius-sm $radius-sm;
   background: var(--hero-status-bg);
   color: var(--hero-status-color);
-  box-shadow: inset 0 0 0 1px var(--hero-status-ring);
+  box-shadow: none;
+  font-size: $font-sm;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .heroStatusActive {
-  --hero-status-color: #{$success-light};
-  --hero-status-bg: rgba($success, 0.14);
-  --hero-status-ring: rgba($success-light, 0.12);
+  --hero-status-color: #fff;
+  --hero-status-bg: #{$success};
 }
 
 .heroStatusInactive {
-  --hero-status-color: var(--app-text-muted, #{$text-dim});
-  --hero-status-bg: var(--app-surface-subtle, rgba(255, 255, 255, 0.04));
-  --hero-status-ring: rgba(255, 255, 255, 0.06);
+  --hero-status-color: var(--app-text, #{$text-body});
+  --hero-status-bg: var(--app-border, #{$border});
 }
 
 .heroStatusRetired {
-  --hero-status-color: #{$warning-light};
-  --hero-status-bg: rgba($warning, 0.14);
-  --hero-status-ring: rgba($warning-light, 0.12);
+  --hero-status-color: #fff;
+  --hero-status-bg: #{$warning};
 }
 
 @media (max-width: 640px) {

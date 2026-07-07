@@ -539,15 +539,15 @@ describe('PlayerDetails info tab', () => {
     ]);
   });
 
-  it('shows the active or retired icon in the hero status area', () => {
+  it('shows the active or retired bookmark in the hero status area', () => {
     const { container, rerender } = render(<PlayerDetails />);
 
     expect(screen.getByRole('heading', { name: 'John Smith' })).toBeInTheDocument();
-    expect(within(container.querySelector('.heroStatus') as HTMLElement).getByRole('img', {
-      name: 'Active',
-    })).toBeInTheDocument();
+    const activeBookmark = container.querySelector('.heroStatusBookmark') as HTMLElement;
+    expect(activeBookmark).toHaveAttribute('aria-label', 'Active');
+    expect(within(activeBookmark).getByText('ACTIVE')).toBeInTheDocument();
     expect(
-      within(container.querySelector('.heroTitleRow') as HTMLElement).queryByText('Active'),
+      within(container.querySelector('.heroTitleRow') as HTMLElement).queryByText('ACTIVE'),
     ).not.toBeInTheDocument();
 
     mockUsePlayerDetails.mockReturnValue({
@@ -572,9 +572,9 @@ describe('PlayerDetails info tab', () => {
 
     rerender(<PlayerDetails />);
 
-    expect(within(container.querySelector('.heroStatus') as HTMLElement).getByRole('img', {
-      name: 'Retired',
-    })).toBeInTheDocument();
+    const retiredBookmark = container.querySelector('.heroStatusBookmark') as HTMLElement;
+    expect(retiredBookmark).toHaveAttribute('aria-label', 'Retired');
+    expect(within(retiredBookmark).getByText('RETIRED')).toBeInTheDocument();
     expect(screen.queryByText('Inactive')).not.toBeInTheDocument();
   });
 
@@ -2035,6 +2035,151 @@ describe('PlayerDetails info tab', () => {
       acquisition_type: 'trade',
       start_date: '2026-06-26',
       end_date: null,
+    });
+  });
+
+  it('records known NHL waiver and free-agency moves after the 2025-26 entry stint during autofill', async () => {
+    const user = userEvent.setup();
+    const createStint = jest.fn().mockResolvedValue(true);
+    const updateStint = jest.fn().mockResolvedValue(true);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8477971',
+        first_name: 'Andreas',
+        last_name: 'Englund',
+        photo: null,
+        date_of_birth: '1996-01-21',
+        birth_city: 'Stockholm',
+        birth_country: 'SWE',
+        height_cm: 193,
+        weight_lbs: 200,
+        position: 'D',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-cgy',
+          team_id: 'team-cgy',
+          season_id: 'season-2026',
+          team: {
+            id: 'team-cgy',
+            name: 'Calgary Flames',
+            code: 'CGY',
+            logo: null,
+            primary_color: '#c8102e',
+            text_color: '#ffffff',
+          },
+          jersey_number: 7,
+          is_prospect: false,
+          position: null,
+          acquisition_type: null,
+          start_date: null,
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-nsh', name: 'Nashville Predators', code: 'NSH', league_id: 'league-1' },
+        { id: 'team-cgy', name: 'Calgary Flames', code: 'CGY', league_id: 'league-1' },
+      ],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2025',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-20',
+          is_current: false,
+          created_at: '2025-01-01T00:00:00Z',
+        },
+        {
+          id: 'season-2026',
+          league_id: 'league-1',
+          name: '2026-27',
+          start_date: '2026-10-01',
+          end_date: null,
+          is_current: true,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUseStintActions.mockReturnValue({
+      createStint,
+      updateStint,
+      deleteStint: jest.fn(),
+      changeJerseyNumber: jest.fn(),
+      updateJerseyHistoryEntry: jest.fn(),
+      deleteJerseyHistoryEntry: jest.fn(),
+      changePlayerPhoto: jest.fn(),
+      deletePlayerPhoto: jest.fn(),
+      uploadStintPhoto: jest.fn(),
+      saving: false,
+    });
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        firstName: { default: 'Andreas' },
+        lastName: { default: 'Englund' },
+        birthDate: '1996-01-21',
+        birthCity: { default: 'Stockholm' },
+        birthCountry: 'SWE',
+        currentTeamAbbrev: 'CGY',
+        fullTeamName: { default: 'Calgary Flames' },
+        teamCommonName: { default: 'Flames' },
+        sweaterNumber: 8,
+        position: 'D',
+        draftDetails: {
+          year: 2014,
+          teamAbbrev: 'OTT',
+          round: 2,
+          overallPick: 40,
+        },
+        seasonTotals: [
+          {
+            season: 20252026,
+            gameTypeId: 2,
+            leagueAbbrev: 'NHL',
+            teamName: { default: 'Nashville Predators' },
+            teamCommonName: { default: 'Predators' },
+          },
+        ],
+      },
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    await waitFor(() =>
+      expect(createStint).toHaveBeenCalledWith({
+        team_id: 'team-nsh',
+        season_id: 'season-2025',
+        jersey_number: null,
+        position: 'D',
+        acquisition_type: 'waivers',
+        start_date: '2025-02-10',
+        end_date: '2026-07-01',
+      }),
+    );
+    expect(updateStint).toHaveBeenCalledWith('stint-cgy', {
+      position: 'D',
+      acquisition_type: 'free_agency',
+      start_date: '2026-07-01',
+      jersey_number: 8,
     });
   });
 
