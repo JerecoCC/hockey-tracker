@@ -2537,7 +2537,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                                     onClick: () => openChangePhotoModal(s, missingPhotoSeason.id),
                                   }
                                 : null,
-                              !s.end_date
+                              !s.end_date && s.roster_player_team_id
                                 ? {
                                     icon: 'jersey',
                                     tooltip: 'Record jersey number change',

@@ -74,6 +74,7 @@ const StintEditModal = ({
   updateStint,
 }: Props) => {
   const mode = stint ? 'edit' : 'create';
+  const canEditJerseyNumber = mode === 'create' || !!stint?.roster_player_team_id;
   const formValues = useMemo<FormValues>(
     () =>
       stint
@@ -173,7 +174,7 @@ const StintEditModal = ({
       const ok = await updateStint(stint.id, {
         team_id: data.team_id,
         ...(seasonId ? { season_id: seasonId } : {}),
-        jersey_number: jerseyNumber,
+        ...(canEditJerseyNumber ? { jersey_number: jerseyNumber } : {}),
         position: data.position || null,
         acquisition_type: data.acquisition_type || null,
         start_date: data.start_date || null,
@@ -237,7 +238,7 @@ const StintEditModal = ({
               placeholder="e.g. 97"
               min={0}
               max={99}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !canEditJerseyNumber}
             />
           </div>
           <Field

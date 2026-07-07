@@ -11,7 +11,7 @@ export interface PlayerStintRecord {
   id: string;
   player_id: string;
   team_id: string;
-  season_id: string;
+  season_id: string | null;
   roster_player_team_id?: string | null;
   jersey_number: number | null;
   is_prospect: boolean;
@@ -250,6 +250,10 @@ export const useStintActions = (playerId: string | null) => {
     jerseyNumber: number,
     effectiveDate?: string | null,
   ): Promise<boolean> => {
+    if (!stint.season_id) {
+      toast.error('Add this player to a season roster before changing jersey number');
+      return false;
+    }
     if (!effectiveDate) {
       toast.error('Effective date is required to change a jersey number');
       return false;

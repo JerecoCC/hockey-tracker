@@ -759,9 +759,6 @@ router.patch('/:id', async (req, res) => {
         ORDER BY end_date DESC NULLS FIRST, created_at DESC
         LIMIT 1
       `) ?? [];
-      if (!roster && (jerseyInBody || prospectInBody)) {
-        return res.status(404).json({ error: 'Season roster record not found for this stint' });
-      }
       if (roster && (jerseyInBody || prospectInBody || positionInBody)) {
         [roster] = (await sql`
           UPDATE player_teams
@@ -794,8 +791,8 @@ router.patch('/:id', async (req, res) => {
         ...stintRows[0],
         season_id: roster?.season_id ?? (seasonInBody ? season_id : null),
         roster_player_team_id: roster?.id ?? null,
-        jersey_number: roster?.jersey_number ?? (jerseyInBody ? jersey_number ?? null : null),
-        is_prospect: roster?.is_prospect ?? (prospectInBody ? !!req.body.is_prospect : false),
+        jersey_number: roster?.jersey_number ?? null,
+        is_prospect: roster?.is_prospect ?? false,
         photo: photoInBody ? (photo ?? null) : null,
       });
     }

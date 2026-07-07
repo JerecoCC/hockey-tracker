@@ -182,6 +182,7 @@ describe('StintEditModal', () => {
             player_id: 'player-kyle-masters',
             team_id: 'team-sjs',
             season_id: 'season-1',
+            roster_player_team_id: 'roster-1',
             jersey_number: 44,
             is_prospect: false,
             photo: null,
@@ -232,5 +233,60 @@ describe('StintEditModal', () => {
       }),
     );
     expect(updatePayload).not.toHaveProperty('is_prospect');
+  });
+
+  it('does not submit jersey changes when editing an unlinked career stint', async () => {
+    const user = userEvent.setup();
+    const updateStint = jest.fn().mockResolvedValue(true);
+
+    render(
+      <StintEditModal
+        open
+        stint={
+          {
+            id: 'career-stint-1',
+            player_id: 'player-kyle-masters',
+            team_id: 'team-sjs',
+            season_id: null,
+            roster_player_team_id: null,
+            jersey_number: null,
+            is_prospect: false,
+            photo: null,
+            position: 'C',
+            acquisition_type: 'draft',
+            start_date: '2024-10-01',
+            end_date: null,
+            created_at: '2024-10-01T00:00:00.000Z',
+            team: {
+              id: 'team-sjs',
+              name: 'San Jose Sharks',
+              code: 'SJS',
+              logo: null,
+              primary_color: '#006d75',
+              text_color: '#ffffff',
+            },
+          }
+        }
+        teams={teams}
+        seasons={seasons}
+        leagueId="league-1"
+        currentTeamId="team-sjs"
+        onClose={jest.fn()}
+        createStint={jest.fn()}
+        updateStint={updateStint}
+      />,
+    );
+
+    expect(screen.getByLabelText('Jersey #')).toBeDisabled();
+
+    await user.selectOptions(screen.getByLabelText('Acquisition Type'), 'trade');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(updateStint).toHaveBeenCalledWith(
+      'career-stint-1',
+      expect.not.objectContaining({
+        jersey_number: expect.anything(),
+      }),
+    );
   });
 });

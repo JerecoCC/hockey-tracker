@@ -541,7 +541,7 @@ describe('PATCH /api/admin/player-teams/:id', () => {
     expect(sql).toHaveBeenCalledTimes(3);
   });
 
-  it('does not report a saved jersey number when no season roster exists for a career stint', async () => {
+  it('saves career stint edits without reporting a jersey number when no season roster exists', async () => {
     sql
       .mockResolvedValueOnce([{
         id: 'career-stint-1',
@@ -561,8 +561,13 @@ describe('PATCH /api/admin/player-teams/:id', () => {
         jersey_number: 88,
       });
 
-    expect(res.status).toBe(404);
-    expect(res.body.error).toMatch(/season roster record/i);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: 'career-stint-1',
+      season_id: 'season-2',
+      roster_player_team_id: null,
+      jersey_number: null,
+    });
     expect(sql).toHaveBeenCalledTimes(2);
   });
 
