@@ -255,14 +255,14 @@ const LeagueDetailsPage = () => {
             content: <LeagueTeamsTabSkeleton />,
           },
           {
-            label: 'Alignments',
-            icon: 'account_tree',
-            content: <LeagueAlignmentsTabSkeleton />,
-          },
-          {
             label: 'Players',
             icon: 'groups',
             content: <LeaguePlayersTabSkeleton />,
+          },
+          {
+            label: 'Alignments',
+            icon: 'account_tree',
+            content: <LeagueAlignmentsTabSkeleton />,
           },
           {
             label: 'Playoffs',
@@ -315,14 +315,14 @@ const LeagueDetailsPage = () => {
               content: <LeagueTeamsTab />,
             },
             {
-              label: 'Alignments',
-              icon: 'account_tree',
-              content: <LeagueAlignmentsTab />,
-            },
-            {
               label: 'Players',
               icon: 'groups',
               content: <LeaguePlayersTab />,
+            },
+            {
+              label: 'Alignments',
+              icon: 'account_tree',
+              content: <LeagueAlignmentsTab />,
             },
             {
               label: 'Playoffs',

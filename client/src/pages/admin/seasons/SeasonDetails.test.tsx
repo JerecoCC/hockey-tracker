@@ -96,7 +96,21 @@ jest.mock('@/components/SegmentedControl/SegmentedControl', () => (props: any) =
   </div>
 ));
 jest.mock('@/components/Tabs/Tabs', () => (props: any) => (
-  <div>{props.tabs[props.activeIndex ?? 0].content}</div>
+  <div>
+    <div role="tablist">
+      {props.tabs.map((tab: any, index: number) => (
+        <button
+          key={tab.label}
+          type="button"
+          role="tab"
+          aria-selected={(props.activeIndex ?? 0) === index}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+    {props.tabs[props.activeIndex ?? 0].content}
+  </div>
 ));
 jest.mock('@/components/TitleRow/TitleRow', () => (props: any) => (
   <div>
@@ -281,6 +295,23 @@ describe('SeasonDetails players tab', () => {
   });
 });
 
+describe('SeasonDetails tabs', () => {
+  it('places Playoffs before Awards', () => {
+    render(<SeasonDetails />);
+
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Info',
+      'Teams',
+      'Players',
+      'Games',
+      'Stats',
+      'Standings',
+      'Playoffs',
+      'Awards',
+    ]);
+  });
+});
+
 describe('SeasonDetails standings tab', () => {
   it('defers season stats and standings until their tabs need them', () => {
     mockUseTabState.mockReturnValue([3, jest.fn()]);
@@ -316,9 +347,15 @@ describe('SeasonDetails standings tab', () => {
     expect(mockUseSeasonStandings).toHaveBeenCalledWith('season-1', { enabled: true });
   });
 
+  it('labels the league standings subpage', () => {
+    render(<SeasonDetails />);
+
+    expect(screen.getByRole('heading', { name: 'League' })).toBeInTheDocument();
+  });
+
   it('enables cached standings and passes them to playoffs when the playoffs tab is active', () => {
     const standings = [makeStanding('team-1', 'Toronto Maple Leafs', 112)];
-    mockUseTabState.mockReturnValue([7, jest.fn()]);
+    mockUseTabState.mockReturnValue([6, jest.fn()]);
     mockUseSeasonStandings.mockReturnValue({
       standings,
       loading: false,
@@ -478,7 +515,14 @@ describe('SeasonDetails standings tab', () => {
     expect(within(standingsHeader as HTMLElement).getByRole('button', { name: 'Division' }))
       .toBeInTheDocument();
 
+    expect(screen.getByRole('heading', { name: 'League' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Conference' }));
+    expect(screen.getByRole('heading', { name: 'Eastern Conference' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Western Conference' })).toBeInTheDocument();
+
     await user.click(screen.getByRole('button', { name: 'Division' }));
+    expect(screen.getByRole('heading', { name: 'Atlantic Division' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Metropolitan Division' })).toBeInTheDocument();
 
     const atlanticThreeRow = screen.getByText('Atlantic Three').closest('tr');
     expect(atlanticThreeRow).toHaveClass('standingsQualifierRow');
@@ -493,6 +537,8 @@ describe('SeasonDetails standings tab', () => {
 
     await user.click(screen.getByRole('button', { name: 'Wildcard' }));
 
+    expect(screen.getByRole('heading', { name: 'Eastern Conference' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Western Conference' })).toBeInTheDocument();
     expect(screen.queryByText('Atlantic Three')).not.toBeInTheDocument();
     expect(screen.queryByText('Metro Three')).not.toBeInTheDocument();
     expect(screen.getByText('Metro Four')).toBeInTheDocument();

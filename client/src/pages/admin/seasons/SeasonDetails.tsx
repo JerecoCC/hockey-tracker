@@ -101,8 +101,8 @@ const SEASON_TAB_INDEX = {
   GAMES: 3,
   STATS: 4,
   STANDINGS: 5,
-  AWARDS: 6,
-  PLAYOFFS: 7,
+  PLAYOFFS: 6,
+  AWARDS: 7,
 } as const;
 const DEFAULT_WILDCARD_FORMAT: PlayoffFormatRule[] = [
   { scope: 'division', method: 'top', count: 3 },
@@ -126,6 +126,17 @@ function getAllTeamIds(groupId: string, allGroups: SeasonGroupRecord[]): Set<str
   collect(groupId);
   return ids;
 }
+
+const standingsGroupTitle = (
+  group: Pick<SeasonGroupRecord, 'name' | 'role'>,
+): string => {
+  const roleLabel =
+    group.role === 'conference' ? 'Conference' : group.role === 'division' ? 'Division' : null;
+  if (!roleLabel || new RegExp(`\\b${roleLabel}\\b`, 'i').test(group.name)) {
+    return group.name;
+  }
+  return `${group.name} ${roleLabel}`;
+};
 
 const SeasonDetailsPage = () => {
   const {
@@ -1399,7 +1410,7 @@ const SeasonDetailsPage = () => {
                       return (
                         <Section
                           key={conf.id}
-                          title={conf.name}
+                          title={standingsGroupTitle(conf)}
                         >
                           {renderTable(rows, 'No standings data yet.')}
                         </Section>
@@ -1416,7 +1427,7 @@ const SeasonDetailsPage = () => {
                       return (
                         <Section
                           key={div.id}
-                          title={div.name}
+                          title={standingsGroupTitle(div)}
                         >
                           {renderTable(rows, 'No standings data yet.')}
                         </Section>
@@ -1435,7 +1446,7 @@ const SeasonDetailsPage = () => {
                       return (
                         <Section
                           key={conf.id}
-                          title={conf.name}
+                          title={standingsGroupTitle(conf)}
                         >
                           {renderTable(rows, 'No wildcard contenders yet.')}
                         </Section>
@@ -1445,30 +1456,12 @@ const SeasonDetailsPage = () => {
 
                   // ── League: all teams in one table (default) ─────────────────────
                   return (
-                    <Card>
+                    <Section title="League">
                       {renderTable(sortRows(withPlaces(standings)), 'No standings data yet.')}
-                    </Card>
+                    </Section>
                   );
                 })()}
               </div>
-            ),
-          },
-          {
-            label: 'Awards',
-            icon: 'emoji_events',
-            content: (
-              <SeasonAwardsTab
-                seasonId={id!}
-                leagueCode={season.league_code}
-                leagueId={season.league_id}
-                seasonName={season.name}
-                playoffsStarted={season.playoffs_started}
-                seasonTeams={effectiveSeasonTeams}
-                groups={groups}
-                skaters={skaters}
-                goalies={goalies}
-                standings={standings}
-              />
             ),
           },
           {
@@ -1494,6 +1487,24 @@ const SeasonDetailsPage = () => {
                 startPlayoffsBusy={busy === 'start-playoffs'}
                 onStartPlayoffs={() => setShowStartPlayoffsConfirm(true)}
                 updateSeason={updateSeason}
+              />
+            ),
+          },
+          {
+            label: 'Awards',
+            icon: 'emoji_events',
+            content: (
+              <SeasonAwardsTab
+                seasonId={id!}
+                leagueCode={season.league_code}
+                leagueId={season.league_id}
+                seasonName={season.name}
+                playoffsStarted={season.playoffs_started}
+                seasonTeams={effectiveSeasonTeams}
+                groups={groups}
+                skaters={skaters}
+                goalies={goalies}
+                standings={standings}
               />
             ),
           },

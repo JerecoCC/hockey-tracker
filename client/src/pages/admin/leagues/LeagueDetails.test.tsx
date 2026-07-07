@@ -320,7 +320,7 @@ describe('LeagueDetailsPage – loading', () => {
   });
 
   it('renders fifteen player row skeletons while loading the Players tab', () => {
-    sessionStorage.setItem('tab:league-details', '4');
+    sessionStorage.setItem('tab:league-details', '3');
     const { container } = setup({ loading: true });
 
     expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'true');
@@ -330,7 +330,7 @@ describe('LeagueDetailsPage – loading', () => {
   });
 
   it('keeps the static Alignments header visible while loading', () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const { container } = setup({ loading: true });
 
     expect(screen.getByRole('tab', { name: 'Alignments' })).toHaveAttribute(
@@ -688,12 +688,18 @@ describe('LeagueDetailsPage – main render', () => {
 
 // ── Tabs ───────────────────────────────────────────────────────────────
 describe('LeagueDetailsPage – tabs', () => {
-  it('renders Info, Seasons, Teams, and Players tabs', () => {
+  it('renders the league detail tabs in the expected order', () => {
     setup({ league: mockLeague });
-    expect(screen.getByRole('tab', { name: 'Info' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Seasons' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Teams' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Players' })).toBeInTheDocument();
+
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Info',
+      'Seasons',
+      'Teams',
+      'Players',
+      'Alignments',
+      'Playoffs',
+      'Awards',
+    ]);
   });
 
   it('Info tab is active by default', () => {
@@ -724,15 +730,15 @@ describe('LeagueDetailsPage – tabs', () => {
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('opens on the Players tab when navigated with activeTab 4', () => {
-    sessionStorage.setItem('tab:league-details', '4');
+  it('opens on the Players tab when navigated with activeTab 3', () => {
+    sessionStorage.setItem('tab:league-details', '3');
     setup({ league: mockLeague });
     expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
   });
 
   it('renders the Alignments card title with an info tooltip', async () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const { container } = setup({ league: mockLeague });
 
     await waitFor(() => {
@@ -747,7 +753,7 @@ describe('LeagueDetailsPage – tabs', () => {
   });
 
   it('opens alignment editing in a modal instead of expanding the list row', async () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const alignmentSet = {
       id: 'align-1',
       league_id: 'lg1',
@@ -805,7 +811,7 @@ describe('LeagueDetailsPage – tabs', () => {
   });
 
   it('uses the alignment editor field layout for the create alignment modal', async () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const { container } = setup({ league: mockLeague });
 
     await waitFor(() =>
@@ -852,7 +858,7 @@ describe('LeagueDetailsPage – tabs', () => {
   });
 
   it('lets create alignment update teams before saving the new alignment', async () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const teams = [
       {
         id: 'team-1',
@@ -895,7 +901,7 @@ describe('LeagueDetailsPage – tabs', () => {
   });
 
   it('renders league alignment teams as a single-column list item stack', async () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const teams = [
       {
         id: 'team-1',
@@ -962,7 +968,7 @@ describe('LeagueDetailsPage – tabs', () => {
   });
 
   it('renders group alignment parents as label rows with grouped child fields', async () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const teams = [
       {
         id: 'team-1',
