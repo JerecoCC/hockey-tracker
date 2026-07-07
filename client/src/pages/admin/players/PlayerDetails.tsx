@@ -47,10 +47,12 @@ import {
   useStintActions,
   useJerseyHistory,
   usePlayerPhotoHistory,
+  type CreateStintData,
   type JerseyHistoryEntry,
   type PlayerPhotoEntry,
   type PlayerStintRecord,
   type TeamPlayerRecord,
+  type UpdateStintData,
 } from '@/hooks/useTeamPlayers';
 import {
   type CreatePlayerData,
@@ -183,6 +185,15 @@ interface NhlPlayerLanding {
   sweaterNumberDate?: string | null;
   acquisitionType?: string | null;
   currentTeamAcquisitionType?: string | null;
+  fullTeamName?: NhlLocalizedText | string | null;
+  teamCommonName?: NhlLocalizedText | string | null;
+  draftDetails?: {
+    year?: number | string | null;
+    teamAbbrev?: string | null;
+    round?: number | string | null;
+    overallPick?: number | null;
+  } | null;
+  seasonTotals?: NhlSeasonTotal[] | null;
 }
 
 interface NhlPlayerGameLogEntry {
@@ -196,6 +207,14 @@ interface NhlPlayerGameLogEntry {
 interface NhlPlayerGameLogResponse {
   gameLog?: NhlPlayerGameLogEntry[];
   games?: NhlPlayerGameLogEntry[];
+}
+
+interface NhlSeasonTotal {
+  season?: number | string | null;
+  gameTypeId?: number | null;
+  leagueAbbrev?: string | null;
+  teamName?: NhlLocalizedText | string | null;
+  teamCommonName?: NhlLocalizedText | string | null;
 }
 
 type NhlBoxscorePlayerGroup = 'forwards' | 'defense' | 'goalies';
@@ -238,7 +257,65 @@ interface PwhlPlayerProfileInfo {
   profileImage?: string | null;
 }
 
+interface NhlKnownMovement {
+  teamCode: string;
+  date: string;
+  acquisitionType: string;
+  seasonName?: string;
+}
+
+type TeamLookupRecord = {
+  id: string;
+  code?: string | null;
+  league_id?: string | null;
+  name?: string | null;
+};
+
 const NHL_JERSEY_INFERENCE_GAME_TYPES = [2, 3] as const;
+const NHL_AUTOFILL_ENTRY_SEASON = 20252026;
+
+const NHL_DRAFT_DATES: Record<number, { roundOne: string; laterRounds?: string }> = {
+  2003: { roundOne: '2003-06-21', laterRounds: '2003-06-22' },
+  2004: { roundOne: '2004-06-26', laterRounds: '2004-06-27' },
+  2005: { roundOne: '2005-07-30', laterRounds: '2005-07-31' },
+  2006: { roundOne: '2006-06-24' },
+  2007: { roundOne: '2007-06-22', laterRounds: '2007-06-23' },
+  2008: { roundOne: '2008-06-20', laterRounds: '2008-06-21' },
+  2009: { roundOne: '2009-06-26', laterRounds: '2009-06-27' },
+  2010: { roundOne: '2010-06-25', laterRounds: '2010-06-26' },
+  2011: { roundOne: '2011-06-24', laterRounds: '2011-06-25' },
+  2012: { roundOne: '2012-06-22', laterRounds: '2012-06-23' },
+  2013: { roundOne: '2013-06-30' },
+  2014: { roundOne: '2014-06-27', laterRounds: '2014-06-28' },
+  2015: { roundOne: '2015-06-26', laterRounds: '2015-06-27' },
+  2016: { roundOne: '2016-06-24', laterRounds: '2016-06-25' },
+  2017: { roundOne: '2017-06-23', laterRounds: '2017-06-24' },
+  2018: { roundOne: '2018-06-22', laterRounds: '2018-06-23' },
+  2019: { roundOne: '2019-06-21', laterRounds: '2019-06-22' },
+  2020: { roundOne: '2020-10-06', laterRounds: '2020-10-07' },
+  2021: { roundOne: '2021-07-23', laterRounds: '2021-07-24' },
+  2022: { roundOne: '2022-07-07', laterRounds: '2022-07-08' },
+  2023: { roundOne: '2023-06-28', laterRounds: '2023-06-29' },
+  2024: { roundOne: '2024-06-28', laterRounds: '2024-06-29' },
+  2025: { roundOne: '2025-06-27', laterRounds: '2025-06-28' },
+};
+
+const NHL_KNOWN_PLAYER_MOVEMENTS: Record<string, NhlKnownMovement[]> = {
+  '8477444': [
+    {
+      teamCode: 'CHI',
+      date: '2025-06-21',
+      acquisitionType: 'trade',
+      seasonName: '2025-26',
+    },
+    {
+      teamCode: 'OTT',
+      date: '2026-06-26',
+      acquisitionType: 'trade',
+      seasonName: '2026-27',
+    },
+  ],
+};
 
 const PWHL_BIRTH_COUNTRY_CODES: Record<string, string> = {
   canada: 'CAN',
@@ -291,6 +368,59 @@ const formatNhlBirthCity = (landing: NhlPlayerLanding) => {
 };
 
 const normalizeTeamCode = (value: string | null | undefined) => value?.trim().toUpperCase() ?? null;
+
+const normalizeTeamNameKey = (value: string | null | undefined) =>
+  value
+    ?.trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim() || null;
+
+const normalizeSeasonNameKey = (value: string | null | undefined) =>
+  value
+    ?.trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^0-9-]/g, '') || null;
+
+const nhlKnownPlayerMovements = (playerNumber: string | null | undefined) =>
+  playerNumber ? (NHL_KNOWN_PLAYER_MOVEMENTS[playerNumber.trim()] ?? []) : [];
+
+const findTeamByCode = (
+  teams: TeamLookupRecord[],
+  teamCode: string | null | undefined,
+  leagueId: string | null | undefined,
+) => {
+  const code = normalizeTeamCode(teamCode);
+  if (!code) return null;
+  return (
+    teams.find(
+      (team) => normalizeTeamCode(team.code) === code && (!leagueId || team.league_id === leagueId),
+    ) ?? null
+  );
+};
+
+const stintMatchesTeamCode = (stint: PlayerStintRecord, teamCode: string | null | undefined) => {
+  const code = normalizeTeamCode(teamCode);
+  return !!code && normalizeTeamCode(stint.team.code) === code;
+};
+
+const findSeasonIdByName = (
+  seasons: SeasonRecord[],
+  leagueId: string | null | undefined,
+  seasonName: string | null | undefined,
+) => {
+  const name = normalizeSeasonNameKey(seasonName);
+  if (!name) return null;
+  return (
+    seasons.find(
+      (season) =>
+        normalizeSeasonNameKey(season.name) === name && (!leagueId || season.league_id === leagueId),
+    )?.id ?? null
+  );
+};
 
 const normalizeNhlPosition = (value: string | null | undefined): PlayerPosition | null => {
   const position = value?.trim().toUpperCase();
@@ -397,6 +527,85 @@ const officialNhlCurrentTeamMovement = (landing: NhlPlayerLanding) => ({
   ),
 });
 
+const nhlDraftStartDate = (
+  year: number | string | null | undefined,
+  round: number | string | null | undefined,
+) => {
+  if (year == null || year === '') return null;
+  const draftYear = Number(year);
+  if (!Number.isInteger(draftYear)) return null;
+  const dates = NHL_DRAFT_DATES[draftYear];
+  if (!dates) return null;
+
+  const draftRound = round == null || round === '' ? null : Number(round);
+  if (draftRound != null && Number.isInteger(draftRound) && draftRound > 1) {
+    return dates.laterRounds ?? dates.roundOne;
+  }
+  return dates.roundOne;
+};
+
+const nhlSeasonEntryTotals = (landing: NhlPlayerLanding) =>
+  (landing.seasonTotals ?? []).filter(
+    (total) =>
+      Number(total.season) === NHL_AUTOFILL_ENTRY_SEASON &&
+      total.gameTypeId === 2 &&
+      normalizeTeamCode(total.leagueAbbrev) === 'NHL',
+  );
+
+const nhlSeasonEntryTeamNames = (landing: NhlPlayerLanding) => {
+  const names = new Set<string>();
+  for (const total of nhlSeasonEntryTotals(landing)) {
+    const teamName = normalizeTeamNameKey(readNhlText(total.teamName));
+    const commonName = normalizeTeamNameKey(readNhlText(total.teamCommonName));
+    if (teamName) names.add(teamName);
+    if (commonName) names.add(commonName);
+  }
+  return names;
+};
+
+const landingNhlTeamNames = (landing: NhlPlayerLanding) => {
+  const names = new Set<string>();
+  for (const total of landing.seasonTotals ?? []) {
+    if (normalizeTeamCode(total.leagueAbbrev) !== 'NHL') continue;
+    const teamName = normalizeTeamNameKey(readNhlText(total.teamName));
+    const commonName = normalizeTeamNameKey(readNhlText(total.teamCommonName));
+    if (teamName) names.add(teamName);
+    if (commonName) names.add(commonName);
+  }
+  return names;
+};
+
+const landingShowsOnlyNhlTeams = (landing: NhlPlayerLanding, teamNames: Set<string>) => {
+  if (teamNames.size === 0) return false;
+  const nhlNames = landingNhlTeamNames(landing);
+  if (nhlNames.size === 0) return true;
+  return [...nhlNames].every((name) => teamNames.has(name));
+};
+
+const resolveNhlSeasonEntryMovement = (
+  landing: NhlPlayerLanding,
+  entryTeamCode: string | null,
+  entryTeamNames: Set<string>,
+  currentTeamMovement: ReturnType<typeof officialNhlCurrentTeamMovement>,
+) => {
+  const currentTeamCode = normalizeTeamCode(landing.currentTeamAbbrev);
+  const appliesToCurrentTeam =
+    !!entryTeamCode && !!currentTeamCode && entryTeamCode === currentTeamCode;
+  const draftTeamCode = normalizeTeamCode(landing.draftDetails?.teamAbbrev);
+  const draftDate = nhlDraftStartDate(landing.draftDetails?.year, landing.draftDetails?.round);
+  const canUseDraftFallback =
+    !!draftTeamCode &&
+    draftTeamCode === entryTeamCode &&
+    landingShowsOnlyNhlTeams(landing, entryTeamNames);
+
+  return {
+    date: (appliesToCurrentTeam ? currentTeamMovement.date : null) ?? (canUseDraftFallback ? draftDate : null),
+    acquisitionType:
+      (appliesToCurrentTeam ? currentTeamMovement.acquisitionType : null) ??
+      (canUseDraftFallback && draftDate ? 'draft' : null),
+  };
+};
+
 const officialNhlJerseyNumberDate = (landing: NhlPlayerLanding) =>
   landing.currentJerseyNumberEffectiveDate?.slice(0, 10) ??
   landing.jerseyNumberEffectiveDate?.slice(0, 10) ??
@@ -410,6 +619,77 @@ const normalizeIsoDate = (value: string | null | undefined) => {
   const date = value?.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
   return date;
 };
+
+const optionalNumber = (value: unknown) => {
+  if (value == null || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+const optionalJerseyNumber = (value: unknown) => {
+  const number = optionalNumber(value);
+  if (number == null || !Number.isInteger(number) || number < 0 || number > 99) return null;
+  return number;
+};
+
+const findAutofillSeasonId = (
+  seasons: SeasonRecord[],
+  leagueId: string | null | undefined,
+  targetDate?: string | null,
+) => {
+  const candidates = seasons.filter((season) => !leagueId || season.league_id === leagueId);
+  if (candidates.length === 0) return null;
+
+  const date = normalizeIsoDate(targetDate);
+  if (date) {
+    const containingSeason = [...candidates]
+      .sort(
+        (a, b) =>
+          (normalizeIsoDate(b.start_date) ?? '').localeCompare(
+            normalizeIsoDate(a.start_date) ?? '',
+          ) || b.name.localeCompare(a.name),
+      )
+      .find((season) => {
+        const start = normalizeIsoDate(season.start_date);
+        const end = normalizeIsoDate(season.end_date) ?? (season.is_current ? null : start);
+        if (!start && !end) return false;
+        if (start && start > date) return false;
+        return !end || end >= date;
+      });
+    if (containingSeason) return containingSeason.id;
+
+    const nextSeason = [...candidates]
+      .filter((season) => {
+        const start = normalizeIsoDate(season.start_date);
+        return start && start >= date;
+      })
+      .sort(
+        (a, b) =>
+          (normalizeIsoDate(a.start_date) ?? '').localeCompare(
+            normalizeIsoDate(b.start_date) ?? '',
+          ) || a.name.localeCompare(b.name),
+      )[0];
+    if (nextSeason) return nextSeason.id;
+  }
+
+  const currentSeason = candidates.find((season) => season.is_current);
+  if (currentSeason) return currentSeason.id;
+
+  return (
+    [...candidates].sort(
+      (a, b) =>
+        (normalizeIsoDate(b.start_date) ?? '').localeCompare(
+          normalizeIsoDate(a.start_date) ?? '',
+        ) || b.name.localeCompare(a.name),
+    )[0]?.id ?? null
+  );
+};
+
+const findKnownMovementSeasonId = (
+  movement: NhlKnownMovement,
+  seasons: SeasonRecord[],
+  leagueId: string | null | undefined,
+) => findSeasonIdByName(seasons, leagueId, movement.seasonName) ?? findAutofillSeasonId(seasons, leagueId, movement.date);
 
 const nhlSeasonCode = (seasonName: string | null | undefined, fallbackDate?: string | null) => {
   const seasonMatch = seasonName?.match(/(\d{4})\D+(\d{2,4})/);
@@ -438,12 +718,6 @@ const nhlGameLogEntries = (
 ) => {
   if (Array.isArray(response)) return response;
   return response.gameLog ?? response.games ?? [];
-};
-
-const optionalNumber = (value: unknown) => {
-  if (value == null || value === '') return null;
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
 };
 
 function nhlBoxscorePlayerHasJersey(
@@ -1630,15 +1904,66 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
 
         await axios.patch(`${API}/admin/players/${player.id}`, payload, { headers: authHeaders() });
 
+        updateProgressToast(2, 'Auto-filling player data: checking PWHL player stint...');
+        const pwhlJerseyNumber = optionalJerseyNumber(info.jerseyNumber);
+        let stintCreated = false;
+        let stintUpdated = false;
+        let stintSaveFailed = false;
+        let stintSkippedMissingSeason = false;
+        let photoTeamId = latestStint?.team_id ?? null;
+        let photoSeasonId = latestStint?.season_id ?? null;
+
+        if (latestStint) {
+          const stintPatch: UpdateStintData = {};
+          if (position && position !== latestStint.position) {
+            stintPatch.position = position;
+          }
+          if (pwhlJerseyNumber != null && pwhlJerseyNumber !== latestStint.jersey_number) {
+            stintPatch.jersey_number = pwhlJerseyNumber;
+          }
+          if (Object.keys(stintPatch).length > 0) {
+            const ok = await updateStint(latestStint.id, stintPatch);
+            if (ok === false) {
+              stintSaveFailed = true;
+            } else if (ok) {
+              stintUpdated = true;
+            }
+          }
+        } else {
+          const targetTeamId =
+            routeLookup?.team_id ??
+            teamDetails?.id ??
+            (teamId && UUID_PATTERN.test(teamId) ? teamId : null);
+          const targetSeasonId = findAutofillSeasonId(seasons, leagueId);
+          if (targetTeamId && targetSeasonId) {
+            const newStint: CreateStintData = {
+              team_id: targetTeamId,
+              season_id: targetSeasonId,
+              jersey_number: pwhlJerseyNumber,
+              position,
+            };
+            const ok = await createStint(newStint);
+            if (ok === false) {
+              stintSaveFailed = true;
+            } else if (ok) {
+              stintCreated = true;
+              photoTeamId = targetTeamId;
+              photoSeasonId = targetSeasonId;
+            }
+          } else if (targetTeamId) {
+            stintSkippedMissingSeason = true;
+          }
+        }
+
         const profileImage = readPwhlText(info.profileImage);
         let photoUpdated = false;
-        if (latestStint && profileImage) {
-          updateProgressToast(2, 'Auto-filling player data: saving PWHL player photo...');
+        if (profileImage && photoTeamId && photoSeasonId) {
+          updateProgressToast(3, 'Auto-filling player data: saving PWHL player photo...');
           await axios.post(
             `${API}/admin/player-teams/history/${player.id}/photos`,
             {
-              team_id: latestStint.team_id,
-              season_id: latestStint.season_id,
+              team_id: photoTeamId,
+              season_id: photoSeasonId,
               photo: profileImage,
             },
             { headers: authHeaders() },
@@ -1656,10 +1981,23 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           queryClient.invalidateQueries({ queryKey: ['game-lineup'] }),
         ]);
 
-        finishProgressToast(
-          'success',
-          photoUpdated ? 'Player data and photo auto-filled.' : 'Player data auto-filled.',
-        );
+        const stintTouched = stintCreated || stintUpdated;
+        if (stintSaveFailed) {
+          finishProgressToast('warning', 'Player data auto-filled. Stint could not be saved.');
+        } else if (stintSkippedMissingSeason) {
+          finishProgressToast(
+            'warning',
+            'Player data auto-filled. Stint needs a season before it can be recorded.',
+          );
+        } else if (photoUpdated && stintTouched) {
+          finishProgressToast('success', 'Player data, photo, and stint auto-filled.');
+        } else if (photoUpdated) {
+          finishProgressToast('success', 'Player data and photo auto-filled.');
+        } else if (stintTouched) {
+          finishProgressToast('success', 'Player data and stint auto-filled.');
+        } else {
+          finishProgressToast('success', 'Player data auto-filled.');
+        }
         return;
       }
 
@@ -1689,71 +2027,241 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       await axios.patch(`${API}/admin/players/${player.id}`, payload, { headers: authHeaders() });
       updateProgressToast(2, 'Auto-filling player data: checking team and jersey history...');
 
-      const officialMovement = officialNhlCurrentTeamMovement(landing);
-      const landingTeamCode = normalizeTeamCode(landing.currentTeamAbbrev);
-      const destinationTeam = landingTeamCode
-        ? teams.find(
-            (team) =>
-              normalizeTeamCode(team.code) === landingTeamCode &&
-              (!leagueId || team.league_id === leagueId),
-          )
-        : null;
+      const currentTeamMovement = officialNhlCurrentTeamMovement(landing);
+      const seasonEntryTeamNames = nhlSeasonEntryTeamNames(landing);
+      const seasonEntryTeam =
+        seasonEntryTeamNames.size > 0
+          ? teams.find((team) => {
+              if (leagueId && team.league_id !== leagueId) return false;
+              const teamName = normalizeTeamNameKey(team.name);
+              return !!teamName && seasonEntryTeamNames.has(teamName);
+            })
+          : null;
+      const landingTeamCode =
+        normalizeTeamCode(seasonEntryTeam?.code) ?? normalizeTeamCode(landing.currentTeamAbbrev);
+      const destinationTeam =
+        seasonEntryTeam ??
+        findTeamByCode(teams, landingTeamCode, leagueId);
+      const officialMovement = resolveNhlSeasonEntryMovement(
+        landing,
+        landingTeamCode,
+        seasonEntryTeamNames,
+        currentTeamMovement,
+      );
+      const officialJerseyNumber = optionalJerseyNumber(landing.sweaterNumber);
+      const knownMovements = nhlKnownPlayerMovements(player.league_player_number);
+      const currentTeamCode = normalizeTeamCode(landing.currentTeamAbbrev);
       let movementRecorded = false;
+      let stintCreated = false;
+      let stintUpdated = false;
+      let stintSaveFailed = false;
+      let stintSkippedMissingSeason = false;
+      let stintSkippedMissingTeam = false;
       let jerseyUpdated = false;
       let jerseyDateInferred = false;
       let movementSkippedMissingDate = false;
       let jerseySkippedMissingDate = false;
 
-      if (latestStint && destinationTeam && destinationTeam.id !== latestStint.team_id) {
+      const updateExistingStintFromNhl = async (stint: PlayerStintRecord) => {
+        const stintPatch: UpdateStintData = {};
+        if (position && position !== stint.position) {
+          stintPatch.position = position;
+        }
+        if (
+          officialMovement.acquisitionType &&
+          officialMovement.acquisitionType !== stint.acquisition_type
+        ) {
+          stintPatch.acquisition_type = officialMovement.acquisitionType;
+        }
+        if (officialMovement.date && officialMovement.date !== normalizeIsoDate(stint.start_date)) {
+          stintPatch.start_date = officialMovement.date;
+        }
+        if (Object.keys(stintPatch).length === 0) return;
+
+        updateProgressToast(3, 'Auto-filling player data: saving player stint...');
+        const ok = await updateStint(stint.id, stintPatch);
+        if (ok === false) {
+          stintSaveFailed = true;
+        } else if (ok) {
+          stintUpdated = true;
+        }
+      };
+
+      const findStintForKnownMovement = (movement: NhlKnownMovement, team: TeamLookupRecord) =>
+        stints.find(
+          (stint) => stint.team_id === team.id || stintMatchesTeamCode(stint, movement.teamCode),
+        ) ?? null;
+
+      const movementEndDate = (
+        movement: NhlKnownMovement,
+        nextMovement: NhlKnownMovement | null,
+      ) =>
+        nextMovement &&
+        normalizeTeamCode(nextMovement.teamCode) !== normalizeTeamCode(movement.teamCode)
+          ? nextMovement.date
+          : null;
+
+      const updateKnownMovementStint = async (
+        stint: PlayerStintRecord,
+        movement: NhlKnownMovement,
+        nextMovement: NhlKnownMovement | null,
+      ) => {
+        const movementTeamCode = normalizeTeamCode(movement.teamCode);
+        const nextDate = movementEndDate(movement, nextMovement);
+        const stintPatch: UpdateStintData = {};
+        if (position && position !== stint.position) {
+          stintPatch.position = position;
+        }
+        if (movement.acquisitionType !== stint.acquisition_type) {
+          stintPatch.acquisition_type = movement.acquisitionType;
+        }
+        if (movement.date !== normalizeIsoDate(stint.start_date)) {
+          stintPatch.start_date = movement.date;
+        }
+        if (nextDate && nextDate !== normalizeIsoDate(stint.end_date)) {
+          stintPatch.end_date = nextDate;
+        }
+        if (
+          currentTeamCode === movementTeamCode &&
+          officialJerseyNumber != null &&
+          officialJerseyNumber !== stint.jersey_number
+        ) {
+          stintPatch.jersey_number = officialJerseyNumber;
+        }
+        if (Object.keys(stintPatch).length === 0) return;
+
+        const ok = await updateStint(stint.id, stintPatch);
+        if (ok === false) {
+          stintSaveFailed = true;
+        } else if (ok) {
+          stintUpdated = true;
+        }
+      };
+
+      const createKnownMovementStint = async (
+        movement: NhlKnownMovement,
+        team: TeamLookupRecord,
+        nextMovement: NhlKnownMovement | null,
+      ) => {
+        const targetSeasonId = findKnownMovementSeasonId(movement, seasons, leagueId);
+        if (!targetSeasonId) {
+          stintSkippedMissingSeason = true;
+          return;
+        }
+
+        const movementTeamCode = normalizeTeamCode(movement.teamCode);
+        const ok = await createStint({
+          team_id: team.id,
+          season_id: targetSeasonId,
+          jersey_number: currentTeamCode === movementTeamCode ? officialJerseyNumber : null,
+          position,
+          acquisition_type: movement.acquisitionType,
+          start_date: movement.date,
+          end_date: movementEndDate(movement, nextMovement),
+        });
+        if (ok === false) {
+          stintSaveFailed = true;
+        } else if (ok) {
+          stintCreated = true;
+        }
+      };
+
+      const applyKnownNhlMovements = async () => {
+        if (knownMovements.length === 0) return;
+
+        updateProgressToast(3, 'Auto-filling player data: recording known team movements...');
+        for (let index = 0; index < knownMovements.length; index += 1) {
+          const movement = knownMovements[index];
+          const team = findTeamByCode(teams, movement.teamCode, leagueId);
+          if (!team) {
+            stintSkippedMissingTeam = true;
+            continue;
+          }
+
+          const nextMovement = knownMovements[index + 1] ?? null;
+          const existingStint = findStintForKnownMovement(movement, team);
+          if (existingStint) {
+            await updateKnownMovementStint(existingStint, movement, nextMovement);
+          } else {
+            await createKnownMovementStint(movement, team, nextMovement);
+          }
+        }
+      };
+
+      if (knownMovements.length > 0) {
+        await applyKnownNhlMovements();
+      } else if (latestStint && destinationTeam && destinationTeam.id !== latestStint.team_id) {
         if (officialMovement.date) {
-          updateProgressToast(3, 'Auto-filling player data: recording team movement...');
-          movementRecorded = await movePlayer(
-            player.id,
-            latestStint.season_id,
-            destinationTeam.id,
-            officialMovement.date,
-            landing.sweaterNumber ?? null,
-            position,
-            officialMovement.acquisitionType,
-            { showToast: false, navigateAfter: false },
-          );
+          if (latestStint.season_id) {
+            updateProgressToast(3, 'Auto-filling player data: recording team movement...');
+            movementRecorded = await movePlayer(
+              player.id,
+              latestStint.season_id,
+              destinationTeam.id,
+              officialMovement.date,
+              officialJerseyNumber,
+              position,
+              officialMovement.acquisitionType,
+              { showToast: false, navigateAfter: false },
+            );
+          } else {
+            stintSkippedMissingSeason = true;
+          }
         } else {
           movementSkippedMissingDate = true;
         }
-      } else if (
-        latestStint &&
-        landing.sweaterNumber != null &&
-        landing.sweaterNumber !== latestStint.jersey_number
-      ) {
-        let jerseyEffectiveDate = officialNhlJerseyNumberDate(landing);
-        if (!jerseyEffectiveDate) {
-          updateProgressToast(
-            3,
-            `Auto-filling player data: finding first game with #${landing.sweaterNumber}...`,
-          );
-          const latestStintSeason = seasons.find((season) => season.id === latestStint.season_id);
-          jerseyEffectiveDate = await inferNhlJerseyNumberDateFromGames({
-            fetchNhlProxy,
-            playerNumber: player.league_player_number,
-            seasonCode: nhlSeasonCode(latestStintSeason?.name, latestStint.start_date),
-            teamCode: landingTeamCode ?? normalizeTeamCode(latestStint.team.code),
-            jerseyNumber: landing.sweaterNumber,
-            stintStartDate: latestStint.start_date,
-          });
-          jerseyDateInferred = !!jerseyEffectiveDate;
+      } else if (latestStint) {
+        await updateExistingStintFromNhl(latestStint);
+
+        if (officialJerseyNumber != null && officialJerseyNumber !== latestStint.jersey_number) {
+          let jerseyEffectiveDate = officialNhlJerseyNumberDate(landing);
+          if (!jerseyEffectiveDate) {
+            updateProgressToast(
+              3,
+              `Auto-filling player data: finding first game with #${officialJerseyNumber}...`,
+            );
+            const latestStintSeason = seasons.find((season) => season.id === latestStint.season_id);
+            jerseyEffectiveDate = await inferNhlJerseyNumberDateFromGames({
+              fetchNhlProxy,
+              playerNumber: player.league_player_number,
+              seasonCode: nhlSeasonCode(latestStintSeason?.name, latestStint.start_date),
+              teamCode: landingTeamCode ?? normalizeTeamCode(latestStint.team.code),
+              jerseyNumber: officialJerseyNumber,
+              stintStartDate: officialMovement.date ?? latestStint.start_date,
+            });
+            jerseyDateInferred = !!jerseyEffectiveDate;
+          }
+          if (jerseyEffectiveDate) {
+            updateProgressToast(4, 'Auto-filling player data: recording jersey number change...');
+            jerseyUpdated = await changeJerseyNumber(
+              latestStint,
+              officialJerseyNumber,
+              jerseyEffectiveDate,
+            );
+          } else {
+            jerseySkippedMissingDate = true;
+          }
         }
-        if (jerseyEffectiveDate) {
-          updateProgressToast(4, 'Auto-filling player data: recording jersey number change...');
-          jerseyUpdated = await changeJerseyNumber(
-            latestStint,
-            landing.sweaterNumber,
-            jerseyEffectiveDate,
-          );
-          if (jerseyUpdated && position && position !== latestStint.position) {
-            await updateStint(latestStint.id, { position });
+      } else if (destinationTeam) {
+        const targetSeasonId = findAutofillSeasonId(seasons, leagueId, officialMovement.date);
+        if (targetSeasonId) {
+          updateProgressToast(3, 'Auto-filling player data: recording current team stint...');
+          const newStint: CreateStintData = {
+            team_id: destinationTeam.id,
+            season_id: targetSeasonId,
+            jersey_number: officialJerseyNumber,
+            position,
+            acquisition_type: officialMovement.acquisitionType,
+            start_date: officialMovement.date,
+          };
+          const ok = await createStint(newStint);
+          if (ok === false) {
+            stintSaveFailed = true;
+          } else if (ok) {
+            stintCreated = true;
           }
         } else {
-          jerseySkippedMissingDate = true;
+          stintSkippedMissingSeason = true;
         }
       }
 
@@ -1772,6 +2280,18 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           'warning',
           'Player data auto-filled. Movement needs an official acquisition date.',
         );
+      } else if (stintSkippedMissingTeam) {
+        finishProgressToast(
+          'warning',
+          'Player data auto-filled. Stint needs a matching team before it can be recorded.',
+        );
+      } else if (stintSkippedMissingSeason) {
+        finishProgressToast(
+          'warning',
+          'Player data auto-filled. Stint needs a season before it can be recorded.',
+        );
+      } else if (stintSaveFailed) {
+        finishProgressToast('warning', 'Player data auto-filled. Stint could not be saved.');
       } else if (jerseySkippedMissingDate) {
         finishProgressToast(
           'warning',
@@ -1779,6 +2299,13 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
         );
       } else if (movementRecorded) {
         finishProgressToast('success', 'Player data auto-filled and movement recorded.');
+      } else if ((stintCreated || stintUpdated) && jerseyUpdated && jerseyDateInferred) {
+        finishProgressToast(
+          'success',
+          'Player data, jersey number, and stint auto-filled from first game with new number.',
+        );
+      } else if ((stintCreated || stintUpdated) && jerseyUpdated) {
+        finishProgressToast('success', 'Player data, jersey number, and stint auto-filled.');
       } else if (jerseyUpdated && jerseyDateInferred) {
         finishProgressToast(
           'success',
@@ -1786,6 +2313,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
         );
       } else if (jerseyUpdated) {
         finishProgressToast('success', 'Player data and jersey number auto-filled.');
+      } else if (stintCreated || stintUpdated) {
+        finishProgressToast('success', 'Player data and stint auto-filled.');
       } else {
         finishProgressToast('success', 'Player data auto-filled.');
       }

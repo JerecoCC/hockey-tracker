@@ -1453,6 +1453,7 @@ describe('PlayerDetails info tab', () => {
 
   it('auto-fills PWHL player details and season photo from HockeyTech profile data', async () => {
     const user = userEvent.setup();
+    const updateStint = jest.fn().mockResolvedValue(true);
     mockUsePlayerRouteLookup.mockReturnValue({
       routeLookup: {
         player_id: 'player-1',
@@ -1483,6 +1484,18 @@ describe('PlayerDetails info tab', () => {
       },
       stats: [],
       loading: false,
+    });
+    mockUseStintActions.mockReturnValue({
+      createStint: jest.fn(),
+      updateStint,
+      deleteStint: jest.fn(),
+      changeJerseyNumber: jest.fn(),
+      updateJerseyHistoryEntry: jest.fn(),
+      deleteJerseyHistoryEntry: jest.fn(),
+      changePlayerPhoto: jest.fn(),
+      deletePlayerPhoto: jest.fn(),
+      uploadStintPhoto: jest.fn(),
+      saving: false,
     });
     mockedAxios.get.mockResolvedValueOnce({
       data: {
@@ -1544,6 +1557,10 @@ describe('PlayerDetails info tab', () => {
       },
       expect.any(Object),
     );
+    expect(updateStint).toHaveBeenCalledWith('stint-1', {
+      jersey_number: 2,
+      position: 'D',
+    });
     expect(mockedToast.loading).toHaveBeenCalledWith(
       'Auto-filling player data: fetching PWHL player...',
       expect.any(Object),
@@ -1552,10 +1569,550 @@ describe('PlayerDetails info tab', () => {
       expect(mockedToast.update).toHaveBeenCalledWith(
         'player-autofill-toast',
         expect.objectContaining({
-          render: 'Player data and photo auto-filled.',
+          render: 'Player data, photo, and stint auto-filled.',
           type: 'success',
         }),
       ),
+    );
+  });
+
+  it('updates NHL current stint details from official landing data during autofill', async () => {
+    const user = userEvent.setup();
+    const updateStint = jest.fn().mockResolvedValue(true);
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-1',
+          team_id: 'team-1',
+          season_id: 'season-1',
+          team: {
+            id: 'team-1',
+            name: 'Toronto Maple Leafs',
+            code: 'TOR',
+            logo: null,
+            primary_color: '#003e7e',
+            text_color: '#ffffff',
+          },
+          jersey_number: 19,
+          is_prospect: false,
+          position: null,
+          acquisition_type: null,
+          start_date: null,
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [{ id: 'team-1', code: 'TOR', league_id: 'league-1' }],
+    });
+    mockUseStintActions.mockReturnValue({
+      createStint: jest.fn(),
+      updateStint,
+      deleteStint: jest.fn(),
+      changeJerseyNumber: jest.fn(),
+      updateJerseyHistoryEntry: jest.fn(),
+      deleteJerseyHistoryEntry: jest.fn(),
+      changePlayerPhoto: jest.fn(),
+      deletePlayerPhoto: jest.fn(),
+      uploadStintPhoto: jest.fn(),
+      saving: false,
+    });
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        firstName: { default: 'John' },
+        lastName: { default: 'Smith' },
+        currentTeamAbbrev: 'TOR',
+        currentTeamStartDate: '2025-07-01',
+        currentTeamAcquisitionType: 'free-agent',
+        sweaterNumber: 19,
+        position: 'RW',
+      },
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    await waitFor(() =>
+      expect(updateStint).toHaveBeenCalledWith('stint-1', {
+        position: 'RW',
+        acquisition_type: 'free_agency',
+        start_date: '2025-07-01',
+      }),
+    );
+    expect(mockedToast.update).toHaveBeenCalledWith(
+      'player-autofill-toast',
+      expect.objectContaining({
+        render: 'Player data and stint auto-filled.',
+        type: 'success',
+      }),
+    );
+  });
+
+  it('uses draft day for NHL 2025-26 entry stints when the player has no prior NHL movements', async () => {
+    const user = userEvent.setup();
+    const updateStint = jest.fn().mockResolvedValue(true);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8480281',
+        first_name: 'Alexey',
+        last_name: 'Toropchenko',
+        photo: null,
+        date_of_birth: '1999-06-25',
+        birth_city: 'Moscow',
+        birth_country: 'RUS',
+        height_cm: 198,
+        weight_lbs: 225,
+        position: 'RW',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-1',
+          team_id: 'team-stl',
+          season_id: 'season-1',
+          team: {
+            id: 'team-stl',
+            name: 'St. Louis Blues',
+            code: 'STL',
+            logo: null,
+            primary_color: '#002f87',
+            text_color: '#ffffff',
+          },
+          jersey_number: 13,
+          is_prospect: false,
+          position: 'RW',
+          acquisition_type: null,
+          start_date: null,
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [{ id: 'team-stl', name: 'St. Louis Blues', code: 'STL', league_id: 'league-1' }],
+    });
+    mockUseStintActions.mockReturnValue({
+      createStint: jest.fn(),
+      updateStint,
+      deleteStint: jest.fn(),
+      changeJerseyNumber: jest.fn(),
+      updateJerseyHistoryEntry: jest.fn(),
+      deleteJerseyHistoryEntry: jest.fn(),
+      changePlayerPhoto: jest.fn(),
+      deletePlayerPhoto: jest.fn(),
+      uploadStintPhoto: jest.fn(),
+      saving: false,
+    });
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        firstName: { default: 'Alexey' },
+        lastName: { default: 'Toropchenko' },
+        birthDate: '1999-06-25',
+        birthCity: { default: 'Moscow' },
+        birthCountry: 'RUS',
+        currentTeamAbbrev: 'STL',
+        fullTeamName: { default: 'St. Louis Blues' },
+        teamCommonName: { default: 'Blues' },
+        sweaterNumber: 13,
+        position: 'R',
+        draftDetails: {
+          year: 2017,
+          teamAbbrev: 'STL',
+          round: 4,
+          overallPick: 113,
+        },
+        seasonTotals: [
+          {
+            season: 20252026,
+            gameTypeId: 2,
+            leagueAbbrev: 'NHL',
+            teamName: { default: 'St. Louis Blues' },
+            teamCommonName: { default: 'Blues' },
+          },
+          {
+            season: 20242025,
+            gameTypeId: 2,
+            leagueAbbrev: 'NHL',
+            teamName: { default: 'St. Louis Blues' },
+            teamCommonName: { default: 'Blues' },
+          },
+        ],
+      },
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    await waitFor(() =>
+      expect(updateStint).toHaveBeenCalledWith('stint-1', {
+        acquisition_type: 'draft',
+        start_date: '2017-06-24',
+      }),
+    );
+  });
+
+  it('uses draft day for the NHL entry team when the official current team has changed', async () => {
+    const user = userEvent.setup();
+    const updateStint = jest.fn().mockResolvedValue(true);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8475314',
+        first_name: 'Anders',
+        last_name: 'Lee',
+        photo: null,
+        date_of_birth: '1990-07-03',
+        birth_city: 'Edina',
+        birth_country: 'USA',
+        height_cm: 191,
+        weight_lbs: 234,
+        position: 'C',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-1',
+          team_id: 'team-nyi',
+          season_id: 'season-1',
+          team: {
+            id: 'team-nyi',
+            name: 'New York Islanders',
+            code: 'NYI',
+            logo: null,
+            primary_color: '#00539b',
+            text_color: '#ffffff',
+          },
+          jersey_number: 27,
+          is_prospect: false,
+          position: 'C',
+          acquisition_type: null,
+          start_date: null,
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-nyi', name: 'New York Islanders', code: 'NYI', league_id: 'league-1' },
+        { id: 'team-uta', name: 'Utah Mammoth', code: 'UTA', league_id: 'league-1' },
+      ],
+    });
+    mockUseStintActions.mockReturnValue({
+      createStint: jest.fn(),
+      updateStint,
+      deleteStint: jest.fn(),
+      changeJerseyNumber: jest.fn(),
+      updateJerseyHistoryEntry: jest.fn(),
+      deleteJerseyHistoryEntry: jest.fn(),
+      changePlayerPhoto: jest.fn(),
+      deletePlayerPhoto: jest.fn(),
+      uploadStintPhoto: jest.fn(),
+      saving: false,
+    });
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        firstName: { default: 'Anders' },
+        lastName: { default: 'Lee' },
+        birthDate: '1990-07-03',
+        birthCity: { default: 'Edina' },
+        birthCountry: 'USA',
+        currentTeamAbbrev: 'UTA',
+        fullTeamName: { default: 'Utah Mammoth' },
+        teamCommonName: { default: 'Mammoth' },
+        sweaterNumber: 27,
+        position: 'C',
+        draftDetails: {
+          year: 2009,
+          teamAbbrev: 'NYI',
+          round: 6,
+          overallPick: 152,
+        },
+        seasonTotals: [
+          {
+            season: 20122013,
+            gameTypeId: 2,
+            leagueAbbrev: 'NHL',
+            teamName: { default: 'New York Islanders' },
+            teamCommonName: { default: 'Islanders' },
+          },
+          {
+            season: 20252026,
+            gameTypeId: 2,
+            leagueAbbrev: 'NHL',
+            teamName: { default: 'New York Islanders' },
+            teamCommonName: { default: 'Islanders' },
+          },
+        ],
+      },
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    await waitFor(() =>
+      expect(updateStint).toHaveBeenCalledWith('stint-1', {
+        acquisition_type: 'draft',
+        start_date: '2009-06-27',
+      }),
+    );
+  });
+
+  it('records known NHL trades after the 2025-26 entry stint during autofill', async () => {
+    const user = userEvent.setup();
+    const createStint = jest.fn().mockResolvedValue(true);
+    const updateStint = jest.fn().mockResolvedValue(true);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8477444',
+        first_name: 'Andre',
+        last_name: 'Burakovsky',
+        photo: null,
+        date_of_birth: '1995-02-09',
+        birth_city: 'Klagenfurt',
+        birth_country: 'AUT',
+        height_cm: 191,
+        weight_lbs: 203,
+        position: 'LW',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-chi',
+          team_id: 'team-chi',
+          season_id: 'season-2025',
+          team: {
+            id: 'team-chi',
+            name: 'Chicago Blackhawks',
+            code: 'CHI',
+            logo: null,
+            primary_color: '#cf0a2c',
+            text_color: '#ffffff',
+          },
+          jersey_number: 95,
+          is_prospect: false,
+          position: 'LW',
+          acquisition_type: null,
+          start_date: null,
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-chi', name: 'Chicago Blackhawks', code: 'CHI', league_id: 'league-1' },
+        { id: 'team-ott', name: 'Ottawa Senators', code: 'OTT', league_id: 'league-1' },
+      ],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2025',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-20',
+          is_current: false,
+          created_at: '2025-01-01T00:00:00Z',
+        },
+        {
+          id: 'season-2026',
+          league_id: 'league-1',
+          name: '2026-27',
+          start_date: '2026-10-01',
+          end_date: null,
+          is_current: true,
+          created_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUseStintActions.mockReturnValue({
+      createStint,
+      updateStint,
+      deleteStint: jest.fn(),
+      changeJerseyNumber: jest.fn(),
+      updateJerseyHistoryEntry: jest.fn(),
+      deleteJerseyHistoryEntry: jest.fn(),
+      changePlayerPhoto: jest.fn(),
+      deletePlayerPhoto: jest.fn(),
+      uploadStintPhoto: jest.fn(),
+      saving: false,
+    });
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        firstName: { default: 'Andre' },
+        lastName: { default: 'Burakovsky' },
+        birthDate: '1995-02-09',
+        birthCity: { default: 'Klagenfurt' },
+        birthCountry: 'AUT',
+        currentTeamAbbrev: 'OTT',
+        fullTeamName: { default: 'Ottawa Senators' },
+        teamCommonName: { default: 'Senators' },
+        sweaterNumber: 28,
+        position: 'L',
+        draftDetails: {
+          year: 2013,
+          teamAbbrev: 'WSH',
+          round: 1,
+          overallPick: 23,
+        },
+        seasonTotals: [
+          {
+            season: 20242025,
+            gameTypeId: 2,
+            leagueAbbrev: 'NHL',
+            teamName: { default: 'Seattle Kraken' },
+            teamCommonName: { default: 'Kraken' },
+          },
+          {
+            season: 20252026,
+            gameTypeId: 2,
+            leagueAbbrev: 'NHL',
+            teamName: { default: 'Chicago Blackhawks' },
+            teamCommonName: { default: 'Blackhawks' },
+          },
+        ],
+      },
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    await waitFor(() =>
+      expect(updateStint).toHaveBeenCalledWith('stint-chi', {
+        acquisition_type: 'trade',
+        start_date: '2025-06-21',
+        end_date: '2026-06-26',
+      }),
+    );
+    expect(createStint).toHaveBeenCalledWith({
+      team_id: 'team-ott',
+      season_id: 'season-2026',
+      jersey_number: 28,
+      position: 'LW',
+      acquisition_type: 'trade',
+      start_date: '2026-06-26',
+      end_date: null,
+    });
+  });
+
+  it('creates an NHL current team stint when player autofill has official team data', async () => {
+    const user = userEvent.setup();
+    const createStint = jest.fn().mockResolvedValue(true);
+    mockUsePlayerTradeHistory.mockReturnValue({ stints: [] });
+    mockUseTeams.mockReturnValue({
+      teams: [{ id: 'team-1', code: 'TOR', league_id: 'league-1' }],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-1',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: null,
+          is_current: true,
+          created_at: '2025-01-01T00:00:00Z',
+        },
+        {
+          id: 'season-2',
+          league_id: 'league-1',
+          name: '2024-25',
+          start_date: '2024-10-01',
+          end_date: '2025-06-30',
+          is_current: false,
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUseStintActions.mockReturnValue({
+      createStint,
+      updateStint: jest.fn(),
+      deleteStint: jest.fn(),
+      changeJerseyNumber: jest.fn(),
+      updateJerseyHistoryEntry: jest.fn(),
+      deleteJerseyHistoryEntry: jest.fn(),
+      changePlayerPhoto: jest.fn(),
+      deletePlayerPhoto: jest.fn(),
+      uploadStintPhoto: jest.fn(),
+      saving: false,
+    });
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        firstName: { default: 'John' },
+        lastName: { default: 'Smith' },
+        currentTeamAbbrev: 'TOR',
+        currentTeamStartDate: '2025-07-01',
+        currentTeamAcquisitionType: 'signing',
+        sweaterNumber: 91,
+        position: 'LW',
+      },
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    await waitFor(() =>
+      expect(createStint).toHaveBeenCalledWith({
+        team_id: 'team-1',
+        season_id: 'season-1',
+        jersey_number: 91,
+        position: 'LW',
+        acquisition_type: 'signing',
+        start_date: '2025-07-01',
+      }),
+    );
+    expect(mockedToast.update).toHaveBeenCalledWith(
+      'player-autofill-toast',
+      expect.objectContaining({
+        render: 'Player data and stint auto-filled.',
+        type: 'success',
+      }),
     );
   });
 
