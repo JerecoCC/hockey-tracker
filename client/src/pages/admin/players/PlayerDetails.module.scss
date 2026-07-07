@@ -143,12 +143,11 @@
   display: flex;
   align-items: center;
   gap: $space-2xl;
-  padding: $space-2xl calc(#{$space-2xl} + 2.75rem) $space-2xl $space-2xl;
+  padding: $space-2xl;
 
   @media (max-width: 640px) {
     align-items: flex-start;
     flex-direction: column;
-    padding-right: calc(#{$space-lg} + 2.75rem);
   }
 }
 
@@ -226,6 +225,20 @@
 }
 
 // ── Status badge ──────────────────────────────────────────────────────────
+.heroRightCol {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
+  flex-shrink: 0;
+
+  @media (max-width: 640px) {
+    align-self: auto;
+    margin-left: 0;
+  }
+}
+
 .heroActions {
   flex-shrink: 0;
   margin-left: auto;
@@ -238,50 +251,6 @@
   display: inline-flex;
   align-items: center;
   color: $accent;
-}
-
-.heroStatusTooltip {
-  position: absolute;
-  top: -1px;
-  right: $space-xl;
-  z-index: 0;
-  display: inline-flex;
-}
-
-.heroStatusBookmark {
-  min-height: 1.5rem;
-  box-sizing: border-box;
-  display: inline-flex;
-  position: relative;
-  align-items: center;
-  justify-content: center;
-  padding: 2px $space-sm;
-  border: 0;
-  border-radius: 0 0 $radius-sm $radius-sm;
-  background: var(--hero-status-bg);
-  color: var(--hero-status-color);
-  box-shadow: none;
-  font-size: $font-sm;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.heroStatusActive {
-  --hero-status-color: #fff;
-  --hero-status-bg: #{$success};
-}
-
-.heroStatusInactive {
-  --hero-status-color: var(--app-text, #{$text-body});
-  --hero-status-bg: var(--app-border, #{$border});
-}
-
-.heroStatusRetired {
-  --hero-status-color: #fff;
-  --hero-status-bg: #{$warning};
 }
 
 @media (max-width: 640px) {

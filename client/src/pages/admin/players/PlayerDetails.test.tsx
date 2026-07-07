@@ -539,13 +539,14 @@ describe('PlayerDetails info tab', () => {
     ]);
   });
 
-  it('shows the active or retired bookmark in the hero status area', () => {
+  it('shows the active or retired tag in the hero status area', () => {
     const { container, rerender } = render(<PlayerDetails />);
 
     expect(screen.getByRole('heading', { name: 'John Smith' })).toBeInTheDocument();
-    const activeBookmark = container.querySelector('.heroStatusBookmark') as HTMLElement;
-    expect(activeBookmark).toHaveAttribute('aria-label', 'Active');
-    expect(within(activeBookmark).getByText('ACTIVE')).toBeInTheDocument();
+    const activeTag = screen.getByRole('status', { name: 'Active' });
+    expect(activeTag).toHaveAttribute('aria-label', 'Active');
+    expect(within(activeTag).getByText('ACTIVE')).toBeInTheDocument();
+    expect(container.querySelector('.heroStatusTooltip')).not.toBeInTheDocument();
     expect(
       within(container.querySelector('.heroTitleRow') as HTMLElement).queryByText('ACTIVE'),
     ).not.toBeInTheDocument();
@@ -572,9 +573,9 @@ describe('PlayerDetails info tab', () => {
 
     rerender(<PlayerDetails />);
 
-    const retiredBookmark = container.querySelector('.heroStatusBookmark') as HTMLElement;
-    expect(retiredBookmark).toHaveAttribute('aria-label', 'Retired');
-    expect(within(retiredBookmark).getByText('RETIRED')).toBeInTheDocument();
+    const retiredTag = screen.getByRole('status', { name: 'Retired' });
+    expect(retiredTag).toHaveAttribute('aria-label', 'Retired');
+    expect(within(retiredTag).getByText('RETIRED')).toBeInTheDocument();
     expect(screen.queryByText('Inactive')).not.toBeInTheDocument();
   });
 

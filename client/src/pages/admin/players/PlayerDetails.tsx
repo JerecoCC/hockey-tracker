@@ -18,6 +18,7 @@ import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal'
 import ListItem from '@/components/ListItem/ListItem';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
+import StatusTag from '@/components/StatusTag/StatusTag';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import StatItem from '@/components/StatItem/StatItem';
@@ -61,7 +62,7 @@ import {
 } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import { formatPlayerPosition } from '@/lib/playerPosition';
-import { getPlayerStatus, PLAYER_STATUS_LABELS } from '@/lib/playerStatus';
+import { getPlayerStatus } from '@/lib/playerStatus';
 import { getLatestEndedSeasonId } from '@/lib/seasonSelection';
 import {
   buildGameDetailsPath,
@@ -208,6 +209,7 @@ interface NhlSeasonTotal {
   season?: number | string | null;
   gameTypeId?: number | null;
   leagueAbbrev?: string | null;
+  teamAbbrev?: NhlLocalizedText | string | null;
   teamName?: NhlLocalizedText | string | null;
   teamCommonName?: NhlLocalizedText | string | null;
 }
@@ -296,6 +298,14 @@ const NHL_DRAFT_DATES: Record<number, { roundOne: string; laterRounds?: string }
 };
 
 const NHL_KNOWN_PLAYER_MOVEMENTS: Record<string, NhlKnownMovement[]> = {
+  '8475461': [
+    {
+      teamCode: 'UTA',
+      date: '2024-07-02',
+      acquisitionType: 'free_agency',
+      seasonName: '2025-26',
+    },
+  ],
   '8477971': [
     {
       teamCode: 'NSH',
@@ -345,6 +355,12 @@ const PWHL_BIRTH_COUNTRY_CODES: Record<string, string> = {
   'united states of america': 'USA',
   us: 'USA',
   usa: 'USA',
+};
+
+const NHL_TEAM_NAME_CODE_ALIASES: Record<string, string> = {
+  'utah hockey club': 'UTA',
+  'utah mammoth': 'UTA',
+  mammoth: 'UTA',
 };
 
 const readNhlText = (value: NhlLocalizedText | string | null | undefined) => {
@@ -570,6 +586,24 @@ const nhlSeasonEntryTeamNames = (landing: NhlPlayerLanding) => {
     if (commonName) names.add(commonName);
   }
   return names;
+};
+
+const nhlTeamCodeFromName = (value: string | null | undefined) => {
+  const key = normalizeTeamNameKey(value);
+  return key ? (NHL_TEAM_NAME_CODE_ALIASES[key] ?? null) : null;
+};
+
+const nhlSeasonEntryTeamCode = (landing: NhlPlayerLanding) => {
+  const codes = new Set<string>();
+  for (const total of nhlSeasonEntryTotals(landing)) {
+    const teamAbbrev = normalizeTeamCode(readNhlText(total.teamAbbrev));
+    const teamNameCode = nhlTeamCodeFromName(readNhlText(total.teamName));
+    const commonNameCode = nhlTeamCodeFromName(readNhlText(total.teamCommonName));
+    if (teamAbbrev) codes.add(teamAbbrev);
+    if (teamNameCode) codes.add(teamNameCode);
+    if (commonNameCode) codes.add(commonNameCode);
+  }
+  return codes.size === 1 ? [...codes][0] : null;
 };
 
 const landingNhlTeamNames = (landing: NhlPlayerLanding) => {
@@ -2047,7 +2081,9 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             })
           : null;
       const landingTeamCode =
-        normalizeTeamCode(seasonEntryTeam?.code) ?? normalizeTeamCode(landing.currentTeamAbbrev);
+        normalizeTeamCode(seasonEntryTeam?.code) ??
+        nhlSeasonEntryTeamCode(landing) ??
+        normalizeTeamCode(landing.currentTeamAbbrev);
       const destinationTeam =
         seasonEntryTeam ??
         findTeamByCode(teams, landingTeamCode, leagueId);
@@ -2059,7 +2095,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       );
       const officialJerseyNumber = optionalJerseyNumber(landing.sweaterNumber);
       const knownMovements = nhlKnownPlayerMovements(player.league_player_number);
-      const currentTeamCode = normalizeTeamCode(landing.currentTeamAbbrev);
+      const currentTeamCode = normalizeTeamCode(landing.currentTeamAbbrev) ?? landingTeamCode;
       let movementRecorded = false;
       let stintCreated = false;
       let stintUpdated = false;
@@ -3058,24 +3094,9 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
               )}
             </div>
           </div>
-          <Tooltip
-            text={PLAYER_STATUS_LABELS[playerStatus]}
-            className={styles.heroStatusTooltip}
-          >
-            <span
-              className={[
-                styles.heroStatusBookmark,
-                playerStatus === 'active'
-                  ? styles.heroStatusActive
-                  : playerStatus === 'inactive'
-                    ? styles.heroStatusInactive
-                    : styles.heroStatusRetired,
-              ].join(' ')}
-              aria-label={PLAYER_STATUS_LABELS[playerStatus]}
-            >
-              {PLAYER_STATUS_LABELS[playerStatus].toUpperCase()}
-            </span>
-          </Tooltip>
+          <div className={styles.heroRightCol}>
+            <StatusTag status={playerStatus} />
+          </div>
         </div>
       </Card>
 
