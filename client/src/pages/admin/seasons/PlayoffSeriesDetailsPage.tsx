@@ -27,6 +27,7 @@ import {
 import ScoreboardCard from '@/pages/admin/games/game-details/ScoreboardCard';
 import GameListItem from '@/components/GameListItem';
 import GameFormModal, { type GameFormTeam } from './GameFormModal';
+import { buildPlayoffSeriesDocumentTitle } from './playoffSeriesDocumentTitle';
 import styles from './PlayoffSeriesDetailsPage.module.scss';
 
 const STATUS_LABEL: Record<GameStatus, string> = {
@@ -194,7 +195,7 @@ const PlayoffSeriesDetailsPage = () => {
     seasonId,
   });
   const loading = leaguesLoading || leagueDetailsLoading || seriesLoading;
-  const title = 'Series Details';
+  const title = buildPlayoffSeriesDocumentTitle(playoffSeries, routeSeason);
   const matchupLabel = playoffSeries
     ? `${playoffSeries.away_team_code ?? 'TBD'} vs ${playoffSeries.home_team_code ?? 'TBD'}`
     : title;
