@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps } from 'react';
 import type { GroupAlignmentSet } from '@/hooks/useGroupAlignmentSets';
@@ -97,6 +97,10 @@ const renderCard = (overrides: Partial<SeasonTeamsCardProps> = {}) =>
     </MemoryRouter>,
   );
 
+beforeEach(() => {
+  window.HTMLElement.prototype.scrollIntoView = jest.fn();
+});
+
 describe('SeasonTeamsCard', () => {
   it('renders group parents as alignment parent rows and subgroup teams in the grid list', () => {
     const wolves = makeTeam('team-1', 'Seattle', 'Wolves', 'SEA');
@@ -153,5 +157,60 @@ describe('SeasonTeamsCard', () => {
     expect(screen.getByRole('heading', { name: 'Teams' })).toBeInTheDocument();
     expect(teamList).toBeInTheDocument();
     expect(Array.from(teamList?.children ?? [])).toHaveLength(2);
+  });
+
+  it('ignores saved groups when the selected alignment is league-wide', () => {
+    const teams = [
+      makeSeasonTeam('team-1', 'Seattle', 'Wolves', 'SEA'),
+      makeSeasonTeam('team-2', 'Boston', 'Bears', 'BOS'),
+    ];
+    const groups = [makeGroup('east', 'Eastern', 'conference', null, [teams[0]])];
+    const { container } = renderCard({
+      alignmentSets: [makeAlignmentSet('align-league', 'league')],
+      groupAlignmentSetId: 'align-league',
+      groups,
+      seasonTeams: teams,
+    });
+
+    const teamList = container.querySelector('.teamList');
+    expect(screen.getByRole('heading', { name: 'Teams' })).toBeInTheDocument();
+    expect(screen.queryByText('Eastern Conference')).not.toBeInTheDocument();
+    expect(container.querySelector('.groupList')).not.toBeInTheDocument();
+    expect(teamList).toBeInTheDocument();
+    expect(Array.from(teamList?.children ?? [])).toHaveLength(2);
+  });
+
+  it('ignores saved groups when previewing a league-wide alignment before saving', async () => {
+    const savedTeam = makeTeam('team-old', 'New York', 'Night', 'NYN');
+    const previewTeams = [
+      makeTeam('team-1', 'Seattle', 'Wolves', 'SEA'),
+      makeTeam('team-2', 'Boston', 'Bears', 'BOS'),
+    ];
+    const groups = [makeGroup('east', 'Eastern', 'conference', null, [savedTeam])];
+    const fetchAlignmentSet = jest.fn(async () => ({
+      ...makeAlignmentSet('align-league', 'league'),
+      teams: previewTeams,
+    }));
+    const { container } = renderCard({
+      alignmentSets: [
+        makeAlignmentSet('align-groups', 'groups'),
+        makeAlignmentSet('align-league', 'league'),
+      ],
+      groupAlignmentSetId: 'align-groups',
+      groups,
+      fetchAlignmentSet,
+    });
+
+    fireEvent.click(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByText('League Wide (league-wide)'));
+
+    await waitFor(() => expect(fetchAlignmentSet).toHaveBeenCalledWith('align-league'));
+    await waitFor(() => expect(container.querySelectorAll('.teamList > *')).toHaveLength(2));
+
+    expect(screen.getByRole('heading', { name: 'Teams' })).toBeInTheDocument();
+    expect(screen.queryByText('Eastern Conference')).not.toBeInTheDocument();
+    expect(screen.queryByText('Night')).not.toBeInTheDocument();
+    expect(screen.getByText('Wolves')).toBeInTheDocument();
+    expect(screen.getByText('Bears')).toBeInTheDocument();
   });
 });

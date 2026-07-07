@@ -184,6 +184,8 @@ const renderTab = (
   playoffSeries: unknown[] = [],
   playoffsStarted = true,
   options: {
+    isEnded?: boolean;
+    clearWinners?: jest.Mock;
     saveNominees?: jest.Mock;
     skaters?: (typeof skater)[];
     rosterPlayers?: unknown[];
@@ -199,6 +201,7 @@ const renderTab = (
     addRecipient,
     saveNominees: options.saveNominees ?? jest.fn(async () => true),
     deleteRecipient: jest.fn(async () => true),
+    clearWinners: options.clearWinners ?? jest.fn(async () => true),
     refresh: jest.fn(),
   });
   mockUsePlayoffSeries.mockReturnValue({
@@ -232,6 +235,7 @@ const renderTab = (
         leagueId="league-1"
         seasonName="2025-26"
         playoffsStarted={playoffsStarted}
+        isEnded={options.isEnded ?? false}
         seasonTeams={options.seasonTeams ?? [team]}
         groups={options.groups ?? []}
         skaters={options.skaters ?? [skater]}
@@ -269,6 +273,24 @@ describe('SeasonAwardsTab', () => {
       makeAward({
         awarded_after_playoffs: true,
         selection_method: 'automatic',
+        stat_key: 'points',
+      }),
+      addRecipient,
+      [],
+      false,
+    );
+
+    expect(addRecipient).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Award Player' })).not.toBeInTheDocument();
+  });
+
+  it('does not automatically record regular-season awards before playoffs start', () => {
+    const addRecipient = jest.fn(async () => true);
+    renderTab(
+      makeAward({
+        awarded_after_playoffs: false,
+        selection_method: 'automatic',
+        competition_scope: 'regular_season',
         stat_key: 'points',
       }),
       addRecipient,
@@ -719,9 +741,55 @@ describe('SeasonAwardsTab', () => {
           games: [],
         },
       ],
+      true,
+      {
+        isEnded: true,
+      },
     );
 
     expect(screen.getByText('Champion - Final 3-2')).toBeInTheDocument();
+  });
+
+  it('does not automatically record playoff champion awards before the season ends', () => {
+    const addRecipient = jest.fn(async () => true);
+    renderTab(
+      makeAward({
+        name: 'Walter Cup Winner',
+        recipient_type: 'team',
+        selection_method: 'automatic',
+        competition_scope: 'playoffs',
+        stat_key: 'playoff_champion',
+      }),
+      addRecipient,
+      [
+        {
+          id: 'series-1',
+          season_id: 'season-1',
+          round: 1,
+          series_letter: 'F',
+          home_team_id: 'team-1',
+          home_team_name: 'Toronto',
+          home_team_code: 'TOR',
+          away_team_id: 'team-2',
+          away_team_name: 'Montreal',
+          away_team_code: 'MTL',
+          games_to_win: 3,
+          home_wins: 3,
+          away_wins: 2,
+          status: 'complete',
+          winner_team_id: 'team-1',
+          bracket_slot_key: null,
+          created_at: '2026-01-01T00:00:00.000Z',
+          games: [],
+        },
+      ],
+      true,
+      {
+        isEnded: false,
+      },
+    );
+
+    expect(addRecipient).not.toHaveBeenCalled();
   });
 
   it('keeps the set winner action for non-automatic awards after a winner is recorded', () => {
@@ -732,6 +800,36 @@ describe('SeasonAwardsTab', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Award Player' })).toBeInTheDocument();
+  });
+
+  it('clears all recorded winners for an award after confirmation', async () => {
+    const user = userEvent.setup();
+    const clearWinners = jest.fn(async () => true);
+    renderTab(
+      makeAward({
+        allow_multiple_winners: true,
+        recipients: [
+          makeWinner('winner-1', 'player-1', 'John Smith'),
+          makeWinner('winner-2', 'player-2', 'Jane Doe'),
+        ],
+      }),
+      undefined,
+      [],
+      true,
+      {
+        clearWinners,
+      },
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Clear winners' }));
+
+    expect(screen.getByRole('heading', { name: 'Clear Winners' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Clear Winners' }));
+
+    expect(clearWinners).toHaveBeenCalledWith('season-award-1', ['winner-1', 'winner-2'], {
+      refresh: false,
+    });
   });
 
   it('uses a radio list when awarding a single player from nominees', async () => {
@@ -882,6 +980,10 @@ describe('SeasonAwardsTab', () => {
           games: [],
         },
       ],
+      true,
+      {
+        isEnded: true,
+      },
     );
 
     expect(

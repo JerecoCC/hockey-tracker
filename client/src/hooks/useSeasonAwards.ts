@@ -269,6 +269,33 @@ const useSeasonAwards = (seasonId: string | undefined) => {
     }
   };
 
+  const clearWinners = async (
+    seasonAwardId: string,
+    recipientIds: string[],
+    options: AwardMutationOptions = {},
+  ): Promise<boolean> => {
+    if (recipientIds.length === 0) return true;
+
+    try {
+      await Promise.all(
+        recipientIds.map((recipientId) =>
+          axios.delete(
+            `${API}/admin/seasons/${seasonId}/awards/${seasonAwardId}/recipients/${recipientId}`,
+            { headers: authHeaders() },
+          ),
+        ),
+      );
+      if (!options.silent) {
+        toast.success(recipientIds.length === 1 ? 'Winner cleared' : 'Winners cleared');
+      }
+      if (options.refresh !== false) refresh();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to clear winners'));
+      return false;
+    }
+  };
+
   return {
     awards: data,
     loading: isLoading,
@@ -279,6 +306,7 @@ const useSeasonAwards = (seasonId: string | undefined) => {
     addRecipient,
     saveNominees,
     deleteRecipient,
+    clearWinners,
     refresh,
   };
 };

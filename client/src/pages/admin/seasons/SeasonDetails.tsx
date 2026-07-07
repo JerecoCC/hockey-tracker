@@ -1500,6 +1500,7 @@ const SeasonDetailsPage = () => {
                 leagueId={season.league_id}
                 seasonName={season.name}
                 playoffsStarted={season.playoffs_started}
+                isEnded={season.is_ended}
                 seasonTeams={effectiveSeasonTeams}
                 groups={groups}
                 skaters={skaters}

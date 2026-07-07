@@ -4,6 +4,7 @@ import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Checklist, { type ChecklistOption } from '@/components/Checklist/Checklist';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Divider from '@/components/Divider/Divider';
 import Section from '@/components/Section/Section';
 import Field from '@/components/Field/Field';
@@ -167,6 +168,7 @@ interface Props {
   leagueId: string | null;
   seasonName: string | null;
   playoffsStarted: boolean;
+  isEnded: boolean;
   seasonTeams: SeasonTeam[];
   groups: SeasonGroupRecord[];
   skaters: SkaterStatRecord[];
@@ -310,6 +312,18 @@ const canAwardWinners = (award: SeasonAwardRecord, playoffsStarted: boolean) =>
 const isAutomaticWinnerAward = (award: SeasonAwardRecord) =>
   award.selection_method === 'automatic' || award.stat_key === 'playoff_champion';
 
+const canRecordAutomaticWinner = (
+  award: SeasonAwardRecord,
+  playoffsStarted: boolean,
+  isEnded: boolean,
+) => {
+  const competitionScope = getAwardCompetitionScope(award);
+  if (competitionScope === 'playoffs' || award.stat_key === 'playoff_champion') {
+    return isEnded;
+  }
+  return playoffsStarted;
+};
+
 // A player who changed teams mid-season can appear as more than one stat row
 // (multiple team stints, or split duplicate records that share only a name).
 // Collapse them to a single entry — their most-recent stint (the latest
@@ -445,14 +459,23 @@ const SeasonAwardsTab = ({
   leagueId,
   seasonName,
   playoffsStarted,
+  isEnded,
   seasonTeams,
   groups,
   skaters,
   goalies,
   standings,
 }: Props) => {
-  const { awards, loading, updateTrackedAwards, addRecipient, saveNominees, deleteRecipient, refresh } =
-    useSeasonAwards(seasonId);
+  const {
+    awards,
+    loading,
+    updateTrackedAwards,
+    addRecipient,
+    saveNominees,
+    deleteRecipient,
+    clearWinners,
+    refresh,
+  } = useSeasonAwards(seasonId);
   const { series: playoffSeries } = usePlayoffSeries(seasonId);
   const { players: rosterPlayers } = useLeaguePlayers(
     leagueId ?? undefined,
@@ -470,6 +493,8 @@ const SeasonAwardsTab = ({
   const [recipientWinnerDraftIds, setRecipientWinnerDraftIds] = useState<string[]>([]);
   const [recipientWinnerQuery, setRecipientWinnerQuery] = useState('');
   const [recipientWinnerSaving, setRecipientWinnerSaving] = useState(false);
+  const [clearWinnersTarget, setClearWinnersTarget] = useState<SeasonAwardRecord | null>(null);
+  const [clearWinnersSaving, setClearWinnersSaving] = useState(false);
   const [nomineeAward, setNomineeAward] = useState<SeasonAwardRecord | null>(null);
   const [nomineeDrafts, setNomineeDrafts] = useState<NomineeDraft[]>([]);
   const [nomineesSaving, setNomineesSaving] = useState(false);
@@ -1035,6 +1060,63 @@ const SeasonAwardsTab = ({
     recipientForm.reset();
   };
 
+  const suppressAutomaticWinnerRecordKeys = (
+    award: SeasonAwardRecord,
+    winners: SeasonAwardRecipient[],
+  ) => {
+    if (!award.season_award_id || !isAutomaticWinnerAward(award)) return;
+
+    const suggestion = suggestions.get(award.award_id);
+    if (suggestion) {
+      automaticWinnerRecordKeysRef.current.add(
+        `${award.season_award_id}:${suggestion.type}:${suggestion.id}`,
+      );
+    }
+
+    winners.forEach((winner) => {
+      const winnerId = recipientValueId(winner);
+      if (!winnerId) return;
+      automaticWinnerRecordKeysRef.current.add(
+        `${award.season_award_id}:${winner.recipient_type}:${winnerId}`,
+      );
+    });
+  };
+
+  const openClearWinnersModal = (award: SeasonAwardRecord) => {
+    setClearWinnersTarget(award);
+    setClearWinnersSaving(false);
+  };
+
+  const closeClearWinnersModal = () => {
+    if (clearWinnersSaving) return;
+    setClearWinnersTarget(null);
+  };
+
+  const confirmClearWinners = async () => {
+    if (!clearWinnersTarget?.season_award_id || clearWinnersSaving) return;
+
+    const winners = clearWinnersTarget.recipients.filter(
+      (recipient) => recipient.role === 'winner',
+    );
+    const winnerIds = winners.map((recipient) => recipient.id);
+    if (winnerIds.length === 0) {
+      setClearWinnersTarget(null);
+      return;
+    }
+
+    setClearWinnersSaving(true);
+    const ok = await clearWinners(clearWinnersTarget.season_award_id, winnerIds, {
+      refresh: false,
+    });
+    setClearWinnersSaving(false);
+
+    if (ok) {
+      suppressAutomaticWinnerRecordKeys(clearWinnersTarget, winners);
+      refresh();
+      setClearWinnersTarget(null);
+    }
+  };
+
   const toggleRecipientWinner = (recipientId: string) => {
     if (!activeRecipientAward || recipientWinnerSaving) return;
     const selected = recipientWinnerDraftIds.includes(recipientId);
@@ -1296,7 +1378,8 @@ const SeasonAwardsTab = ({
 
       for (const award of trackedAwards) {
         if (!isAutomaticWinnerAward(award) || isTeamSelectionAward(award)) continue;
-        if (!award.season_award_id || !canAwardWinners(award, playoffsStarted)) continue;
+        if (!award.season_award_id) continue;
+        if (!canRecordAutomaticWinner(award, playoffsStarted, isEnded)) continue;
 
         const suggestion = suggestions.get(award.award_id);
         if (!suggestion) continue;
@@ -1347,7 +1430,7 @@ const SeasonAwardsTab = ({
     };
 
     void recordAutomaticWinners();
-  }, [playoffsStarted, suggestions, trackedAwards, withAwardStatValue]);
+  }, [isEnded, playoffsStarted, suggestions, trackedAwards, withAwardStatValue]);
 
   const submitTeamSelection = teamSelectionForm.handleSubmit(async (values) => {
     if (
@@ -1406,6 +1489,10 @@ const SeasonAwardsTab = ({
       );
       return option.value === draft.recipient_id || !selectedInAnotherDraft;
     });
+  const clearWinnersTargetCount =
+    clearWinnersTarget?.recipients.filter((recipient) => recipient.role === 'winner').length ?? 0;
+  const clearWinnersConfirmLabel =
+    clearWinnersTargetCount === 1 ? 'Clear Winner' : 'Clear Winners';
 
   return (
     <>
@@ -1464,6 +1551,9 @@ const SeasonAwardsTab = ({
               const isAutomaticAward = isAutomaticWinnerAward(award);
               const showAwardAction =
                 !isAutomaticAward && canAwardWinners(award, playoffsStarted);
+              const canClearWinners = !!award.season_award_id && winners.length > 0;
+              const isClearWinnersSaving =
+                clearWinnersSaving && clearWinnersTarget?.award_id === award.award_id;
               const rendersColumnList =
                 isGroupedAward || (!canManageNominees && award.allow_multiple_winners);
               const getAwardRecipientStat = (recipient: SeasonAwardRecipient) =>
@@ -1483,7 +1573,7 @@ const SeasonAwardsTab = ({
                   </h4>
                 </div>
               );
-              const awardActions = canManageNominees || showAwardAction ? (
+              const awardActions = canManageNominees || showAwardAction || canClearWinners ? (
                 <div className={styles.awardActions}>
                   <div className={styles.awardRecipientActions}>
                     {canManageNominees && (
@@ -1512,6 +1602,18 @@ const SeasonAwardsTab = ({
                         onClick={() => openRecipientModal(award)}
                       />
                     ) : null}
+                    {canClearWinners && (
+                      <Button
+                        variant="outlined"
+                        intent="danger"
+                        icon="delete"
+                        tooltip={winners.length === 1 ? 'Clear winner' : 'Clear winners'}
+                        tooltipIntent="error"
+                        aria-label={winners.length === 1 ? 'Clear winner' : 'Clear winners'}
+                        disabled={isAutomaticWinnerSaving || isClearWinnersSaving}
+                        onClick={() => openClearWinnersModal(award)}
+                      />
+                    )}
                   </div>
                 </div>
               ) : null;
@@ -1587,6 +1689,27 @@ const SeasonAwardsTab = ({
           </div>
         )}
       </Section>
+
+      <ConfirmModal
+        open={!!clearWinnersTarget}
+        title={clearWinnersConfirmLabel}
+        body={
+          clearWinnersTarget ? (
+            <>
+              {clearWinnersTargetCount === 1
+                ? 'Clear the recorded winner for '
+                : `Clear all ${clearWinnersTargetCount} winners recorded for `}
+              <strong>{clearWinnersTarget.name}</strong>?
+            </>
+          ) : null
+        }
+        confirmLabel={clearWinnersSaving ? 'Clearing...' : clearWinnersConfirmLabel}
+        confirmIcon="delete"
+        variant="danger"
+        busy={clearWinnersSaving}
+        onCancel={closeClearWinnersModal}
+        onConfirm={confirmClearWinners}
+      />
 
       <Modal
         open={awardSelectionOpen}

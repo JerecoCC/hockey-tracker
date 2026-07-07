@@ -298,13 +298,18 @@ const SeasonTeamsCard = ({
     [draftAlignmentDetails?.groups],
   );
   const showPreview = hasDraftAlignmentChange && !!draftAlignment;
-  const userGroups =
-    showPreview && draftAlignment?.structure_type === 'groups' ? previewGroups : savedUserGroups;
+  const isLeagueWideAlignment = draftAlignment?.structure_type === 'league';
+  const isGroupedAlignment = draftAlignment?.structure_type === 'groups';
+  const userGroups = isLeagueWideAlignment
+    ? []
+    : showPreview && isGroupedAlignment
+      ? previewGroups
+      : savedUserGroups;
   const userRoots = userGroups
     .filter((group) => group.parent_id === null)
     .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
   const flatTeams: TeamDisplayRecord[] =
-    showPreview && draftAlignment?.structure_type === 'league'
+    showPreview && isLeagueWideAlignment
       ? (draftAlignmentDetails?.teams ?? [])
       : savedFlatTeams;
   const alignmentOptions = alignmentSets.map((set) => ({
@@ -371,7 +376,7 @@ const SeasonTeamsCard = ({
 
   return (
     <Section
-      title={draftAlignment?.structure_type === 'groups' ? 'Team Groups' : 'Teams'}
+      title={isGroupedAlignment ? 'Team Groups' : 'Teams'}
       action={alignmentControl}
     >
       {loading || (showPreview && previewLoading) ? (
