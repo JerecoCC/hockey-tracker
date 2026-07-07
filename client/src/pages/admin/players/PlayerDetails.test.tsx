@@ -2262,6 +2262,115 @@ describe('PlayerDetails info tab', () => {
     );
   });
 
+  it('creates Andrew Agozzino Utah stint when NHL landing omits current team abbrev', async () => {
+    const user = userEvent.setup();
+    const createStint = jest.fn().mockResolvedValue(true);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8475461',
+        first_name: 'Andrew',
+        last_name: 'Agozzino',
+        photo: null,
+        date_of_birth: '1991-01-03',
+        birth_city: 'Kleinburg, Ontario',
+        birth_country: 'CAN',
+        height_cm: 178,
+        weight_lbs: 187,
+        position: null,
+        shoots: null,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({ stints: [] });
+    mockUseTeams.mockReturnValue({
+      teams: [{ id: 'team-uta', name: 'Utah Hockey Club', code: 'UTA', league_id: 'league-1' }],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2025',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: null,
+          is_current: true,
+          created_at: '2025-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUseStintActions.mockReturnValue({
+      createStint,
+      updateStint: jest.fn(),
+      deleteStint: jest.fn(),
+      changeJerseyNumber: jest.fn(),
+      updateJerseyHistoryEntry: jest.fn(),
+      deleteJerseyHistoryEntry: jest.fn(),
+      changePlayerPhoto: jest.fn(),
+      deletePlayerPhoto: jest.fn(),
+      uploadStintPhoto: jest.fn(),
+      saving: false,
+    });
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        firstName: { default: 'Andrew' },
+        lastName: { default: 'Agozzino' },
+        birthDate: '1991-01-03',
+        birthCity: { default: 'Kleinburg' },
+        birthStateProvince: { default: 'Ontario' },
+        birthCountry: 'CAN',
+        currentTeamAbbrev: null,
+        currentTeamRoster: null,
+        sweaterNumber: 36,
+        position: 'L',
+        shootsCatches: 'L',
+        seasonTotals: [
+          {
+            season: 20252026,
+            gameTypeId: 2,
+            leagueAbbrev: 'NHL',
+            teamName: { default: 'Utah Mammoth' },
+            teamCommonName: { default: 'Mammoth' },
+          },
+          {
+            season: 20252026,
+            gameTypeId: 2,
+            leagueAbbrev: 'AHL',
+            teamName: { default: 'Tucson Roadrunners' },
+          },
+        ],
+      },
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    await waitFor(() =>
+      expect(createStint).toHaveBeenCalledWith({
+        team_id: 'team-uta',
+        season_id: 'season-2025',
+        jersey_number: 36,
+        position: 'LW',
+        acquisition_type: 'free_agency',
+        start_date: '2024-07-02',
+        end_date: null,
+      }),
+    );
+    expect(mockedToast.update).toHaveBeenCalledWith(
+      'player-autofill-toast',
+      expect.objectContaining({
+        render: 'Player data and stint auto-filled.',
+        type: 'success',
+      }),
+    );
+  });
+
   it('records NHL autofill jersey changes through dated jersey history', async () => {
     const user = userEvent.setup();
     const updateStint = jest.fn().mockResolvedValue(true);
