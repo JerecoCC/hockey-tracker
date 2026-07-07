@@ -225,7 +225,19 @@ const SeasonFormModal = (props: Props) => {
                 disabled={isSubmitting}
               />
             </div>
-            <div>
+          </div>
+        )}
+        {showRegularSeasonSettings && (
+          <div className={styles.settingsGridFull}>
+            <Field
+              label="Scoring System"
+              type="select"
+              control={control}
+              name="scoring_system"
+              options={SCORING_SYSTEM_OPTIONS}
+              disabled={isSubmitting}
+            />
+            <div className={styles.settingsGridCompact}>
               <Field
                 label="Goalie Min TOI"
                 type="number"
@@ -244,18 +256,6 @@ const SeasonFormModal = (props: Props) => {
                 disabled={isSubmitting}
               />
             </div>
-          </div>
-        )}
-        {showRegularSeasonSettings && (
-          <div className={styles.settingsGridFull}>
-            <Field
-              label="Scoring System"
-              type="select"
-              control={control}
-              name="scoring_system"
-              options={SCORING_SYSTEM_OPTIONS}
-              disabled={isSubmitting}
-            />
           </div>
         )}
       </form>

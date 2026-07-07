@@ -144,26 +144,28 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
             disabled={isSubmitting}
           />
         </div>
-        <Field
-          label="Name"
-          required
-          control={control}
-          name="name"
-          rules={{ required: true }}
-          placeholder="e.g. National Hockey League"
-          autoFocus
-          disabled={isSubmitting}
-        />
-        <Field
-          label="Code"
-          required
-          control={control}
-          name="code"
-          rules={{ required: true }}
-          transform={(v) => v.toUpperCase()}
-          placeholder="e.g. NHL"
-          disabled={isSubmitting}
-        />
+        <div className={styles.nameCodeRow}>
+          <Field
+            label="Name"
+            required
+            control={control}
+            name="name"
+            rules={{ required: true }}
+            placeholder="e.g. National Hockey League"
+            autoFocus
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Code"
+            required
+            control={control}
+            name="code"
+            rules={{ required: true }}
+            transform={(v) => v.toUpperCase()}
+            placeholder="e.g. NHL"
+            disabled={isSubmitting}
+          />
+        </div>
         <div className={styles.colorRow}>
           <Field
             label="Primary Color"
@@ -197,6 +199,18 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
             options={SHOOTOUT_OPTIONS}
             disabled={isSubmitting}
           />
+        </div>
+        <div className={styles.scoringSettingsRow}>
+          <div>
+            <Field
+              label="Scoring System"
+              type="select"
+              control={control}
+              name="scoring_system"
+              options={SCORING_SYSTEM_OPTIONS}
+              disabled={isSubmitting}
+            />
+          </div>
           <Field
             label="Goalie Min TOI"
             type="number"
@@ -213,16 +227,6 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
             }}
             disabled={isSubmitting}
           />
-          <div className={styles.settingsGridFull}>
-            <Field
-              label="Scoring System"
-              type="select"
-              control={control}
-              name="scoring_system"
-              options={SCORING_SYSTEM_OPTIONS}
-              disabled={isSubmitting}
-            />
-          </div>
         </div>
         <Field
           label="Description"

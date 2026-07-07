@@ -14,6 +14,17 @@
   row-gap: $space-xl;
 }
 
+.nameCodeRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(5rem, 7rem);
+  column-gap: $space-md;
+  row-gap: $space-xl;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
 .colorRow {
   display: flex;
   column-gap: $space-md;
@@ -29,9 +40,16 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: $space-md;
+}
 
-  &Full {
-    grid-column: 1 / -1;
+.scoringSettingsRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(7rem, 8.5rem);
+  align-items: end;
+  gap: $space-md;
+
+  @media (max-width: 760px) {
+    grid-template-columns: 1fr;
   }
 }
 

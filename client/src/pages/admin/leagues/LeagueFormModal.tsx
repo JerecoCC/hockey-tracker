@@ -6,6 +6,11 @@ import Modal from '@/components/Modal/Modal';
 import { type CreateLeagueData, type LeagueRecord } from '@/hooks/useLeagues';
 import styles from './Leagues.module.scss';
 
+const SCORING_SYSTEM_OPTIONS = [
+  { value: '2-1-0', label: '2-1-0 (W / OT Loss / Loss)' },
+  { value: '3-2-1-0', label: '3-2-1-0 (W / OT W / OT Loss / Loss)' },
+];
+
 interface FormValues {
   name: string;
   code: string;
@@ -13,6 +18,8 @@ interface FormValues {
   icon: File | string | null;
   primary_color: string;
   text_color: string;
+  scoring_system: '3-2-1-0' | '2-1-0';
+  goalie_min_regular_minutes: string;
 }
 
 interface Props {
@@ -34,6 +41,8 @@ const LeagueFormModal = (props: Props) => {
       icon: editTarget?.icon ?? null,
       primary_color: editTarget?.primary_color ?? '#334155',
       text_color: editTarget?.text_color ?? '#ffffff',
+      scoring_system: editTarget?.scoring_system ?? '2-1-0',
+      goalie_min_regular_minutes: String(editTarget?.goalie_min_regular_minutes ?? 1500),
     }),
     [editTarget],
   );
@@ -91,6 +100,8 @@ const LeagueFormModal = (props: Props) => {
       icon: iconUrl,
       primary_color: data.primary_color,
       text_color: data.text_color,
+      scoring_system: data.scoring_system,
+      goalie_min_regular_minutes: parseInt(data.goalie_min_regular_minutes, 10),
     };
     const ok = editTarget ? await updateLeague(editTarget.id, payload) : await addLeague(payload);
     if (ok) handleClose();
@@ -127,24 +138,26 @@ const LeagueFormModal = (props: Props) => {
             disabled={isSubmitting}
           />
         </div>
-        <Field
-          label="Name"
-          required
-          control={control}
-          name="name"
-          rules={{ required: true }}
-          placeholder="e.g. National Hockey League"
-          autoFocus
-        />
-        <Field
-          label="Code"
-          required
-          control={control}
-          name="code"
-          rules={{ required: true }}
-          transform={(v) => v.toUpperCase()}
-          placeholder="e.g. NHL"
-        />
+        <div className={styles.nameCodeRow}>
+          <Field
+            label="Name"
+            required
+            control={control}
+            name="name"
+            rules={{ required: true }}
+            placeholder="e.g. National Hockey League"
+            autoFocus
+          />
+          <Field
+            label="Code"
+            required
+            control={control}
+            name="code"
+            rules={{ required: true }}
+            transform={(v) => v.toUpperCase()}
+            placeholder="e.g. NHL"
+          />
+        </div>
         <div className={styles.colorRow}>
           <Field
             type="color"
@@ -158,6 +171,34 @@ const LeagueFormModal = (props: Props) => {
             label="Text Color"
             control={control}
             name="text_color"
+            disabled={isSubmitting}
+          />
+        </div>
+        <div className={styles.scoringSettingsRow}>
+          <div>
+            <Field
+              label="Scoring System"
+              type="select"
+              control={control}
+              name="scoring_system"
+              options={SCORING_SYSTEM_OPTIONS}
+              disabled={isSubmitting}
+            />
+          </div>
+          <Field
+            label="Goalie Min TOI"
+            type="number"
+            control={control}
+            name="goalie_min_regular_minutes"
+            placeholder="e.g. 240"
+            suffix="min"
+            rules={{
+              required: 'Goalie minimum is required',
+              min: { value: 0, message: 'Must be 0 or higher' },
+              max: { value: 9999, message: 'Too many minutes' },
+              validate: (value) =>
+                Number.isInteger(Number(value)) || 'Must be a whole number',
+            }}
             disabled={isSubmitting}
           />
         </div>

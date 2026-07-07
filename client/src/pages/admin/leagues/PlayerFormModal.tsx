@@ -140,6 +140,19 @@ const PlayerFormModal = ({
     handleClose();
   });
 
+  const statusField = (
+    <Field
+      type="select"
+      label="Status"
+      required
+      control={control}
+      name="status"
+      options={STATUS_OPTIONS}
+      rules={{ required: true }}
+      disabled={isSubmitting}
+    />
+  );
+
   return (
     <Modal
       open={open}
@@ -213,19 +226,9 @@ const PlayerFormModal = ({
             placeholder="Select side"
             disabled={isSubmitting}
           />
-          <Field
-            type="select"
-            label="Status"
-            required
-            control={control}
-            name="status"
-            options={STATUS_OPTIONS}
-            rules={{ required: true }}
-            disabled={isSubmitting}
-          />
         </div>
-        {seasons.length > 0 && (
-          <div className={styles.fullRow}>
+        <div className={seasons.length > 0 ? styles.playerInfoIdentityRow : styles.fullRow}>
+          {seasons.length > 0 && (
             <Field
               type="select"
               label="Rookie Season"
@@ -235,8 +238,9 @@ const PlayerFormModal = ({
               placeholder="Select rookie season"
               disabled={isSubmitting}
             />
-          </div>
-        )}
+          )}
+          {statusField}
+        </div>
       </form>
     </Modal>
   );
