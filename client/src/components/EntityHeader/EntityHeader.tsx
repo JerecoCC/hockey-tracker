@@ -75,7 +75,7 @@ const EntityHeader = ({
       variant="outlined"
       intent="neutral"
       icon="edit"
-      size="sm"
+      size="large"
       iconHeight="button"
       tooltip="Edit"
       aria-label="Edit"
@@ -86,6 +86,7 @@ const EntityHeader = ({
       variant="outlined"
       intent="neutral"
       icon="edit"
+      size="large"
       onClick={onEdit}
     >
       Edit

@@ -124,7 +124,7 @@ const SignupPage = () => {
           <Button
             className={styles.primaryBtn}
             type="submit"
-            size="lg"
+            size="large"
             icon="person_add"
             disabled={isSubmitting}
           >

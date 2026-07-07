@@ -1564,7 +1564,7 @@ const UserGames = () => {
                 type="button"
                 variant="outlined"
                 intent="neutral"
-                size="sm"
+                size="medium"
                 icon="download"
                 iconHeight="field"
                 aria-label="Download monthly schedule"

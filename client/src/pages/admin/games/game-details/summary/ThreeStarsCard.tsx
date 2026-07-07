@@ -50,7 +50,7 @@ const ThreeStarsCard = ({
             variant="outlined"
             intent="neutral"
             icon="edit"
-            size="sm"
+            size="medium"
             tooltip="Edit three stars"
             onClick={onEdit}
           />

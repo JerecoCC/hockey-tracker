@@ -42,7 +42,7 @@ const UserGameActions = ({
         variant="outlined"
         intent="neutral"
         icon="open_in_new"
-        size="sm"
+        size="small"
         tooltip="View game details"
         onClick={(e) => {
           e.stopPropagation();
@@ -56,7 +56,7 @@ const UserGameActions = ({
         variant="outlined"
         intent="warning"
         icon="undo"
-        size="sm"
+        size="small"
         tooltip="Undo skip"
         disabled={busy}
         onClick={(e) => {
@@ -71,7 +71,7 @@ const UserGameActions = ({
         variant="outlined"
         intent="neutral"
         icon="download"
-        size="sm"
+        size="small"
         tooltip="Download score card"
         onClick={(e) => {
           e.stopPropagation();
@@ -85,7 +85,7 @@ const UserGameActions = ({
         variant="outlined"
         intent="danger"
         icon="visibility_off"
-        size="sm"
+        size="small"
         tooltip="Unwatch"
         disabled={busy}
         onClick={(e) => {
@@ -100,7 +100,7 @@ const UserGameActions = ({
         variant="outlined"
         intent="warning"
         icon="remove_circle_outline"
-        size="sm"
+        size="small"
         tooltip="Skip game"
         disabled={busy}
         onClick={(e) => {
@@ -115,7 +115,7 @@ const UserGameActions = ({
         variant="outlined"
         intent="neutral"
         icon="calendar_month"
-        size="sm"
+        size="small"
         tooltip={scheduled ? 'Edit watch schedule' : 'Schedule watch'}
         disabled={busy}
         onClick={(e) => {
@@ -130,7 +130,7 @@ const UserGameActions = ({
         variant="outlined"
         intent="accent"
         icon="visibility"
-        size="sm"
+        size="small"
         tooltip="Mark as watched"
         disabled={busy}
         onClick={(e) => {

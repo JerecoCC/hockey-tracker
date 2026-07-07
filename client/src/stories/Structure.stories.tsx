@@ -65,7 +65,7 @@ export const Surfaces = {
             title="Filled Card"
             action={
               <Button
-                size="sm"
+                size="medium"
                 icon="add"
                 onClick={noop}
               >
@@ -191,14 +191,14 @@ export const RowHelpers = {
           Hover target
           <ActionOverlay className="storybook-overlay-visible">
             <Button
-              size="sm"
+              size="medium"
               variant="outlined"
               intent="neutral"
               icon="edit"
               onClick={noop}
             />
             <Button
-              size="sm"
+              size="medium"
               variant="outlined"
               intent="danger"
               icon="delete"

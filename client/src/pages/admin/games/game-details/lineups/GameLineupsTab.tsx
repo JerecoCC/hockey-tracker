@@ -328,7 +328,7 @@ const GameLineupsTab = ({
             <div className={styles.lineupActionBar}>
               {canOfferFinalLineupCorrection && (
                 <Button
-                  size="sm"
+                  size="medium"
                   variant="outlined"
                   intent={finalLineupCorrectionActive ? 'neutral' : 'warning'}
                   icon={finalLineupCorrectionActive ? 'check' : 'edit'}

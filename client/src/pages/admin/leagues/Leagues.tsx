@@ -59,7 +59,7 @@ const LeaguesPage = () => {
         action={
           <Button
             icon="add"
-            size="sm"
+            size="medium"
             onClick={openModal}
           >
             Create League

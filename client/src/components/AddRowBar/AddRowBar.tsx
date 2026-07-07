@@ -21,7 +21,7 @@ const AddRowBar = ({ label, onClick, disabled, hint }: Props) => (
       variant="outlined"
       intent="accent"
       icon="add"
-      size="sm"
+      size="small"
       disabled={disabled}
       onClick={onClick}
     >

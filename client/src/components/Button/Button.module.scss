@@ -21,7 +21,18 @@
 }
 
 // ── Sizes ──────────────────────────────────────────────────────────────
-.sm {
+.small {
+  padding: $space-sm $space-md;
+  font-size: $font-xs;
+  &.iconOnly {
+    padding: $space-xs;
+  }
+  &.iconOnlyButton {
+    padding: $space-sm;
+  }
+}
+
+.medium {
   padding: $space-md $space-md;
   font-size: $font-sm;
   &.iconOnly {
@@ -32,17 +43,7 @@
   }
 }
 
-.md {
-  padding: $space-md $space-lg;
-  &.iconOnly {
-    padding: $space-md;
-  }
-  &.iconOnlyButton {
-    padding: $space-md;
-  }
-}
-
-.lg {
+.large {
   padding: $space-md $space-xl;
   font-size: $font-lg;
   &.iconOnly {
@@ -55,7 +56,7 @@
 
 // ── Icon size ──────────────────────────────────────────────────────────
 // 1em inherits the button's own font-size so icons and text carry
-// equal visual weight for the same intent — sm/md/lg all scale together.
+// equal visual weight for the same intent — small/medium/large all scale together.
 .btn svg {
   font-size: 1em;
 }

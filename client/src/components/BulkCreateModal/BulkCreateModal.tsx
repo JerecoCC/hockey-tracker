@@ -267,7 +267,7 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
                         variant="outlined"
                         intent="danger"
                         icon="close"
-                        size="sm"
+                        size="small"
                         tooltip={`Remove ${itemLabel}`}
                         className={styles.deleteBtn}
                         onClick={() => handleDeleteClick(index)}

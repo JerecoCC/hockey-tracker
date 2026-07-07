@@ -514,7 +514,7 @@ const AlignmentGroupNode = ({
         type="button"
         variant="outlined"
         intent="neutral"
-        size="sm"
+        size="small"
         icon="edit"
         tooltip="Edit group"
         disabled={busy === group.id}
@@ -525,7 +525,7 @@ const AlignmentGroupNode = ({
           type="button"
           variant="outlined"
           intent="accent"
-          size="sm"
+          size="small"
           icon="add"
           tooltip="Create subgroup"
           disabled={busy === group.id}
@@ -537,7 +537,7 @@ const AlignmentGroupNode = ({
           type="button"
           variant="outlined"
           intent="accent"
-          size="sm"
+          size="small"
           icon="group_add"
           tooltip="Edit teams"
           disabled={busy === group.id}
@@ -548,7 +548,7 @@ const AlignmentGroupNode = ({
         type="button"
         variant="outlined"
         intent="danger"
-        size="sm"
+        size="small"
         icon="delete"
         tooltip="Delete group"
         disabled={busy === group.id}
@@ -971,7 +971,7 @@ const AlignmentPanel = ({
           />
           <Button
             type="button"
-            size="sm"
+            size="small"
             variant="outlined"
             intent="accent"
             icon={alignmentActionIcon}
@@ -983,7 +983,7 @@ const AlignmentPanel = ({
         </div>
         <Button
           type="submit"
-          size="sm"
+          size="small"
           icon="save"
           className={styles.srOnly}
           disabled={busy === alignmentSet.id || !isValid || detailsLoading || !hasChanges}
@@ -1370,7 +1370,7 @@ const CreateAlignmentModal = ({
               {selectedStructure && (
                 <Button
                   type="button"
-                  size="sm"
+                  size="small"
                   variant="outlined"
                   intent="accent"
                   icon={alignmentActionIcon}
@@ -1383,7 +1383,7 @@ const CreateAlignmentModal = ({
             </div>
             <Button
               type="submit"
-              size="sm"
+              size="small"
               icon="save"
               className={styles.srOnly}
               disabled={isSubmitting || busy || !isValid || !selectedStructure}
@@ -1554,7 +1554,7 @@ const LeagueAlignmentsTab = (props: Props) => {
             action={
               <Button
                 icon="add"
-                size="sm"
+                size="medium"
                 onClick={() => setCreateModalOpen(true)}
               >
                 Create Alignment

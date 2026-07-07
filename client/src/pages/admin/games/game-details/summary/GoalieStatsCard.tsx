@@ -221,7 +221,7 @@ const GoalieStatsCard = ({
                 variant="outlined"
                 intent="neutral"
                 icon="schedule"
-                size="sm"
+                size="medium"
                 tooltip="Edit time on ice"
                 onClick={() => setToiOpen(true)}
               />
@@ -229,7 +229,7 @@ const GoalieStatsCard = ({
                 variant="outlined"
                 intent="neutral"
                 icon="edit"
-                size="sm"
+                size="medium"
                 tooltip="Edit goalie stats"
                 onClick={() => setEditOpen(true)}
               />

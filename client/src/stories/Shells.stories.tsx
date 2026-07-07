@@ -55,7 +55,7 @@ const ShellContent = ({ title }: { title: string }) => (
       title={title}
       action={
         <Button
-          size="sm"
+          size="medium"
           icon="add"
           onClick={noop}
         >

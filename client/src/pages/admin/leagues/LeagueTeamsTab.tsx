@@ -31,7 +31,7 @@ const LeagueTeamsTab = (props: Props) => {
         action={
           <Button
             icon="add"
-            size="sm"
+            size="medium"
             onClick={onAddTeam}
           >
             Create Team

@@ -11,10 +11,13 @@
 }
 
 .trigger.trigger {
+  // Keep the vertical-dot trigger skinny while preserving side padding.
+  box-sizing: content-box;
+  width: 0;
   min-width: 0;
   min-height: 0;
   aspect-ratio: auto;
-  padding-inline: 0;
+  padding-inline: $space-sm;
 }
 
 .menu {

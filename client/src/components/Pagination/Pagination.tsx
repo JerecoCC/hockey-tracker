@@ -27,7 +27,7 @@ const Pagination = ({ page, pageSize, total, onPageChange, className }: Paginati
           variant="outlined"
           intent="neutral"
           icon="first_page"
-          size="sm"
+          size="small"
           tooltip="First page"
           disabled={currentPage <= 1}
           onClick={() => onPageChange(1)}
@@ -36,7 +36,7 @@ const Pagination = ({ page, pageSize, total, onPageChange, className }: Paginati
           variant="outlined"
           intent="neutral"
           icon="chevron_left"
-          size="sm"
+          size="small"
           tooltip="Previous page"
           disabled={currentPage <= 1}
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
@@ -48,7 +48,7 @@ const Pagination = ({ page, pageSize, total, onPageChange, className }: Paginati
           variant="outlined"
           intent="neutral"
           icon="chevron_right"
-          size="sm"
+          size="small"
           tooltip="Next page"
           disabled={currentPage >= pageCount}
           onClick={() => onPageChange(Math.min(pageCount, currentPage + 1))}
@@ -57,7 +57,7 @@ const Pagination = ({ page, pageSize, total, onPageChange, className }: Paginati
           variant="outlined"
           intent="neutral"
           icon="last_page"
-          size="sm"
+          size="small"
           tooltip="Last page"
           disabled={currentPage >= pageCount}
           onClick={() => onPageChange(pageCount)}

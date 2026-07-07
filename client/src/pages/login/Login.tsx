@@ -86,7 +86,7 @@ const LoginPage = () => {
           <Button
             className={styles.primaryBtn}
             type="submit"
-            size="lg"
+            size="large"
             icon="account_circle"
             disabled={isSubmitting}
           >

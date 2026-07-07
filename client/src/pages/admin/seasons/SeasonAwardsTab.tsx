@@ -1312,7 +1312,7 @@ const SeasonAwardsTab = ({
           !loading && awards.length > 0 ? (
             <Button
               type="button"
-              size="sm"
+              size="medium"
               intent="accent"
               icon="playlist_add"
               onClick={openAwardSelectionModal}
@@ -1387,7 +1387,7 @@ const SeasonAwardsTab = ({
                   <div className={styles.awardRecipientActions}>
                     {canManageNominees && (
                       <Button
-                        size="sm"
+                        size="small"
                         variant="outlined"
                         intent="neutral"
                         icon="person_add"
@@ -1398,7 +1398,7 @@ const SeasonAwardsTab = ({
                     )}
                     {showAwardAction && isGroupedAward ? (
                       <Button
-                        size="sm"
+                        size="small"
                         icon="groups"
                         tooltip="Set team"
                         aria-label="Set team"
@@ -1406,7 +1406,7 @@ const SeasonAwardsTab = ({
                       />
                     ) : showAwardAction ? (
                       <Button
-                        size="sm"
+                        size="small"
                         icon="emoji_events"
                         tooltip="Set Winner"
                         aria-label={awardRecipientLabel}
@@ -1714,7 +1714,7 @@ const SeasonAwardsTab = ({
                     </ReorderableField>
                     <Button
                       type="button"
-                      size="sm"
+                      size="small"
                       variant="outlined"
                       intent="danger"
                       icon="close"
@@ -1730,7 +1730,7 @@ const SeasonAwardsTab = ({
               <div className={styles.awardNomineeAddRow}>
                 <Button
                   type="button"
-                  size="sm"
+                  size="small"
                   variant="outlined"
                   intent="accent"
                   icon="add"

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import Button from '../Button/Button';
+import Button, { type ButtonSize } from '../Button/Button';
 import Icon from '../Icon/Icon';
 import styles from './MoreActionsMenu.module.scss';
 
@@ -16,8 +16,8 @@ interface Props {
   items: MoreActionsMenuItem[];
   /** Disables the trigger button (e.g. while a mutation is in flight). */
   disabled?: boolean;
-  /** Size of the trigger button. Defaults to 'sm'. */
-  size?: 'sm' | 'md';
+  /** Size of the trigger button. Defaults to 'small'. */
+  size?: ButtonSize;
   /** Optional trigger icon-size override for constrained header contexts. */
   iconSize?: string;
   /** Optional trigger height override for icon-only button contexts. */
@@ -37,7 +37,7 @@ const VIEWPORT_MARGIN = 8;
 const MoreActionsMenu = ({
   items,
   disabled = false,
-  size = 'sm',
+  size = 'small',
   iconSize,
   iconHeight = 'default',
   wrapperClassName,
@@ -109,6 +109,8 @@ const MoreActionsMenu = ({
     updateMenuPosition();
     setOpen(true);
   };
+  const resolvedIconSize =
+    iconSize ?? (size === 'large' && iconHeight === 'button' ? '1.35rem' : undefined);
 
   const menu = open
     ? createPortal(
@@ -156,7 +158,7 @@ const MoreActionsMenu = ({
         intent="neutral"
         icon="more_vert"
         size={size}
-        iconSize={iconSize}
+        iconSize={resolvedIconSize}
         iconHeight={iconHeight}
         tooltip="More actions"
         disabled={disabled}

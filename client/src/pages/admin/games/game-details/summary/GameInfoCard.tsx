@@ -57,7 +57,7 @@ const GameInfoCard = ({
               variant="outlined"
               intent="neutral"
               icon="edit"
-              size="sm"
+              size="medium"
               tooltip="Edit game info"
               onClick={() => setEditOpen(true)}
             />

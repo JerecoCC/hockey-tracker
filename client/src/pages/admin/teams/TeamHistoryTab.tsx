@@ -211,7 +211,7 @@ const TeamHistoryTab = ({
         action={
           <Button
             icon="history"
-            size="sm"
+            size="medium"
             onClick={openAdd}
           >
             Record Version

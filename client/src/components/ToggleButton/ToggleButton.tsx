@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Button, { type ButtonIntent, type ButtonSize } from '../Button/Button';
 import Icon from '../Icon/Icon';
 import Tooltip from '../Tooltip/Tooltip';
@@ -16,7 +17,7 @@ interface Props {
   activeIcon?: string;
   /** Icon shown when inactive for the switch variant. Falls back to icon. */
   inactiveIcon?: string;
-  /** Size preset. Default: 'md'. */
+  /** Size preset. Default: 'medium'. */
   size?: ButtonSize;
   /**
    * Controls the height of an icon-only button.
@@ -34,7 +35,7 @@ interface Props {
   /** Tooltip shown when inactive. */
   inactiveTooltip?: string;
   /** Optional label. Omit for icon-only mode. */
-  children?: React.ReactNode;
+  children?: ReactNode;
   disabled?: boolean;
   className?: string;
 }

@@ -279,7 +279,7 @@ const ScoringCard = ({
                     variant="ghost"
                     intent="neutral"
                     icon="edit"
-                    size="sm"
+                    size="medium"
                     tooltip="Edit goal"
                     onClick={() => onEditGoal(goal)}
                   />
@@ -288,7 +288,7 @@ const ScoringCard = ({
                       variant="ghost"
                       intent="danger"
                       icon="delete"
-                      size="sm"
+                      size="medium"
                       tooltip="Delete goal"
                       onClick={() => onDeleteGoal(goal.id)}
                     />

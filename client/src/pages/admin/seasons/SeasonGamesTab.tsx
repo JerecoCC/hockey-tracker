@@ -1253,6 +1253,7 @@ const SeasonGamesTab = ({
               renderDayAction={(dateKey, dayGames) =>
                 !isEnded && (
                   <MoreActionsMenu
+                    size="medium"
                     disabled={autofillDay === dateKey}
                     items={buildDayActions(dateKey, dayGames)}
                   />

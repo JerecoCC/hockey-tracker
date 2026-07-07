@@ -181,6 +181,25 @@ interface NhlPlayerGameLogResponse {
   games?: NhlPlayerGameLogEntry[];
 }
 
+type NhlBoxscorePlayerGroup = 'forwards' | 'defense' | 'goalies';
+
+interface NhlBoxscorePlayerStats {
+  playerId?: number | string | null;
+  sweaterNumber?: number | string | null;
+}
+
+type NhlBoxscoreTeamStats = Partial<Record<NhlBoxscorePlayerGroup, NhlBoxscorePlayerStats[]>>;
+
+interface NhlBoxscoreResponse {
+  awayTeam?: { abbrev?: NhlLocalizedText | string | null } | null;
+  homeTeam?: { abbrev?: NhlLocalizedText | string | null } | null;
+  playerByGameStats?: {
+    awayTeam?: NhlBoxscoreTeamStats | null;
+    homeTeam?: NhlBoxscoreTeamStats | null;
+  } | null;
+  gameDate?: string | null;
+}
+
 interface PwhlPlayerProfile {
   info?: PwhlPlayerProfileInfo | null;
 }
@@ -411,7 +430,7 @@ const optionalNumber = (value: unknown) => {
 };
 
 function nhlBoxscorePlayerHasJersey(
-  boxscore: any,
+  boxscore: NhlBoxscoreResponse,
   playerNumber: string,
   jerseyNumber: number,
   teamCode: string | null,
@@ -419,21 +438,19 @@ function nhlBoxscorePlayerHasJersey(
   const nhlPlayerNumber = Number(playerNumber);
   return (['away', 'home'] as const).some((side) => {
     const boxscoreTeam = boxscore?.[`${side}Team`];
-    const boxscoreTeamAbbrev =
-      readNhlText(boxscoreTeam?.abbrev) ??
-      (typeof boxscoreTeam?.abbrev === 'string' ? boxscoreTeam.abbrev : null);
+    const boxscoreTeamAbbrev = readNhlText(boxscoreTeam?.abbrev);
     const boxscoreTeamCode = normalizeTeamCode(
       boxscoreTeamAbbrev,
     );
     if (teamCode && boxscoreTeamCode && boxscoreTeamCode !== teamCode) return false;
 
-    const stats = boxscore?.playerByGameStats?.[`${side}Team`] ?? {};
+    const stats: NhlBoxscoreTeamStats = boxscore?.playerByGameStats?.[`${side}Team`] ?? {};
     return (['forwards', 'defense', 'goalies'] as const).some((group) =>
       Array.isArray(stats[group]) &&
       stats[group].some(
-        (row: any) =>
-          Number(row?.playerId) === nhlPlayerNumber &&
-          Number(row?.sweaterNumber) === jerseyNumber,
+        (row) =>
+          Number(row.playerId) === nhlPlayerNumber &&
+          Number(row.sweaterNumber) === jerseyNumber,
       ),
     );
   });
@@ -496,7 +513,7 @@ async function inferNhlJerseyNumberDateFromGames({
     if (candidate.entryJerseyNumber === jerseyNumber) return candidate.gameDate;
 
     try {
-      const boxscore = await fetchNhlProxy<any>(
+      const boxscore = await fetchNhlProxy<NhlBoxscoreResponse>(
         `https://api-web.nhle.com/v1/gamecenter/${candidate.gameId}/boxscore`,
       );
       if (nhlBoxscorePlayerHasJersey(boxscore, playerNumber, jerseyNumber, teamCode)) {
@@ -2106,7 +2123,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             variant="outlined"
             intent="neutral"
             icon="edit"
-            size="sm"
+            size="medium"
             onClick={() => setEditPlayerInfoOpen(true)}
           />
         ) : null
@@ -2235,7 +2252,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             variant="outlined"
             intent="neutral"
             icon="chevron_left"
-            size="sm"
+            size="small"
             tooltip="Previous page"
             disabled={gameLogPage <= 1}
             onClick={() => setGameLogPage((page) => Math.max(1, page - 1))}
@@ -2247,7 +2264,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             variant="outlined"
             intent="neutral"
             icon="chevron_right"
-            size="sm"
+            size="small"
             tooltip="Next page"
             disabled={gameLogPage >= gameLogPageCount}
             onClick={() => setGameLogPage((page) => Math.min(gameLogPageCount, page + 1))}
@@ -2433,7 +2450,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                   variant="outlined"
                   intent="neutral"
                   icon="edit"
-                  size="sm"
+                  size="large"
                   iconHeight="button"
                   tooltip="Edit player"
                   onClick={() => setEditPlayerOpen(true)}
@@ -2441,6 +2458,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                 {playerActionItems.length > 0 && (
                   <MoreActionsMenu
                     items={playerActionItems}
+                    size="large"
                     iconHeight="button"
                   />
                 )}
@@ -2503,7 +2521,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                           variant="filled"
                           intent="accent"
                           icon="add"
-                          size="sm"
+                          size="medium"
                           onClick={() => setCreatingStint(true)}
                         >
                           Record Stint

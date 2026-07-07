@@ -64,7 +64,7 @@ const GoalieSwitchReportCard = ({ game }: Props) => {
             variant="outlined"
             intent="neutral"
             icon="api_search"
-            size="sm"
+            size="medium"
             tooltip="Check NHL Goalie Switches"
             onClick={() => setModalOpen(true)}
           />

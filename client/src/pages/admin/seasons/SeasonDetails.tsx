@@ -943,7 +943,7 @@ const SeasonDetailsPage = () => {
             variant="outlined"
             intent="neutral"
             icon="edit"
-            size="sm"
+            size="large"
             iconHeight="button"
             tooltip="Edit season"
             aria-label="Edit season"
@@ -952,6 +952,7 @@ const SeasonDetailsPage = () => {
           {seasonMoreItems.length > 0 && (
             <MoreActionsMenu
               items={seasonMoreItems}
+              size="large"
               iconHeight="button"
             />
           )}
@@ -1113,7 +1114,7 @@ const SeasonDetailsPage = () => {
                             type="button"
                             variant="outlined"
                             intent="neutral"
-                            size="sm"
+                            size="medium"
                             icon="ranking_star"
                             iconHeight="button"
                             tooltip="All Leaders"
@@ -1163,7 +1164,7 @@ const SeasonDetailsPage = () => {
                             type="button"
                             variant="outlined"
                             intent="neutral"
-                            size="sm"
+                            size="medium"
                             icon="ranking_star"
                             iconHeight="button"
                             tooltip="All Leaders"
@@ -1221,7 +1222,7 @@ const SeasonDetailsPage = () => {
                             type="button"
                             variant="outlined"
                             intent="neutral"
-                            size="sm"
+                            size="medium"
                             icon="ranking_star"
                             iconHeight="button"
                             tooltip="All Leaders"

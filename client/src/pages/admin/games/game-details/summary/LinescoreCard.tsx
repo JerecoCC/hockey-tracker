@@ -93,7 +93,7 @@ const LinescoreCard = ({
               variant="outlined"
               intent="info"
               icon={GAME_AUTOFILL_ACTION_ICON}
-              size="sm"
+              size="medium"
               tooltip="Auto-fill game"
               disabled={!!busy}
               onClick={onAutofillGame}
@@ -105,7 +105,7 @@ const LinescoreCard = ({
                 variant="filled"
                 intent="success"
                 icon="play_arrow"
-                size="sm"
+                size="medium"
                 tooltip={
                   !rosterReady
                     ? 'Add game rosters for both teams first'
@@ -119,6 +119,7 @@ const LinescoreCard = ({
               />
               <MoreActionsMenu
                 disabled={!!busy}
+                size="medium"
                 items={[
                   { label: 'Reschedule Game', icon: 'calendar', onClick: onReschedule },
                   { label: 'Delete Game', icon: 'delete', intent: 'danger', onClick: onDelete },
@@ -131,7 +132,7 @@ const LinescoreCard = ({
               variant="filled"
               intent="danger"
               icon="flag"
-              size="sm"
+              size="medium"
               tooltip="End Game"
               disabled={!!busy}
               onClick={onEndGame}
@@ -142,7 +143,7 @@ const LinescoreCard = ({
               variant="outlined"
               intent="neutral"
               icon="download"
-              size="sm"
+              size="medium"
               tooltip="Download score card"
               onClick={onDownloadScoreCard}
             />
@@ -150,6 +151,7 @@ const LinescoreCard = ({
           {game.status !== 'scheduled' && onDelete && (
             <MoreActionsMenu
               disabled={!!busy}
+              size="medium"
               items={[
                 {
                   label: 'Delete Game',

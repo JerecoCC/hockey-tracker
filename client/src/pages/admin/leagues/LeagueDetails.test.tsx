@@ -622,7 +622,7 @@ describe('LeagueDetailsPage – main render', () => {
     setup({ league: mockLeague });
     const editButton = screen.getByRole('button', { name: 'Edit' });
     expect(editButton).not.toHaveTextContent('Edit');
-    expect(editButton).toHaveClass('sm');
+    expect(editButton).toHaveClass('large');
     expect(editButton).toHaveClass('iconOnlyButton');
     expect(editButton).not.toHaveClass('iconOnly');
   });

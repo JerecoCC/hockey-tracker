@@ -35,7 +35,7 @@ const LeagueSeasonsCard = (props: Props) => {
       action={
         <Button
           icon="add"
-          size="sm"
+          size="medium"
           onClick={onAddSeason}
         >
           Create Season

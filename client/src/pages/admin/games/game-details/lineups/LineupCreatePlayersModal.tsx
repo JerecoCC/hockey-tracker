@@ -437,7 +437,7 @@ const LineupCreatePlayersModal = ({
                   type="button"
                   variant="outlined"
                   intent="warning"
-                  size="sm"
+                  size="small"
                   onClick={handleCreateAnyway}
                 >
                   Create Anyway

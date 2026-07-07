@@ -294,7 +294,7 @@ const ShootoutAccordion = ({
                 variant="ghost"
                 intent="neutral"
                 icon="edit"
-                size="sm"
+                size="medium"
                 tooltip="Edit attempt"
                 disabled={deletingAttemptId === attempt.id}
                 onClick={() => onEditAttempt(attempt)}
@@ -303,7 +303,7 @@ const ShootoutAccordion = ({
                 variant="ghost"
                 intent="danger"
                 icon={deletingAttemptId === attempt.id ? 'hourglass_empty' : 'delete'}
-                size="sm"
+                size="medium"
                 tooltip={deletingAttemptId === attempt.id ? 'Deleting…' : 'Delete attempt'}
                 disabled={deletingAttemptId === attempt.id}
                 onClick={() => onDeleteAttempt(attempt.id)}

@@ -465,7 +465,7 @@ const UserDashboard = () => {
                     <Button
                       variant="ghost"
                       intent="neutral"
-                      size="sm"
+                      size="medium"
                       icon="close"
                       tooltip="Reset to today"
                       aria-label="Reset dashboard date to today"
@@ -525,7 +525,7 @@ const UserDashboard = () => {
               <Button
                 variant="outlined"
                 intent="neutral"
-                size="sm"
+                size="medium"
                 icon="table_rows"
                 tooltip="View all games watched"
                 aria-label="View all games watched"

@@ -59,7 +59,7 @@ jest.mock('@/components/Button/Button', () => (props: any) => {
           ? 'iconOnlyField'
           : 'iconOnly'
       : null;
-  const computedClassName = [className, size ?? 'md', iconOnlyClass].filter(Boolean).join(' ');
+  const computedClassName = [className, size ?? 'medium', iconOnlyClass].filter(Boolean).join(' ');
   return (
     <button
       {...buttonProps}
@@ -516,7 +516,7 @@ describe('SeasonDetails info tab', () => {
 
     const editButton = screen.getByRole('button', { name: 'Edit season' });
     expect(editButton).not.toHaveTextContent('Edit season');
-    expect(editButton).toHaveClass('sm', 'iconOnlyButton');
+    expect(editButton).toHaveClass('large', 'iconOnlyButton');
     expect(editButton).not.toHaveClass('iconOnly');
 
     expect(mockMoreActionsMenu).toHaveBeenCalledWith(

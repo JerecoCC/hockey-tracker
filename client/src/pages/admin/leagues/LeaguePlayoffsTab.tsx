@@ -120,7 +120,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
           action={
             <Button
               icon="add"
-              size="sm"
+              size="medium"
               onClick={openCreate}
             >
               Create Rule Set
@@ -165,7 +165,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
           action={
             <Button
               icon="add"
-              size="sm"
+              size="medium"
               onClick={openCreateQualification}
             >
               Create Format

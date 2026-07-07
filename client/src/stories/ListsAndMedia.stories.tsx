@@ -155,7 +155,7 @@ export const SearchAndDetails = {
           )}
           actions={
             <Button
-              size="sm"
+              size="small"
               icon="filter_list"
               variant="outlined"
               intent="neutral"
@@ -234,6 +234,7 @@ export const HeadersAndBreadcrumbs = {
             variant="outlined"
             intent="accent"
             icon="image"
+            size="large"
             onClick={noop}
           >
             Logos

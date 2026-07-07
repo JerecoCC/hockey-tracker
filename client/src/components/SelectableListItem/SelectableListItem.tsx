@@ -197,7 +197,7 @@ const SelectableListItem = ({
               variant="outlined"
               intent={action.intent ?? 'neutral'}
               icon={action.icon}
-              size="sm"
+              size="medium"
               tooltip={action.tooltip}
               disabled={disabled || action.disabled}
               onClick={(e) => {

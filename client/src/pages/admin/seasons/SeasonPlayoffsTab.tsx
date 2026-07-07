@@ -305,7 +305,7 @@ const BracketSlot = ({
               variant="filled"
               intent="accent"
               icon="sync"
-              size="sm"
+              size="small"
               tooltip="Create next-round series"
               disabled={busy === 'advancing'}
               onClick={onAdvance}
@@ -408,7 +408,7 @@ const BracketSlot = ({
               variant="filled"
               intent="accent"
               icon="play_arrow"
-              size="sm"
+              size="small"
               tooltip="Start series"
               disabled={busy === series.id}
               onClick={() => onStart(series)}
@@ -419,7 +419,7 @@ const BracketSlot = ({
               variant="filled"
               intent="accent"
               icon="arrow_forward"
-              size="sm"
+              size="small"
               tooltip="Advance winner to next round"
               disabled={!!busy}
               onClick={onForceAdvance}
@@ -1187,7 +1187,7 @@ const SeasonPlayoffsTab = ({
               variant="filled"
               intent="success"
               icon="emoji_events"
-              size="sm"
+              size="small"
               disabled={startPlayoffsDisabled}
               onClick={onStartPlayoffs}
             >
@@ -1224,7 +1224,7 @@ const SeasonPlayoffsTab = ({
                     variant="outlined"
                     intent="neutral"
                     icon="close"
-                    size="sm"
+                    size="medium"
                     onClick={() => {
                       setSimulatedSlots(null);
                       setSimulatedSlotTeams(null);
@@ -1238,7 +1238,7 @@ const SeasonPlayoffsTab = ({
                     intent="success"
                     icon="play_arrow"
                     iconHeight="button"
-                    size="sm"
+                    size="medium"
                     tooltip={bracketActionTooltip}
                     aria-label={bracketActionLabel}
                     disabled={simulating || pickModalOpen || simulationStandingsUnavailable}
@@ -1475,7 +1475,7 @@ const SeasonPlayoffsTab = ({
                                     variant="ghost"
                                     intent="accent"
                                     icon="play_arrow"
-                                    size="sm"
+                                    size="small"
                                     tooltip="Start series"
                                     disabled={seriesBusy === s.id}
                                     onClick={() => handleStartSeries(s)}
@@ -1523,7 +1523,7 @@ const SeasonPlayoffsTab = ({
               <Button
                 type="button"
                 icon={playoffSettingsActionIcon}
-                size="sm"
+                size="medium"
                 variant="outlined"
                 intent="neutral"
                 tooltip={playoffSettingsActionTooltip}

@@ -386,14 +386,14 @@ const LeaguePlayersTab = ({ className }: Props) => {
             variant="outlined"
             intent="accent"
             icon="group_add"
-            size="sm"
+            size="medium"
             onClick={onBulkAdd}
           >
             Bulk Create
           </Button>
           <Button
             icon="add"
-            size="sm"
+            size="medium"
             onClick={onAdd}
           >
             Create Player

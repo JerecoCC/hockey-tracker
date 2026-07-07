@@ -6,14 +6,14 @@ import styles from './Button.module.scss';
 
 export type ButtonVariant = 'filled' | 'outlined' | 'ghost';
 export type ButtonIntent = 'accent' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';
-export type ButtonSize = 'sm' | 'md' | 'lg';
+export type ButtonSize = 'small' | 'medium' | 'large';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Visual style: filled solid, outlined border, or ghost (no border/bg). Default: 'filled'. */
   variant?: ButtonVariant;
   /** Colour intent. Default: 'accent'. */
   intent?: ButtonIntent;
-  /** Size preset. Default: 'md'. */
+  /** Size preset. Default: 'medium'. */
   size?: ButtonSize;
   /** Material Icons ligature name. Renders an icon; if provided without children → icon-only mode. */
   icon?: string;
@@ -62,9 +62,9 @@ const VARIANT_INTENT: Record<ButtonVariant, Record<ButtonIntent, string>> = {
 };
 
 const SIZE: Record<ButtonSize, string> = {
-  sm: styles.sm,
-  md: styles.md,
-  lg: styles.lg,
+  small: styles.small,
+  medium: styles.medium,
+  large: styles.large,
 };
 
 /**
@@ -74,13 +74,13 @@ const SIZE: Record<ButtonSize, string> = {
  *   <Button icon="add">Add League</Button>               // filled accent, icon + label
  *   <Button variant="outlined" intent="danger">Cancel</Button> // outlined danger, label only
  *   <Button variant="ghost" intent="neutral" icon="edit" /> // ghost neutral, icon only
- *   <Button variant="filled" intent="danger" icon="delete" size="sm" /> // small icon-only
+ *   <Button variant="filled" intent="danger" icon="delete" size="small" /> // compact icon-only
  */
 const Button = (props: ButtonProps) => {
   const {
     variant = 'filled',
     intent = 'accent',
-    size = 'md',
+    size = 'medium',
     icon,
     iconSize,
     iconHeight,

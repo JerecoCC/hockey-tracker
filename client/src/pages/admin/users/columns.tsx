@@ -78,7 +78,7 @@ export const getUserColumns = (deps: ColumnDeps): Column<UserRecord>[] => {
                 variant="outlined"
                 intent="accent"
                 icon="manage_accounts"
-                size="sm"
+                size="small"
                 disabled={isBusy}
                 tooltip="Make Admin"
                 onClick={() => confirmRole(u, 'admin')}
@@ -89,7 +89,7 @@ export const getUserColumns = (deps: ColumnDeps): Column<UserRecord>[] => {
                 variant="outlined"
                 intent="info"
                 icon="person_remove"
-                size="sm"
+                size="small"
                 disabled={isBusy}
                 tooltip="Remove Admin"
                 onClick={() => confirmRole(u, 'user')}
@@ -100,7 +100,7 @@ export const getUserColumns = (deps: ColumnDeps): Column<UserRecord>[] => {
                 variant="outlined"
                 intent="danger"
                 icon="delete"
-                size="sm"
+                size="small"
                 disabled={isBusy}
                 tooltip="Delete"
                 onClick={() => confirmDelete(u)}

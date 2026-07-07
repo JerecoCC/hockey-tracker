@@ -107,7 +107,6 @@ const GroupNode = ({
   const teamCount = countGroupTeams(group, allGroups);
   const teamCountLabel = teamCount === 1 ? 'team' : 'teams';
   const groupName = roleLabel ? `${group.name} ${roleLabel}` : group.name;
-  const groupCountLabel = `${teamCount} ${teamCountLabel}`;
 
   const groupBody = (
     <>
@@ -356,7 +355,7 @@ const SeasonTeamsCard = ({
             <Button
               type="button"
               icon="save"
-              size="sm"
+              size="medium"
               variant="filled"
               intent="accent"
               iconHeight="field"

@@ -631,7 +631,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
           action={
             <Button
               icon="add"
-              size="sm"
+              size="medium"
               onClick={openCreate}
             >
               Create Award
@@ -691,7 +691,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                               variant="outlined"
                               intent="neutral"
                               icon="edit"
-                              size="sm"
+                              size="small"
                               tooltip="Edit award"
                               aria-label={`Edit ${award.name}`}
                               disabled={reorderingAwards}
@@ -701,7 +701,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                               variant="outlined"
                               intent="danger"
                               icon="delete"
-                              size="sm"
+                              size="small"
                               tooltip="Remove award"
                               aria-label={`Remove ${award.name}`}
                               disabled={reorderingAwards}
