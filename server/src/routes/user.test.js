@@ -215,6 +215,13 @@ describe('GET /api/user/players/:id/stats', () => {
         goals: 7,
         assists: 4,
         points: 11,
+        wins: 6,
+        shootout_wins: 2,
+        goals_against: 20,
+        shots_against: 220,
+        saves: 200,
+        time_on_ice: 30000,
+        save_pct: 0.909,
       },
     ]);
 
@@ -225,6 +232,9 @@ describe('GET /api/user/players/:id/stats', () => {
     expect(res.body[0]).toMatchObject({ season_id: 'season-1', points: 11 });
     expect(queryText).toMatch(/WITH\s+stat_rows AS/);
     expect(queryText).toContain('FROM game_player_stats gps');
+    expect(queryText).toContain('gps.goalie_win');
+    expect(queryText).toContain('shootout_wins');
+    expect(queryText).toContain('save_pct');
   });
 });
 

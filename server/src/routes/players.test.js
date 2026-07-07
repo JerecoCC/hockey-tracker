@@ -475,6 +475,13 @@ describe('GET /api/admin/players/:id/stats', () => {
       goals: 8,
       assists: 10,
       points: 18,
+      wins: 7,
+      shootout_wins: 1,
+      goals_against: 24,
+      shots_against: 250,
+      saves: 226,
+      time_on_ice: 36000,
+      save_pct: 0.904,
       team_id: 'team-1',
       team_name: 'Oilers',
       team_logo: 'oilers.png',
@@ -492,6 +499,9 @@ describe('GET /api/admin/players/:id/stats', () => {
     expect(queryText).toMatch(/WITH\s+stat_rows AS/);
     expect(queryText).toContain('FROM game_player_stats gps');
     expect(queryText).toContain('WHERE gps.player_id =');
+    expect(queryText).toContain('gps.goalie_win');
+    expect(queryText).toContain('shootout_wins');
+    expect(queryText).toContain('save_pct');
   });
 
   it('returns 500 on DB error', async () => {

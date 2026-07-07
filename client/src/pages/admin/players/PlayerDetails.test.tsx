@@ -20,7 +20,11 @@ import {
   usePlayerTradeHistory,
   useStintActions,
 } from '@/hooks/useTeamPlayers';
-import PlayerDetails, { collapseSameTeamStints } from './PlayerDetails';
+import PlayerDetails, {
+  buildCareerStatColumns,
+  buildGameLogColumns,
+  collapseSameTeamStints,
+} from './PlayerDetails';
 
 const mockNavigate = jest.fn();
 const mockUsePageBreadcrumbs = jest.fn();
@@ -358,6 +362,32 @@ beforeEach(() => {
         created_at: '2023-01-01T00:00:00Z',
       },
     ],
+  });
+});
+
+describe('player career stat columns', () => {
+  it('matches goalie career columns to the goalie season stats shown on the info tab', () => {
+    const headers = buildCareerStatColumns(true).map((column) => column.header);
+
+    expect(headers).toEqual(['Team', 'Season', '#', 'GP', 'W', 'SO', 'GAA', 'SV%']);
+  });
+
+  it('keeps skater career columns unchanged', () => {
+    const headers = buildCareerStatColumns(false).map((column) => column.header);
+
+    expect(headers).toEqual(['Team', 'Season', '#', 'GP', 'G', 'A', 'PTS']);
+  });
+});
+
+describe('player game stat columns', () => {
+  const headerText = (header: any) =>
+    typeof header === 'string' ? header : header?.props?.label ?? '';
+
+  it('shows goalie game goals against instead of goals-against average', () => {
+    const headers = buildGameLogColumns(true).map((column) => headerText(column.header));
+
+    expect(headers).toEqual(['Date', 'Team', 'Opponent', 'GS', 'SA', 'GA', 'SV%']);
+    expect(headers).not.toContain('GAA');
   });
 });
 

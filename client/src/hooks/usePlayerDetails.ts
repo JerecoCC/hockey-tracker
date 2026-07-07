@@ -30,6 +30,14 @@ export interface PlayerCareerStatRecord {
   goals: number;
   assists: number;
   points: number;
+  wins: number;
+  shootout_wins: number;
+  goals_against: number;
+  shots_against: number;
+  saves: number;
+  /** Total goalie time on ice for this season/team row, in seconds. */
+  time_on_ice: number;
+  save_pct: number | null;
   team_id: string | null;
   team_name: string | null;
   team_logo: string | null;

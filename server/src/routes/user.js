@@ -1343,9 +1343,15 @@ router.get('/players/:id/stats', async (req, res) => {
           gps.season_id,
           gps.team_id,
           COUNT(*)::int AS gp,
-          SUM(gps.goals)::int AS goals,
-          SUM(gps.assists)::int AS assists,
-          SUM(gps.points)::int AS points
+          COALESCE(SUM(gps.goals) FILTER (WHERE gps.is_goalie = false), 0)::int AS goals,
+          COALESCE(SUM(gps.assists) FILTER (WHERE gps.is_goalie = false), 0)::int AS assists,
+          COALESCE(SUM(gps.points) FILTER (WHERE gps.is_goalie = false), 0)::int AS points,
+          COUNT(*) FILTER (WHERE gps.is_goalie = true AND gps.goalie_win)::int AS wins,
+          COUNT(*) FILTER (WHERE gps.is_goalie = true AND gps.shootout_win)::int AS shootout_wins,
+          COALESCE(SUM(gps.shots_against) FILTER (WHERE gps.is_goalie = true), 0)::int AS shots_against,
+          COALESCE(SUM(gps.goals_against) FILTER (WHERE gps.is_goalie = true), 0)::int AS goals_against,
+          COALESCE(SUM(gps.saves) FILTER (WHERE gps.is_goalie = true), 0)::int AS saves,
+          COALESCE(SUM(gps.time_on_ice) FILTER (WHERE gps.is_goalie = true), 0)::int AS time_on_ice
         FROM game_player_stats gps
         WHERE gps.player_id = ${id}
         GROUP BY gps.season_id, gps.team_id
@@ -1358,6 +1364,15 @@ router.get('/players/:id/stats', async (req, res) => {
         COALESCE(sr.goals, 0) AS goals,
         COALESCE(sr.assists, 0) AS assists,
         COALESCE(sr.points, 0) AS points,
+        COALESCE(sr.wins, 0) AS wins,
+        COALESCE(sr.shootout_wins, 0) AS shootout_wins,
+        COALESCE(sr.shots_against, 0) AS shots_against,
+        COALESCE(sr.goals_against, 0) AS goals_against,
+        COALESCE(sr.saves, 0) AS saves,
+        COALESCE(sr.time_on_ice, 0) AS time_on_ice,
+        CASE WHEN COALESCE(sr.shots_against, 0) > 0
+          THEN ROUND(sr.saves::numeric / sr.shots_against, 3)::float8
+          ELSE NULL END AS save_pct,
         sr.team_id,
         ti.name AS team_name,
         ti.logo AS team_logo,

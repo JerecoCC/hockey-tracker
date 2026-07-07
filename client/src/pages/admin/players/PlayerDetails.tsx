@@ -544,7 +544,7 @@ const formatDate = (iso: string | null) => {
 };
 
 // ── Career stats table columns ──────────────────────────────────────────────
-const statColumns: Column<PlayerCareerStatRecord>[] = [
+const skaterCareerStatColumns: Column<PlayerCareerStatRecord>[] = [
   {
     type: 'logo',
     header: 'Team',
@@ -866,16 +866,48 @@ const buildJerseyHistoryRows = (
     });
 };
 
-const formatSavePct = (value: number | null) => {
+const formatSavePct = (value: number | string | null | undefined) => {
   if (value == null) return '—';
-  return value.toFixed(3).replace(/^0/, '');
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '—';
+  return numeric.toFixed(3).replace(/^0/, '');
 };
 
 // Goals-against average = goals against per 60 minutes of ice time.
-const formatGaa = (ga: number | null | undefined, toi: number | null | undefined) => {
+const formatGaa = (
+  ga: number | string | null | undefined,
+  toi: number | string | null | undefined,
+) => {
   if (ga == null || !toi) return '—';
-  return ((ga * 3600) / toi).toFixed(2);
+  const goalsAgainst = Number(ga);
+  const seconds = Number(toi);
+  if (!Number.isFinite(goalsAgainst) || !Number.isFinite(seconds) || seconds <= 0) {
+    return '—';
+  }
+  return ((goalsAgainst * 3600) / seconds).toFixed(2);
 };
+
+const goalieCareerStatColumns: Column<PlayerCareerStatRecord>[] = [
+  ...skaterCareerStatColumns.slice(0, 3),
+  { header: 'GP', key: 'gp', align: 'center' },
+  { header: 'W', key: 'wins', align: 'center' },
+  { header: 'SO', key: 'shootout_wins', align: 'center' },
+  {
+    type: 'custom',
+    header: 'GAA',
+    render: (row) => formatGaa(row.goals_against, row.time_on_ice),
+    align: 'center',
+  },
+  {
+    type: 'custom',
+    header: 'SV%',
+    render: (row) => formatSavePct(row.save_pct),
+    align: 'center',
+  },
+];
+
+export const buildCareerStatColumns = (isGoalie: boolean): Column<PlayerCareerStatRecord>[] =>
+  isGoalie ? goalieCareerStatColumns : skaterCareerStatColumns;
 
 const StatHeader = ({ label, tooltip }: { label: string; tooltip: string }) => (
   <Tooltip text={tooltip}>
@@ -1045,7 +1077,7 @@ const StintHistoryDetails = ({
   );
 };
 
-const buildGameLogColumns = (isGoalie: boolean): Column<PlayerLastFiveGameRecord>[] => [
+export const buildGameLogColumns = (isGoalie: boolean): Column<PlayerLastFiveGameRecord>[] => [
   {
     type: 'custom',
     header: 'Date',
@@ -1102,11 +1134,11 @@ const buildGameLogColumns = (isGoalie: boolean): Column<PlayerLastFiveGameRecord
           type: 'custom' as const,
           header: (
             <StatHeader
-              label="GAA"
-              tooltip="Goals Against Average"
+              label="GA"
+              tooltip="Goals Against"
             />
           ),
-          render: (row: PlayerLastFiveGameRecord) => formatGaa(row.goals_against, row.time_on_ice),
+          render: (row: PlayerLastFiveGameRecord) => row.goals_against ?? '—',
           align: 'center' as const,
         },
         {
@@ -2036,116 +2068,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           homeTeamCode: row.is_home ? row.team_code : row.opponent_code,
           scheduledAt: row.scheduled_at,
         });
-  const recentGameColumns: Column<PlayerLastFiveGameRecord>[] = [
-    {
-      type: 'custom',
-      header: 'Date',
-      render: (row) => formatShortDate(row.scheduled_at),
-    },
-    {
-      type: 'custom',
-      header: 'Team',
-      render: (row) => (
-        <TeamCodeCell
-          code={row.team_code}
-          name={row.team_name}
-        />
-      ),
-    },
-    {
-      type: 'custom',
-      header: 'Opponent',
-      render: (row) => (
-        <span className={styles.opponentCell}>
-          <span className={styles.opponentPrefix}>{row.is_home ? 'vs' : '@'}</span>
-          <TeamCodeCell
-            code={row.opponent_code}
-            name={row.opponent_name}
-          />
-        </span>
-      ),
-    },
-    ...(isGoalie
-      ? [
-          {
-            type: 'custom' as const,
-            header: (
-              <StatHeader
-                label="GS"
-                tooltip="Games Started"
-              />
-            ),
-            render: (row: PlayerLastFiveGameRecord) => (row.goalie_started ? 'Yes' : 'No'),
-            align: 'center' as const,
-          },
-          {
-            type: 'custom' as const,
-            header: (
-              <StatHeader
-                label="SA"
-                tooltip="Shots Against"
-              />
-            ),
-            render: (row: PlayerLastFiveGameRecord) => row.shots_against ?? '—',
-            align: 'center' as const,
-          },
-          {
-            type: 'custom' as const,
-            header: (
-              <StatHeader
-                label="GAA"
-                tooltip="Goals Against Average"
-              />
-            ),
-            render: (row: PlayerLastFiveGameRecord) =>
-              formatGaa(row.goals_against, row.time_on_ice),
-            align: 'center' as const,
-          },
-          {
-            type: 'custom' as const,
-            header: (
-              <StatHeader
-                label="SV%"
-                tooltip="Save Percentage"
-              />
-            ),
-            render: (row: PlayerLastFiveGameRecord) => formatSavePct(row.save_pct),
-            align: 'center' as const,
-          },
-        ]
-      : [
-          {
-            header: (
-              <StatHeader
-                label="G"
-                tooltip="Goals"
-              />
-            ),
-            key: 'goals' as const,
-            align: 'center' as const,
-          },
-          {
-            header: (
-              <StatHeader
-                label="A"
-                tooltip="Assist"
-              />
-            ),
-            key: 'assists' as const,
-            align: 'center' as const,
-          },
-          {
-            header: (
-              <StatHeader
-                label="PTS"
-                tooltip="Points"
-              />
-            ),
-            key: 'points' as const,
-            align: 'center' as const,
-          },
-        ]),
-  ];
+  const recentGameColumns = buildGameLogColumns(isGoalie);
   const gameLogColumns = buildGameLogColumns(isGoalie);
   const gameLogPageCount = Math.max(1, Math.ceil(gameLogsTotal / GAME_LOG_PAGE_SIZE));
   const playerAwardGroups = groupPlayerAwards(playerAwards);
@@ -2551,7 +2474,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
               content: (
                 <Section title="Career Statistics">
                   <Table
-                    columns={statColumns}
+                    columns={buildCareerStatColumns(isGoalie)}
                     data={stats}
                     rowKey={(r) => `${r.season_id}-${r.team_id ?? 'teamless'}`}
                     emptyMessage="No stats recorded yet."
