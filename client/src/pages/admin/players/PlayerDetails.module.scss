@@ -198,9 +198,9 @@
   }
 
   &FirstName {
-    font-size: $font-base;
+    font-size: $font-lg;
     font-weight: 600;
-    color: var(--app-text-muted, #{$text-dim});
+    color: #fff;
     line-height: 1.1;
     letter-spacing: 0;
     @include truncate;
