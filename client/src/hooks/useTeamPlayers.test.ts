@@ -284,6 +284,7 @@ describe('useStintActions', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({
       queryKey: ['player-trade-history', 'player-1'],
     });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['player', 'player-1'] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['players'] });
   });
 });

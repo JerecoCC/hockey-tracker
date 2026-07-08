@@ -216,6 +216,7 @@ export const useStintActions = (playerId: string | null) => {
       await axios.delete(`${API}/admin/player-teams/${stintId}`, { headers: authHeaders() });
       toast.success('Stint deleted!');
       await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['player', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['players'] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });

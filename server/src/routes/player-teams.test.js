@@ -612,6 +612,9 @@ describe('DELETE /api/admin/player-teams/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.message).toBe('Stint deleted');
     expect(sql).toHaveBeenCalledTimes(3);
+    const deleteQuery = sql.mock.calls[2][0].join(' ');
+    expect(deleteQuery).toContain('DELETE FROM player_teams');
+    expect(deleteQuery).toContain('DELETE FROM player_team_stints');
   });
 
   it('returns 409 when the player has stats for that team', async () => {

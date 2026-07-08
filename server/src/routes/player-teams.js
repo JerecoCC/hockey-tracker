@@ -860,7 +860,19 @@ router.delete('/:id', async (req, res) => {
           error: 'Cannot delete team stint while player has stats for this team.',
         });
       }
+      // Career stints are not FK-linked to season roster rows, so remove any
+      // roster remnants for the same player/team once the no-stats guard passes.
       await sql`
+        WITH target AS (
+          SELECT ${stintRows[0].player_id}::uuid AS player_id, ${stintRows[0].team_id}::uuid AS team_id
+        ),
+        deleted_roster_rows AS (
+          DELETE FROM player_teams pt
+          USING target
+          WHERE pt.player_id = target.player_id
+            AND pt.team_id = target.team_id
+          RETURNING pt.id
+        )
         DELETE FROM player_team_stints
         WHERE id = ${id}
       `;

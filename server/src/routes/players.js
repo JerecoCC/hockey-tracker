@@ -268,9 +268,19 @@ router.get('/', async (req, res) => {
               ) cs ON TRUE
               ORDER BY
                 p.id,
-                COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
+                CASE
+                  WHEN EXISTS (
+                    SELECT 1
+                    FROM player_team_stints pts
+                    WHERE pts.player_id = p.id
+                      AND pts.team_id = t.id
+                  )
+                  THEN 0
+                  ELSE 1
+                END,
                 CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
                 COALESCE(pt.end_date, pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
+                COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
                 s.start_date DESC NULLS LAST,
                 pt.created_at DESC,
                 pt.id DESC
@@ -324,9 +334,19 @@ router.get('/', async (req, res) => {
               JOIN recent_seasons s ON s.id         = pt.season_id
               ORDER BY
                 p.id,
-                COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
+                CASE
+                  WHEN EXISTS (
+                    SELECT 1
+                    FROM player_team_stints pts
+                    WHERE pts.player_id = p.id
+                      AND pts.team_id = t.id
+                  )
+                  THEN 0
+                  ELSE 1
+                END,
                 CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
                 COALESCE(pt.end_date, pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
+                COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
                 s.start_date DESC NULLS LAST,
                 pt.created_at DESC,
                 pt.id DESC
@@ -2725,4 +2745,3 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
-

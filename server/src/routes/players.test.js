@@ -49,6 +49,20 @@ const expectLatestStintStartBeforeOpenTieBreaker = (queryText) => {
   expect(openTieBreakerIndex).toBeGreaterThan(latestStartIndex);
 };
 
+const expectCareerStintPreferenceBeforeRosterRecency = (queryText) => {
+  const normalized = queryText.replace(/\s+/g, ' ');
+  const orderByIndex = normalized.indexOf('ORDER BY p.id');
+  const careerPreferenceIndex = normalized.indexOf('FROM player_team_stints pts', orderByIndex);
+  const openTieBreakerIndex = normalized.indexOf(
+    'CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END',
+    orderByIndex,
+  );
+
+  expect(orderByIndex).toBeGreaterThanOrEqual(0);
+  expect(careerPreferenceIndex).toBeGreaterThan(orderByIndex);
+  expect(openTieBreakerIndex).toBeGreaterThan(careerPreferenceIndex);
+};
+
 afterEach(() => jest.clearAllMocks());
 
 // ---------------------------------------------------------------------------
@@ -159,6 +173,8 @@ describe('GET /api/admin/players', () => {
     expect(rowQueryText).toContain('last_season_name');
     expect(rowQueryText).toContain('JOIN recent_seasons s ON s.id');
     expect(countQueryText).toContain('WITH recent_seasons AS');
+    expectCareerStintPreferenceBeforeRosterRecency(rowQueryText);
+    expectCareerStintPreferenceBeforeRosterRecency(countQueryText);
     expect(sql.mock.calls[0]).toContain(5);
     expect(sql.mock.calls[1]).toContain(5);
   });
@@ -273,6 +289,7 @@ describe('GET /api/admin/players', () => {
     expect(res.status).toBe(500);
   });
 });
+
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/players/route-lookup
@@ -1122,4 +1139,3 @@ describe('DELETE /api/admin/players/:id', () => {
     expect(res.status).toBe(500);
   });
 });
-
