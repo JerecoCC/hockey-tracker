@@ -237,6 +237,7 @@ interface PlayerManualMovementAnchor {
   seasonName: string | null;
   seasonStartDate: string | null;
   stintStartDate: string | null;
+  acquisitionType: string | null;
 }
 
 interface PlayerManualMovementReport {
@@ -458,6 +459,14 @@ const parsePuckPediaDateLine = (line: string) => {
   };
 };
 
+const parsePuckPediaInlineDate = (value: string) => {
+  const match = value.match(/\b([A-Z][a-z]{2})\s+(\d{1,2}),?\s+(\d{4})\b/);
+  if (!match) return null;
+  const month = PUCKPEDIA_MONTHS[match[1].toLowerCase()];
+  if (!month) return null;
+  return `${match[3]}-${month}-${match[2].padStart(2, '0')}`;
+};
+
 const normalizeTeamNameKey = (value: string | null | undefined) =>
   value
     ?.trim()
@@ -637,9 +646,9 @@ const rawPuckPediaEventFromDetail = ({
     };
   }
 
-  if (lowerDetail.includes(' acquired ') && isPlayerDetail) {
+  if (/\bacquir(?:e|es|ed)\b/i.test(detail) && isPlayerDetail) {
     const tradeMatch = detail.match(
-      /\bThe\s+(.+?)\s+acquired\s+.+?\s+from\s+(?:the\s+)?(.+?)(?:\s+for\b|\s+in exchange\b|\.|$)/i,
+      /\bThe\s+(.+?)\s+acquir(?:e|es|ed)\s+.+?\s+from\s+(?:the\s+)?(.+?)(?:\s+for\b|\s+in exchange\b|\.|$)/i,
     );
     if (tradeMatch) {
       return {
@@ -667,7 +676,7 @@ const rawPuckPediaEventFromDetail = ({
     }
   }
 
-  if (lowerDetail.includes('claimed off waivers') && isPlayerDetail) {
+  if (/\bclaimed\b.*\boff waivers\b/i.test(detail) && isPlayerDetail) {
     const claimedByMatch = detail.match(
       /\bclaimed off waivers by\s+(?:the\s+)?(.+?)\s+from\s+(?:the\s+)?(.+?)(?:\s+on\b|,|\.|$)/i,
     );
@@ -690,6 +699,21 @@ const rawPuckPediaEventFromDetail = ({
         type: 'waiver',
         toTeamName: teamClaimedMatch[1].trim(),
         fromTeamName: teamClaimedMatch[2].trim(),
+        detail,
+      };
+    }
+  }
+
+  if (/\bclaimed by\b/i.test(detail) && lowerDetail.includes('on waivers') && isPlayerDetail) {
+    const placedClaimedByMatch = detail.match(
+      /\b(?:The\s+)?(.+?)\s+placed\s+.+?\s+on waivers(?:\s+on\s+[A-Z][a-z]{2}\s+\d{1,2},?\s+\d{4})?\.\s*Claimed by\s+(?:the\s+)?(.+?)(?:\.|$)/i,
+    );
+    if (placedClaimedByMatch) {
+      return {
+        date: parsePuckPediaInlineDate(detail) ?? date,
+        type: 'waiver',
+        toTeamName: placedClaimedByMatch[2].trim(),
+        fromTeamName: placedClaimedByMatch[1].trim(),
         detail,
       };
     }
@@ -806,6 +830,15 @@ const parsePuckPediaTransactions = (
   return events;
 };
 
+const movementDatesAreNear = (left: string | null, right: string | null) => {
+  if (!left || !right) return left === right;
+  const leftTime = Date.parse(`${left}T00:00:00.000Z`);
+  const rightTime = Date.parse(`${right}T00:00:00.000Z`);
+  if (Number.isNaN(leftTime) || Number.isNaN(rightTime)) return left === right;
+  const daysApart = Math.abs(leftTime - rightTime) / (24 * 60 * 60 * 1000);
+  return daysApart <= 2;
+};
+
 const buildManualMovementReport = ({
   playerName,
   sourceUrl,
@@ -834,10 +867,38 @@ const buildManualMovementReport = ({
   const anchorSeasonStartDate = movementAnchor?.seasonStartDate ?? null;
   const anchorStintStartDate = movementAnchor?.stintStartDate ?? anchorSeasonStartDate;
   const anchorKnownFromDate = anchorSeasonStartDate ?? anchorStintStartDate;
-  let activeTeamName = draft?.teamName ?? null;
+  const draftTeamName = resolveReportTeamName(teamLookup, draft?.teamCode, draft?.teamName);
+  const anchorIsDraftStint =
+    movementAnchor?.acquisitionType === MANUAL_MOVEMENT_ACQUISITION_TYPES.draft ||
+    teamsMatch(anchorTeamName, draftTeamName);
+  let activeTeamName = draftTeamName;
   let anchorAppliedToActiveTeam = false;
 
   const addMovement = (movement: PlayerManualMovementReportEntry) => {
+    const duplicateIndex = movements.findIndex(
+      (existingMovement) =>
+        existingMovement.acquisitionType === movement.acquisitionType &&
+        teamsMatch(existingMovement.fromTeamName, movement.fromTeamName) &&
+        teamsMatch(existingMovement.toTeamName, movement.toTeamName) &&
+        movementDatesAreNear(existingMovement.startDate, movement.startDate),
+    );
+    if (duplicateIndex >= 0) {
+      const existingMovement = movements[duplicateIndex];
+      if (
+        movement.startDate &&
+        (!existingMovement.startDate || movement.startDate < existingMovement.startDate)
+      ) {
+        movements[duplicateIndex] = {
+          ...existingMovement,
+          id: movement.id,
+          startDate: movement.startDate,
+          previousEndDate: movement.previousEndDate,
+          detail: movement.detail || existingMovement.detail,
+        };
+      }
+      return;
+    }
+
     const key = [
       movement.acquisitionType,
       movement.startDate,
@@ -939,7 +1000,23 @@ const buildManualMovementReport = ({
 
     if (anchorMovementIndex >= 0) {
       visibleMovements = movements.slice(anchorMovementIndex);
-      reportStartDate = movements[anchorMovementIndex].startDate ?? reportStartDate;
+      if (anchorIsDraftStint && visibleMovements[0]) {
+        visibleMovements = [
+          {
+            ...visibleMovements[0],
+            id: `unknown-anchor-${anchorTeamName}`,
+            acquisitionType: MANUAL_MOVEMENT_ACQUISITION_TYPES.draft,
+            startDate: null,
+            previousEndDate: null,
+            fromTeamName: null,
+            detail: visibleMovements[0].detail,
+          },
+          ...visibleMovements.slice(1),
+        ];
+      }
+      reportStartDate = anchorIsDraftStint
+        ? (anchorSeasonStartDate ?? reportStartDate)
+        : (movements[anchorMovementIndex].startDate ?? reportStartDate);
     } else {
       visibleMovements = anchorSeasonStartDate
         ? movements.filter(
@@ -947,11 +1024,15 @@ const buildManualMovementReport = ({
           )
         : movements;
       if (!teamsMatch(visibleMovements[0]?.toTeamName, anchorTeamName)) {
+        const anchorAcquisitionType = anchorIsDraftStint
+          ? MANUAL_MOVEMENT_ACQUISITION_TYPES.draft
+          : MANUAL_MOVEMENT_CURRENT_STINT_ACQUISITION;
+        const anchorStartDate = anchorIsDraftStint ? null : anchorStintStartDate;
         visibleMovements = [
           {
-            id: `${anchorStintStartDate ?? 'unknown'}-anchor-${anchorTeamName}`,
-            acquisitionType: MANUAL_MOVEMENT_CURRENT_STINT_ACQUISITION,
-            startDate: anchorStintStartDate,
+            id: `${anchorStartDate ?? 'unknown'}-anchor-${anchorTeamName}`,
+            acquisitionType: anchorAcquisitionType,
+            startDate: anchorStartDate,
             endDate: null,
             previousEndDate: null,
             fromTeamName: null,
@@ -1002,6 +1083,7 @@ const formatDate = (iso: string | null) => {
 const MANUAL_MOVEMENT_SOURCE_FORM_ID = 'manual-movement-source-form';
 const MANUAL_MOVEMENT_CURRENT_STINT_ACQUISITION = 'current_stint';
 const MANUAL_MOVEMENT_ACQUISITION_TYPES = {
+  draft: 'draft',
   trade: 'trade',
   freeAgency: 'free_agency',
   waivers: 'waivers',
@@ -2229,6 +2311,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
         seasonName: latestEndedPlayerSeason?.name ?? null,
         seasonStartDate: latestEndedPlayerSeasonStart,
         stintStartDate: dateKey(manualMovementAnchorStint.start_date),
+        acquisitionType: manualMovementAnchorStint.acquisition_type ?? null,
       }
     : null;
 

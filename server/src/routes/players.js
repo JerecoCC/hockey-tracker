@@ -33,7 +33,8 @@ const normalizeLeagueNumber = (value) => {
 };
 
 const PLAYER_STATUSES = new Set(['active', 'inactive', 'retired']);
-const LEAGUE_PLAYER_WARNING_MINIMUM_GAMES = 15;
+const LEAGUE_PLAYER_WARNING_MINIMUM_SKATER_GAMES = 41;
+const LEAGUE_PLAYER_WARNING_MINIMUM_GOALIE_GAMES = 15;
 
 const normalizePlayerStatus = ({ status, is_active }, fallback = 'active') => {
   if (status !== undefined && status !== null && status !== '') {
@@ -310,7 +311,10 @@ router.get('/', async (req, res) => {
           AND (
             ${!warningsOnly}
             OR (
-              (position = 'G' OR games_played >= ${LEAGUE_PLAYER_WARNING_MINIMUM_GAMES})
+              (
+                (position = 'G' AND games_played >= ${LEAGUE_PLAYER_WARNING_MINIMUM_GOALIE_GAMES})
+                OR (COALESCE(position, '') <> 'G' AND games_played >= ${LEAGUE_PLAYER_WARNING_MINIMUM_SKATER_GAMES})
+              )
               AND (date_of_birth IS NULL OR start_date IS NULL OR acquisition_type IS NULL)
             )
           )
@@ -404,7 +408,10 @@ router.get('/', async (req, res) => {
           AND (
             ${!warningsOnly}
             OR (
-              (position = 'G' OR games_played >= ${LEAGUE_PLAYER_WARNING_MINIMUM_GAMES})
+              (
+                (position = 'G' AND games_played >= ${LEAGUE_PLAYER_WARNING_MINIMUM_GOALIE_GAMES})
+                OR (COALESCE(position, '') <> 'G' AND games_played >= ${LEAGUE_PLAYER_WARNING_MINIMUM_SKATER_GAMES})
+              )
               AND (date_of_birth IS NULL OR start_date IS NULL OR acquisition_type IS NULL)
             )
           )

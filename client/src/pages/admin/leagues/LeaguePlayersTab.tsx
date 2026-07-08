@@ -44,7 +44,7 @@ interface LeaguePlayersListSectionProps {
   busy: string | null;
   selectedSeasonId?: string | null;
   showLastSeasonSubtitle?: boolean;
-  minimumGamesForDataIndicator?: number;
+  minimumGamesForDataIndicator?: PlayerDataIndicatorMinimumGames;
   emptyMessage: ReactNode;
   onPageChange: (page: number) => void;
   onSearchChange: (query: string) => void;
@@ -56,7 +56,15 @@ interface LeaguePlayersListSectionProps {
 const PLAYER_SKELETON_ROW_COUNT = 15;
 const PLAYER_SEARCH_DEBOUNCE_MS = 350;
 const PLAYER_SEARCH_MIN_LENGTH = 3;
-const LEAGUE_PLAYER_DATA_MINIMUM_GAMES = 15;
+interface PlayerDataIndicatorMinimumGames {
+  skater: number;
+  goalie: number;
+}
+
+const LEAGUE_PLAYER_DATA_MINIMUM_GAMES: PlayerDataIndicatorMinimumGames = {
+  skater: 41,
+  goalie: 15,
+};
 const PLAYER_STATUS_TAG_INTENTS: Record<PlayerStatus, 'success' | 'neutral' | 'warning'> = {
   active: 'success',
   inactive: 'neutral',
@@ -82,11 +90,14 @@ const LeaguePlayerRowsSkeleton = ({
   </ul>
 );
 
-const playerDataIndicator = (player: PlayerRecord, minimumGames?: number) => {
+const playerDataIndicator = (
+  player: PlayerRecord,
+  minimumGames?: PlayerDataIndicatorMinimumGames,
+) => {
+  const minimumGamesRequired =
+    (player.position ?? '').toUpperCase() === 'G' ? minimumGames?.goalie : minimumGames?.skater;
   const meetsGameMinimum =
-    minimumGames === undefined ||
-    player.position === 'G' ||
-    (player.games_played ?? 0) >= minimumGames;
+    minimumGamesRequired === undefined || (player.games_played ?? 0) >= minimumGamesRequired;
   if (!meetsGameMinimum) return '';
 
   const hasMissingData = !player.date_of_birth || !player.start_date || !player.acquisition_type;

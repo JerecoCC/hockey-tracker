@@ -1616,7 +1616,7 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.queryByLabelText('Loading players')).not.toBeInTheDocument();
   });
 
-  it('shows missing data indicators only after skaters meet the game minimum', () => {
+  it('shows missing data indicators only after players meet position game minimums', () => {
     setup({ league: mockLeague }, {}, null, {
       players: [
         {
@@ -1638,7 +1638,7 @@ describe('LeagueDetailsPage – players tab', () => {
           acquisition_type: null,
           start_date: null,
           has_games: true,
-          games_played: 15,
+          games_played: 41,
           season_points: 1,
         },
         {
@@ -1660,7 +1660,7 @@ describe('LeagueDetailsPage – players tab', () => {
           acquisition_type: null,
           start_date: null,
           has_games: true,
-          games_played: 15,
+          games_played: 40,
           season_points: 2,
         },
         {
@@ -1682,7 +1682,7 @@ describe('LeagueDetailsPage – players tab', () => {
           acquisition_type: 'draft',
           start_date: '2024-10-01',
           has_games: true,
-          games_played: 15,
+          games_played: 41,
           season_points: 1,
         },
         {
@@ -1726,21 +1726,46 @@ describe('LeagueDetailsPage – players tab', () => {
           acquisition_type: null,
           start_date: null,
           has_games: true,
-          games_played: 4,
+          games_played: 14,
+          season_points: 0,
+        },
+        {
+          id: 'player-6',
+          first_name: 'Grace',
+          last_name: 'Goalie',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'G',
+          shoots: 'L',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+          acquisition_type: null,
+          start_date: null,
+          has_games: true,
+          games_played: 15,
           season_points: 0,
         },
       ],
-      total: 5,
+      total: 6,
     });
     clickPlayersTab();
 
     expect(screen.getByText('John Smith \u26A0\uFE0F')).toBeInTheDocument();
     expect(screen.queryByText('John Smith \uD83D\uDCDD')).not.toBeInTheDocument();
-    expect(screen.getByText('Jane Doe \u26A0\uFE0F')).toBeInTheDocument();
+    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+    expect(screen.queryByText('Jane Doe \u26A0\uFE0F')).not.toBeInTheDocument();
     expect(screen.getByText('Pat Ready')).toBeInTheDocument();
     expect(screen.queryByText('Pat Ready \u26A0\uFE0F')).not.toBeInTheDocument();
     expect(screen.getByText('Sam Short')).toBeInTheDocument();
     expect(screen.queryByText('Sam Short \u26A0\uFE0F')).not.toBeInTheDocument();
-    expect(screen.getByText('Glen Goalie \u26A0\uFE0F')).toBeInTheDocument();
+    expect(screen.getByText('Glen Goalie')).toBeInTheDocument();
+    expect(screen.queryByText('Glen Goalie \u26A0\uFE0F')).not.toBeInTheDocument();
+    expect(screen.getByText('Grace Goalie \u26A0\uFE0F')).toBeInTheDocument();
   });
 });

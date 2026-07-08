@@ -232,6 +232,7 @@ jest.mock('./StintEditModal', () => ({
   __esModule: true,
   default: () => null,
   ACQUISITION_TYPE_LABELS: {
+    draft: 'Draft',
     free_agency: 'Free Agency',
     trade: 'Trade',
     waivers: 'Waivers',
@@ -1211,6 +1212,127 @@ describe('PlayerDetails info tab', () => {
     expect(report.queryByText('March 6, 2014')).not.toBeInTheDocument();
   });
 
+  it('uses placed-and-claimed waiver rows for current stint acquisitions', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8481678',
+        first_name: 'Brandon',
+        last_name: 'Bussi',
+        photo: null,
+        date_of_birth: '1998-06-25',
+        birth_city: 'Sound Beach',
+        birth_country: 'USA',
+        height_cm: 196,
+        weight_lbs: 218,
+        position: 'G',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-car', name: 'Carolina Hurricanes', code: 'CAR', league_id: 'league-1' },
+        { id: 'team-fla', name: 'Florida Panthers', code: 'FLA', league_id: 'league-1' },
+        { id: 'team-bos', name: 'Boston Bruins', code: 'BOS', league_id: 'league-1' },
+      ],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2025',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-30',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-car',
+          team_id: 'team-car',
+          season_id: 'season-2025',
+          team: {
+            id: 'team-car',
+            name: 'Carolina Hurricanes',
+            code: 'CAR',
+            logo: null,
+            primary_color: '#cc0000',
+            text_color: '#ffffff',
+          },
+          jersey_number: 30,
+          is_prospect: false,
+          position: 'G',
+          acquisition_type: null,
+          start_date: '2025-10-07',
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'PuckPedia source' }));
+
+    fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
+      target: {
+        value: `
+          Date	Type	Teams	Details
+          Feb 16, 2026	Signing
+
+          Brandon Bussi signs a 3-Year, $5,700,000 deal with the Hurricanes
+          Oct 5, 2025	Waiver
+
+          Panthers placed Brandon Bussi on waivers on Oct 4, 2025. Claimed by Hurricanes.
+          Oct 5, 2025	Moves
+
+          Carolina claimed Bussi off waivers from Florida on Sunday.
+          Oct 4, 2025	Moves
+
+          Bussi was placed on waivers Saturday, per PuckPedia.
+          Jul 1, 2025	Signing
+
+          Brandon Bussi signs a 1-Year, $775,000 deal with the Panthers
+          Mar 30, 2022	Signing
+
+          Brandon Bussi signs a 1-Year, $825,000 deal with the Bruins
+        `,
+      },
+    });
+    await user.click(screen.getByText('Build report'));
+
+    const reportSection = screen
+      .getByText('Manual Movement Report')
+      .closest('.stintHistorySection') as HTMLElement;
+    const report = within(reportSection);
+    const carolinaMovementRows = report
+      .getAllByText('Carolina Hurricanes')
+      .map((node) => node.closest('tr') as HTMLElement | null)
+      .filter((row): row is HTMLElement => row !== null);
+
+    expect(carolinaMovementRows).toHaveLength(1);
+    expect(within(carolinaMovementRows[0]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+      'Carolina Hurricanes',
+      'Waivers',
+      'October 4, 2025',
+      'Present',
+    ]);
+    expect(report.queryByText('Current stint')).not.toBeInTheDocument();
+    expect(report.queryByText('October 7, 2025')).not.toBeInTheDocument();
+    expect(report.queryByText('October 5, 2025')).not.toBeInTheDocument();
+  });
+
   it('skips same-team signing extensions when only recent PuckPedia transactions are pasted', async () => {
     const user = userEvent.setup();
     mockUseTabState.mockReturnValue([4, jest.fn()]);
@@ -1951,6 +2073,136 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getByText('#8')).toBeInTheDocument();
     expect(screen.getByText('#2')).toBeInTheDocument();
     expect(screen.queryByText(/signs a 1-Year/)).not.toBeInTheDocument();
+  });
+
+  it('parses present-tense acquire trades and uses local draft anchor stints', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8480801',
+        first_name: 'Brady',
+        last_name: 'Tkachuk',
+        photo: null,
+        date_of_birth: '1999-09-16',
+        birth_city: 'Scottsdale',
+        birth_country: 'USA',
+        height_cm: 193,
+        weight_lbs: 221,
+        position: 'LW',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-ott', name: 'Ottawa Senators', code: 'OTT', league_id: 'league-1' },
+        { id: 'team-fla', name: 'Florida Panthers', code: 'FLA', league_id: 'league-1' },
+      ],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2026',
+          league_id: 'league-1',
+          name: '2026-27',
+          start_date: '2026-10-01',
+          created_at: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 'season-2025',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-30',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-ott',
+          team_id: 'team-ott',
+          season_id: 'season-2025',
+          team: {
+            id: 'team-ott',
+            name: 'Ottawa Senators',
+            code: 'OTT',
+            logo: null,
+            primary_color: '#da1a32',
+            text_color: '#ffffff',
+          },
+          jersey_number: 7,
+          is_prospect: false,
+          position: 'LW',
+          acquisition_type: 'draft',
+          start_date: '2018-08-13',
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'PuckPedia source' }));
+
+    expect(screen.getByRole('dialog', { name: 'PuckPedia Source' })).toBeInTheDocument();
+    expect(mockedAxios.get).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
+      target: {
+        value: `
+          Date	Type	Teams	Details
+          Jun 21, 2026	Trade
+
+          The Florida Panthers acquire Brady Tkachuk from the Ottawa Senators for a 2026 1st round pick (#9), a 2026 1st round pick (TBL, #25), a conditional 2029 1st round pick and a 2027 2nd round pick
+          Oct 14, 2021	Signing
+
+          Brady Tkachuk signs a 7-Year, $57,564,958 deal with the Senators
+          Aug 13, 2018	Signing
+
+          Brady Tkachuk signs a 3-Year, $2,775,000 deal with the Senators
+        `,
+      },
+    });
+    await user.click(screen.getByText('Build report'));
+
+    const reportSection = screen
+      .getByText('Manual Movement Report')
+      .closest('.stintHistorySection') as HTMLElement;
+    const report = within(reportSection);
+    const ottawaMovementRow = report
+      .getAllByText('Ottawa Senators')
+      .map((node) => node.closest('tr') as HTMLElement | null)
+      .find((row): row is HTMLElement => row !== null);
+    const floridaMovementRow = report
+      .getAllByText('Florida Panthers')
+      .map((node) => node.closest('tr') as HTMLElement | null)
+      .find((row): row is HTMLElement => row !== null);
+
+    expect(report.queryByText('Draft Year: 2018 | Round: 1')).not.toBeInTheDocument();
+    expect(report.queryByText('Free Agency')).not.toBeInTheDocument();
+    expect(ottawaMovementRow).toBeDefined();
+    expect(within(ottawaMovementRow!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+      'Ottawa Senators',
+      'Draft',
+      '-',
+      'June 21, 2026',
+    ]);
+    expect(floridaMovementRow).toBeDefined();
+    expect(within(floridaMovementRow!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+      'Florida Panthers',
+      'Trade',
+      'June 21, 2026',
+      'Present',
+    ]);
   });
 
   it('auto-fills PWHL player details from HockeyTech profile data', async () => {

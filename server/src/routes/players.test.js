@@ -199,26 +199,38 @@ describe('GET /api/admin/players', () => {
     const rowQueryText = rowCall[0].join(' ');
     const countQueryText = countCall[0].join(' ');
 
-    expect(rowQueryText).toContain("position = 'G' OR games_played >=");
+    expect(rowQueryText).toContain("position = 'G' AND games_played >=");
+    expect(rowQueryText).toContain("COALESCE(position, '') <> 'G' AND games_played >=");
     expect(rowQueryText).toContain(
       'date_of_birth IS NULL OR start_date IS NULL OR acquisition_type IS NULL',
     );
-    expect(countQueryText).toContain("position = 'G' OR games_played >=");
+    expect(countQueryText).toContain("position = 'G' AND games_played >=");
+    expect(countQueryText).toContain("COALESCE(position, '') <> 'G' AND games_played >=");
     expect(countQueryText).toContain(
       'date_of_birth IS NULL OR start_date IS NULL OR acquisition_type IS NULL',
     );
     expect(countQueryText).toContain('COUNT(DISTINCT gr.game_id)::int AS games_played');
 
-    const rowMinimumIndex = rowCall[0].findIndex((segment) =>
-      segment.includes('position = \'G\' OR games_played >='),
+    const rowGoalieMinimumIndex = rowCall[0].findIndex((segment) =>
+      segment.includes('position = \'G\' AND games_played >='),
     );
-    const countMinimumIndex = countCall[0].findIndex((segment) =>
-      segment.includes('position = \'G\' OR games_played >='),
+    const rowSkaterMinimumIndex = rowCall[0].findIndex((segment) =>
+      segment.includes('COALESCE(position, \'\') <> \'G\' AND games_played >='),
     );
-    expect(rowMinimumIndex).toBeGreaterThanOrEqual(0);
-    expect(countMinimumIndex).toBeGreaterThanOrEqual(0);
-    expect(rowCall[rowMinimumIndex + 1]).toBe(15);
-    expect(countCall[countMinimumIndex + 1]).toBe(15);
+    const countGoalieMinimumIndex = countCall[0].findIndex((segment) =>
+      segment.includes('position = \'G\' AND games_played >='),
+    );
+    const countSkaterMinimumIndex = countCall[0].findIndex((segment) =>
+      segment.includes('COALESCE(position, \'\') <> \'G\' AND games_played >='),
+    );
+    expect(rowGoalieMinimumIndex).toBeGreaterThanOrEqual(0);
+    expect(rowSkaterMinimumIndex).toBeGreaterThanOrEqual(0);
+    expect(countGoalieMinimumIndex).toBeGreaterThanOrEqual(0);
+    expect(countSkaterMinimumIndex).toBeGreaterThanOrEqual(0);
+    expect(rowCall[rowGoalieMinimumIndex + 1]).toBe(15);
+    expect(rowCall[rowSkaterMinimumIndex + 1]).toBe(41);
+    expect(countCall[countGoalieMinimumIndex + 1]).toBe(15);
+    expect(countCall[countSkaterMinimumIndex + 1]).toBe(41);
   });
 
   it('normalizes Maksim and Maxim player name aliases in paginated search', async () => {
