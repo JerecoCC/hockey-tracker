@@ -24,6 +24,7 @@ app.use('/api/admin/games', gamesRouter);
 
 let selectRows = [];
 let selectError = null;
+const originalFetch = global.fetch;
 
 const makeSelectChain = () => {
   const chain = {
@@ -105,6 +106,73 @@ beforeEach(() => {
   selectRows = [];
   selectError = null;
   db.select.mockImplementation(() => makeSelectChain());
+});
+
+afterEach(() => {
+  global.fetch = originalFetch;
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/games/puckpedia-player-link
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/games/puckpedia-player-link', () => {
+  it('returns available true when the PuckPedia page contains the requested player', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      url: 'https://puckpedia.com/player/andrew-peeke/transactions?transaction_type=trade,waiver,signing,roster',
+      text: jest.fn().mockResolvedValue(
+        '<html><head><link rel="canonical" href="https://puckpedia.com/player/andrew-peeke/transactions"></head><body><h1>Andrew Peeke</h1></body></html>',
+      ),
+    });
+
+    const res = await request(app)
+      .get('/api/admin/games/puckpedia-player-link')
+      .query({
+        url: 'https://puckpedia.com/player/andrew-peeke/transactions?transaction_type=trade,waiver,signing,roster',
+        player_name: 'Andrew Peeke',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      available: true,
+      url: 'https://puckpedia.com/player/andrew-peeke/transactions?transaction_type=trade,waiver,signing,roster',
+    });
+  });
+
+  it('returns available false when the page does not contain the requested player name', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      url: 'https://puckpedia.com/player/artem-zub/transactions?transaction_type=trade,waiver,signing,roster',
+      text: jest.fn().mockResolvedValue(
+        '<html><head><link rel="canonical" href="https://puckpedia.com/player/artem-zub/transactions"></head><body><h1>Artyom Zub</h1></body></html>',
+      ),
+    });
+
+    const res = await request(app)
+      .get('/api/admin/games/puckpedia-player-link')
+      .query({
+        url: 'https://puckpedia.com/player/artem-zub/transactions?transaction_type=trade,waiver,signing,roster',
+        player_name: 'Artem Zub',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.available).toBe(false);
+    expect(res.body.reason).toMatch(/not verified/i);
+  });
+
+  it('rejects non-PuckPedia hosts', async () => {
+    const res = await request(app)
+      .get('/api/admin/games/puckpedia-player-link')
+      .query({
+        url: 'https://example.com/player/andrew-peeke',
+        player_name: 'Andrew Peeke',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/host/i);
+  });
 });
 
 // ---------------------------------------------------------------------------

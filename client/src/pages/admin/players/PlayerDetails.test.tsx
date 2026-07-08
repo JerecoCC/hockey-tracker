@@ -133,6 +133,41 @@ jest.mock(
         </div>
       ) : null,
 );
+jest.mock(
+  '@/components/Modal/Modal',
+  () =>
+    ({
+      open,
+      title,
+      children,
+      onClose,
+      cancelLabel = 'Close',
+      confirmLabel = 'Save',
+      confirmForm,
+      onConfirm,
+      confirmDisabled,
+    }: any) =>
+      open ? (
+        <div
+          role="dialog"
+          aria-label={title}
+        >
+          <h2>{title}</h2>
+          {children}
+          <button onClick={onClose}>{cancelLabel}</button>
+          {(confirmForm || onConfirm) && (
+            <button
+              type={confirmForm ? 'submit' : 'button'}
+              form={confirmForm}
+              onClick={onConfirm}
+              disabled={confirmDisabled}
+            >
+              {confirmLabel}
+            </button>
+          )}
+        </div>
+      ) : null,
+);
 jest.mock('@/components/TitleRow/TitleRow', () => ({ left, right }: any) => (
   <div>
     {left}
@@ -145,12 +180,41 @@ jest.mock('@/components/PlayerAvatar/PlayerAvatar', () => ({ photo }: any) => (
 jest.mock('@/components/TeamLogo/TeamLogo', () => ({ size }: any) => (
   <span data-size={size}>logo</span>
 ));
-jest.mock('@/components/InfoTooltip/InfoTooltip', () => ({
-  ariaLabel,
-  text,
-  content,
-}: any) => <span aria-label={ariaLabel ?? text ?? 'Information'}>{content ?? text}</span>);
-jest.mock('@/components/Table/Table', () => () => <div />);
+jest.mock('@/components/InfoTooltip/InfoTooltip', () => ({ ariaLabel, text, content }: any) => (
+  <span aria-label={ariaLabel ?? text ?? 'Information'}>{content ?? text}</span>
+));
+jest.mock('@/components/Table/Table', () => ({ columns, data, rowKey, emptyMessage }: any) => (
+  <table>
+    <thead>
+      <tr>
+        {columns.map((column: any, index: number) => (
+          <th key={index}>{column.header}</th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {data.length > 0 ? (
+        data.map((row: any, rowIndex: number) => (
+          <tr key={rowKey?.(row) ?? rowIndex}>
+            {columns.map((column: any, columnIndex: number) => {
+              const content =
+                column.type === 'custom'
+                  ? column.render(row)
+                  : column.type === 'logo'
+                    ? column.getName(row)
+                    : row[column.key];
+              return <td key={columnIndex}>{content}</td>;
+            })}
+          </tr>
+        ))
+      ) : (
+        <tr>
+          <td colSpan={columns.length}>{emptyMessage}</td>
+        </tr>
+      )}
+    </tbody>
+  </table>
+));
 jest.mock('@/components/Tabs/Tabs', () => ({ tabs, activeIndex = 0 }: any) => (
   <div>{tabs[activeIndex].content}</div>
 ));
@@ -158,8 +222,11 @@ jest.mock('@/components/Tooltip/Tooltip', () => ({ children, className }: any) =
   <span className={className}>{children}</span>
 ));
 jest.mock('../teams/TeamPlayerEditModal', () => () => null);
-jest.mock('../teams/MovePlayerModal', () => ({ open }: any) =>
-  open ? <div>Move Player Modal</div> : null,
+jest.mock(
+  '../teams/MovePlayerModal',
+  () =>
+    ({ open }: any) =>
+      open ? <div>Move Player Modal</div> : null,
 );
 jest.mock('./StintEditModal', () => ({
   __esModule: true,
@@ -179,18 +246,21 @@ jest.mock('./ChangePhotoModal', () => {
   MockChangePhotoModal.displayName = 'MockChangePhotoModal';
   return MockChangePhotoModal;
 });
-jest.mock('@/components/ImagePreviewModal/ImagePreviewModal', () => ({ open, src, alt }: any) =>
-  open ? (
-    <div
-      role="dialog"
-      aria-label="Image Preview"
-    >
-      <img
-        src={src}
-        alt={alt ?? ''}
-      />
-    </div>
-  ) : null,
+jest.mock(
+  '@/components/ImagePreviewModal/ImagePreviewModal',
+  () =>
+    ({ open, src, alt }: any) =>
+      open ? (
+        <div
+          role="dialog"
+          aria-label="Image Preview"
+        >
+          <img
+            src={src}
+            alt={alt ?? ''}
+          />
+        </div>
+      ) : null,
 );
 
 const mockUsePlayerDetails = usePlayerDetails as jest.Mock;
@@ -220,18 +290,16 @@ beforeAll(() => {
   });
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
-    value: jest
-      .fn()
-      .mockImplementation((query: string) => ({
-        matches: false,
-        media: query,
-        onchange: null,
-        addListener: jest.fn(),
-        removeListener: jest.fn(),
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
-        dispatchEvent: jest.fn(),
-      })),
+    value: jest.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
   });
 });
 
@@ -240,6 +308,12 @@ beforeEach(() => {
   mockedAxios.get.mockReset();
   mockedAxios.patch.mockReset();
   mockedAxios.post.mockReset();
+  mockedAxios.get.mockImplementation((url: string, config?: any) => {
+    if (url === '/api/admin/games/puckpedia-player-link') {
+      return Promise.resolve({ data: { available: true, url: config?.params?.url } });
+    }
+    return Promise.resolve({ data: {} });
+  });
   mockedToast.loading.mockReturnValue('player-autofill-toast');
   (mockedAxios.isAxiosError as unknown as jest.Mock).mockReturnValue(false);
   document.title = 'Hockey Tracker';
@@ -384,7 +458,7 @@ describe('player career stat columns', () => {
 
 describe('player game stat columns', () => {
   const headerText = (header: any) =>
-    typeof header === 'string' ? header : header?.props?.label ?? '';
+    typeof header === 'string' ? header : (header?.props?.label ?? '');
 
   it('shows goalie game goals against instead of goals-against average', () => {
     const headers = buildGameLogColumns(true).map((column) => headerText(column.header));
@@ -821,6 +895,217 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getByRole('img', { name: 'John Smith' })).toHaveAttribute('src', '/photo.jpg');
   });
 
+  it('opens the manual movement report from history and starts with the latest ended season team', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8479369',
+        first_name: 'Andrew',
+        last_name: 'Peeke',
+        photo: null,
+        date_of_birth: '1998-03-17',
+        birth_city: 'Parkland',
+        birth_country: 'USA',
+        height_cm: 191,
+        weight_lbs: 214,
+        position: 'D',
+        shoots: 'R',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-bos', name: 'Boston Bruins', code: 'BOS', league_id: 'league-1' },
+        { id: 'team-uta', name: 'Utah Mammoth', code: 'UTA', league_id: 'league-1' },
+        { id: 'team-cbj', name: 'Columbus Blue Jackets', code: 'CBJ', league_id: 'league-1' },
+      ],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2026',
+          league_id: 'league-1',
+          name: '2026-27',
+          start_date: '2026-10-01',
+          created_at: '2026-01-01T00:00:00Z',
+        },
+        {
+          id: 'season-2025',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-30',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+        {
+          id: 'season-2024',
+          league_id: 'league-1',
+          name: '2024-25',
+          start_date: '2024-10-01',
+          end_date: '2025-06-30',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-uta',
+          team_id: 'team-uta',
+          season_id: 'season-2026',
+          team: {
+            id: 'team-uta',
+            name: 'Utah Mammoth',
+            code: 'UTA',
+            logo: null,
+            primary_color: '#71afe5',
+            text_color: '#111111',
+          },
+          jersey_number: null,
+          is_prospect: false,
+          position: 'D',
+          acquisition_type: 'free_agency',
+          start_date: '2026-07-03',
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+        {
+          id: 'stint-bos',
+          team_id: 'team-bos',
+          season_id: 'season-2025',
+          team: {
+            id: 'team-bos',
+            name: 'Boston Bruins',
+            code: 'BOS',
+            logo: null,
+            primary_color: '#fcb514',
+            text_color: '#111111',
+          },
+          jersey_number: 52,
+          is_prospect: false,
+          position: 'D',
+          acquisition_type: 'trade',
+          start_date: '2024-03-08',
+          end_date: '2026-07-03',
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+        {
+          id: 'stint-cbj',
+          team_id: 'team-cbj',
+          season_id: 'season-2024',
+          team: {
+            id: 'team-cbj',
+            name: 'Columbus Blue Jackets',
+            code: 'CBJ',
+            logo: null,
+            primary_color: '#002654',
+            text_color: '#ffffff',
+          },
+          jersey_number: 2,
+          is_prospect: false,
+          position: 'D',
+          acquisition_type: 'draft',
+          start_date: '2019-04-01',
+          end_date: '2024-03-08',
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'PuckPedia source' }));
+
+    expect(screen.getByRole('dialog', { name: 'PuckPedia Source' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Open PuckPedia' })).toHaveAttribute(
+      'href',
+      'https://puckpedia.com/player/andrew-peeke/transactions?transaction_type=trade,waiver,signing,roster',
+    );
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      '/api/admin/games/puckpedia-player-link',
+      expect.objectContaining({
+        params: {
+          url: 'https://puckpedia.com/player/andrew-peeke/transactions?transaction_type=trade,waiver,signing,roster',
+          player_name: 'Andrew Peeke',
+        },
+      }),
+    );
+
+    fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
+      target: {
+        value: `
+          Date	Type	Teams	Details
+          Jul 3, 2026	Signing
+
+          Andrew Peeke signs a 1-Year, $1,000,000 deal with the Mammoth
+          Mar 8, 2024	Trade
+
+          The Boston Bruins acquired Andrew Peeke from the Columbus Blue Jackets for a 2027 3rd round pick and Jakub Zboril
+          Mar 8, 2024	Moves
+
+          Peeke was traded to Boston from Columbus in exchange for Jakub Zboril on Friday.
+          Sep 28, 2022	Signing
+
+          Andrew Peeke signs a 3-Year, $8,250,000 deal with the Blue Jackets
+          Aug 9, 2021	Signing
+
+          Andrew Peeke signs a 2-Year, $1,575,000 deal with the Blue Jackets
+          Apr 1, 2019	Signing
+
+          Andrew Peeke signs a 3-Year, $2,749,998 deal with the Blue Jackets
+        `,
+      },
+    });
+    await user.click(screen.getByText('Build report'));
+
+    expect(screen.queryByRole('dialog', { name: 'PuckPedia Source' })).not.toBeInTheDocument();
+    expect(screen.getByText('Manual Movement Report')).toBeInTheDocument();
+    expect(screen.getByText('Acquisition')).toBeInTheDocument();
+    expect(screen.getAllByText('Trade').length).toBeGreaterThan(0);
+    expect(screen.getByText('Free Agency')).toBeInTheDocument();
+    expect(screen.getAllByText('Boston Bruins').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Utah Mammoth').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('March 8, 2024').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('July 3, 2026').length).toBeGreaterThan(0);
+    expect(screen.getByText('Present')).toBeInTheDocument();
+    expect(screen.queryByText('September 28, 2022')).not.toBeInTheDocument();
+    expect(screen.queryByText('August 9, 2021')).not.toBeInTheDocument();
+    expect(screen.queryByText('April 1, 2019')).not.toBeInTheDocument();
+    expect(screen.queryByText(/acquired Andrew Peeke/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/signs a 3-Year/)).not.toBeInTheDocument();
+  });
+
+  it('hides the generated PuckPedia link when the player page cannot be verified', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockedAxios.get.mockImplementation((url: string) => {
+      if (url === '/api/admin/games/puckpedia-player-link') {
+        return Promise.resolve({ data: { available: false } });
+      }
+      return Promise.resolve({ data: {} });
+    });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'PuckPedia source' }));
+
+    expect(
+      await screen.findByText(/PuckPedia player link could not be verified for John Smith/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Open PuckPedia' })).not.toBeInTheDocument();
+  });
+
   it('shows generated season photo rows without delete actions', async () => {
     const user = userEvent.setup();
     const generatedPhoto = 'https://assets.nhle.com/mugs/nhl/20252026/TOR/8478402.png';
@@ -884,10 +1169,7 @@ describe('PlayerDetails info tab', () => {
     await user.click(photoItem);
 
     expect(screen.getByRole('dialog', { name: 'Image Preview' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'John Smith' })).toHaveAttribute(
-      'src',
-      generatedPhoto,
-    );
+    expect(screen.getByRole('img', { name: 'John Smith' })).toHaveAttribute('src', generatedPhoto);
   });
 
   it('does not add an assumed current jersey row when saved history exists', async () => {
@@ -1396,8 +1678,10 @@ describe('PlayerDetails info tab', () => {
 
   it('uses a progress toast and saves NHL birth state with the birth city during autofill', async () => {
     const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
     mockedAxios.get.mockResolvedValueOnce({
       data: {
+        isActive: false,
         firstName: { default: 'John' },
         lastName: { default: 'Smith' },
         birthDate: '1997-01-13',
@@ -1407,9 +1691,23 @@ describe('PlayerDetails info tab', () => {
         currentTeamAbbrev: null,
         sweaterNumber: 19,
         position: 'C',
+        draftDetails: {
+          year: 2013,
+          teamAbbrev: 'WPG',
+          round: 4,
+          overallPick: 104,
+        },
       },
     });
     mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-wpg', name: 'Winnipeg Jets', code: 'WPG', league_id: 'league-1' },
+        { id: 'team-nyr', name: 'New York Rangers', code: 'NYR', league_id: 'league-1' },
+        { id: 'team-det', name: 'Detroit Red Wings', code: 'DET', league_id: 'league-1' },
+        { id: 'team-uta', name: 'Utah Mammoth', code: 'UTA', league_id: 'league-1' },
+      ],
+    });
 
     render(<PlayerDetails />);
 
@@ -1422,9 +1720,16 @@ describe('PlayerDetails info tab', () => {
         expect.objectContaining({
           birth_city: 'Mississauga, Ontario',
           birth_country: 'CAN',
+          status: 'inactive',
         }),
         expect.any(Object),
       ),
+    );
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      '/api/admin/games/nhl-api',
+      expect.objectContaining({
+        params: { url: 'https://api-web.nhle.com/v1/player/8478402/landing' },
+      }),
     );
 
     expect(mockedToast.loading).toHaveBeenCalledWith(
@@ -1440,7 +1745,7 @@ describe('PlayerDetails info tab', () => {
       expect(mockedToast.update).toHaveBeenCalledWith(
         'player-autofill-toast',
         expect.objectContaining({
-          render: 'Player data auto-filled.',
+          render: 'Player data auto-filled. Manual movement report ready.',
           type: 'success',
           isLoading: false,
           hideProgressBar: true,
@@ -1450,6 +1755,46 @@ describe('PlayerDetails info tab', () => {
       ),
     );
     expect(mockedToast.success).not.toHaveBeenCalledWith('Player data auto-filled.');
+    expect(screen.getByRole('dialog', { name: 'PuckPedia Source' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Open PuckPedia' })).toHaveAttribute(
+      'href',
+      'https://puckpedia.com/player/john-smith/transactions?transaction_type=trade,waiver,signing,roster',
+    );
+    expect(screen.getByLabelText('PuckPedia transactions text or HTML')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
+      target: {
+        value: `
+          Date	Type	Teams	Details
+          Jul 3, 2026	Signing
+
+          Smith signs a 1-Year, $1,000,000 deal with the Mammoth
+          Apr 26, 2026	News
+
+          Smith logged a shorthanded assist against the Buffalo Sabres.
+          Aug 5, 2024	News
+
+          Smith changes jersey number from #8 to #2.
+          Mar 21, 2022	Trade
+
+          The New York Rangers acquired John Smith from the Winnipeg Jets for Future Considerations
+        `,
+      },
+    });
+    await user.click(screen.getByText('Build report'));
+
+    expect(screen.queryByRole('dialog', { name: 'PuckPedia Source' })).not.toBeInTheDocument();
+    expect(screen.getByText('Draft Year: 2013 | Round: 4')).toBeInTheDocument();
+    expect(screen.getByText('Player Status')).toBeInTheDocument();
+    expect(screen.getAllByText('Inactive').length).toBeGreaterThan(0);
+    expect(screen.getByText('Date: -')).toBeInTheDocument();
+    expect(screen.getByText('Winnipeg Jets')).toBeInTheDocument();
+    expect(screen.getAllByText('New York Rangers').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Utah Mammoth').length).toBeGreaterThan(0);
+    expect(screen.getByText('Jersey Number Changes')).toBeInTheDocument();
+    expect(screen.getByText('#8')).toBeInTheDocument();
+    expect(screen.getByText('#2')).toBeInTheDocument();
+    expect(screen.queryByText(/signs a 1-Year/)).not.toBeInTheDocument();
   });
 
   it('auto-fills PWHL player details from HockeyTech profile data', async () => {
@@ -1552,7 +1897,7 @@ describe('PlayerDetails info tab', () => {
     expect(mockedAxios.post).not.toHaveBeenCalled();
     expect(createStint).not.toHaveBeenCalled();
     expect(updateStint).not.toHaveBeenCalled();
-    expect(screen.queryByText('Manual Player Updates')).not.toBeInTheDocument();
+    expect(screen.queryByText('Manual Movement Report')).not.toBeInTheDocument();
     await waitFor(() =>
       expect(mockedToast.update).toHaveBeenCalledWith(
         'player-autofill-toast',
@@ -1840,26 +2185,33 @@ describe('PlayerDetails awards tab', () => {
     expect(screen.getByText('Awards')).toBeInTheDocument();
     expect(forwardGroup).not.toBeNull();
     expect(walterCupGroup).not.toBeNull();
-    expect(within(forwardGroup as HTMLElement).getByRole('button', { name: 'Collapse' }))
-      .toBeInTheDocument();
+    expect(
+      within(forwardGroup as HTMLElement).getByRole('button', { name: 'Collapse' }),
+    ).toBeInTheDocument();
     expect(
       within(forwardGroup as HTMLElement).getByLabelText('Forward of the Year award details'),
     ).toBeInTheDocument();
     expect(
       within(walterCupGroup as HTMLElement).getByLabelText('Walter Cup Winner award details'),
     ).toBeInTheDocument();
-    expect(within(forwardGroup as HTMLElement).getByText('Awarded to the top forward.'))
-      .toBeInTheDocument();
-    expect(within(walterCupGroup as HTMLElement).getByText('Awarded to the playoff champion.'))
-      .toBeInTheDocument();
+    expect(
+      within(forwardGroup as HTMLElement).getByText('Awarded to the top forward.'),
+    ).toBeInTheDocument();
+    expect(
+      within(walterCupGroup as HTMLElement).getByText('Awarded to the playoff champion.'),
+    ).toBeInTheDocument();
     expect(within(forwardGroup as HTMLElement).getByLabelText('2 wins')).toBeInTheDocument();
     expect(within(walterCupGroup as HTMLElement).getByLabelText('1 win')).toBeInTheDocument();
-    expect(within(forwardGroup as HTMLElement).getByText('Toronto Maple Leafs')).toBeInTheDocument();
+    expect(
+      within(forwardGroup as HTMLElement).getByText('Toronto Maple Leafs'),
+    ).toBeInTheDocument();
     expect(within(forwardGroup as HTMLElement).getByText('Montreal Victoire')).toBeInTheDocument();
     expect(within(forwardGroup as HTMLElement).getByText('2025-26')).toBeInTheDocument();
-    expect(within(forwardGroup as HTMLElement).getByText('2025-26').closest('li')).toHaveClass(
-      'itemPlain',
-    );
+    expect(
+      within(forwardGroup as HTMLElement)
+        .getByText('2025-26')
+        .closest('li'),
+    ).toHaveClass('itemPlain');
     expect(within(forwardGroup as HTMLElement).getByText('2024-25')).toBeInTheDocument();
     expect(
       within(walterCupGroup as HTMLElement).getByText('Toronto Maple Leafs'),
@@ -2024,8 +2376,7 @@ describe('PlayerDetails awards tab', () => {
     );
     const arenaBannerPanel = (arenaBanner as HTMLElement).querySelector('.awardBannerPanel');
     expect(arenaBannerPanel?.lastElementChild).toHaveTextContent('2025-26');
-    expect(within(arenaBanner as HTMLElement).getByText('Forward of the Year'))
-      .toBeInTheDocument();
+    expect(within(arenaBanner as HTMLElement).getByText('Forward of the Year')).toBeInTheDocument();
     expect(within(arenaBanner as HTMLElement).getByText('Toronto')).toHaveClass(
       'awardBannerTeamPlace',
     );

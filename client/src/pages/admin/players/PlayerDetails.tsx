@@ -1,21 +1,25 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import { toast, type TypeOptions } from 'react-toastify';
 import Accordion from '@/components/Accordion/Accordion';
 import AwardBanner from '@/components/AwardBanner/AwardBanner';
 import Badge from '@/components/Badge/Badge';
+import Banner from '@/components/Banner/Banner';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Chip from '@/components/Chip/Chip';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Divider from '@/components/Divider/Divider';
+import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import Section from '@/components/Section/Section';
 import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
 import ListItem from '@/components/ListItem/ListItem';
+import Modal from '@/components/Modal/Modal';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import StatusTag from '@/components/StatusTag/StatusTag';
@@ -60,7 +64,7 @@ import {
 } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import { formatPlayerPosition } from '@/lib/playerPosition';
-import { getPlayerStatus } from '@/lib/playerStatus';
+import { PLAYER_STATUS_LABELS, getPlayerStatus, type PlayerStatus } from '@/lib/playerStatus';
 import { getLatestEndedSeasonId } from '@/lib/seasonSelection';
 import {
   buildGameDetailsPath,
@@ -151,6 +155,7 @@ interface NhlLocalizedText {
 }
 
 interface NhlPlayerLanding {
+  isActive?: boolean | null;
   firstName?: NhlLocalizedText;
   lastName?: NhlLocalizedText;
   birthDate?: string | null;
@@ -165,6 +170,12 @@ interface NhlPlayerLanding {
   weightInPounds?: number | null;
   position?: string | null;
   shootsCatches?: string | null;
+  draftDetails?: {
+    year?: number | string | null;
+    teamAbbrev?: string | null;
+    round?: number | string | null;
+    overallPick?: number | string | null;
+  } | null;
 }
 
 interface PwhlPlayerProfile {
@@ -185,6 +196,73 @@ interface PwhlPlayerProfileInfo {
   weight?: string | number | null;
   birthDate?: string | null;
   birthPlace?: string | null;
+}
+
+interface PlayerManualDraftReport {
+  teamCode: string | null;
+  teamName: string | null;
+  year: string;
+  round: string;
+}
+
+interface PlayerManualMovementReportEntry {
+  id: string;
+  acquisitionType: string;
+  startDate: string | null;
+  endDate: string | null;
+  previousEndDate: string | null;
+  fromTeamName: string | null;
+  toTeamName: string | null;
+  detail: string;
+}
+
+interface PlayerManualJerseyReportEntry {
+  id: string;
+  date: string;
+  teamName: string | null;
+  fromNumber: string | null;
+  toNumber: string | null;
+  detail: string;
+}
+
+interface PlayerManualStatusReport {
+  status: PlayerStatus;
+  date: string | null;
+  detail: string;
+}
+
+interface PlayerManualMovementAnchor {
+  teamCode: string | null;
+  teamName: string | null;
+  seasonName: string | null;
+  seasonStartDate: string | null;
+  stintStartDate: string | null;
+}
+
+interface PlayerManualMovementReport {
+  playerName: string;
+  sourceUrl: string;
+  draft: PlayerManualDraftReport | null;
+  playerStatus: PlayerManualStatusReport | null;
+  movementAnchor?: PlayerManualMovementAnchor | null;
+  movements: PlayerManualMovementReportEntry[];
+  jerseyChanges?: PlayerManualJerseyReportEntry[];
+  error?: string;
+}
+
+interface PlayerManualMovementSourceForm {
+  sourceText: string;
+}
+
+interface PuckPediaRawMovementEvent {
+  date: string;
+  type: 'signing' | 'trade' | 'jersey';
+  teamName?: string | null;
+  fromTeamName?: string | null;
+  toTeamName?: string | null;
+  fromNumber?: string | null;
+  toNumber?: string | null;
+  detail: string;
 }
 
 const PWHL_BIRTH_COUNTRY_CODES: Record<string, string> = {
@@ -313,6 +391,548 @@ const normalizeIsoDate = (value: string | null | undefined) => {
   return date;
 };
 
+type TeamReportLookupRecord = {
+  code?: string | null;
+  name?: string | null;
+};
+
+const PUCKPEDIA_BASE_URL = 'https://puckpedia.com';
+const PUCKPEDIA_MOVEMENT_FILTER_QUERY = 'transaction_type=trade,waiver,signing,roster';
+const PUCKPEDIA_MONTHS: Record<string, string> = {
+  jan: '01',
+  feb: '02',
+  mar: '03',
+  apr: '04',
+  may: '05',
+  jun: '06',
+  jul: '07',
+  aug: '08',
+  sep: '09',
+  oct: '10',
+  nov: '11',
+  dec: '12',
+};
+
+const normalizePuckPediaSlug = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+const puckPediaMovementReportUrl = (playerPath: string) =>
+  `${PUCKPEDIA_BASE_URL}${playerPath}/transactions?${PUCKPEDIA_MOVEMENT_FILTER_QUERY}`;
+
+const decodeHtmlEntities = (value: string) =>
+  value
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/g, "'");
+
+const htmlToTextLines = (html: string) =>
+  html
+    .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<img\b[^>]*alt=["']([^"']+)["'][^>]*>/gi, '\n$1\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(?:article|div|h[1-6]|li|p|section|td|th|tr)>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .split(/\n+/)
+    .map((line) => decodeHtmlEntities(line).replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+const parsePuckPediaDateLine = (line: string) => {
+  const match = line.match(/^([A-Z][a-z]{2})\s+(\d{1,2}),?\s+(\d{4})(?:\s*\|\s*(.+))?$/);
+  if (!match) return null;
+  const month = PUCKPEDIA_MONTHS[match[1].toLowerCase()];
+  if (!month) return null;
+  return {
+    date: `${match[3]}-${month}-${match[2].padStart(2, '0')}`,
+    teamName: match[4]?.trim() || null,
+  };
+};
+
+const normalizeTeamNameKey = (value: string | null | undefined) =>
+  value
+    ?.trim()
+    .toLowerCase()
+    .replace(/^the\s+/, '')
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim() || null;
+
+const teamsMatch = (left: string | null | undefined, right: string | null | undefined) => {
+  const leftKey = normalizeTeamNameKey(left);
+  const rightKey = normalizeTeamNameKey(right);
+  return !!leftKey && !!rightKey && leftKey === rightKey;
+};
+
+const compactReportText = (value: string) => value.replace(/\s+/g, ' ').trim();
+
+const playerReportNameKeys = (playerName: string) => {
+  const parts = playerName
+    .toLowerCase()
+    .split(/\s+/)
+    .map((part) => part.replace(/[^a-z0-9-]/g, ''))
+    .filter(Boolean);
+  const fullName = compactReportText(parts.join(' '));
+  const lastName = parts[parts.length - 1] ?? '';
+  return [fullName, lastName].filter(
+    (key, index, keys) => key.length > 1 && keys.indexOf(key) === index,
+  );
+};
+
+const detailMatchesPlayer = (detail: string, playerName: string) => {
+  const lowerDetail = detail.toLowerCase();
+  return playerReportNameKeys(playerName).some((key) => lowerDetail.includes(key));
+};
+
+const findReportTeamByCode = (
+  teams: TeamReportLookupRecord[],
+  teamCode: string | null | undefined,
+) => {
+  const code = normalizeTeamCode(teamCode);
+  return code ? (teams.find((team) => normalizeTeamCode(team.code) === code) ?? null) : null;
+};
+
+const resolveReportTeamName = (
+  teams: TeamReportLookupRecord[],
+  teamCode: string | null | undefined,
+  fallbackName?: string | null,
+) => findReportTeamByCode(teams, teamCode)?.name ?? fallbackName ?? null;
+
+const resolveReportTeamNameByText = (
+  teams: TeamReportLookupRecord[],
+  value: string | null | undefined,
+) => {
+  const teamName = value?.replace(/^the\s+/i, '').trim();
+  const teamKey = normalizeTeamNameKey(teamName);
+  if (!teamName || !teamKey) return null;
+
+  const matchedTeam = teams.find((team) => {
+    const nameKey = normalizeTeamNameKey(team.name);
+    const codeKey = normalizeTeamCode(team.code)?.toLowerCase() ?? null;
+    return (
+      nameKey === teamKey ||
+      codeKey === teamKey ||
+      !!nameKey?.startsWith(`${teamKey} `) ||
+      !!nameKey?.endsWith(` ${teamKey}`) ||
+      teamKey.startsWith(`${nameKey} `) ||
+      teamKey.endsWith(` ${nameKey}`)
+    );
+  });
+
+  return matchedTeam?.name ?? teamName;
+};
+
+const draftReportFromLanding = (
+  landing: NhlPlayerLanding,
+  teams: TeamReportLookupRecord[],
+): PlayerManualDraftReport | null => {
+  const year = landing.draftDetails?.year == null ? null : String(landing.draftDetails.year);
+  const round = landing.draftDetails?.round == null ? null : String(landing.draftDetails.round);
+  if (!year || !round) return null;
+
+  const teamCode = normalizeTeamCode(landing.draftDetails?.teamAbbrev);
+  return {
+    teamCode,
+    teamName: resolveReportTeamName(teams, teamCode),
+    year,
+    round,
+  };
+};
+
+const statusReportFromNhlLanding = (landing: NhlPlayerLanding): PlayerManualStatusReport | null =>
+  landing.isActive === false
+    ? {
+        status: 'inactive',
+        date: null,
+        detail: 'NHL API lists this player as inactive.',
+      }
+    : null;
+
+const extractPuckPediaSigningTeam = (detail: string) => {
+  const match =
+    detail.match(/\bdeal with (?:the\s+)?(.+?)(?:\.|$)/i) ??
+    detail.match(/\bcontract with (?:the\s+)?(.+?)(?:\.|$)/i) ??
+    detail.match(/\bsigns?.*?\bwith (?:the\s+)?(.+?)(?:\.|$)/i);
+  return match?.[1]?.trim() ?? null;
+};
+
+const parsePuckPediaJerseyChange = (detail: string) => {
+  const fromToMatch = detail.match(/\bfrom\s+#?(\d{1,3})\s+to\s+#?(\d{1,3})\b/i);
+  if (fromToMatch) {
+    return {
+      fromNumber: fromToMatch[1],
+      toNumber: fromToMatch[2],
+    };
+  }
+
+  const toMatch =
+    detail.match(/\b(?:will wear|wears?|switch(?:es|ed)? to|changes? to)\s+#?(\d{1,3})\b/i) ??
+    detail.match(/\bnumber\s+#?(\d{1,3})\b/i);
+  if (!toMatch) return null;
+  return {
+    fromNumber: null,
+    toNumber: toMatch[1],
+  };
+};
+
+const PUCKPEDIA_EVENT_TYPE_PATTERN =
+  'SIGNING|TRADE|MOVES?|WAIVERS?|ROSTER|JERSEY(?:\\s+NUMBER)?|NEWS|INJURY';
+
+const parsePuckPediaDateTypeLine = (line: string) => {
+  const match = line.match(
+    new RegExp(
+      `^([A-Z][a-z]{2}\\s+\\d{1,2},?\\s+\\d{4})\\s+(${PUCKPEDIA_EVENT_TYPE_PATTERN})(?:\\s+(.+))?$`,
+      'i',
+    ),
+  );
+  if (!match) return null;
+
+  const parsedDate = parsePuckPediaDateLine(match[1]);
+  if (!parsedDate) return null;
+
+  return {
+    date: parsedDate.date,
+    eventType: match[2],
+    detail: match[3]?.trim() ?? '',
+    teamName: parsedDate.teamName,
+  };
+};
+
+const rawPuckPediaEventFromDetail = ({
+  date,
+  eventType,
+  detail,
+  teamName,
+  playerName,
+}: {
+  date: string;
+  eventType: string | null;
+  detail: string;
+  teamName?: string | null;
+  playerName: string;
+}): PuckPediaRawMovementEvent | null => {
+  const lowerDetail = detail.toLowerCase();
+  const normalizedType = eventType?.trim().toLowerCase() ?? '';
+  const isPlayerDetail = detailMatchesPlayer(detail, playerName);
+  const jerseyChange = isPlayerDetail ? parsePuckPediaJerseyChange(detail) : null;
+
+  if (jerseyChange && (lowerDetail.includes('jersey') || lowerDetail.includes('number'))) {
+    return {
+      date,
+      type: 'jersey',
+      teamName,
+      fromNumber: jerseyChange.fromNumber,
+      toNumber: jerseyChange.toNumber,
+      detail,
+    };
+  }
+
+  if (lowerDetail.includes(' acquired ') && isPlayerDetail) {
+    const tradeMatch = detail.match(
+      /\bThe\s+(.+?)\s+acquired\s+.+?\s+from\s+(?:the\s+)?(.+?)(?:\s+for\b|\s+in exchange\b|\.|$)/i,
+    );
+    if (tradeMatch) {
+      return {
+        date,
+        type: 'trade',
+        toTeamName: tradeMatch[1].trim(),
+        fromTeamName: tradeMatch[2].trim(),
+        detail,
+      };
+    }
+  }
+
+  if (lowerDetail.includes(' traded to ') && isPlayerDetail) {
+    const tradeMatch = detail.match(
+      /\btraded to\s+(?:the\s+)?(.+?)\s+from\s+(?:the\s+)?(.+?)(?:\s+in exchange\b|,|\.|\s+on\b|$)/i,
+    );
+    if (tradeMatch) {
+      return {
+        date,
+        type: 'trade',
+        toTeamName: tradeMatch[1].trim(),
+        fromTeamName: tradeMatch[2].trim(),
+        detail,
+      };
+    }
+  }
+
+  const signingTeamName = teamName ?? extractPuckPediaSigningTeam(detail);
+  const isSigning =
+    normalizedType === 'signing' ||
+    /(?:standard|entry level|two-way|arbitration|offer sheet)\s*\|\s*\d+\s*yrs/i.test(detail) ||
+    /\bsigns?.*?\bwith\b/i.test(detail);
+
+  if (signingTeamName && isPlayerDetail && isSigning) {
+    return {
+      date,
+      type: 'signing',
+      teamName: signingTeamName,
+      detail,
+    };
+  }
+
+  return null;
+};
+
+const parsePuckPediaTableRow = (
+  line: string,
+  playerName: string,
+): PuckPediaRawMovementEvent | null => {
+  const row = parsePuckPediaDateTypeLine(line);
+  if (!row?.detail) return null;
+
+  return rawPuckPediaEventFromDetail({
+    date: row.date,
+    eventType: row.eventType,
+    detail: compactReportText(row.detail),
+    teamName: row.teamName,
+    playerName,
+  });
+};
+
+const parsePuckPediaTransactions = (
+  html: string,
+  playerName: string,
+): PuckPediaRawMovementEvent[] => {
+  const lines = htmlToTextLines(html);
+  const events: PuckPediaRawMovementEvent[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const parsedDateType = parsePuckPediaDateTypeLine(lines[index]);
+    if (parsedDateType) {
+      let nextIndex = index + 1;
+      while (
+        nextIndex < lines.length &&
+        !parsePuckPediaDateTypeLine(lines[nextIndex]) &&
+        !parsePuckPediaDateLine(lines[nextIndex])
+      ) {
+        nextIndex += 1;
+      }
+
+      const detail = compactReportText(
+        [parsedDateType.detail, ...lines.slice(index + 1, nextIndex)]
+          .filter((line) => !/^(DATE|TYPE|TEAMS|DETAILS)$/i.test(line))
+          .join(' '),
+      );
+      const event = rawPuckPediaEventFromDetail({
+        date: parsedDateType.date,
+        eventType: parsedDateType.eventType,
+        detail,
+        teamName: parsedDateType.teamName,
+        playerName,
+      });
+      if (event) events.push(event);
+
+      index = nextIndex - 1;
+      continue;
+    }
+
+    const rowEvent = parsePuckPediaTableRow(lines[index], playerName);
+    if (rowEvent) {
+      events.push(rowEvent);
+      continue;
+    }
+
+    const parsedDate = parsePuckPediaDateLine(lines[index]);
+    if (!parsedDate) continue;
+
+    let nextIndex = index + 1;
+    while (
+      nextIndex < lines.length &&
+      !parsePuckPediaDateLine(lines[nextIndex]) &&
+      !parsePuckPediaDateTypeLine(lines[nextIndex])
+    ) {
+      nextIndex += 1;
+    }
+
+    const blockLines = lines
+      .slice(index + 1, nextIndex)
+      .filter((line) => !/^(DATE|TYPE|TEAMS|DETAILS)$/i.test(line));
+    const eventType = blockLines.find((line) =>
+      /^(SIGNING|TRADE|MOVES?|WAIVERS?|ROSTER|JERSEY(?:\s+NUMBER)?|NEWS|INJURY)$/i.test(line),
+    );
+    const detail = compactReportText(blockLines.join(' '));
+    const event = rawPuckPediaEventFromDetail({
+      date: parsedDate.date,
+      eventType: eventType ?? null,
+      detail,
+      teamName: parsedDate.teamName,
+      playerName,
+    });
+    if (event) events.push(event);
+
+    index = nextIndex - 1;
+  }
+
+  return events;
+};
+
+const buildManualMovementReport = ({
+  playerName,
+  sourceUrl,
+  transactionsHtml,
+  draft,
+  playerStatus,
+  movementAnchor,
+  teams,
+}: {
+  playerName: string;
+  sourceUrl: string;
+  transactionsHtml: string;
+  draft: PlayerManualDraftReport | null;
+  playerStatus?: PlayerManualStatusReport | null;
+  movementAnchor?: PlayerManualMovementAnchor | null;
+  teams?: TeamReportLookupRecord[];
+}): PlayerManualMovementReport => {
+  const rawEvents = parsePuckPediaTransactions(transactionsHtml, playerName).sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
+  const teamLookup = teams ?? [];
+  const movements: PlayerManualMovementReportEntry[] = [];
+  const jerseyChanges: PlayerManualJerseyReportEntry[] = [];
+  const movementKeys = new Set<string>();
+  let activeTeamName = draft?.teamName ?? null;
+
+  const addMovement = (movement: PlayerManualMovementReportEntry) => {
+    const key = [
+      movement.acquisitionType,
+      movement.startDate,
+      normalizeTeamNameKey(movement.fromTeamName),
+      normalizeTeamNameKey(movement.toTeamName),
+    ].join('|');
+    if (movementKeys.has(key)) return;
+    movementKeys.add(key);
+    movements.push(movement);
+  };
+
+  rawEvents.forEach((event) => {
+    if (event.type === 'jersey') {
+      jerseyChanges.push({
+        id: `${event.date}-jersey-${event.toNumber ?? event.detail}`,
+        date: event.date,
+        teamName: resolveReportTeamNameByText(teamLookup, event.teamName),
+        fromNumber: event.fromNumber ?? null,
+        toNumber: event.toNumber ?? null,
+        detail: event.detail,
+      });
+      return;
+    }
+
+    if (event.type === 'trade' && event.toTeamName) {
+      const fromTeamName = resolveReportTeamNameByText(
+        teamLookup,
+        event.fromTeamName ?? activeTeamName,
+      );
+      const toTeamName = resolveReportTeamNameByText(teamLookup, event.toTeamName);
+      addMovement({
+        id: `${event.date}-trade-${toTeamName}`,
+        acquisitionType: 'Trade',
+        startDate: event.date,
+        endDate: null,
+        previousEndDate: event.date,
+        fromTeamName,
+        toTeamName,
+        detail: event.detail,
+      });
+      activeTeamName = toTeamName;
+      return;
+    }
+
+    if (event.type === 'signing' && event.teamName) {
+      const toTeamName = resolveReportTeamNameByText(teamLookup, event.teamName);
+      if (teamsMatch(activeTeamName, toTeamName)) return;
+      addMovement({
+        id: `${event.date}-signing-${toTeamName}`,
+        acquisitionType: activeTeamName ? 'Free Agency' : 'Signing',
+        startDate: event.date,
+        endDate: null,
+        previousEndDate: activeTeamName ? event.date : null,
+        fromTeamName: activeTeamName,
+        toTeamName,
+        detail: event.detail,
+      });
+      activeTeamName = toTeamName;
+    }
+  });
+
+  const anchorTeamName = resolveReportTeamNameByText(teamLookup, movementAnchor?.teamName);
+  const anchorSeasonStartDate = movementAnchor?.seasonStartDate ?? null;
+  const anchorStintStartDate = movementAnchor?.stintStartDate ?? anchorSeasonStartDate;
+  let reportStartDate = anchorSeasonStartDate;
+  let visibleMovements = movements;
+
+  if (anchorTeamName) {
+    let anchorMovementIndex = -1;
+    movements.forEach((movement, index) => {
+      if (!teamsMatch(movement.toTeamName, anchorTeamName)) return;
+      if (
+        anchorSeasonStartDate &&
+        movement.startDate &&
+        movement.startDate > anchorSeasonStartDate
+      ) {
+        return;
+      }
+      anchorMovementIndex = index;
+    });
+
+    if (anchorMovementIndex >= 0) {
+      visibleMovements = movements.slice(anchorMovementIndex);
+      reportStartDate = movements[anchorMovementIndex].startDate ?? reportStartDate;
+    } else {
+      visibleMovements = anchorSeasonStartDate
+        ? movements.filter(
+            (movement) => !movement.startDate || movement.startDate >= anchorSeasonStartDate,
+          )
+        : movements;
+      if (!teamsMatch(visibleMovements[0]?.toTeamName, anchorTeamName)) {
+        visibleMovements = [
+          {
+            id: `${anchorStintStartDate ?? 'unknown'}-anchor-${anchorTeamName}`,
+            acquisitionType: 'Current stint',
+            startDate: anchorStintStartDate,
+            endDate: null,
+            previousEndDate: null,
+            fromTeamName: null,
+            toTeamName: anchorTeamName,
+            detail: '',
+          },
+          ...visibleMovements,
+        ];
+      }
+      reportStartDate = anchorStintStartDate ?? reportStartDate;
+    }
+  }
+
+  const movementsWithEndDates = visibleMovements.map((movement, index) => ({
+    ...movement,
+    endDate: visibleMovements[index + 1]?.startDate ?? null,
+  }));
+  const visibleJerseyChanges = reportStartDate
+    ? jerseyChanges.filter((change) => change.date >= reportStartDate)
+    : jerseyChanges;
+
+  return {
+    playerName,
+    sourceUrl,
+    draft,
+    playerStatus: playerStatus ?? null,
+    movementAnchor,
+    movements: movementsWithEndDates,
+    jerseyChanges: visibleJerseyChanges,
+  };
+};
+
 const formatHeight = (cm: number | null) => {
   if (!cm) return null;
   const totalIn = Math.round(cm / 2.54);
@@ -326,6 +946,297 @@ const formatDate = (iso: string | null) => {
     month: 'long',
     day: 'numeric',
   });
+};
+
+const MANUAL_MOVEMENT_SOURCE_FORM_ID = 'manual-movement-source-form';
+
+type PuckPediaSourceLinkStatus = 'checking' | 'valid' | 'invalid';
+
+const manualMovementStintColumns: Column<PlayerManualMovementReportEntry>[] = [
+  { header: 'Team', key: 'toTeamName' },
+  { header: 'Acquisition', key: 'acquisitionType' },
+  {
+    type: 'custom',
+    header: 'Start Date',
+    render: (movement) => formatDate(movement.startDate) ?? '-',
+  },
+  {
+    type: 'custom',
+    header: 'End Date',
+    render: (movement) => formatDate(movement.endDate) ?? 'Present',
+  },
+];
+
+const manualMovementJerseyColumns: Column<PlayerManualJerseyReportEntry>[] = [
+  {
+    type: 'custom',
+    header: 'Date',
+    render: (change) => formatDate(change.date) ?? '-',
+  },
+  { header: 'Team', key: 'teamName' },
+  {
+    type: 'custom',
+    header: 'From',
+    render: (change) => (change.fromNumber ? `#${change.fromNumber}` : '-'),
+  },
+  {
+    type: 'custom',
+    header: 'To',
+    render: (change) => (change.toNumber ? `#${change.toNumber}` : '-'),
+  },
+];
+
+const manualMovementStatusTagIntents: Record<PlayerStatus, TagIntent> = {
+  active: 'success',
+  inactive: 'warning',
+  retired: 'danger',
+};
+
+const ManualMovementReportSection = ({
+  report,
+  onOpenSource,
+}: {
+  report: PlayerManualMovementReport | null;
+  onOpenSource: () => void;
+}) => {
+  const jerseyChanges = report?.jerseyChanges ?? [];
+
+  return (
+    <Section
+      title="Manual Movement Report"
+      className={styles.stintHistorySection}
+      action={
+        <Button
+          type="button"
+          variant="outlined"
+          intent="neutral"
+          icon="description"
+          size="medium"
+          tooltip="PuckPedia source"
+          onClick={onOpenSource}
+        >
+          PuckPedia Source
+        </Button>
+      }
+    >
+      {!report && <p className={styles.placeholder}>No manual movement report generated yet.</p>}
+
+      {report?.draft && (
+        <ul className={styles.stintHistoryList}>
+          <ListItem
+            hideImage
+            name={report.draft.teamName ?? report.draft.teamCode ?? 'Unknown team'}
+            subtitle={`Draft Year: ${report.draft.year} | Round: ${report.draft.round}`}
+            rightContent={{ type: 'tag', label: 'Draft', intent: 'info' }}
+          />
+        </ul>
+      )}
+
+      {report?.playerStatus && (
+        <>
+          <h4>Player Status</h4>
+          <ul className={styles.stintHistoryList}>
+            <ListItem
+              hideImage
+              name={PLAYER_STATUS_LABELS[report.playerStatus.status]}
+              subtitle={`Date: ${formatDate(report.playerStatus.date) ?? '-'}`}
+              rightContent={{
+                type: 'tag',
+                label: PLAYER_STATUS_LABELS[report.playerStatus.status],
+                intent: manualMovementStatusTagIntents[report.playerStatus.status],
+              }}
+            />
+          </ul>
+        </>
+      )}
+
+      {report && (
+        <Table
+          columns={manualMovementStintColumns}
+          data={report.movements}
+          rowKey={(movement) => movement.id}
+          emptyMessage="No team stints generated yet."
+        />
+      )}
+
+      {jerseyChanges.length > 0 && (
+        <>
+          <h4>Jersey Number Changes</h4>
+          <Table
+            columns={manualMovementJerseyColumns}
+            data={jerseyChanges}
+            rowKey={(change) => change.id}
+          />
+        </>
+      )}
+    </Section>
+  );
+};
+
+const ManualMovementReportModal = ({
+  open,
+  report,
+  teams,
+  onReportBuilt,
+  onClose,
+}: {
+  open: boolean;
+  report: PlayerManualMovementReport | null;
+  teams: TeamReportLookupRecord[];
+  onReportBuilt: (report: PlayerManualMovementReport) => void;
+  onClose: () => void;
+}) => {
+  const { control, handleSubmit, reset, watch } = useForm<PlayerManualMovementSourceForm>({
+    defaultValues: { sourceText: '' },
+  });
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [sourceLinkStatus, setSourceLinkStatus] = useState<PuckPediaSourceLinkStatus>('checking');
+  const [verifiedSourceUrl, setVerifiedSourceUrl] = useState<string | null>(null);
+  const sourceText = watch('sourceText') ?? '';
+
+  useEffect(() => {
+    reset({ sourceText: '' });
+    setParseError(null);
+  }, [report, reset]);
+
+  useEffect(() => {
+    setParseError(null);
+  }, [sourceText]);
+
+  useEffect(() => {
+    if (!open || !report?.sourceUrl) return undefined;
+    let cancelled = false;
+    setSourceLinkStatus('checking');
+    setVerifiedSourceUrl(null);
+
+    axios
+      .get(`${API}/admin/games/puckpedia-player-link`, {
+        headers: authHeaders(),
+        params: {
+          url: report.sourceUrl,
+          player_name: report.playerName,
+        },
+      })
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.available && typeof data.url === 'string') {
+          setVerifiedSourceUrl(data.url);
+          setSourceLinkStatus('valid');
+          return;
+        }
+        setSourceLinkStatus('invalid');
+      })
+      .catch(() => {
+        if (!cancelled) setSourceLinkStatus('invalid');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, report?.playerName, report?.sourceUrl]);
+
+  if (!open || !report) return null;
+
+  const buildReport = handleSubmit(({ sourceText }) => {
+    const trimmedSource = sourceText.trim();
+    if (!trimmedSource) {
+      setParseError('Paste PuckPedia transaction text or HTML first.');
+      return;
+    }
+    const nextReport = buildManualMovementReport({
+      playerName: report.playerName,
+      sourceUrl: verifiedSourceUrl ?? report.sourceUrl,
+      transactionsHtml: trimmedSource,
+      draft: report.draft,
+      playerStatus: report.playerStatus,
+      movementAnchor: report.movementAnchor,
+      teams,
+    });
+
+    if (
+      !nextReport.playerStatus &&
+      nextReport.movements.length === 0 &&
+      (nextReport.jerseyChanges?.length ?? 0) === 0
+    ) {
+      setParseError(
+        'No team-changing movements or jersey changes were detected in the pasted text.',
+      );
+      return;
+    }
+
+    onReportBuilt(nextReport);
+    onClose();
+  });
+
+  return (
+    <Modal
+      open
+      title="PuckPedia Source"
+      onClose={onClose}
+      cancelLabel="Close"
+      size="lg"
+      confirmForm={MANUAL_MOVEMENT_SOURCE_FORM_ID}
+      confirmLabel="Build report"
+      confirmIcon="playlist_add_check"
+      confirmDisabled={!sourceText.trim()}
+      disableBackdropClose
+    >
+      {sourceLinkStatus === 'checking' && (
+        <Banner
+          intent="info"
+          icon="manage_search"
+        >
+          Checking the generated PuckPedia link...
+        </Banner>
+      )}
+      {sourceLinkStatus === 'valid' && verifiedSourceUrl && (
+        <p>
+          <InlineAction
+            className={styles.infoCellCopyButton}
+            href={verifiedSourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            ariaLabel="Open PuckPedia"
+            tooltip="Open PuckPedia"
+            tooltipClassName={styles.infoCellCopyTooltip}
+            indicatorClassName={styles.infoCellCopyIndicator}
+            icon="open_in_new"
+          >
+            Open PuckPedia
+          </InlineAction>
+        </p>
+      )}
+      {sourceLinkStatus === 'invalid' && (
+        <Banner
+          intent="warning"
+          icon="search"
+        >
+          PuckPedia player link could not be verified for {report.playerName}. Search PuckPedia
+          manually, then paste the transaction table here.
+        </Banner>
+      )}
+      <form
+        id={MANUAL_MOVEMENT_SOURCE_FORM_ID}
+        onSubmit={buildReport}
+      >
+        <Field
+          type="textarea"
+          label="PuckPedia transactions text or HTML"
+          control={control}
+          name="sourceText"
+          rows={10}
+        />
+      </form>
+      {parseError && (
+        <Banner
+          intent="warning"
+          icon="warning"
+        >
+          {parseError}
+        </Banner>
+      )}
+    </Modal>
+  );
 };
 
 // ── Career stats table columns ──────────────────────────────────────────────
@@ -511,9 +1422,7 @@ const hasCollapsedStints = (stint: PlayerStintRecord): stint is TeamHistoryStint
   'collapsed_stints' in stint && Array.isArray(stint.collapsed_stints);
 
 const getCollapsedStints = (stint: PlayerStintRecord) =>
-  hasCollapsedStints(stint) && stint.collapsed_stints.length > 0
-    ? stint.collapsed_stints
-    : [stint];
+  hasCollapsedStints(stint) && stint.collapsed_stints.length > 0 ? stint.collapsed_stints : [stint];
 
 const getCollapsedJerseyHistory = (
   stint: PlayerStintRecord,
@@ -537,8 +1446,7 @@ const dateKey = (date: string | null | undefined) => date?.slice(0, 10) ?? null;
 const photoHistoryKey = (entry: PlayerPhotoEntry) =>
   entry.id ?? `${entry.team_id}:${entry.season_id}`;
 
-const hasSavedPhoto = (entry: PlayerPhotoEntry) =>
-  Boolean(entry.has_saved_photo ?? entry.id);
+const hasSavedPhoto = (entry: PlayerPhotoEntry) => Boolean(entry.has_saved_photo ?? entry.id);
 
 const seasonOverlapsStint = (season: SeasonRecord, stint: PlayerStintRecord) => {
   if (season.id === stint.season_id) return true;
@@ -615,11 +1523,7 @@ const buildJerseyHistoryRows = (
     historyEntry: entry as JerseyHistoryEntry | null,
   }));
 
-  if (
-    entries.length === 0 &&
-    stint.jersey_number != null &&
-    stint.start_date
-  ) {
+  if (entries.length === 0 && stint.jersey_number != null && stint.start_date) {
     entries.push({
       id: `assumed-${stint.id}`,
       jerseyNumber: stint.jersey_number,
@@ -1045,16 +1949,15 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const defaultPlayerSeasonId = getLatestEndedSeasonId(playerSeasonOptions);
   const [seasonStatsSeasonId, setSeasonStatsSeasonId] = useState<string | null>(null);
   const effectiveSeasonStatsSeasonId = seasonStatsSeasonId ?? defaultPlayerSeasonId;
-  const {
-    currentSeasonStats: seasonStats,
-    loading: seasonStatsLoading,
-  } = usePlayerCurrentSeasonStats(id, {
-    mode,
-    seasonId: effectiveSeasonStatsSeasonId,
-    requireSeasonId: true,
-  });
+  const { currentSeasonStats: seasonStats, loading: seasonStatsLoading } =
+    usePlayerCurrentSeasonStats(id, {
+      mode,
+      seasonId: effectiveSeasonStatsSeasonId,
+      requireSeasonId: true,
+    });
   const renderedPlayerSeasonOptions =
-    seasonStats?.season_id && !playerSeasonOptions.some((season) => season.id === seasonStats.season_id)
+    seasonStats?.season_id &&
+    !playerSeasonOptions.some((season) => season.id === seasonStats.season_id)
       ? gameLogSeasons.filter(
           (season) => playerSeasonIds.has(season.id) || season.id === seasonStats.season_id,
         )
@@ -1080,6 +1983,9 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const [photoPreviewSrc, setPhotoPreviewSrc] = useState<string | null>(null);
   const [movePlayerOpen, setMovePlayerOpen] = useState(false);
   const [autoFillPlayerBusy, setAutoFillPlayerBusy] = useState(false);
+  const [manualMovementReport, setManualMovementReport] =
+    useState<PlayerManualMovementReport | null>(null);
+  const [manualMovementSourceOpen, setManualMovementSourceOpen] = useState(false);
   const [retirePlayerOpen, setRetirePlayerOpen] = useState(false);
   const [playerStatusSaving, setPlayerStatusSaving] = useState(false);
   const [gameLogSeasonId, setGameLogSeasonId] = useState('all');
@@ -1289,6 +2195,57 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const currentLeagueCode = normalizeTeamCode(
     routeLookup?.league_code ?? teamDetails?.league_code ?? leagueCode,
   );
+  const latestEndedPlayerSeason =
+    playerSeasonOptions.find((season) => season.id === defaultPlayerSeasonId) ?? null;
+  const latestEndedPlayerSeasonStart = dateKey(latestEndedPlayerSeason?.start_date);
+  const manualMovementAnchorStint =
+    (latestEndedPlayerSeasonStart
+      ? stints.find((stint) => {
+          const stintStart = dateKey(stint.start_date);
+          const stintEnd = dateKey(stint.end_date);
+          return (
+            (!stintStart || stintStart <= latestEndedPlayerSeasonStart) &&
+            (!stintEnd || stintEnd >= latestEndedPlayerSeasonStart)
+          );
+        })
+      : null) ??
+    stints.find((stint) => stint.season_id === defaultPlayerSeasonId) ??
+    null;
+  const manualMovementAnchor: PlayerManualMovementAnchor | null = manualMovementAnchorStint
+    ? {
+        teamCode: normalizeTeamCode(manualMovementAnchorStint.team.code),
+        teamName: manualMovementAnchorStint.team.name ?? null,
+        seasonName: latestEndedPlayerSeason?.name ?? null,
+        seasonStartDate: latestEndedPlayerSeasonStart,
+        stintStartDate: dateKey(manualMovementAnchorStint.start_date),
+      }
+    : null;
+
+  const createManualMovementReportSeed = (
+    reportPlayerName: string,
+    draft: PlayerManualDraftReport | null = null,
+    playerStatus: PlayerManualStatusReport | null = null,
+  ): PlayerManualMovementReport => {
+    const puckPediaPlayerPath = `/player/${normalizePuckPediaSlug(reportPlayerName)}`;
+    return {
+      playerName: reportPlayerName,
+      sourceUrl: puckPediaMovementReportUrl(puckPediaPlayerPath),
+      draft,
+      playerStatus,
+      movementAnchor: manualMovementAnchor,
+      movements: [],
+    };
+  };
+
+  const openManualMovementReport = () => {
+    if (!player) return;
+    setManualMovementReport((currentReport) =>
+      currentReport?.playerName === fullName
+        ? currentReport
+        : createManualMovementReportSeed(fullName),
+    );
+    setManualMovementSourceOpen(true);
+  };
 
   const fetchNhlProxy = async <T,>(url: string) => {
     const { data } = await axios.get<T>(`${API}/admin/games/nhl-api`, {
@@ -1316,7 +2273,10 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     }
 
     const autoFillLeagueLabel = currentLeagueCode === 'PWHL' ? 'PWHL' : 'NHL';
+    const autoFillProgressSteps = PLAYER_AUTOFILL_PROGRESS_STEPS;
     setAutoFillPlayerBusy(true);
+    setManualMovementReport(null);
+    setManualMovementSourceOpen(false);
     const progressToastId = toast.loading(
       `Auto-filling player data: fetching ${autoFillLeagueLabel} player...`,
       {
@@ -1341,7 +2301,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
         draggable: false,
         hideProgressBar: false,
         pauseOnHover: false,
-        progress: Math.min(completedSteps / PLAYER_AUTOFILL_PROGRESS_STEPS, 0.98),
+        progress: Math.min(completedSteps / autoFillProgressSteps, 0.98),
         progressClassName: styles.autoFillProgressBar,
       });
     };
@@ -1375,8 +2335,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
         const position = normalizeNhlPosition(info.position);
         const shoots = normalizeShoots(
           position === 'G'
-            ? readPwhlText(info.catches) ?? readPwhlText(info.shoots)
-            : readPwhlText(info.shoots) ?? readPwhlText(info.catches),
+            ? (readPwhlText(info.catches) ?? readPwhlText(info.shoots))
+            : (readPwhlText(info.shoots) ?? readPwhlText(info.catches)),
         );
         const heightCm = parsePwhlHeightCm(
           info.height ?? info.height_sans_hyphen ?? info.height_hyphenated,
@@ -1422,6 +2382,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       const position = normalizeNhlPosition(landing.position);
       const shoots = normalizeShoots(landing.shootsCatches);
       const payload: Partial<CreatePlayerData> = {};
+      const landingStatus =
+        typeof landing.isActive === 'boolean' ? (landing.isActive ? 'active' : 'inactive') : null;
       if (firstName) payload.first_name = firstName;
       if (lastName) payload.last_name = lastName;
       if (landing.birthDate) payload.date_of_birth = landing.birthDate;
@@ -1431,15 +2393,29 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       if (landing.weightInPounds != null) payload.weight_lbs = landing.weightInPounds;
       if (position) payload.position = position;
       if (shoots) payload.shoots = shoots;
+      if (landingStatus && getPlayerStatus(player) !== 'retired') payload.status = landingStatus;
 
       await axios.patch(`${API}/admin/players/${player.id}`, payload, { headers: authHeaders() });
+      const reportPlayerName =
+        [firstName ?? player.first_name, lastName ?? player.last_name].filter(Boolean).join(' ') ||
+        fullName;
+      const draft = draftReportFromLanding(landing, teams);
+      setManualMovementReport(
+        createManualMovementReportSeed(
+          reportPlayerName,
+          draft,
+          statusReportFromNhlLanding(landing),
+        ),
+      );
+      setManualMovementSourceOpen(true);
+
       updateProgressToast(2, 'Auto-filling player data: refreshing player data...');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['player', player.id] }),
         queryClient.invalidateQueries({ queryKey: ['players'] }),
       ]);
 
-      finishProgressToast('success', 'Player data auto-filled.');
+      finishProgressToast('success', 'Player data auto-filled. Manual movement report ready.');
     } catch (err) {
       const message =
         axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
@@ -2217,149 +3193,164 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
               ? {
                   label: 'History',
                   content: (
-                    <Section
-                      title="History"
-                      action={
-                        <Button
-                          variant="filled"
-                          intent="accent"
-                          icon="add"
-                          size="medium"
-                          onClick={() => setCreatingStint(true)}
-                        >
-                          Record Stint
-                        </Button>
-                      }
+                    <div
+                      className={currentLeagueCode === 'NHL' ? styles.stintHistoryGrid : undefined}
                     >
-                      {teamHistoryStints.length === 0 ? (
-                        <p className={styles.placeholder}>No team history yet.</p>
-                      ) : (
-                        <ul className={styles.stintList}>
-                          {teamHistoryStints.map((s) => {
-                            const jerseyHistory = getCollapsedJerseyHistory(
-                              s,
-                              jerseyHistoryByStint,
-                            );
-                            const teamLeagueId = teams.find((team) => team.id === s.team_id)?.league_id;
-                            const photoHistory = getStintPhotoHistory(
-                              s,
-                              seasons,
-                              photoHistoryByTeam[s.team_id] ?? [],
-                              teamLeagueId,
-                            );
-                            const missingPhotoSeason = findMissingPhotoSeason(
-                              s,
-                              seasons,
-                              photoHistory,
-                              teamLeagueId,
-                            );
-                            const acquisitionLabel = s.acquisition_type
-                              ? (ACQUISITION_TYPE_LABELS[s.acquisition_type] ?? s.acquisition_type)
-                              : null;
-                            const actions = [
-                              missingPhotoSeason
-                                ? {
-                                    icon: 'image',
-                                    tooltip: 'Set team photo',
-                                    onClick: () => openChangePhotoModal(s, missingPhotoSeason.id),
-                                  }
-                                : null,
-                              !s.end_date && s.roster_player_team_id
-                                ? {
-                                    icon: 'jersey',
-                                    tooltip: 'Record jersey number change',
-                                    onClick: () => setChangingJerseyStint(s),
-                                  }
-                                : null,
-                              {
-                                icon: 'edit',
-                                tooltip: 'Edit stint',
-                                onClick: () => setEditingStint(s),
-                              },
-                              s.can_delete
-                                ? {
-                                    icon: 'delete',
-                                    intent: 'danger' as const,
-                                    tooltip: 'Delete stint',
-                                    onClick: () => setDeletingStint(s),
-                                  }
-                                : null,
-                            ].filter((action): action is NonNullable<typeof action> => action != null);
+                      <Section
+                        title="History"
+                        action={
+                          <Button
+                            variant="filled"
+                            intent="accent"
+                            icon="add"
+                            size="medium"
+                            onClick={() => setCreatingStint(true)}
+                          >
+                            Record Stint
+                          </Button>
+                        }
+                      >
+                        {teamHistoryStints.length === 0 ? (
+                          <p className={styles.placeholder}>No team history yet.</p>
+                        ) : (
+                          <ul className={styles.stintList}>
+                            {teamHistoryStints.map((s) => {
+                              const jerseyHistory = getCollapsedJerseyHistory(
+                                s,
+                                jerseyHistoryByStint,
+                              );
+                              const teamLeagueId = teams.find(
+                                (team) => team.id === s.team_id,
+                              )?.league_id;
+                              const photoHistory = getStintPhotoHistory(
+                                s,
+                                seasons,
+                                photoHistoryByTeam[s.team_id] ?? [],
+                                teamLeagueId,
+                              );
+                              const missingPhotoSeason = findMissingPhotoSeason(
+                                s,
+                                seasons,
+                                photoHistory,
+                                teamLeagueId,
+                              );
+                              const acquisitionLabel = s.acquisition_type
+                                ? (ACQUISITION_TYPE_LABELS[s.acquisition_type] ??
+                                  s.acquisition_type)
+                                : null;
+                              const actions = [
+                                missingPhotoSeason
+                                  ? {
+                                      icon: 'image',
+                                      tooltip: 'Set team photo',
+                                      onClick: () => openChangePhotoModal(s, missingPhotoSeason.id),
+                                    }
+                                  : null,
+                                !s.end_date && s.roster_player_team_id
+                                  ? {
+                                      icon: 'jersey',
+                                      tooltip: 'Record jersey number change',
+                                      onClick: () => setChangingJerseyStint(s),
+                                    }
+                                  : null,
+                                {
+                                  icon: 'edit',
+                                  tooltip: 'Edit stint',
+                                  onClick: () => setEditingStint(s),
+                                },
+                                s.can_delete
+                                  ? {
+                                      icon: 'delete',
+                                      intent: 'danger' as const,
+                                      tooltip: 'Delete stint',
+                                      onClick: () => setDeletingStint(s),
+                                    }
+                                  : null,
+                              ].filter(
+                                (action): action is NonNullable<typeof action> => action != null,
+                              );
 
-                            return (
-                              <li
-                                key={s.id}
-                                className={styles.stintListItem}
-                              >
-                                <Accordion
-                                  defaultOpen={false}
-                                  headerType="light"
-                                  className={styles.stintAccordion}
-                                  rowClassName={styles.stintHeader}
-                                  labelWrapClassName={styles.stintHeaderLabelWrap}
-                                  labelClassName={styles.stintHeaderAccordionLabel}
-                                  bodyClassName={styles.stintBody}
-                                  label={
-                                    <span className={styles.stintHeaderLabel}>
-                                      <TeamLogo
-                                        logo={s.team.logo}
-                                        logoDark={s.team.logo_dark}
-                                        logoLight={s.team.logo_light}
-                                        code={teamCodePlaceholder(s)}
-                                        primaryColor={s.team.primary_color}
-                                        textColor={s.team.text_color}
-                                        size={32}
-                                        shape="square"
-                                      />
-                                      {s.jersey_number != null && (
-                                        <Chip
+                              return (
+                                <li
+                                  key={s.id}
+                                  className={styles.stintListItem}
+                                >
+                                  <Accordion
+                                    defaultOpen={false}
+                                    headerType="light"
+                                    className={styles.stintAccordion}
+                                    rowClassName={styles.stintHeader}
+                                    labelWrapClassName={styles.stintHeaderLabelWrap}
+                                    labelClassName={styles.stintHeaderAccordionLabel}
+                                    bodyClassName={styles.stintBody}
+                                    label={
+                                      <span className={styles.stintHeaderLabel}>
+                                        <TeamLogo
+                                          logo={s.team.logo}
+                                          logoDark={s.team.logo_dark}
+                                          logoLight={s.team.logo_light}
+                                          code={teamCodePlaceholder(s)}
                                           primaryColor={s.team.primary_color}
                                           textColor={s.team.text_color}
-                                        >
-                                          {s.jersey_number}
-                                        </Chip>
-                                      )}
-                                      <span className={styles.stintHeaderInfo}>
-                                        <span className={styles.stintHeaderName}>
-                                          {s.team.name ?? 'Unknown team'}
-                                        </span>
-                                        <span className={styles.stintHeaderDates}>
-                                          {formatStintDates(s)}
+                                          size={32}
+                                          shape="square"
+                                        />
+                                        {s.jersey_number != null && (
+                                          <Chip
+                                            primaryColor={s.team.primary_color}
+                                            textColor={s.team.text_color}
+                                          >
+                                            {s.jersey_number}
+                                          </Chip>
+                                        )}
+                                        <span className={styles.stintHeaderInfo}>
+                                          <span className={styles.stintHeaderName}>
+                                            {s.team.name ?? 'Unknown team'}
+                                          </span>
+                                          <span className={styles.stintHeaderDates}>
+                                            {formatStintDates(s)}
+                                          </span>
                                         </span>
                                       </span>
-                                    </span>
-                                  }
-                                  headerRight={
-                                    acquisitionLabel ? (
-                                      <Tag
-                                        label={acquisitionLabel}
-                                        intent="info"
-                                      />
-                                    ) : null
-                                  }
-                                  hoverActions={actions}
-                                >
-                                  <StintHistoryDetails
-                                    stint={s}
-                                    jerseyHistory={jerseyHistory}
-                                    photoHistory={photoHistory}
-                                    currentJerseyNumber={jerseyNumber}
-                                    currentJerseyStintKey={currentJerseyStintKey}
-                                    currentPhotoHistoryKey={currentPhotoHistoryKey}
-                                    initials={initials}
-                                    onPreviewPhoto={(src) => setPhotoPreviewSrc(src)}
-                                    onChangePhoto={openChangePhotoModal}
-                                    onEditJerseyHistoryEntry={setEditingJerseyHistoryEntry}
-                                    onDeletePhotoEntry={setDeletingPhotoEntry}
-                                    onDeleteJerseyHistoryEntry={setDeletingJerseyHistoryEntry}
-                                  />
-                                </Accordion>
-                              </li>
-                            );
-                          })}
-                        </ul>
+                                    }
+                                    headerRight={
+                                      acquisitionLabel ? (
+                                        <Tag
+                                          label={acquisitionLabel}
+                                          intent="info"
+                                        />
+                                      ) : null
+                                    }
+                                    hoverActions={actions}
+                                  >
+                                    <StintHistoryDetails
+                                      stint={s}
+                                      jerseyHistory={jerseyHistory}
+                                      photoHistory={photoHistory}
+                                      currentJerseyNumber={jerseyNumber}
+                                      currentJerseyStintKey={currentJerseyStintKey}
+                                      currentPhotoHistoryKey={currentPhotoHistoryKey}
+                                      initials={initials}
+                                      onPreviewPhoto={(src) => setPhotoPreviewSrc(src)}
+                                      onChangePhoto={openChangePhotoModal}
+                                      onEditJerseyHistoryEntry={setEditingJerseyHistoryEntry}
+                                      onDeletePhotoEntry={setDeletingPhotoEntry}
+                                      onDeleteJerseyHistoryEntry={setDeletingJerseyHistoryEntry}
+                                    />
+                                  </Accordion>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </Section>
+                      {currentLeagueCode === 'NHL' && (
+                        <ManualMovementReportSection
+                          report={manualMovementReport}
+                          onOpenSource={openManualMovementReport}
+                        />
                       )}
-                    </Section>
+                    </div>
                   ),
                 }
               : null,
@@ -2450,6 +3441,14 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             changePlayerPhoto={changePlayerPhoto}
           />
 
+          <ManualMovementReportModal
+            open={manualMovementSourceOpen}
+            report={manualMovementReport}
+            teams={teams}
+            onReportBuilt={setManualMovementReport}
+            onClose={() => setManualMovementSourceOpen(false)}
+          />
+
           <ConfirmModal
             open={!!deletingPhotoEntry}
             title="Delete Season Photo"
@@ -2499,8 +3498,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
               deletingStint ? (
                 <>
                   Delete the {deletingStint.team.name ?? 'selected team'} stint from this
-                  player&apos;s
-                  team history? This is only allowed when the player has no stats for that team.
+                  player&apos;s team history? This is only allowed when the player has no stats for
+                  that team.
                 </>
               ) : (
                 ''
@@ -2561,6 +3560,8 @@ interface InlineActionProps {
   href?: string;
   indicatorClassName?: string;
   onClick?: () => void | Promise<void>;
+  rel?: string;
+  target?: string;
   tooltip?: string;
   tooltipClassName?: string;
 }
@@ -2573,6 +3574,8 @@ const InlineAction = ({
   icon,
   indicatorClassName,
   onClick,
+  rel,
+  target,
   tooltip,
   tooltipClassName,
 }: InlineActionProps) => {
@@ -2595,6 +3598,8 @@ const InlineAction = ({
     <a
       className={className}
       href={href}
+      target={target}
+      rel={rel}
       aria-label={ariaLabel}
     >
       {content}

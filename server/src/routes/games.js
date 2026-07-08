@@ -554,6 +554,105 @@ const proxyExternalGameApi = (label, allowedHosts) => async (req, res) => {
   }
 };
 
+const normalizePuckPediaText = (value) =>
+  String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const normalizePuckPediaPath = (value) => String(value ?? '').replace(/\/+$/, '');
+
+const puckPediaBodyText = (html) => {
+  const bodyMatch = html.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i);
+  return (bodyMatch?.[1] ?? html)
+    .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ');
+};
+
+const puckPediaCanonicalPath = (html) => {
+  const canonicalMatch = html.match(
+    /<link\b(?=[^>]*\brel=["']canonical["'])(?=[^>]*\bhref=["']([^"']+)["'])[^>]*>/i,
+  );
+  if (!canonicalMatch) return null;
+
+  try {
+    return normalizePuckPediaPath(new URL(canonicalMatch[1], 'https://puckpedia.com').pathname);
+  } catch {
+    return null;
+  }
+};
+
+const puckPediaPathsMatch = (expectedPath, foundPath) => {
+  if (!expectedPath || !foundPath) return true;
+  return (
+    foundPath === expectedPath ||
+    foundPath === `${expectedPath}/transactions` ||
+    expectedPath === `${foundPath}/transactions`
+  );
+};
+
+router.get('/puckpedia-player-link', async (req, res) => {
+  const { url, player_name } = req.query;
+
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ error: 'Missing PuckPedia URL.' });
+  }
+  if (!player_name || typeof player_name !== 'string') {
+    return res.status(400).json({ error: 'Missing player_name.' });
+  }
+
+  try {
+    const parsedUrl = new URL(url);
+    if (!['puckpedia.com', 'www.puckpedia.com'].includes(parsedUrl.hostname)) {
+      return res.status(400).json({ error: 'Invalid PuckPedia host.' });
+    }
+    if (!normalizePuckPediaPath(parsedUrl.pathname).startsWith('/player/')) {
+      return res.status(400).json({ error: 'PuckPedia URL must be a player page.' });
+    }
+
+    const response = await fetch(parsedUrl.toString(), {
+      headers: {
+        accept: 'text/html',
+        'user-agent': 'Mozilla/5.0 HockeyTracker/1.0',
+      },
+    });
+    const html = await response.text();
+
+    if (!response.ok) {
+      return res.json({
+        available: false,
+        reason: `PuckPedia returned ${response.status}.`,
+      });
+    }
+
+    const expectedPath = normalizePuckPediaPath(parsedUrl.pathname);
+    const finalPath = normalizePuckPediaPath(
+      response.url ? new URL(response.url).pathname : expectedPath,
+    );
+    const canonicalPath = puckPediaCanonicalPath(html);
+    const normalizedBodyText = normalizePuckPediaText(puckPediaBodyText(html));
+    const normalizedPlayerName = normalizePuckPediaText(player_name);
+    const hasPlayerName =
+      normalizedPlayerName.length > 0 && normalizedBodyText.includes(normalizedPlayerName);
+    const pathMatches =
+      puckPediaPathsMatch(expectedPath, finalPath) &&
+      (!canonicalPath || puckPediaPathsMatch(expectedPath, canonicalPath));
+
+    return res.json({
+      available: hasPlayerName && pathMatches,
+      url: parsedUrl.toString(),
+      reason: hasPlayerName && pathMatches ? null : 'Generated PuckPedia player page not verified.',
+    });
+  } catch (error) {
+    console.error('PuckPedia link check error:', error);
+    return res.json({ available: false, reason: 'PuckPedia link could not be checked.' });
+  }
+});
+
 router.get("/nhl-api", proxyExternalGameApi("NHL", ["api-web.nhle.com", "api.nhle.com", "www.nhl.com"]));
 router.get("/pwhl-api", proxyExternalGameApi("PWHL", ["lscluster.hockeytech.com"]));
 
