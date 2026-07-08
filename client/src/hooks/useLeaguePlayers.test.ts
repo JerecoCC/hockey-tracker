@@ -86,7 +86,7 @@ describe('useLeaguePlayers – fetch', () => {
     );
   });
 
-  it('passes recent season limit as a query param', async () => {
+  it('passes recent season limit and warning filter as query params', async () => {
     const { result } = renderHook(
       () =>
         useLeaguePlayers('league-1', undefined, {
@@ -94,6 +94,7 @@ describe('useLeaguePlayers – fetch', () => {
           pageSize: 15,
           includeInactive: true,
           recentSeasons: 5,
+          warningsOnly: true,
         }),
       { wrapper: createWrapper() },
     );
@@ -108,6 +109,7 @@ describe('useLeaguePlayers – fetch', () => {
           page_size: '15',
           include_inactive: 'true',
           recent_seasons: '5',
+          warnings_only: 'true',
         },
       }),
     );

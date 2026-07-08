@@ -92,6 +92,7 @@ const LeagueDetailsPage = () => {
   const [editTargetPlayer, setEditTargetPlayer] = useState<PlayerRecord | null>(null);
   const [playersPage, setPlayersPage] = useState(1);
   const [playersSearch, setPlayersSearch] = useState('');
+  const [playersWarningsOnly, setPlayersWarningsOnly] = useState(false);
 
   usePageBreadcrumbs(
     leagueLoading
@@ -150,6 +151,7 @@ const LeagueDetailsPage = () => {
     includeInactive: true,
     includeProspects: true,
     recentSeasons: 5,
+    warningsOnly: playersWarningsOnly,
   });
   const leagueContextValue = useMemo(
     () =>
@@ -166,6 +168,7 @@ const LeagueDetailsPage = () => {
               page: playersPage,
               pageSize: PLAYERS_PAGE_SIZE,
               search: playersSearch,
+              warningsOnly: playersWarningsOnly,
               loading: playersLoading,
               fetching: playersFetching,
               busy: playerBusy,
@@ -173,6 +176,10 @@ const LeagueDetailsPage = () => {
               onSearchChange: (query: string) => {
                 setPlayersPage(1);
                 setPlayersSearch(query);
+              },
+              onWarningsOnlyChange: (warningsOnly: boolean) => {
+                setPlayersPage(1);
+                setPlayersWarningsOnly(warningsOnly);
               },
               onAdd: () => {
                 setEditTargetPlayer(null);
@@ -228,6 +235,7 @@ const LeagueDetailsPage = () => {
       playersPage,
       playersSearch,
       playersTotal,
+      playersWarningsOnly,
       seasons,
       teams,
     ],

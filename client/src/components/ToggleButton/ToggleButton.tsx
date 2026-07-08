@@ -34,6 +34,8 @@ interface Props {
   activeTooltip?: string;
   /** Tooltip shown when inactive. */
   inactiveTooltip?: string;
+  /** Accessible label for the switch variant. Falls back to the active/inactive tooltip. */
+  ariaLabel?: string;
   /** Optional label. Omit for icon-only mode. */
   children?: ReactNode;
   disabled?: boolean;
@@ -66,6 +68,7 @@ const ToggleButton = ({
   inactiveIntent = 'neutral',
   activeTooltip,
   inactiveTooltip,
+  ariaLabel,
   children,
   disabled,
   className,
@@ -79,7 +82,7 @@ const ToggleButton = ({
         type="button"
         role="switch"
         aria-checked={active}
-        aria-label={tooltip}
+        aria-label={ariaLabel ?? tooltip}
         onClick={onClick}
         disabled={disabled}
         className={[

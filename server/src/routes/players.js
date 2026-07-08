@@ -33,6 +33,7 @@ const normalizeLeagueNumber = (value) => {
 };
 
 const PLAYER_STATUSES = new Set(['active', 'inactive', 'retired']);
+const LEAGUE_PLAYER_WARNING_MINIMUM_GAMES = 15;
 
 const normalizePlayerStatus = ({ status, is_active }, fallback = 'active') => {
   if (status !== undefined && status !== null && status !== '') {
@@ -80,6 +81,7 @@ router.get('/', async (req, res) => {
   const unassignedOnly = req.query.unassigned === 'true';
   const rookiesOnly = req.query.rookies_only === 'true';
   const inactiveOnly = req.query.inactive_only === 'true';
+  const warningsOnly = req.query.warnings_only === 'true';
   const includeInactive =
     req.query.include_inactive === 'true' || req.query.include_retired === 'true';
   const recentSeasonLimit = Math.min(
@@ -305,6 +307,13 @@ router.get('/', async (req, res) => {
             ${!rookiesOnly}
             OR (last_season_id IS NOT NULL AND rookie_season_id = last_season_id)
           )
+          AND (
+            ${!warningsOnly}
+            OR (
+              (position = 'G' OR games_played >= ${LEAGUE_PLAYER_WARNING_MINIMUM_GAMES})
+              AND (date_of_birth IS NULL OR start_date IS NULL OR acquisition_type IS NULL)
+            )
+          )
           ORDER BY first_name, last_name, id
           LIMIT ${pageSize} OFFSET ${offset}
         `;
@@ -318,14 +327,21 @@ router.get('/', async (req, res) => {
             LIMIT ${recentSeasonLimit}
           ),
           roster AS (
-            SELECT id, league_player_number, first_name, last_name, position, jersey_number, rookie_season_id, is_active, last_season_id
+            SELECT
+              id, league_player_number, first_name, last_name,
+              date_of_birth, position, jersey_number, rookie_season_id, is_active,
+              acquisition_type, start_date, games_played, last_season_id
             FROM (
               SELECT DISTINCT ON (p.id)
                 p.id, p.league_player_number, p.first_name, p.last_name,
+                p.date_of_birth,
                 COALESCE(pt.position, p.position) AS position,
                 pt.jersey_number,
                 p.rookie_season_id,
                 p.is_active,
+                COALESCE(pt.acquisition_type, cs.acquisition_type) AS acquisition_type,
+                COALESCE(pt.start_date, cs.start_date) AS start_date,
+                recent_games.games_played,
                 s.id AS last_season_id
               FROM players p
               JOIN player_teams pt ON pt.player_id = p.id
@@ -334,6 +350,20 @@ router.get('/', async (req, res) => {
               JOIN teams        t  ON t.id          = pt.team_id
                                   AND t.league_id   = ${league_id}
               JOIN recent_seasons s ON s.id         = pt.season_id
+              LEFT JOIN LATERAL (
+                SELECT acquisition_type, start_date
+                FROM player_team_stints
+                WHERE player_id = p.id AND team_id = t.id
+                ORDER BY start_date DESC NULLS LAST, created_at DESC
+                LIMIT 1
+              ) cs ON TRUE
+              LEFT JOIN LATERAL (
+                SELECT COUNT(DISTINCT gr.game_id)::int AS games_played
+                FROM game_rosters gr
+                JOIN games rg ON rg.id = gr.game_id
+                JOIN recent_seasons grs ON grs.id = rg.season_id
+                WHERE gr.player_id = p.id
+              ) recent_games ON TRUE
               ORDER BY
                 p.id,
                 CASE
@@ -370,6 +400,13 @@ router.get('/', async (req, res) => {
           AND (
             ${!rookiesOnly}
             OR (last_season_id IS NOT NULL AND rookie_season_id = last_season_id)
+          )
+          AND (
+            ${!warningsOnly}
+            OR (
+              (position = 'G' OR games_played >= ${LEAGUE_PLAYER_WARNING_MINIMUM_GAMES})
+              AND (date_of_birth IS NULL OR start_date IS NULL OR acquisition_type IS NULL)
+            )
           )
         `;
 

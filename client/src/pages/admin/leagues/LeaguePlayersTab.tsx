@@ -9,6 +9,7 @@ import SearchableList from '@/components/SearchableList/SearchableList';
 import Section from '@/components/Section/Section';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import Tag from '@/components/Tag/Tag';
+import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { missingPlayerDataIndicator } from '@/lib/playerDataStatus';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -38,6 +39,7 @@ interface LeaguePlayersListSectionProps {
   page: number;
   pageSize: number;
   search: string;
+  warningsOnly?: boolean;
   fetching: boolean;
   busy: string | null;
   selectedSeasonId?: string | null;
@@ -46,6 +48,7 @@ interface LeaguePlayersListSectionProps {
   emptyMessage: ReactNode;
   onPageChange: (page: number) => void;
   onSearchChange: (query: string) => void;
+  onWarningsOnlyChange?: (warningsOnly: boolean) => void;
   onEdit?: (player: PlayerRecord) => void;
   onDelete?: (playerId: string) => Promise<void>;
 }
@@ -135,6 +138,7 @@ export const LeaguePlayersListSection = ({
   page,
   pageSize,
   search,
+  warningsOnly = false,
   fetching,
   busy,
   selectedSeasonId,
@@ -143,6 +147,7 @@ export const LeaguePlayersListSection = ({
   emptyMessage,
   onPageChange,
   onSearchChange,
+  onWarningsOnlyChange,
   onEdit,
   onDelete,
 }: LeaguePlayersListSectionProps) => {
@@ -315,6 +320,22 @@ export const LeaguePlayersListSection = ({
             searchDebounceMs={PLAYER_SEARCH_DEBOUNCE_MS}
             minSearchLength={PLAYER_SEARCH_MIN_LENGTH}
             disableClientFilter
+            actions={
+              onWarningsOnlyChange ? (
+                <span className={styles.playerFilterToggles}>
+                  <ToggleButton
+                    active={warningsOnly}
+                    variant="switch"
+                    ariaLabel="Warnings only"
+                    activeIcon="warning"
+                    inactiveIcon="warning"
+                    activeTooltip="Show all players"
+                    inactiveTooltip="Show players with warnings"
+                    onClick={() => onWarningsOnlyChange(!warningsOnly)}
+                  />
+                </span>
+              ) : undefined
+            }
             loading={showListSkeleton}
             loadingRowCount={PLAYER_SKELETON_ROW_COUNT}
             loadingFooter={
@@ -366,11 +387,13 @@ const LeaguePlayersTab = ({ className }: Props) => {
     page,
     pageSize,
     search,
+    warningsOnly,
     loading,
     fetching,
     busy,
     onPageChange,
     onSearchChange,
+    onWarningsOnlyChange,
     onAdd,
     onBulkAdd,
     onEdit,
@@ -388,11 +411,16 @@ const LeaguePlayersTab = ({ className }: Props) => {
       page={page}
       pageSize={pageSize}
       search={search}
+      warningsOnly={warningsOnly}
       fetching={fetching}
       busy={busy}
       showLastSeasonSubtitle
       minimumGamesForDataIndicator={LEAGUE_PLAYER_DATA_MINIMUM_GAMES}
-      emptyMessage="No players from the last five seasons yet."
+      emptyMessage={
+        warningsOnly
+          ? 'No players with warnings.'
+          : 'No players from the last five seasons yet.'
+      }
       action={
         <div className={styles.playerActionButtons}>
           <Button
@@ -415,6 +443,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
       }
       onPageChange={onPageChange}
       onSearchChange={onSearchChange}
+      onWarningsOnlyChange={onWarningsOnlyChange}
       onEdit={onEdit}
       onDelete={onDelete}
     />

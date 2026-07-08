@@ -1336,6 +1336,32 @@ describe('LeagueDetailsPage – players tab', () => {
     );
   });
 
+  it('toggles the players list to warnings only', async () => {
+    setup({ league: mockLeague });
+    clickPlayersTab();
+
+    const warningsToggle = screen.getByRole('switch', { name: /warnings only/i });
+    expect(warningsToggle).toHaveAttribute('aria-checked', 'false');
+    expect(warningsToggle.querySelector('svg[data-icon="triangle-exclamation"]')).toBeInTheDocument();
+
+    fireEvent.click(warningsToggle);
+
+    await waitFor(() =>
+      expect(useLeaguePlayers).toHaveBeenLastCalledWith(
+        undefined,
+        undefined,
+        expect.objectContaining({
+          page: 1,
+          warningsOnly: true,
+        }),
+      ),
+    );
+    expect(screen.getByRole('switch', { name: /warnings only/i })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+  });
+
   it('debounces player search and requires at least 3 characters for search requests', async () => {
     jest.useFakeTimers();
     try {

@@ -9,11 +9,13 @@ interface LeaguePlayersContextValue {
   page: number;
   pageSize: number;
   search: string;
+  warningsOnly: boolean;
   loading: boolean;
   fetching: boolean;
   busy: string | null;
   onPageChange: (page: number) => void;
   onSearchChange: (query: string) => void;
+  onWarningsOnlyChange: (warningsOnly: boolean) => void;
   onAdd: () => void;
   onBulkAdd: () => void;
   onEdit: (player: PlayerRecord) => void;

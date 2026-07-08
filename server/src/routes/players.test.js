@@ -183,6 +183,44 @@ describe('GET /api/admin/players', () => {
     expect(sql.mock.calls[1]).toContain(5);
   });
 
+  it('filters paginated recent league players to warning candidates', async () => {
+    sql
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: 0 }]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&page=1&page_size=15&recent_seasons=5&warnings_only=true');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+
+    const rowCall = sql.mock.calls[0];
+    const countCall = sql.mock.calls[1];
+    const rowQueryText = rowCall[0].join(' ');
+    const countQueryText = countCall[0].join(' ');
+
+    expect(rowQueryText).toContain("position = 'G' OR games_played >=");
+    expect(rowQueryText).toContain(
+      'date_of_birth IS NULL OR start_date IS NULL OR acquisition_type IS NULL',
+    );
+    expect(countQueryText).toContain("position = 'G' OR games_played >=");
+    expect(countQueryText).toContain(
+      'date_of_birth IS NULL OR start_date IS NULL OR acquisition_type IS NULL',
+    );
+    expect(countQueryText).toContain('COUNT(DISTINCT gr.game_id)::int AS games_played');
+
+    const rowMinimumIndex = rowCall[0].findIndex((segment) =>
+      segment.includes('position = \'G\' OR games_played >='),
+    );
+    const countMinimumIndex = countCall[0].findIndex((segment) =>
+      segment.includes('position = \'G\' OR games_played >='),
+    );
+    expect(rowMinimumIndex).toBeGreaterThanOrEqual(0);
+    expect(countMinimumIndex).toBeGreaterThanOrEqual(0);
+    expect(rowCall[rowMinimumIndex + 1]).toBe(15);
+    expect(countCall[countMinimumIndex + 1]).toBe(15);
+  });
+
   it('normalizes Maksim and Maxim player name aliases in paginated search', async () => {
     sql
       .mockResolvedValueOnce([PLAYER_WITH_ROSTER])

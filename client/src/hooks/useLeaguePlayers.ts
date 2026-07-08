@@ -91,6 +91,7 @@ interface UseLeaguePlayersOptions {
   includeInactive?: boolean;
   includeProspects?: boolean;
   recentSeasons?: number;
+  warningsOnly?: boolean;
   enabled?: boolean;
 }
 
@@ -125,6 +126,7 @@ const useLeaguePlayers = (
         include_inactive: options.includeInactive,
         include_prospects: options.includeProspects,
         recent_seasons: options.recentSeasons,
+        warnings_only: options.warningsOnly,
       },
     ],
     queryFn: async () => {
@@ -140,6 +142,7 @@ const useLeaguePlayers = (
         else if (options.includeInactive) params.include_inactive = 'true';
         if (options.includeProspects) params.include_prospects = 'true';
         if (options.recentSeasons !== undefined) params.recent_seasons = String(options.recentSeasons);
+        if (options.warningsOnly) params.warnings_only = 'true';
         const { data } = await axios.get<PlayerRecord[] | PaginatedPlayersResponse>(
           `${API}/admin/players`,
           { headers: authHeaders(), params: Object.keys(params).length ? params : undefined },
