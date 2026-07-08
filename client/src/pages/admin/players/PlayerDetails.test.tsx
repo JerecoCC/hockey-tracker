@@ -1333,6 +1333,115 @@ describe('PlayerDetails info tab', () => {
     expect(report.queryByText('October 5, 2025')).not.toBeInTheDocument();
   });
 
+  it('matches apostrophized player names when picking signing acquisition dates', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8482698',
+        first_name: 'Charle-Edouard',
+        last_name: "D'Astous",
+        photo: null,
+        date_of_birth: '1998-04-18',
+        birth_city: 'Rimouski',
+        birth_country: 'CAN',
+        height_cm: 191,
+        weight_lbs: 205,
+        position: 'D',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-tbl', name: 'Tampa Bay Lightning', code: 'TBL', league_id: 'league-1' },
+      ],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2025',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-30',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-tbl',
+          team_id: 'team-tbl',
+          season_id: 'season-2025',
+          team: {
+            id: 'team-tbl',
+            name: 'Tampa Bay Lightning',
+            code: 'TBL',
+            logo: null,
+            primary_color: '#002868',
+            text_color: '#ffffff',
+          },
+          jersey_number: 47,
+          is_prospect: false,
+          position: 'D',
+          acquisition_type: null,
+          start_date: '2025-10-07',
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'PuckPedia source' }));
+
+    fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
+      target: {
+        value: `
+          Date	Type	Teams	Details
+          Feb 24, 2026	Moves
+
+          D'Astous (lower body) is expected to be an option for Wednesday's home contest against the Toronto Maple Leafs.
+          Jan 2, 2026	Signing
+
+          Charle-Edouard D'Astous signs a 1-Year, $875,000 deal with the Lightning
+          Oct 20, 2025	Moves
+
+          D'Astous was summoned from AHL Syracuse on Monday.
+          May 5, 2025	Signing
+
+          Charle-Edouard D'Astous signs a 1-Year, $775,000 deal with the Lightning
+        `,
+      },
+    });
+    await user.click(screen.getByText('Build report'));
+
+    const reportSection = screen
+      .getByText('Manual Movement Report')
+      .closest('.stintHistorySection') as HTMLElement;
+    const report = within(reportSection);
+    const movementRows = report
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+
+    expect(movementRows).toEqual([
+      ['Tampa Bay Lightning', 'Free Agency', 'May 5, 2025', 'Present'],
+    ]);
+    expect(report.queryByText('Current stint')).not.toBeInTheDocument();
+    expect(report.queryByText('October 7, 2025')).not.toBeInTheDocument();
+    expect(report.queryByText('January 2, 2026')).not.toBeInTheDocument();
+  });
+
   it('skips same-team signing extensions when only recent PuckPedia transactions are pasted', async () => {
     const user = userEvent.setup();
     mockUseTabState.mockReturnValue([4, jest.fn()]);
@@ -2073,6 +2182,142 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getByText('#8')).toBeInTheDocument();
     expect(screen.getByText('#2')).toBeInTheDocument();
     expect(screen.queryByText(/signs a 1-Year/)).not.toBeInTheDocument();
+  });
+
+  it('limits auto-filled manual movement report team lookup to the current NHL league', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        isActive: true,
+        firstName: { default: 'Charlie' },
+        lastName: { default: 'Coyle' },
+        birthDate: '1992-03-02',
+        birthCity: { default: 'East Weymouth' },
+        birthStateProvince: { default: 'Massachusetts' },
+        birthCountry: 'USA',
+        currentTeamAbbrev: 'CBJ',
+        sweaterNumber: 13,
+        position: 'C',
+        draftDetails: {
+          year: 2010,
+          teamAbbrev: 'SJS',
+          round: 1,
+          overallPick: 28,
+        },
+      },
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8473419',
+        first_name: 'Charlie',
+        last_name: 'Coyle',
+        photo: null,
+        date_of_birth: '1992-03-02',
+        birth_city: 'East Weymouth, Massachusetts',
+        birth_country: 'USA',
+        height_cm: 191,
+        weight_lbs: 223,
+        position: 'C',
+        shoots: 'R',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-pwhl-sjs', name: 'PWHL San Jose', code: 'SJS', league_id: 'league-pwhl' },
+        { id: 'team-sjs', name: 'San Jose Sharks', code: 'SJS', league_id: 'league-1' },
+        { id: 'team-cbj', name: 'Columbus Blue Jackets', code: 'CBJ', league_id: 'league-1' },
+        { id: 'team-col', name: 'Colorado Avalanche', code: 'COL', league_id: 'league-1' },
+        { id: 'team-bos', name: 'Boston Bruins', code: 'BOS', league_id: 'league-1' },
+        { id: 'team-min', name: 'Minnesota Wild', code: 'MIN', league_id: 'league-1' },
+      ],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2025',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-30',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-cbj',
+          team_id: 'team-cbj',
+          season_id: 'season-2025',
+          team: {
+            id: 'team-cbj',
+            name: 'Columbus Blue Jackets',
+            code: 'CBJ',
+            logo: null,
+            primary_color: '#002654',
+            text_color: '#ffffff',
+          },
+          jersey_number: 13,
+          is_prospect: false,
+          position: 'C',
+          acquisition_type: 'trade',
+          start_date: '2025-06-27',
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    expect(await screen.findByRole('dialog', { name: 'PuckPedia Source' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
+      target: {
+        value: `
+          Date	Type	Teams	Details
+          May 12, 2026	Signing
+
+          Charlie Coyle signs a 6-Year, $36,000,000 deal with the Blue Jackets
+          Jun 27, 2025	Trade
+
+          The Columbus Blue Jackets acquired Charlie Coyle and Miles Wood from the Colorado Avalanche for Gavin Brindley, a 2025 3rd round pick (#77) and a 2027 2nd round pick
+          Mar 7, 2025	Trade
+
+          The Colorado Avalanche acquired Charlie Coyle and a 2026 5th round pick from the Boston Bruins for Casey Mittelstadt, William Zellers and a 2025 2nd round pick
+          Nov 27, 2019	Signing
+
+          Charlie Coyle signs a 6-Year, $31,500,000 deal with the Bruins
+          Oct 23, 2014	Signing
+
+          Charlie Coyle signs a 5-Year, $16,000,000 deal with the Wild
+          Mar 1, 2012	Signing
+
+          Charlie Coyle signs a 3-Year, $2,700,000 deal with the Wild
+        `,
+      },
+    });
+    await user.click(screen.getByText('Build report'));
+
+    const reportSection = screen
+      .getByText('Manual Movement Report')
+      .closest('.stintHistorySection') as HTMLElement;
+    const report = within(reportSection);
+
+    expect(report.getByText('Draft Year: 2010 | Round: 1')).toBeInTheDocument();
+    expect(report.getByText('San Jose Sharks')).toBeInTheDocument();
+    expect(report.queryByText('PWHL San Jose')).not.toBeInTheDocument();
   });
 
   it('parses present-tense acquire trades and uses local draft anchor stints', async () => {

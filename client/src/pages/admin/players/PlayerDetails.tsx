@@ -485,12 +485,16 @@ const teamsMatch = (left: string | null | undefined, right: string | null | unde
 
 const compactReportText = (value: string) => value.replace(/\s+/g, ' ').trim();
 
-const playerReportNameKeys = (playerName: string) => {
-  const parts = playerName
+const normalizePlayerNameMatchText = (value: string) =>
+  value
     .toLowerCase()
-    .split(/\s+/)
-    .map((part) => part.replace(/[^a-z0-9-]/g, ''))
-    .filter(Boolean);
+    .replace(/['’`]/g, '')
+    .replace(/[^a-z0-9-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const playerReportNameKeys = (playerName: string) => {
+  const parts = normalizePlayerNameMatchText(playerName).split(/\s+/).filter(Boolean);
   const fullName = compactReportText(parts.join(' '));
   const lastName = parts[parts.length - 1] ?? '';
   return [fullName, lastName].filter(
@@ -501,9 +505,9 @@ const playerReportNameKeys = (playerName: string) => {
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const textMatchesPlayerName = (value: string, playerName: string) => {
-  const lowerValue = value.toLowerCase();
+  const normalizedValue = normalizePlayerNameMatchText(value);
   return playerReportNameKeys(playerName).some((key) =>
-    new RegExp(`(^|[^a-z0-9-])${escapeRegExp(key)}($|[^a-z0-9-])`, 'i').test(lowerValue),
+    new RegExp(`(^|\\s)${escapeRegExp(key)}(?=\\s|$)`).test(normalizedValue),
   );
 };
 
@@ -2353,6 +2357,9 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const currentLeagueCode = normalizeTeamCode(
     routeLookup?.league_code ?? teamDetails?.league_code ?? leagueCode,
   );
+  const manualMovementReportTeams = leagueId
+    ? teams.filter((team) => team.league_id === leagueId)
+    : teams;
   const latestEndedPlayerSeason =
     playerSeasonOptions.find((season) => season.id === defaultPlayerSeasonId) ?? null;
   const latestEndedPlayerSeasonStart = dateKey(latestEndedPlayerSeason?.start_date);
@@ -2558,7 +2565,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       const reportPlayerName =
         [firstName ?? player.first_name, lastName ?? player.last_name].filter(Boolean).join(' ') ||
         fullName;
-      const draft = draftReportFromLanding(landing, teams);
+      const draft = draftReportFromLanding(landing, manualMovementReportTeams);
       setManualMovementReport(
         createManualMovementReportSeed(
           reportPlayerName,
@@ -3603,7 +3610,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           <ManualMovementReportModal
             open={manualMovementSourceOpen}
             report={manualMovementReport}
-            teams={teams}
+            teams={manualMovementReportTeams}
             onReportBuilt={setManualMovementReport}
             onClose={() => setManualMovementSourceOpen(false)}
           />
