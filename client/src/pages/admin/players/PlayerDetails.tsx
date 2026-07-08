@@ -397,6 +397,44 @@ type TeamReportLookupRecord = {
   name?: string | null;
 };
 
+const NHL_FRANCHISE_TRANSFER_TEAM_ALIASES = [
+  {
+    historicalCodes: ['ARI', 'PHX', 'PHO'],
+    historicalNames: ['Arizona Coyotes', 'Phoenix Coyotes', 'Coyotes'],
+    currentCodes: ['UTA'],
+    currentNames: ['Utah Mammoth', 'Utah Hockey Club', 'Mammoth'],
+    historicalDisplayName: 'Arizona Coyotes',
+  },
+  {
+    historicalCodes: ['ATL'],
+    historicalNames: ['Atlanta Thrashers', 'Thrashers'],
+    currentCodes: ['WPG'],
+    currentNames: ['Winnipeg Jets', 'Jets'],
+    historicalDisplayName: 'Atlanta Thrashers',
+  },
+  {
+    historicalCodes: ['QUE'],
+    historicalNames: ['Quebec Nordiques', 'Nordiques'],
+    currentCodes: ['COL'],
+    currentNames: ['Colorado Avalanche', 'Avalanche'],
+    historicalDisplayName: 'Quebec Nordiques',
+  },
+  {
+    historicalCodes: ['HFD', 'HAR'],
+    historicalNames: ['Hartford Whalers', 'Whalers'],
+    currentCodes: ['CAR'],
+    currentNames: ['Carolina Hurricanes', 'Hurricanes'],
+    historicalDisplayName: 'Hartford Whalers',
+  },
+  {
+    historicalCodes: ['MNS'],
+    historicalNames: ['Minnesota North Stars', 'North Stars'],
+    currentCodes: ['DAL'],
+    currentNames: ['Dallas Stars', 'Stars'],
+    historicalDisplayName: 'Minnesota North Stars',
+  },
+] as const;
+
 const PUCKPEDIA_BASE_URL = 'https://puckpedia.com';
 const PUCKPEDIA_MOVEMENT_FILTER_QUERY = 'transaction_type=trade,waiver,signing,roster';
 const PUCKPEDIA_MONTHS: Record<string, string> = {
@@ -483,6 +521,23 @@ const teamsMatch = (left: string | null | undefined, right: string | null | unde
   return !!leftKey && !!rightKey && leftKey === rightKey;
 };
 
+const reportTeamTextMatches = (
+  candidate: string | null | undefined,
+  value: string | null | undefined,
+) => {
+  const candidateKey = normalizeTeamNameKey(candidate);
+  const valueKey = normalizeTeamNameKey(value);
+  return (
+    !!candidateKey &&
+    !!valueKey &&
+    (candidateKey === valueKey ||
+      candidateKey.startsWith(`${valueKey} `) ||
+      candidateKey.endsWith(` ${valueKey}`) ||
+      valueKey.startsWith(`${candidateKey} `) ||
+      valueKey.endsWith(` ${candidateKey}`))
+  );
+};
+
 const compactReportText = (value: string) => value.replace(/\s+/g, ' ').trim();
 
 const normalizePlayerNameMatchText = (value: string) =>
@@ -522,11 +577,78 @@ const findReportTeamByCode = (
   return code ? (teams.find((team) => normalizeTeamCode(team.code) === code) ?? null) : null;
 };
 
+const reportTeamMatchesAliasCurrent = (
+  team: TeamReportLookupRecord,
+  alias: (typeof NHL_FRANCHISE_TRANSFER_TEAM_ALIASES)[number],
+) => {
+  const teamCode = normalizeTeamCode(team.code);
+  return (
+    !!teamCode && (alias.currentCodes as readonly string[]).includes(teamCode)
+  ) || alias.currentNames.some((name) => reportTeamTextMatches(team.name, name));
+};
+
+const reportHasAliasCurrentTeam = (
+  teams: TeamReportLookupRecord[],
+  alias: (typeof NHL_FRANCHISE_TRANSFER_TEAM_ALIASES)[number],
+) => teams.some((team) => reportTeamMatchesAliasCurrent(team, alias));
+
+const findReportFranchiseTransferAliasByHistoricalCode = (
+  teams: TeamReportLookupRecord[],
+  teamCode: string | null | undefined,
+) => {
+  const code = normalizeTeamCode(teamCode);
+  if (!code) return null;
+  return (
+    NHL_FRANCHISE_TRANSFER_TEAM_ALIASES.find(
+      (alias) =>
+        (alias.historicalCodes as readonly string[]).includes(code) &&
+        reportHasAliasCurrentTeam(teams, alias),
+    ) ?? null
+  );
+};
+
+const reportValueMatchesFranchiseAlias = (
+  alias: (typeof NHL_FRANCHISE_TRANSFER_TEAM_ALIASES)[number],
+  value: string | null | undefined,
+) => {
+  const valueCode = normalizeTeamCode(value);
+  return (
+    (!!valueCode &&
+      ((alias.historicalCodes as readonly string[]).includes(valueCode) ||
+        (alias.currentCodes as readonly string[]).includes(valueCode))) ||
+    alias.historicalNames.some((name) => reportTeamTextMatches(name, value)) ||
+    alias.currentNames.some((name) => reportTeamTextMatches(name, value))
+  );
+};
+
+const findReportFranchiseTransferAliasByText = (
+  teams: TeamReportLookupRecord[],
+  value: string | null | undefined,
+) =>
+  NHL_FRANCHISE_TRANSFER_TEAM_ALIASES.find(
+    (alias) => reportHasAliasCurrentTeam(teams, alias) && reportValueMatchesFranchiseAlias(alias, value),
+  ) ?? null;
+
+const reportTeamsShareFranchiseTransfer = (
+  teams: TeamReportLookupRecord[],
+  left: string | null | undefined,
+  right: string | null | undefined,
+) => {
+  if (teamsMatch(left, right)) return false;
+  const leftAlias = findReportFranchiseTransferAliasByText(teams, left);
+  const rightAlias = findReportFranchiseTransferAliasByText(teams, right);
+  return !!leftAlias && leftAlias === rightAlias;
+};
+
 const resolveReportTeamName = (
   teams: TeamReportLookupRecord[],
   teamCode: string | null | undefined,
   fallbackName?: string | null,
-) => findReportTeamByCode(teams, teamCode)?.name ?? fallbackName ?? null;
+) =>
+  findReportTeamByCode(teams, teamCode)?.name ??
+  findReportFranchiseTransferAliasByHistoricalCode(teams, teamCode)?.historicalDisplayName ??
+  fallbackName ??
+  null;
 
 const resolveReportTeamNameByText = (
   teams: TeamReportLookupRecord[],
@@ -537,19 +659,18 @@ const resolveReportTeamNameByText = (
   if (!teamName || !teamKey) return null;
 
   const matchedTeam = teams.find((team) => {
-    const nameKey = normalizeTeamNameKey(team.name);
     const codeKey = normalizeTeamCode(team.code)?.toLowerCase() ?? null;
     return (
-      nameKey === teamKey ||
       codeKey === teamKey ||
-      !!nameKey?.startsWith(`${teamKey} `) ||
-      !!nameKey?.endsWith(` ${teamKey}`) ||
-      teamKey.startsWith(`${nameKey} `) ||
-      teamKey.endsWith(` ${nameKey}`)
+      reportTeamTextMatches(team.name, teamName)
     );
   });
 
-  return matchedTeam?.name ?? teamName;
+  return (
+    matchedTeam?.name ??
+    findReportFranchiseTransferAliasByText(teams, teamName)?.historicalDisplayName ??
+    teamName
+  );
 };
 
 const draftReportFromLanding = (
@@ -911,9 +1032,18 @@ const buildManualMovementReport = ({
   const anchorStintStartDate = movementAnchor?.stintStartDate ?? anchorSeasonStartDate;
   const anchorKnownFromDate = anchorSeasonStartDate ?? anchorStintStartDate;
   const draftTeamName = resolveReportTeamName(teamLookup, draft?.teamCode, draft?.teamName);
+  const normalizedDraft = draft
+    ? {
+        ...draft,
+        teamName: draftTeamName ?? draft.teamName ?? null,
+      }
+    : null;
   const anchorIsDraftStint =
     movementAnchor?.acquisitionType === MANUAL_MOVEMENT_ACQUISITION_TYPES.draft ||
     teamsMatch(anchorTeamName, draftTeamName);
+  const anchorIsTeamTransferStint =
+    movementAnchor?.acquisitionType === MANUAL_MOVEMENT_ACQUISITION_TYPES.teamTransfer ||
+    reportTeamsShareFranchiseTransfer(teamLookup, draftTeamName, anchorTeamName);
   let activeTeamName = draftTeamName;
   let anchorAppliedToActiveTeam = false;
 
@@ -1006,8 +1136,14 @@ const buildManualMovementReport = ({
     if (event.type === 'signing' && event.teamName) {
       const toTeamName = resolveReportTeamNameByText(teamLookup, event.teamName);
       const eventActiveTeamName = activeTeamNameForEvent(event.date);
-      if (teamsMatch(eventActiveTeamName, toTeamName)) {
-        activeTeamName = toTeamName;
+      const signingKeepsSameTeam = teamsMatch(eventActiveTeamName, toTeamName);
+      if (
+        signingKeepsSameTeam ||
+        reportTeamsShareFranchiseTransfer(teamLookup, eventActiveTeamName, toTeamName)
+      ) {
+        if (signingKeepsSameTeam) {
+          activeTeamName = toTeamName;
+        }
         return;
       }
       addMovement({
@@ -1069,7 +1205,9 @@ const buildManualMovementReport = ({
       if (!teamsMatch(visibleMovements[0]?.toTeamName, anchorTeamName)) {
         const anchorAcquisitionType = anchorIsDraftStint
           ? MANUAL_MOVEMENT_ACQUISITION_TYPES.draft
-          : MANUAL_MOVEMENT_CURRENT_STINT_ACQUISITION;
+          : anchorIsTeamTransferStint
+            ? MANUAL_MOVEMENT_ACQUISITION_TYPES.teamTransfer
+            : MANUAL_MOVEMENT_CURRENT_STINT_ACQUISITION;
         const anchorStartDate = anchorIsDraftStint ? null : anchorStintStartDate;
         visibleMovements = [
           {
@@ -1100,7 +1238,7 @@ const buildManualMovementReport = ({
   return {
     playerName,
     sourceUrl,
-    draft,
+    draft: normalizedDraft,
     playerStatus: playerStatus ?? null,
     movementAnchor,
     movements: movementsWithEndDates,
@@ -1130,6 +1268,7 @@ const MANUAL_MOVEMENT_ACQUISITION_TYPES = {
   trade: 'trade',
   freeAgency: 'free_agency',
   waivers: 'waivers',
+  teamTransfer: 'team_transfer',
 } as const;
 
 const formatManualMovementAcquisitionType = (acquisitionType: string) =>

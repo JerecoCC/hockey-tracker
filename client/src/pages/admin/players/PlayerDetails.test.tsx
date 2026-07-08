@@ -236,6 +236,7 @@ jest.mock('./StintEditModal', () => ({
     free_agency: 'Free Agency',
     trade: 'Trade',
     waivers: 'Waivers',
+    team_transfer: 'Team Transfer',
   },
 }));
 jest.mock('./ChangeJerseyModal', () => () => null);
@@ -2318,6 +2319,131 @@ describe('PlayerDetails info tab', () => {
     expect(report.getByText('Draft Year: 2010 | Round: 1')).toBeInTheDocument();
     expect(report.getByText('San Jose Sharks')).toBeInTheDocument();
     expect(report.queryByText('PWHL San Jose')).not.toBeInTheDocument();
+  });
+
+  it('treats historical NHL franchise aliases as team transfers to the current team', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        isActive: true,
+        firstName: { default: 'Clayton' },
+        lastName: { default: 'Keller' },
+        birthDate: '1998-07-29',
+        birthCity: { default: 'Chesterfield' },
+        birthStateProvince: { default: 'Missouri' },
+        birthCountry: 'USA',
+        currentTeamAbbrev: 'UTA',
+        sweaterNumber: 9,
+        position: 'RW',
+        draftDetails: {
+          year: 2016,
+          teamAbbrev: 'ARI',
+          round: 1,
+          overallPick: 7,
+        },
+      },
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8479343',
+        first_name: 'Clayton',
+        last_name: 'Keller',
+        photo: null,
+        date_of_birth: '1998-07-29',
+        birth_city: 'Chesterfield, Missouri',
+        birth_country: 'USA',
+        height_cm: 178,
+        weight_lbs: 178,
+        position: 'RW',
+        shoots: 'R',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [{ id: 'team-uta', name: 'Utah Mammoth', code: 'UTA', league_id: 'league-1' }],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2025',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-30',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-uta',
+          team_id: 'team-uta',
+          season_id: 'season-2025',
+          team: {
+            id: 'team-uta',
+            name: 'Utah Mammoth',
+            code: 'UTA',
+            logo: null,
+            primary_color: '#71afe5',
+            text_color: '#111111',
+          },
+          jersey_number: 9,
+          is_prospect: false,
+          position: 'RW',
+          acquisition_type: null,
+          start_date: '2024-04-18',
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    expect(await screen.findByRole('dialog', { name: 'PuckPedia Source' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
+      target: {
+        value: `
+          Date	Type	Teams	Details
+          Sep 4, 2019	Signing
+
+          [Clayton Keller](https://puckpedia.com/player/clayton-keller) signs an 8-Year, $57,200,000 deal with the [Mammoth](https://puckpedia.com/team/utah-mammoth)
+          Mar 26, 2017	Signing
+
+          [Clayton Keller](https://puckpedia.com/player/clayton-keller) signs a 3-Year, $2,657,499 deal with the [Mammoth](https://puckpedia.com/team/utah-mammoth)
+        `,
+      },
+    });
+    await user.click(screen.getByText('Build report'));
+
+    const reportSection = screen
+      .getByText('Manual Movement Report')
+      .closest('.stintHistorySection') as HTMLElement;
+    const report = within(reportSection);
+    const movementRows = report
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+
+    expect(report.getByText('Arizona Coyotes')).toBeInTheDocument();
+    expect(report.getByText('Draft Year: 2016 | Round: 1')).toBeInTheDocument();
+    expect(report.queryByText('ARI')).not.toBeInTheDocument();
+    expect(movementRows).toEqual([
+      ['Utah Mammoth', 'Team Transfer', 'April 18, 2024', 'Present'],
+    ]);
+    expect(report.queryByText('Free Agency')).not.toBeInTheDocument();
   });
 
   it('parses present-tense acquire trades and uses local draft anchor stints', async () => {
