@@ -802,7 +802,12 @@ const buildManualMovementReport = ({
   const movements: PlayerManualMovementReportEntry[] = [];
   const jerseyChanges: PlayerManualJerseyReportEntry[] = [];
   const movementKeys = new Set<string>();
+  const anchorTeamName = resolveReportTeamNameByText(teamLookup, movementAnchor?.teamName);
+  const anchorSeasonStartDate = movementAnchor?.seasonStartDate ?? null;
+  const anchorStintStartDate = movementAnchor?.stintStartDate ?? anchorSeasonStartDate;
+  const anchorKnownFromDate = anchorSeasonStartDate ?? anchorStintStartDate;
   let activeTeamName = draft?.teamName ?? null;
+  let anchorAppliedToActiveTeam = false;
 
   const addMovement = (movement: PlayerManualMovementReportEntry) => {
     const key = [
@@ -814,6 +819,19 @@ const buildManualMovementReport = ({
     if (movementKeys.has(key)) return;
     movementKeys.add(key);
     movements.push(movement);
+  };
+
+  const activeTeamNameForEvent = (eventDate: string) => {
+    if (
+      !anchorAppliedToActiveTeam &&
+      anchorTeamName &&
+      anchorKnownFromDate &&
+      eventDate >= anchorKnownFromDate
+    ) {
+      activeTeamName = anchorTeamName;
+      anchorAppliedToActiveTeam = true;
+    }
+    return activeTeamName;
   };
 
   rawEvents.forEach((event) => {
@@ -830,9 +848,10 @@ const buildManualMovementReport = ({
     }
 
     if (event.type === 'trade' && event.toTeamName) {
+      const eventActiveTeamName = activeTeamNameForEvent(event.date);
       const fromTeamName = resolveReportTeamNameByText(
         teamLookup,
-        event.fromTeamName ?? activeTeamName,
+        event.fromTeamName ?? eventActiveTeamName,
       );
       const toTeamName = resolveReportTeamNameByText(teamLookup, event.toTeamName);
       addMovement({
@@ -851,14 +870,18 @@ const buildManualMovementReport = ({
 
     if (event.type === 'signing' && event.teamName) {
       const toTeamName = resolveReportTeamNameByText(teamLookup, event.teamName);
-      if (teamsMatch(activeTeamName, toTeamName)) return;
+      const eventActiveTeamName = activeTeamNameForEvent(event.date);
+      if (teamsMatch(eventActiveTeamName, toTeamName)) {
+        activeTeamName = toTeamName;
+        return;
+      }
       addMovement({
         id: `${event.date}-signing-${toTeamName}`,
-        acquisitionType: activeTeamName ? 'Free Agency' : 'Signing',
+        acquisitionType: 'Free Agency',
         startDate: event.date,
         endDate: null,
-        previousEndDate: activeTeamName ? event.date : null,
-        fromTeamName: activeTeamName,
+        previousEndDate: eventActiveTeamName ? event.date : null,
+        fromTeamName: eventActiveTeamName,
         toTeamName,
         detail: event.detail,
       });
@@ -866,9 +889,6 @@ const buildManualMovementReport = ({
     }
   });
 
-  const anchorTeamName = resolveReportTeamNameByText(teamLookup, movementAnchor?.teamName);
-  const anchorSeasonStartDate = movementAnchor?.seasonStartDate ?? null;
-  const anchorStintStartDate = movementAnchor?.stintStartDate ?? anchorSeasonStartDate;
   let reportStartDate = anchorSeasonStartDate;
   let visibleMovements = movements;
 
@@ -949,8 +969,6 @@ const formatDate = (iso: string | null) => {
 };
 
 const MANUAL_MOVEMENT_SOURCE_FORM_ID = 'manual-movement-source-form';
-
-type PuckPediaSourceLinkStatus = 'checking' | 'valid' | 'invalid';
 
 const manualMovementStintColumns: Column<PlayerManualMovementReportEntry>[] = [
   { header: 'Team', key: 'toTeamName' },
@@ -1090,8 +1108,6 @@ const ManualMovementReportModal = ({
     defaultValues: { sourceText: '' },
   });
   const [parseError, setParseError] = useState<string | null>(null);
-  const [sourceLinkStatus, setSourceLinkStatus] = useState<PuckPediaSourceLinkStatus>('checking');
-  const [verifiedSourceUrl, setVerifiedSourceUrl] = useState<string | null>(null);
   const sourceText = watch('sourceText') ?? '';
 
   useEffect(() => {
@@ -1103,38 +1119,6 @@ const ManualMovementReportModal = ({
     setParseError(null);
   }, [sourceText]);
 
-  useEffect(() => {
-    if (!open || !report?.sourceUrl) return undefined;
-    let cancelled = false;
-    setSourceLinkStatus('checking');
-    setVerifiedSourceUrl(null);
-
-    axios
-      .get(`${API}/admin/games/puckpedia-player-link`, {
-        headers: authHeaders(),
-        params: {
-          url: report.sourceUrl,
-          player_name: report.playerName,
-        },
-      })
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.available && typeof data.url === 'string') {
-          setVerifiedSourceUrl(data.url);
-          setSourceLinkStatus('valid');
-          return;
-        }
-        setSourceLinkStatus('invalid');
-      })
-      .catch(() => {
-        if (!cancelled) setSourceLinkStatus('invalid');
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, report?.playerName, report?.sourceUrl]);
-
   if (!open || !report) return null;
 
   const buildReport = handleSubmit(({ sourceText }) => {
@@ -1145,7 +1129,7 @@ const ManualMovementReportModal = ({
     }
     const nextReport = buildManualMovementReport({
       playerName: report.playerName,
-      sourceUrl: verifiedSourceUrl ?? report.sourceUrl,
+      sourceUrl: report.sourceUrl,
       transactionsHtml: trimmedSource,
       draft: report.draft,
       playerStatus: report.playerStatus,
@@ -1181,40 +1165,21 @@ const ManualMovementReportModal = ({
       confirmDisabled={!sourceText.trim()}
       disableBackdropClose
     >
-      {sourceLinkStatus === 'checking' && (
-        <Banner
-          intent="info"
-          icon="manage_search"
+      <p>
+        <InlineAction
+          className={styles.infoCellCopyButton}
+          href={report.sourceUrl}
+          target="_blank"
+          rel="noreferrer"
+          ariaLabel="Open PuckPedia"
+          tooltip="Open PuckPedia"
+          tooltipClassName={styles.infoCellCopyTooltip}
+          indicatorClassName={styles.infoCellCopyIndicator}
+          icon="open_in_new"
         >
-          Checking the generated PuckPedia link...
-        </Banner>
-      )}
-      {sourceLinkStatus === 'valid' && verifiedSourceUrl && (
-        <p>
-          <InlineAction
-            className={styles.infoCellCopyButton}
-            href={verifiedSourceUrl}
-            target="_blank"
-            rel="noreferrer"
-            ariaLabel="Open PuckPedia"
-            tooltip="Open PuckPedia"
-            tooltipClassName={styles.infoCellCopyTooltip}
-            indicatorClassName={styles.infoCellCopyIndicator}
-            icon="open_in_new"
-          >
-            Open PuckPedia
-          </InlineAction>
-        </p>
-      )}
-      {sourceLinkStatus === 'invalid' && (
-        <Banner
-          intent="warning"
-          icon="search"
-        >
-          PuckPedia player link could not be verified for {report.playerName}. Search PuckPedia
-          manually, then paste the transaction table here.
-        </Banner>
-      )}
+          Open PuckPedia
+        </InlineAction>
+      </p>
       <form
         id={MANUAL_MOVEMENT_SOURCE_FORM_ID}
         onSubmit={buildReport}

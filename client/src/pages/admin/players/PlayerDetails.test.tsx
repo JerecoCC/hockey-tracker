@@ -308,12 +308,7 @@ beforeEach(() => {
   mockedAxios.get.mockReset();
   mockedAxios.patch.mockReset();
   mockedAxios.post.mockReset();
-  mockedAxios.get.mockImplementation((url: string, config?: any) => {
-    if (url === '/api/admin/games/puckpedia-player-link') {
-      return Promise.resolve({ data: { available: true, url: config?.params?.url } });
-    }
-    return Promise.resolve({ data: {} });
-  });
+  mockedAxios.get.mockResolvedValue({ data: {} });
   mockedToast.loading.mockReturnValue('player-autofill-toast');
   (mockedAxios.isAxiosError as unknown as jest.Mock).mockReturnValue(false);
   document.title = 'Hockey Tracker';
@@ -1032,15 +1027,7 @@ describe('PlayerDetails info tab', () => {
       'href',
       'https://puckpedia.com/player/andrew-peeke/transactions?transaction_type=trade,waiver,signing,roster',
     );
-    expect(mockedAxios.get).toHaveBeenCalledWith(
-      '/api/admin/games/puckpedia-player-link',
-      expect.objectContaining({
-        params: {
-          url: 'https://puckpedia.com/player/andrew-peeke/transactions?transaction_type=trade,waiver,signing,roster',
-          player_name: 'Andrew Peeke',
-        },
-      }),
-    );
+    expect(mockedAxios.get).not.toHaveBeenCalled();
 
     fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
       target: {
@@ -1049,6 +1036,9 @@ describe('PlayerDetails info tab', () => {
           Jul 3, 2026	Signing
 
           Andrew Peeke signs a 1-Year, $1,000,000 deal with the Mammoth
+          Jan 15, 2026	Signing
+
+          Andrew Peeke signs a 2-Year, $4,000,000 deal with the Bruins
           Mar 8, 2024	Trade
 
           The Boston Bruins acquired Andrew Peeke from the Columbus Blue Jackets for a 2027 3rd round pick and Jakub Zboril
@@ -1079,6 +1069,8 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getAllByText('March 8, 2024').length).toBeGreaterThan(0);
     expect(screen.getAllByText('July 3, 2026').length).toBeGreaterThan(0);
     expect(screen.getByText('Present')).toBeInTheDocument();
+    expect(screen.queryByText('Signing')).not.toBeInTheDocument();
+    expect(screen.queryByText('January 15, 2026')).not.toBeInTheDocument();
     expect(screen.queryByText('September 28, 2022')).not.toBeInTheDocument();
     expect(screen.queryByText('August 9, 2021')).not.toBeInTheDocument();
     expect(screen.queryByText('April 1, 2019')).not.toBeInTheDocument();
@@ -1086,24 +1078,55 @@ describe('PlayerDetails info tab', () => {
     expect(screen.queryByText(/signs a 3-Year/)).not.toBeInTheDocument();
   });
 
-  it('hides the generated PuckPedia link when the player page cannot be verified', async () => {
+  it('skips same-team signing extensions when only recent PuckPedia transactions are pasted', async () => {
     const user = userEvent.setup();
     mockUseTabState.mockReturnValue([4, jest.fn()]);
-    mockedAxios.get.mockImplementation((url: string) => {
-      if (url === '/api/admin/games/puckpedia-player-link') {
-        return Promise.resolve({ data: { available: false } });
-      }
-      return Promise.resolve({ data: {} });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-1', name: 'Toronto Maple Leafs', code: 'TOR', league_id: 'league-1' },
+        { id: 'team-uta', name: 'Utah Mammoth', code: 'UTA', league_id: 'league-1' },
+      ],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-1',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-30',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+      ],
     });
 
     render(<PlayerDetails />);
 
     await user.click(screen.getByRole('button', { name: 'PuckPedia source' }));
 
-    expect(
-      await screen.findByText(/PuckPedia player link could not be verified for John Smith/i),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Open PuckPedia' })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
+      target: {
+        value: `
+          Date	Type	Teams	Details
+          Jul 3, 2026	Signing
+
+          Smith signs a 1-Year, $1,000,000 deal with the Mammoth
+          Jan 15, 2026	Signing
+
+          Smith signs a 3-Year, $8,250,000 deal with the Maple Leafs
+        `,
+      },
+    });
+    await user.click(screen.getByText('Build report'));
+
+    expect(screen.getByText('Manual Movement Report')).toBeInTheDocument();
+    expect(screen.queryByText('Signing')).not.toBeInTheDocument();
+    expect(screen.queryByText('January 15, 2026')).not.toBeInTheDocument();
+    expect(screen.getByText('Current stint')).toBeInTheDocument();
+    expect(screen.getByText('Free Agency')).toBeInTheDocument();
+    expect(screen.getAllByText('Toronto Maple Leafs').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Utah Mammoth').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('July 3, 2026').length).toBeGreaterThan(0);
   });
 
   it('shows generated season photo rows without delete actions', async () => {
