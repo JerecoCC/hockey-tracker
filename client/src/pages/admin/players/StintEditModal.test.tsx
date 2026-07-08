@@ -138,7 +138,8 @@ describe('StintEditModal', () => {
       />,
     );
 
-    expect(screen.getByLabelText('Acquisition Type')).toHaveValue('signing');
+    expect(screen.getByLabelText('Acquisition Type')).toHaveValue('free_agency');
+    expect(screen.queryByRole('option', { name: 'Signing' })).not.toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Foundational Signing' })).toHaveValue(
       'foundational_signing',
     );
@@ -163,7 +164,7 @@ describe('StintEditModal', () => {
         jersey_number: 23,
         is_prospect: false,
         position: 'RW',
-        acquisition_type: 'signing',
+        acquisition_type: 'free_agency',
         start_date: '2025-01-15',
       }),
     );
@@ -176,31 +177,29 @@ describe('StintEditModal', () => {
     render(
       <StintEditModal
         open
-        stint={
-          {
-            id: 'stint-1',
-            player_id: 'player-kyle-masters',
-            team_id: 'team-sjs',
-            season_id: 'season-1',
-            roster_player_team_id: 'roster-1',
-            jersey_number: 44,
-            is_prospect: false,
-            photo: null,
-            position: 'C',
-            acquisition_type: 'draft',
-            start_date: '2024-10-01',
-            end_date: null,
-            created_at: '2024-10-01T00:00:00.000Z',
-            team: {
-              id: 'team-sjs',
-              name: 'San Jose Sharks',
-              code: 'SJS',
-              logo: null,
-              primary_color: '#006d75',
-              text_color: '#ffffff',
-            },
-          }
-        }
+        stint={{
+          id: 'stint-1',
+          player_id: 'player-kyle-masters',
+          team_id: 'team-sjs',
+          season_id: 'season-1',
+          roster_player_team_id: 'roster-1',
+          jersey_number: 44,
+          is_prospect: false,
+          photo: null,
+          position: 'C',
+          acquisition_type: 'draft',
+          start_date: '2024-10-01',
+          end_date: null,
+          created_at: '2024-10-01T00:00:00.000Z',
+          team: {
+            id: 'team-sjs',
+            name: 'San Jose Sharks',
+            code: 'SJS',
+            logo: null,
+            primary_color: '#006d75',
+            text_color: '#ffffff',
+          },
+        }}
         teams={teams}
         seasons={seasons}
         leagueId="league-1"
@@ -242,31 +241,29 @@ describe('StintEditModal', () => {
     render(
       <StintEditModal
         open
-        stint={
-          {
-            id: 'career-stint-1',
-            player_id: 'player-kyle-masters',
-            team_id: 'team-sjs',
-            season_id: null,
-            roster_player_team_id: null,
-            jersey_number: null,
-            is_prospect: false,
-            photo: null,
-            position: 'C',
-            acquisition_type: 'draft',
-            start_date: '2024-10-01',
-            end_date: null,
-            created_at: '2024-10-01T00:00:00.000Z',
-            team: {
-              id: 'team-sjs',
-              name: 'San Jose Sharks',
-              code: 'SJS',
-              logo: null,
-              primary_color: '#006d75',
-              text_color: '#ffffff',
-            },
-          }
-        }
+        stint={{
+          id: 'career-stint-1',
+          player_id: 'player-kyle-masters',
+          team_id: 'team-sjs',
+          season_id: null,
+          roster_player_team_id: null,
+          jersey_number: null,
+          is_prospect: false,
+          photo: null,
+          position: 'C',
+          acquisition_type: 'draft',
+          start_date: '2024-10-01',
+          end_date: null,
+          created_at: '2024-10-01T00:00:00.000Z',
+          team: {
+            id: 'team-sjs',
+            name: 'San Jose Sharks',
+            code: 'SJS',
+            logo: null,
+            primary_color: '#006d75',
+            text_color: '#ffffff',
+          },
+        }}
         teams={teams}
         seasons={seasons}
         leagueId="league-1"

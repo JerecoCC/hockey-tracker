@@ -256,7 +256,7 @@ interface PlayerManualMovementSourceForm {
 
 interface PuckPediaRawMovementEvent {
   date: string;
-  type: 'signing' | 'trade' | 'jersey';
+  type: 'signing' | 'trade' | 'waiver' | 'jersey';
   teamName?: string | null;
   fromTeamName?: string | null;
   toTeamName?: string | null;
@@ -667,6 +667,34 @@ const rawPuckPediaEventFromDetail = ({
     }
   }
 
+  if (lowerDetail.includes('claimed off waivers') && isPlayerDetail) {
+    const claimedByMatch = detail.match(
+      /\bclaimed off waivers by\s+(?:the\s+)?(.+?)\s+from\s+(?:the\s+)?(.+?)(?:\s+on\b|,|\.|$)/i,
+    );
+    if (claimedByMatch) {
+      return {
+        date,
+        type: 'waiver',
+        toTeamName: claimedByMatch[1].trim(),
+        fromTeamName: claimedByMatch[2].trim(),
+        detail,
+      };
+    }
+
+    const teamClaimedMatch = detail.match(
+      /\b(?:The\s+)?(.+?)\s+claimed\s+.+?\s+off waivers from\s+(?:the\s+)?(.+?)(?:\s+on\b|,|\.|$)/i,
+    );
+    if (teamClaimedMatch) {
+      return {
+        date,
+        type: 'waiver',
+        toTeamName: teamClaimedMatch[1].trim(),
+        fromTeamName: teamClaimedMatch[2].trim(),
+        detail,
+      };
+    }
+  }
+
   const signingTeamName = teamName ?? extractPuckPediaSigningTeam(detail);
   const isSigning =
     normalizedType === 'signing' ||
@@ -847,7 +875,7 @@ const buildManualMovementReport = ({
       return;
     }
 
-    if (event.type === 'trade' && event.toTeamName) {
+    if ((event.type === 'trade' || event.type === 'waiver') && event.toTeamName) {
       const eventActiveTeamName = activeTeamNameForEvent(event.date);
       const fromTeamName = resolveReportTeamNameByText(
         teamLookup,
@@ -855,8 +883,11 @@ const buildManualMovementReport = ({
       );
       const toTeamName = resolveReportTeamNameByText(teamLookup, event.toTeamName);
       addMovement({
-        id: `${event.date}-trade-${toTeamName}`,
-        acquisitionType: 'Trade',
+        id: `${event.date}-${event.type}-${toTeamName}`,
+        acquisitionType:
+          event.type === 'waiver'
+            ? MANUAL_MOVEMENT_ACQUISITION_TYPES.waivers
+            : MANUAL_MOVEMENT_ACQUISITION_TYPES.trade,
         startDate: event.date,
         endDate: null,
         previousEndDate: event.date,
@@ -877,7 +908,7 @@ const buildManualMovementReport = ({
       }
       addMovement({
         id: `${event.date}-signing-${toTeamName}`,
-        acquisitionType: 'Free Agency',
+        acquisitionType: MANUAL_MOVEMENT_ACQUISITION_TYPES.freeAgency,
         startDate: event.date,
         endDate: null,
         previousEndDate: eventActiveTeamName ? event.date : null,
@@ -919,7 +950,7 @@ const buildManualMovementReport = ({
         visibleMovements = [
           {
             id: `${anchorStintStartDate ?? 'unknown'}-anchor-${anchorTeamName}`,
-            acquisitionType: 'Current stint',
+            acquisitionType: MANUAL_MOVEMENT_CURRENT_STINT_ACQUISITION,
             startDate: anchorStintStartDate,
             endDate: null,
             previousEndDate: null,
@@ -969,10 +1000,25 @@ const formatDate = (iso: string | null) => {
 };
 
 const MANUAL_MOVEMENT_SOURCE_FORM_ID = 'manual-movement-source-form';
+const MANUAL_MOVEMENT_CURRENT_STINT_ACQUISITION = 'current_stint';
+const MANUAL_MOVEMENT_ACQUISITION_TYPES = {
+  trade: 'trade',
+  freeAgency: 'free_agency',
+  waivers: 'waivers',
+} as const;
+
+const formatManualMovementAcquisitionType = (acquisitionType: string) =>
+  acquisitionType === MANUAL_MOVEMENT_CURRENT_STINT_ACQUISITION
+    ? 'Current stint'
+    : (ACQUISITION_TYPE_LABELS[acquisitionType] ?? acquisitionType);
 
 const manualMovementStintColumns: Column<PlayerManualMovementReportEntry>[] = [
   { header: 'Team', key: 'toTeamName' },
-  { header: 'Acquisition', key: 'acquisitionType' },
+  {
+    type: 'custom',
+    header: 'Acquisition',
+    render: (movement) => formatManualMovementAcquisitionType(movement.acquisitionType),
+  },
   {
     type: 'custom',
     header: 'Start Date',

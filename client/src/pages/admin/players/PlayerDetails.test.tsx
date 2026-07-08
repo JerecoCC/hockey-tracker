@@ -231,7 +231,11 @@ jest.mock(
 jest.mock('./StintEditModal', () => ({
   __esModule: true,
   default: () => null,
-  ACQUISITION_TYPE_LABELS: { trade: 'Trade' },
+  ACQUISITION_TYPE_LABELS: {
+    free_agency: 'Free Agency',
+    trade: 'Trade',
+    waivers: 'Waivers',
+  },
 }));
 jest.mock('./ChangeJerseyModal', () => () => null);
 jest.mock('./JerseyHistoryEditModal', () => {
@@ -1063,7 +1067,7 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getByText('Manual Movement Report')).toBeInTheDocument();
     expect(screen.getByText('Acquisition')).toBeInTheDocument();
     expect(screen.getAllByText('Trade').length).toBeGreaterThan(0);
-    expect(screen.getByText('Free Agency')).toBeInTheDocument();
+    expect(screen.getAllByText('Free Agency').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Boston Bruins').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Utah Mammoth').length).toBeGreaterThan(0);
     expect(screen.getAllByText('March 8, 2024').length).toBeGreaterThan(0);
@@ -1076,6 +1080,135 @@ describe('PlayerDetails info tab', () => {
     expect(screen.queryByText('April 1, 2019')).not.toBeInTheDocument();
     expect(screen.queryByText(/acquired Andrew Peeke/)).not.toBeInTheDocument();
     expect(screen.queryByText(/signs a 3-Year/)).not.toBeInTheDocument();
+  });
+
+  it('reports waiver claims as the latest team-changing movement', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8476624',
+        first_name: 'Barclay',
+        last_name: 'Goodrow',
+        photo: null,
+        date_of_birth: '1993-02-26',
+        birth_city: 'Toronto',
+        birth_country: 'CAN',
+        height_cm: 188,
+        weight_lbs: 215,
+        position: 'C',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-sjs', name: 'San Jose Sharks', code: 'SJS', league_id: 'league-1' },
+        { id: 'team-nyr', name: 'New York Rangers', code: 'NYR', league_id: 'league-1' },
+        { id: 'team-tbl', name: 'Tampa Bay Lightning', code: 'TBL', league_id: 'league-1' },
+      ],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2025',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-30',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-sjs',
+          team_id: 'team-sjs',
+          season_id: 'season-2025',
+          team: {
+            id: 'team-sjs',
+            name: 'San Jose Sharks',
+            code: 'SJS',
+            logo: null,
+            primary_color: '#006d75',
+            text_color: '#ffffff',
+          },
+          jersey_number: 23,
+          is_prospect: false,
+          position: 'C',
+          acquisition_type: 'waivers',
+          start_date: '2024-06-19',
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'PuckPedia source' }));
+
+    fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
+      target: {
+        value: `
+          Date	Type	Teams	Details
+          Dec 10, 2024	Moves
+
+          Goodrow (upper body) was activated off of injured reserve Tuesday, according to Curtis Pashelka of The San Jose Mercury News.
+          Nov 28, 2024	Moves
+
+          Goodrow (upper body) was placed on injured reserve Thursday.
+          Jun 19, 2024	Moves
+
+          Goodrow was claimed off waivers by the San Jose Sharks from the New York Rangers on Wednesday, per Chris Johnston of The Athletic.
+          Jun 18, 2024	Moves
+
+          Goodrow was placed on waivers Tuesday, Elliotte Friedman of Sportsnet reports.
+          Jul 22, 2021	Signing
+
+          Barclay Goodrow signs a 6-Year, $21,850,002 deal with the Rangers
+          Jul 17, 2021	Trade
+
+          The New York Rangers acquired Barclay Goodrow from the Tampa Bay Lightning for a 2022 7th Round Pick
+          Feb 24, 2020	Trade
+
+          The Tampa Bay Lightning acquired Barclay Goodrow and a 2020 third round pick from the San Jose Sharks for 2020 first round pick and Anthony Greco
+          Oct 4, 2018	Signing
+
+          Barclay Goodrow signs a 2-Year, $1,850,000 deal with the Sharks
+          Aug 7, 2017	Signing
+
+          Barclay Goodrow signs a 2-Year, $1,300,000 deal with the Sharks
+          Mar 6, 2014	Signing
+
+          Barclay Goodrow signs a 3-Year, $1,880,000 deal with the Sharks
+        `,
+      },
+    });
+    await user.click(screen.getByText('Build report'));
+
+    const reportSection = screen
+      .getByText('Manual Movement Report')
+      .closest('.stintHistorySection') as HTMLElement;
+    const report = within(reportSection);
+
+    expect(report.getByText('San Jose Sharks')).toBeInTheDocument();
+    expect(report.getByText('Waivers')).toBeInTheDocument();
+    expect(report.getByText('June 19, 2024')).toBeInTheDocument();
+    expect(report.getByText('Present')).toBeInTheDocument();
+    expect(report.queryByText('Trade')).not.toBeInTheDocument();
+    expect(report.queryByText('Free Agency')).not.toBeInTheDocument();
+    expect(report.queryByText('Tampa Bay Lightning')).not.toBeInTheDocument();
+    expect(report.queryByText('July 17, 2021')).not.toBeInTheDocument();
+    expect(report.queryByText('February 24, 2020')).not.toBeInTheDocument();
+    expect(report.queryByText('March 6, 2014')).not.toBeInTheDocument();
   });
 
   it('skips same-team signing extensions when only recent PuckPedia transactions are pasted', async () => {
