@@ -1,3 +1,4 @@
+import { useEffect, useId, useState } from 'react';
 import Button from '@/components/Button/Button';
 import Table, { type Column } from '@/components/Table/Table';
 import styles from './Pagination.module.scss';
@@ -10,10 +11,40 @@ interface PaginationProps {
   className?: string;
 }
 
+const PAGE_JUMP_DEBOUNCE_MS = 500;
+
 const Pagination = ({ page, pageSize, total, onPageChange, className }: PaginationProps) => {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const currentPage = Math.min(page, pageCount);
+  const currentPage = Math.min(Math.max(1, page), pageCount);
   const start = (currentPage - 1) * pageSize;
+  const [pageInput, setPageInput] = useState(String(currentPage));
+  const pageJumpId = useId();
+
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
+
+  useEffect(() => {
+    if (total <= pageSize) return undefined;
+
+    const trimmedPageInput = pageInput.trim();
+    if (!trimmedPageInput) return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      const requestedPage = Number(trimmedPageInput);
+
+      if (!Number.isFinite(requestedPage)) {
+        setPageInput(String(currentPage));
+        return;
+      }
+
+      const nextPage = Math.min(pageCount, Math.max(1, Math.trunc(requestedPage)));
+      if (String(nextPage) !== trimmedPageInput) setPageInput(String(nextPage));
+      if (nextPage !== currentPage) onPageChange(nextPage);
+    }, PAGE_JUMP_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [currentPage, onPageChange, pageCount, pageInput, pageSize, total]);
 
   if (total <= pageSize) return null;
 
@@ -40,7 +71,22 @@ const Pagination = ({ page, pageSize, total, onPageChange, className }: Paginati
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
         />
         <span className={styles.page}>
-          Page {currentPage} of {pageCount}
+          <label htmlFor={pageJumpId}>Page</label>
+          <input
+            id={pageJumpId}
+            className={styles.pageInput}
+            type="number"
+            min={1}
+            max={pageCount}
+            inputMode="numeric"
+            value={pageInput}
+            onChange={(event) => setPageInput(event.target.value)}
+            onBlur={() => {
+              if (!pageInput.trim()) setPageInput(String(currentPage));
+            }}
+            aria-label="Page number"
+          />
+          <span>of {pageCount}</span>
         </span>
         <Button
           variant="outlined"
