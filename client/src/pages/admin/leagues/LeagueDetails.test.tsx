@@ -1590,7 +1590,7 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.queryByLabelText('Loading players')).not.toBeInTheDocument();
   });
 
-  it('shows missing data indicators for players missing roster data', () => {
+  it('shows missing data indicators only after skaters meet the game minimum', () => {
     setup({ league: mockLeague }, {}, null, {
       players: [
         {
@@ -1612,6 +1612,7 @@ describe('LeagueDetailsPage – players tab', () => {
           acquisition_type: null,
           start_date: null,
           has_games: true,
+          games_played: 15,
           season_points: 1,
         },
         {
@@ -1633,6 +1634,7 @@ describe('LeagueDetailsPage – players tab', () => {
           acquisition_type: null,
           start_date: null,
           has_games: true,
+          games_played: 15,
           season_points: 2,
         },
         {
@@ -1654,10 +1656,55 @@ describe('LeagueDetailsPage – players tab', () => {
           acquisition_type: 'draft',
           start_date: '2024-10-01',
           has_games: true,
+          games_played: 15,
           season_points: 1,
         },
+        {
+          id: 'player-4',
+          first_name: 'Sam',
+          last_name: 'Short',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'RW',
+          shoots: 'R',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+          acquisition_type: null,
+          start_date: null,
+          has_games: true,
+          games_played: 14,
+          season_points: 3,
+        },
+        {
+          id: 'player-5',
+          first_name: 'Glen',
+          last_name: 'Goalie',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'G',
+          shoots: 'L',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+          acquisition_type: null,
+          start_date: null,
+          has_games: true,
+          games_played: 4,
+          season_points: 0,
+        },
       ],
-      total: 3,
+      total: 5,
     });
     clickPlayersTab();
 
@@ -1666,5 +1713,8 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.getByText('Jane Doe \u26A0\uFE0F')).toBeInTheDocument();
     expect(screen.getByText('Pat Ready')).toBeInTheDocument();
     expect(screen.queryByText('Pat Ready \u26A0\uFE0F')).not.toBeInTheDocument();
+    expect(screen.getByText('Sam Short')).toBeInTheDocument();
+    expect(screen.queryByText('Sam Short \u26A0\uFE0F')).not.toBeInTheDocument();
+    expect(screen.getByText('Glen Goalie \u26A0\uFE0F')).toBeInTheDocument();
   });
 });

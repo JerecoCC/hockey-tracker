@@ -148,6 +148,7 @@ describe('GET /api/admin/players', () => {
   it('returns paginated recent league players with last season metadata', async () => {
     const recentPlayer = {
       ...PLAYER_WITH_ROSTER,
+      games_played: 16,
       last_season_id: 'season-1',
       last_season_name: '2025-26',
     };
@@ -171,6 +172,9 @@ describe('GET /api/admin/players', () => {
     const countQueryText = sql.mock.calls[1][0].join(' ');
     expect(rowQueryText).toContain('WITH recent_seasons AS');
     expect(rowQueryText).toContain('last_season_name');
+    expect(rowQueryText).toContain('AS games_played');
+    expect(rowQueryText).toContain('COUNT(DISTINCT gr.game_id)::int');
+    expect(rowQueryText).toContain('recent_games.games_played > 0 AS has_games');
     expect(rowQueryText).toContain('JOIN recent_seasons s ON s.id');
     expect(countQueryText).toContain('WITH recent_seasons AS');
     expectCareerStintPreferenceBeforeRosterRecency(rowQueryText);

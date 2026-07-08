@@ -42,6 +42,7 @@ interface LeaguePlayersListSectionProps {
   busy: string | null;
   selectedSeasonId?: string | null;
   showLastSeasonSubtitle?: boolean;
+  minimumGamesForDataIndicator?: number;
   emptyMessage: ReactNode;
   onPageChange: (page: number) => void;
   onSearchChange: (query: string) => void;
@@ -52,6 +53,7 @@ interface LeaguePlayersListSectionProps {
 const PLAYER_SKELETON_ROW_COUNT = 15;
 const PLAYER_SEARCH_DEBOUNCE_MS = 350;
 const PLAYER_SEARCH_MIN_LENGTH = 3;
+const LEAGUE_PLAYER_DATA_MINIMUM_GAMES = 15;
 const PLAYER_STATUS_TAG_INTENTS: Record<PlayerStatus, 'success' | 'neutral' | 'warning'> = {
   active: 'success',
   inactive: 'neutral',
@@ -77,7 +79,13 @@ const LeaguePlayerRowsSkeleton = ({
   </ul>
 );
 
-const playerDataIndicator = (player: PlayerRecord) => {
+const playerDataIndicator = (player: PlayerRecord, minimumGames?: number) => {
+  const meetsGameMinimum =
+    minimumGames === undefined ||
+    player.position === 'G' ||
+    (player.games_played ?? 0) >= minimumGames;
+  if (!meetsGameMinimum) return '';
+
   const hasMissingData = !player.date_of_birth || !player.start_date || !player.acquisition_type;
   if (!hasMissingData) return '';
   return ` ${missingPlayerDataIndicator}`;
@@ -131,6 +139,7 @@ export const LeaguePlayersListSection = ({
   busy,
   selectedSeasonId,
   showLastSeasonSubtitle = false,
+  minimumGamesForDataIndicator,
   emptyMessage,
   onPageChange,
   onSearchChange,
@@ -274,7 +283,10 @@ export const LeaguePlayersListSection = ({
                               size={48}
                             />
                           }
-                          name={`${p.first_name} ${p.last_name}${playerDataIndicator(p)}`}
+                          name={`${p.first_name} ${p.last_name}${playerDataIndicator(
+                            p,
+                            minimumGamesForDataIndicator,
+                          )}`}
                           placeholder={`${p.first_name[0]}${p.last_name[0]}`}
                           primaryColor={p.primary_color ?? undefined}
                           textColor={p.text_color ?? undefined}
@@ -379,6 +391,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
       fetching={fetching}
       busy={busy}
       showLastSeasonSubtitle
+      minimumGamesForDataIndicator={LEAGUE_PLAYER_DATA_MINIMUM_GAMES}
       emptyMessage="No players from the last five seasons yet."
       action={
         <div className={styles.playerActionButtons}>

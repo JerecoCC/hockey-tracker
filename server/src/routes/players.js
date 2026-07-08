@@ -203,7 +203,7 @@ router.get('/', async (req, res) => {
               rookie_season_id, rookie_season_name,
               status, is_active, created_at,
               jersey_number, player_team_id, team_id, team_name, team_code, team_logo, team_logo_dark, team_logo_light, primary_color, text_color, is_prospect,
-              acquisition_type, start_date::text AS start_date, has_games,
+              acquisition_type, start_date::text AS start_date, has_games, games_played,
               last_season_id, last_season_name
             FROM (
               SELECT DISTINCT ON (p.id)
@@ -228,13 +228,8 @@ router.get('/', async (req, res) => {
                 t.text_color,
                 COALESCE(pt.acquisition_type, cs.acquisition_type) AS acquisition_type,
                 COALESCE(pt.start_date, cs.start_date) AS start_date,
-                EXISTS (
-                  SELECT 1
-                  FROM game_rosters gr
-                  JOIN games rg ON rg.id = gr.game_id
-                  JOIN recent_seasons grs ON grs.id = rg.season_id
-                  WHERE gr.player_id = p.id
-                ) AS has_games,
+                recent_games.games_played > 0 AS has_games,
+                recent_games.games_played,
                 s.id AS last_season_id,
                 s.name AS last_season_name
               FROM players p
@@ -266,6 +261,13 @@ router.get('/', async (req, res) => {
                 ORDER BY start_date DESC NULLS LAST, created_at DESC
                 LIMIT 1
               ) cs ON TRUE
+              LEFT JOIN LATERAL (
+                SELECT COUNT(DISTINCT gr.game_id)::int AS games_played
+                FROM game_rosters gr
+                JOIN games rg ON rg.id = gr.game_id
+                JOIN recent_seasons grs ON grs.id = rg.season_id
+                WHERE gr.player_id = p.id
+              ) recent_games ON TRUE
               ORDER BY
                 p.id,
                 CASE

@@ -50,6 +50,7 @@ export interface PlayerRecord {
   acquisition_type?: string | null;
   start_date?: string | null;
   has_games?: boolean;
+  games_played?: number | null;
   season_points?: number | null;
   last_season_id?: string | null;
   last_season_name?: string | null;
