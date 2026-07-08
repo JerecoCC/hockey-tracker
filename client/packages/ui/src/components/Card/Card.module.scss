@@ -1,0 +1,30 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.card {
+  // Base: variant classes provide the visual styles.
+}
+
+// Filled variant (card background, border)
+.filled {
+  background: var(--app-surface, #{$bg-card});
+  border-radius: $radius-lg;
+  padding: $space-xl;
+  border: 1px solid var(--app-border, #{$border});
+}
+
+.border {
+  background: transparent;
+  border-radius: $radius-lg;
+  padding: $space-xl;
+  border: 1px solid var(--app-border, #{$border});
+}
+
+// Light variant (soft light background, shadow)
+.light {
+  background: var(--app-card-light-bg, #f8fafc);
+  border-radius: $radius-xl;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  padding: $space-4xl;
+}
+

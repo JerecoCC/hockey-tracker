@@ -1,0 +1,35 @@
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
+
+.groupedFields {
+  --grouped-fields-gap: #{$space-md};
+  --grouped-fields-padding: #{$space-md};
+  --grouped-fields-grid-template-columns: minmax(0, 1fr);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--grouped-fields-gap);
+  min-width: 0;
+  padding: var(--grouped-fields-padding);
+}
+
+.plain {
+  border: 0;
+  border-radius: 0;
+}
+
+.legend {
+  padding: 0 $space-xs;
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-xs;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: var(--grouped-fields-grid-template-columns);
+  gap: var(--grouped-fields-gap);
+  min-width: 0;
+}

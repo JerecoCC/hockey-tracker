@@ -1,0 +1,325 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.wrapper {
+  position: relative;
+  min-width: 0;
+}
+
+// ── Trigger ──────────────────────────────────────────────────────────────────
+
+.trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
+  border: 1px solid var(--app-field-border, #{$border});
+  border-radius: $radius-md;
+  color: var(--app-text, #{$text-body});
+  font-size: $font-base;
+  height: 42px;
+  min-height: 42px;
+  box-sizing: border-box;
+  padding: $space-xs $space-xs $space-xs $space-lg;
+  outline: none;
+  cursor: pointer;
+  font-weight: 400;
+  text-align: left;
+  transition: border-color $transition-base;
+
+  &:focus {
+    border-color: $accent;
+  }
+
+  &:hover:not(.triggerDisabled) {
+    border-color: var(--app-field-border-hover, #{$text-dim});
+    background: var(
+      --app-field-bg-hover,
+      var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
+    );
+  }
+
+  &.triggerOpen {
+    border-color: $accent;
+  }
+
+  &.triggerDisabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  &.triggerError {
+    border-color: $danger-light;
+  }
+}
+
+// ── Pills (selected value chips) ──────────────────────────────────────────────
+
+.pills {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.pill {
+  &Tooltip {
+    flex: 0 0 auto;
+  }
+
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  background: rgba($accent, 0.2);
+  border-radius: $radius-sm;
+  padding: 2px 4px 2px 5px;
+  font-size: $font-sm;
+  color: var(--app-text-strong, #{$text-bright});
+  font-weight: 700;
+  max-width: 96px;
+  min-width: 0;
+  height: 26px;
+
+  &Label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &Logo {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    border-radius: $radius-sm;
+    flex-shrink: 0;
+  }
+
+  &NoLogo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: $radius-sm;
+    background: var(--app-field-border, #{$border});
+    flex-shrink: 0;
+    color: var(--app-text, #{$text-body});
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0;
+  }
+
+  &Remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.65;
+    border-radius: 2px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: opacity $transition-fast;
+
+    &:hover {
+      opacity: 1;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
+  }
+}
+
+.searchInput {
+  flex: 1 0 96px;
+  min-width: 80px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--app-text, #{$text-body});
+  font-size: $font-base;
+  font-family: inherit;
+  padding: 2px 0;
+  cursor: text;
+
+  &::placeholder {
+    color: var(--app-text-muted, #{$text-dim});
+  }
+}
+
+.placeholder {
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-base;
+  flex: 1;
+}
+
+.triggerDivider {
+  --divider-color: var(--app-field-border, #{$border});
+}
+
+.caretButton {
+  display: inline-flex;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 2rem;
+  border-radius: $radius-md;
+  color: var(--app-text-muted, #{$text-dim});
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+}
+
+.trigger:hover:not(.triggerDisabled) .caretButton {
+  color: var(--app-text-strong, #{$text-bright});
+  background: var(--app-hover-bg, rgba(255, 255, 255, 0.05));
+}
+
+.caret {
+  color: currentColor;
+  flex-shrink: 0;
+  transition: transform $transition-base ease;
+
+  &.caretOpen {
+    transform: rotate(180deg);
+  }
+}
+
+// ── Dropdown menu ─────────────────────────────────────────────────────────────
+
+.menu {
+  // Positioned `fixed` with coordinates measured from the trigger so it overlays
+  // instead of growing/clipping inside an overflow card or modal.
+  position: fixed;
+  background: var(--app-menu-bg, #{$bg-card});
+  border: 1px solid $accent;
+  border-radius: $radius-md;
+  list-style: none;
+  margin: 0;
+  padding: $space-xs;
+  z-index: 200;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px var(--app-shadow, rgba(0, 0, 0, 0.4));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  // Custom scrollbar — always visible as a thin $border track
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-field-border, #{$border}) transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--app-field-border, #{$border});
+    border-radius: $radius-md;
+  }
+}
+
+.emptyMessage {
+  padding: $space-sm $space-md;
+  font-size: $font-sm;
+  color: var(--app-text-muted, #{$text-dim});
+  font-style: italic;
+  text-align: center;
+  list-style: none;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: $space-md;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 $space-md;
+  background: transparent;
+  border: none;
+  border-radius: $radius-sm;
+  color: var(--app-text, #{$text-body});
+  font-size: $font-base;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  transition: background $transition-fast;
+
+  &:hover,
+  &.optionFocused {
+    background: rgba($accent, 0.12);
+  }
+
+  &.optionSelected {
+    color: var(--app-text-strong, #{$text-bright});
+    font-weight: 500;
+  }
+}
+
+// Checkbox mark on the left of each option
+.option {
+  &Check {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border: 2px solid var(--app-field-border, #{$border});
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
+
+    &.optionCheckSelected {
+      background: $accent;
+      border-color: $accent;
+    }
+  }
+
+  &Logo {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    border-radius: $radius-sm;
+    flex-shrink: 0;
+  }
+
+  &NoLogo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: $radius-sm;
+    background: var(--app-field-border, #{$border});
+    flex-shrink: 0;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: var(--app-text, #{$text-body});
+    text-transform: uppercase;
+    letter-spacing: 0;
+  }
+}

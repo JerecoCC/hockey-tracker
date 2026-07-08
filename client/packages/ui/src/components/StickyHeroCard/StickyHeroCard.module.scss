@@ -1,0 +1,44 @@
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
+
+.card {
+  --sticky-hero-main-inline-padding: var(--main-inline-padding, #{$space-4xl});
+  --sticky-hero-main-inline-padding-offset: var(--main-inline-padding-offset, -#{$space-4xl});
+  --sticky-hero-stuck-border: transparent;
+
+  position: sticky;
+  top: var(--sticky-hero-top, 52px);
+  z-index: 4;
+  width: 100%;
+  overflow: hidden;
+  margin-inline: 0;
+  transition:
+    border-color $transition-layout ease,
+    border-radius $transition-layout ease,
+    box-shadow $transition-layout ease,
+    margin-inline $transition-layout ease,
+    width $transition-layout ease;
+
+  @media (max-width: $bp-tablet) {
+    position: static;
+    top: auto;
+    z-index: auto;
+  }
+}
+
+.stuck {
+  border-radius: 0 0 $radius-lg $radius-lg !important;
+  border-color: var(--sticky-hero-stuck-border) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+:global(:root[data-theme='light']) .card {
+  --sticky-hero-stuck-border: var(--app-border, #{$border-light});
+}
+
+.expandOnStuck.stuck {
+  width: calc(
+    100% + var(--sticky-hero-main-inline-padding) + var(--sticky-hero-main-inline-padding)
+  );
+  margin-inline: var(--sticky-hero-main-inline-padding-offset);
+}

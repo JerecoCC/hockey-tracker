@@ -11,6 +11,8 @@ module.exports = {
     // Static assets → simple string stub
     '\\.(jpg|jpeg|png|gif|svg|ico|webp)$': '<rootDir>/src/__mocks__/fileMock.cjs',
     // Path alias: @/ → src/
+    '^@hockey-tracker/ui$': '<rootDir>/packages/ui/src/index.ts',
+    '^@hockey-tracker/ui/(.*)$': '<rootDir>/packages/ui/src/$1',
     '^@/(.*)$': '<rootDir>/src/$1',
   },
 };

@@ -1,0 +1,47 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  width: 100%;
+  min-width: 0;
+}
+
+.label {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: var(--app-text-muted, #{$text-dim});
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.box {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  width: 100%;
+  min-width: 0;
+  padding: $space-md $space-lg;
+  border: 1px solid var(--app-field-border, #{$border});
+  border-radius: $radius-md;
+  background: var(--app-field-bg, #{$bg-input});
+  color: var(--app-text, #{$text-body});
+  font-size: $font-base;
+  line-height: 1.4;
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.tooltip {
+  width: 100%;
+  justify-content: stretch;
+}
+
+.value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

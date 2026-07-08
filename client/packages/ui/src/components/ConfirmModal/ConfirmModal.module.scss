@@ -1,0 +1,13 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.body {
+  color: var(--app-text, #{$text-body});
+  font-size: $font-body;
+  line-height: 1.6;
+  margin: 0 0 $space-2xl;
+
+  strong {
+    color: var(--app-text-strong, #{$text-bright});
+  }
+}

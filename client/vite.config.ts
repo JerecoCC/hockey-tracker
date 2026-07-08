@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      '@hockey-tracker/ui': path.resolve(__dirname, './packages/ui/src'),
       '@': path.resolve(__dirname, './src'),
     },
   },
@@ -14,7 +15,7 @@ export default defineConfig({
     preprocessorOptions: {
       scss: {
         api: 'modern-compiler',
-        loadPaths: [path.resolve(__dirname, './src')],
+        loadPaths: [path.resolve(__dirname, './src'), path.resolve(__dirname, './packages/ui/src')],
       },
     },
   },

@@ -498,10 +498,17 @@ const playerReportNameKeys = (playerName: string) => {
   );
 };
 
-const detailMatchesPlayer = (detail: string, playerName: string) => {
-  const lowerDetail = detail.toLowerCase();
-  return playerReportNameKeys(playerName).some((key) => lowerDetail.includes(key));
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const textMatchesPlayerName = (value: string, playerName: string) => {
+  const lowerValue = value.toLowerCase();
+  return playerReportNameKeys(playerName).some((key) =>
+    new RegExp(`(^|[^a-z0-9-])${escapeRegExp(key)}($|[^a-z0-9-])`, 'i').test(lowerValue),
+  );
 };
+
+const detailMatchesPlayer = (detail: string, playerName: string) =>
+  textMatchesPlayerName(detail, playerName);
 
 const findReportTeamByCode = (
   teams: TeamReportLookupRecord[],
@@ -594,6 +601,40 @@ const parsePuckPediaJerseyChange = (detail: string) => {
   };
 };
 
+const cleanPuckPediaTradeTeamName = (value: string) =>
+  value.replace(/^the\s+/i, '').replace(/[,\s]+$/g, '').trim();
+
+const parsePuckPediaAcquiredTrade = (detail: string, playerName: string) => {
+  const tradeMatch = detail.match(
+    /\b(?:The\s+)?(.+?)\s+acquir(?:e|es|ed)\s+(.+?)\s+from\s+(?:the\s+)?(.+?)(?:\s+(?:for|in exchange(?: for)?)\s+(.+?))?(?:\.|$)/i,
+  );
+  if (!tradeMatch) return null;
+
+  const acquiringTeamName = cleanPuckPediaTradeTeamName(tradeMatch[1]);
+  const acquiredAssets = tradeMatch[2].trim();
+  const sourceTeamName = cleanPuckPediaTradeTeamName(tradeMatch[3]);
+  const outgoingAssets = tradeMatch[4]?.trim() ?? '';
+
+  if (textMatchesPlayerName(acquiredAssets, playerName)) {
+    return {
+      toTeamName: acquiringTeamName,
+      fromTeamName: sourceTeamName,
+    };
+  }
+
+  if (outgoingAssets && textMatchesPlayerName(outgoingAssets, playerName)) {
+    return {
+      toTeamName: sourceTeamName,
+      fromTeamName: acquiringTeamName,
+    };
+  }
+
+  return {
+    toTeamName: acquiringTeamName,
+    fromTeamName: sourceTeamName,
+  };
+};
+
 const PUCKPEDIA_EVENT_TYPE_PATTERN =
   'SIGNING|TRADE|MOVES?|WAIVERS?|ROSTER|JERSEY(?:\\s+NUMBER)?|NEWS|INJURY';
 
@@ -647,15 +688,13 @@ const rawPuckPediaEventFromDetail = ({
   }
 
   if (/\bacquir(?:e|es|ed)\b/i.test(detail) && isPlayerDetail) {
-    const tradeMatch = detail.match(
-      /\bThe\s+(.+?)\s+acquir(?:e|es|ed)\s+.+?\s+from\s+(?:the\s+)?(.+?)(?:\s+for\b|\s+in exchange\b|\.|$)/i,
-    );
-    if (tradeMatch) {
+    const acquiredTrade = parsePuckPediaAcquiredTrade(detail, playerName);
+    if (acquiredTrade) {
       return {
         date,
         type: 'trade',
-        toTeamName: tradeMatch[1].trim(),
-        fromTeamName: tradeMatch[2].trim(),
+        toTeamName: acquiredTrade.toTeamName,
+        fromTeamName: acquiredTrade.fromTeamName,
         detail,
       };
     }
@@ -1132,6 +1171,27 @@ const manualMovementJerseyColumns: Column<PlayerManualJerseyReportEntry>[] = [
   },
 ];
 
+const getManualMovementDisplayDate = (movement: PlayerManualMovementReportEntry) =>
+  movement.endDate ?? movement.startDate ?? '';
+
+const sortManualMovementReportMovementsForDisplay = (
+  movements: PlayerManualMovementReportEntry[],
+) =>
+  [...movements].sort((a, b) => {
+    const aIsCurrent = a.endDate === null;
+    const bIsCurrent = b.endDate === null;
+
+    if (aIsCurrent !== bIsCurrent) {
+      return aIsCurrent ? -1 : 1;
+    }
+
+    return (
+      getManualMovementDisplayDate(b).localeCompare(getManualMovementDisplayDate(a)) ||
+      (b.startDate ?? '').localeCompare(a.startDate ?? '') ||
+      (a.toTeamName ?? '').localeCompare(b.toTeamName ?? '')
+    );
+  });
+
 const manualMovementStatusTagIntents: Record<PlayerStatus, TagIntent> = {
   active: 'success',
   inactive: 'warning',
@@ -1145,7 +1205,12 @@ const ManualMovementReportSection = ({
   report: PlayerManualMovementReport | null;
   onOpenSource: () => void;
 }) => {
-  const jerseyChanges = report?.jerseyChanges ?? [];
+  const reportMovements = report
+    ? sortManualMovementReportMovementsForDisplay(report.movements)
+    : [];
+  const jerseyChanges = report?.jerseyChanges
+    ? [...report.jerseyChanges].sort((a, b) => b.date.localeCompare(a.date))
+    : [];
 
   return (
     <Section
@@ -1199,7 +1264,7 @@ const ManualMovementReportSection = ({
       {report && (
         <Table
           columns={manualMovementStintColumns}
-          data={report.movements}
+          data={reportMovements}
           rowKey={(movement) => movement.id}
           emptyMessage="No team stints generated yet."
         />

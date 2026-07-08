@@ -1,0 +1,190 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+// ── Root container ────────────────────────────────────────────────────────────
+
+.accordion {
+  // CSS custom property so consumers can tint the header to match a coloured border
+  // by overriding --accordion-header-bg on the root element via className.
+  --accordion-header-bg: var(--app-border, #{$border});
+  --accordion-border-color: var(--app-border, #{$border});
+  --accordion-header-text: var(--app-text, #{$text-body});
+  --accordion-header-muted: var(--app-text-muted, #{$text-dim});
+  --accordion-toggle-color: var(--accordion-header-muted);
+  --accordion-toggle-hover-color: var(--accordion-header-text);
+  --accordion-toggle-size: 2rem;
+
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--accordion-border-color);
+  border-radius: $radius-md;
+  overflow: hidden;
+}
+
+// ── Header background treatments (headerType prop) ──────────────────────────────
+
+// Faded overlay header — matches the season awards tab item headers.
+.headerLight {
+  --accordion-header-bg: var(--app-surface-subtle, #{rgba(#fff, 0.03)});
+}
+
+// No header background.
+.headerTransparent {
+  --accordion-header-bg: transparent;
+}
+
+// ── Header row ────────────────────────────────────────────────────────────────
+
+.row {
+  --accordion-current-header-bg: var(--accordion-header-bg);
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  min-height: 42px;
+  padding: $space-sm $space-md $space-sm 0;
+  background: var(--accordion-current-header-bg);
+  border-bottom: 1px solid var(--accordion-border-color);
+  &.rowCollapsed {
+    border-bottom: none;
+  }
+
+  &WithActions {
+    &:hover,
+    &:focus-within {
+      .hoverActions {
+        opacity: 1;
+        pointer-events: auto;
+      }
+    }
+  }
+}
+
+// Static variant — no hover highlight since there is no toggle to interact with.
+.rowStatic {
+  cursor: default;
+  padding-left: $space-md;
+}
+
+.rowClickable {
+  cursor: pointer;
+}
+
+// By default a static accordion shows its actions permanently (there is no
+// collapse trigger to hover over). When `hoverRevealActions` is set this class
+// is omitted, so the actions fall back to hover/focus reveal via .rowWithActions.
+.rowStaticActionsVisible .hoverActions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+// ── Toggle chevron ────────────────────────────────────────────────────────────
+
+.toggleShell {
+  position: relative;
+  flex-shrink: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 $space-sm;
+}
+
+.toggle {
+  width: var(--accordion-toggle-size);
+  height: var(--accordion-toggle-size);
+  min-width: var(--accordion-toggle-size);
+  padding: 0;
+  color: var(--accordion-toggle-color);
+  border-radius: $radius-md;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+
+  &:hover:not(:disabled) {
+    color: var(--accordion-toggle-hover-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 2px;
+  }
+
+  svg {
+    transition: transform $transition-base;
+    transform: rotate(-90deg);
+  }
+
+  &Open svg {
+    transform: rotate(0deg);
+  }
+
+  &Disabled {
+    opacity: 0;
+    pointer-events: none;
+    cursor: default;
+  }
+
+  &Divider {
+    --divider-color: var(--accordion-border-color);
+    --divider-vertical-margin-block: 0;
+
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: 0;
+    height: var(--accordion-toggle-size);
+    transform: translateY(-50%);
+  }
+}
+
+// ── Label area ────────────────────────────────────────────────────────────────
+
+.label {
+  &Wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+  }
+
+  min-width: 0;
+  font-size: $font-lg;
+  font-weight: 500;
+  color: var(--accordion-header-text);
+
+  &Meta {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    color: var(--accordion-header-muted);
+  }
+}
+
+// ── Always-visible right-side header content ──────────────────────────────────
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  flex-shrink: 0;
+  color: var(--accordion-header-muted);
+}
+
+// ── Hover-revealed action overlay (replaces ActionOverlay) ────────────────────
+
+.hoverActions {
+  background: var(--accordion-actions-bg, var(--accordion-current-header-bg));
+  z-index: 1;
+
+  &::before {
+    background: linear-gradient(to right, transparent, var(--accordion-actions-bg, var(--accordion-current-header-bg)));
+  }
+}
+
+// ── Collapsible body ──────────────────────────────────────────────────────────
+
+.body {
+  // Consumers style the content directly; this is just a structural wrapper.
+}

@@ -1,0 +1,101 @@
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
+
+.searchField {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  box-sizing: border-box;
+  padding: $space-xs $space-xs $space-xs $space-xs;
+  background: var(--filter-field-background, var(--app-field-bg, #{$bg-filter-field}));
+  border: 1px solid var(--app-field-border, #{$border});
+  border-radius: $radius-md;
+  transition:
+    border-color $transition-fast,
+    opacity $transition-fast;
+
+  &:focus-within {
+    border-color: $accent;
+  }
+
+  &:hover:not(.disabled) {
+    border-color: var(--app-field-border-hover, #{$text-dim});
+    background: var(
+      --app-field-bg-hover,
+      var(--filter-field-background, var(--app-field-bg, #{$bg-filter-field}))
+    );
+  }
+}
+
+.disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+
+  .input {
+    cursor: not-allowed;
+  }
+}
+
+.error {
+  border-color: $danger-light;
+}
+
+.iconRegion {
+  display: inline-flex;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 2rem;
+  color: var(--app-text-muted, #{$text-dim});
+  pointer-events: none;
+}
+
+.icon {
+  color: currentColor;
+}
+
+.divider {
+  --divider-color: var(--app-field-border, #{$border});
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 0 0 0 $space-xs;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: $font-base;
+  font-family: inherit;
+  color: var(--app-text, #{$text-body});
+
+  &::placeholder {
+    color: var(--app-text-muted, #{$text-dim});
+  }
+
+  &::-webkit-search-cancel-button {
+    display: none;
+  }
+}
+
+.clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--app-text-muted, #{$text-dim});
+  line-height: 1;
+  cursor: pointer;
+  margin-right: calc((2rem - 0.75rem) / 2);
+  transition: color $transition-fast;
+
+  &:hover {
+    color: var(--app-text, #{$text-body});
+  }
+}

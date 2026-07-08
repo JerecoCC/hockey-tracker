@@ -13,6 +13,7 @@ const config: StorybookConfig = {
       ...viteConfig.resolve,
       alias: {
         ...(viteConfig.resolve?.alias ?? {}),
+        '@hockey-tracker/ui': path.resolve(__dirname, '../packages/ui/src'),
         '@': path.resolve(__dirname, '../src'),
       },
     },
@@ -23,7 +24,10 @@ const config: StorybookConfig = {
         scss: {
           ...(viteConfig.css?.preprocessorOptions?.scss ?? {}),
           api: 'modern-compiler',
-          loadPaths: [path.resolve(__dirname, '../src')],
+          loadPaths: [
+            path.resolve(__dirname, '../src'),
+            path.resolve(__dirname, '../packages/ui/src'),
+          ],
         },
       },
     },

@@ -1,0 +1,144 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.field {
+  --reorderable-field-control-bg: var(--app-field-border, var(--app-border, #{$border}));
+  --reorderable-field-control-color: var(--app-text-strong, #{$text-bright});
+
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) 2rem;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 42px;
+  overflow: hidden;
+  border: 1px solid var(--app-field-border, #{$border});
+  border-radius: $radius-md;
+  background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
+  color: var(--app-text, #{$text-body});
+  transition:
+    border-color $transition-base,
+    background $transition-base,
+    opacity $transition-base;
+
+  &:focus-within {
+    border-color: $accent;
+  }
+
+  &:hover:not(.fieldDisabled) {
+    border-color: var(--app-field-border-hover, #{$text-dim});
+    background: var(
+      --app-field-bg-hover,
+      var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
+    );
+  }
+}
+
+.fieldDraggable {
+  cursor: grab;
+}
+
+.fieldDragging {
+  opacity: 0.58;
+  cursor: grabbing;
+}
+
+.fieldDisabled {
+  opacity: 0.55;
+}
+
+.handle {
+  background: var(--reorderable-field-control-bg);
+}
+
+.handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  border-right: 1px solid var(--app-field-border, #{$border});
+  color: var(--reorderable-field-control-color);
+  font-size: $font-sm;
+}
+
+.content {
+  min-width: 0;
+  align-self: stretch;
+
+  > * {
+    height: 100%;
+  }
+
+  > div {
+    height: 100%;
+  }
+
+  > div > button,
+  > div > div {
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+}
+
+.moveControls {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  min-width: 0;
+  border-left: 1px solid var(--app-field-border, #{$border});
+  background: transparent;
+}
+
+.moveButtonTooltip {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+
+  &:first-child {
+    border-bottom: 1px solid var(--app-field-border, #{$border});
+  }
+}
+
+.moveButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--reorderable-field-control-color);
+  cursor: pointer;
+  transition:
+    background $transition-fast,
+    color $transition-fast,
+    opacity $transition-fast;
+  &:hover:not(:disabled) {
+    background: color-mix(
+      in srgb,
+      var(--reorderable-field-control-bg) 74%,
+      var(--reorderable-field-control-color)
+    );
+    color: var(--app-text-strong, #{$text-bright});
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.moveControls .moveButtonTooltip {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}

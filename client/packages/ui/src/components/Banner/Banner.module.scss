@@ -1,0 +1,88 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.root {
+  --banner-color: var(--app-text-muted, #{$text-dim});
+  --banner-border: color-mix(in srgb, var(--banner-color) 58%, var(--app-border, #{$border}));
+  --banner-bg: color-mix(in srgb, var(--banner-color) 10%, var(--app-surface, #{$bg-card}));
+
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-md;
+  border-color: var(--banner-border);
+  border-radius: $radius-md;
+  background: var(--banner-bg);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-sm;
+  justify-self: end;
+}
+
+.accent {
+  --banner-color: #{$accent-light};
+}
+
+.info {
+  --banner-color: #{$info-light};
+}
+
+.success {
+  --banner-color: #{$success-light};
+}
+
+.warning {
+  --banner-color: #{$warning-light};
+}
+
+.danger {
+  --banner-color: #{$danger-light};
+}
+
+.neutral {
+  --banner-color: var(--app-text-muted, #{$text-light});
+}
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--banner-color);
+  pointer-events: none;
+}
+
+.divider {
+  width: 1px;
+  min-height: 2.25rem;
+  align-self: stretch;
+  background: var(--banner-border);
+}
+
+.content {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.title {
+  color: var(--app-text, #{$text-body});
+  font-size: $font-sm;
+  line-height: 1.3;
+}
+
+.message {
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-sm;
+  line-height: 1.45;
+}
+
+.close {
+  justify-self: end;
+}

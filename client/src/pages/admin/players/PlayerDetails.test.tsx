@@ -2178,31 +2178,173 @@ describe('PlayerDetails info tab', () => {
       .getByText('Manual Movement Report')
       .closest('.stintHistorySection') as HTMLElement;
     const report = within(reportSection);
-    const ottawaMovementRow = report
-      .getAllByText('Ottawa Senators')
-      .map((node) => node.closest('tr') as HTMLElement | null)
-      .find((row): row is HTMLElement => row !== null);
-    const floridaMovementRow = report
-      .getAllByText('Florida Panthers')
-      .map((node) => node.closest('tr') as HTMLElement | null)
-      .find((row): row is HTMLElement => row !== null);
+    const movementRows = report
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
 
     expect(report.queryByText('Draft Year: 2018 | Round: 1')).not.toBeInTheDocument();
     expect(report.queryByText('Free Agency')).not.toBeInTheDocument();
-    expect(ottawaMovementRow).toBeDefined();
-    expect(within(ottawaMovementRow!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
-      'Ottawa Senators',
-      'Draft',
-      '-',
-      'June 21, 2026',
+    expect(movementRows).toEqual([
+      ['Florida Panthers', 'Trade', 'June 21, 2026', 'Present'],
+      ['Ottawa Senators', 'Draft', '-', 'June 21, 2026'],
     ]);
-    expect(floridaMovementRow).toBeDefined();
-    expect(within(floridaMovementRow!).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
-      'Florida Panthers',
-      'Trade',
-      'June 21, 2026',
-      'Present',
+  });
+
+  it('uses the returning team when the player is traded for acquired assets', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8476967',
+        first_name: 'Brett',
+        last_name: 'Kulak',
+        photo: null,
+        date_of_birth: '1994-01-06',
+        birth_city: 'Edmonton',
+        birth_country: 'CAN',
+        height_cm: 188,
+        weight_lbs: 197,
+        position: 'D',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-col', name: 'Colorado Avalanche', code: 'COL', league_id: 'league-1' },
+        { id: 'team-pit', name: 'Pittsburgh Penguins', code: 'PIT', league_id: 'league-1' },
+        { id: 'team-edm', name: 'Edmonton Oilers', code: 'EDM', league_id: 'league-1' },
+        { id: 'team-mtl', name: 'Montreal Canadiens', code: 'MTL', league_id: 'league-1' },
+      ],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2025',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-30',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-col',
+          team_id: 'team-col',
+          season_id: 'season-2025',
+          team: {
+            id: 'team-col',
+            name: 'Colorado Avalanche',
+            code: 'COL',
+            logo: null,
+            primary_color: '#6f263d',
+            text_color: '#ffffff',
+          },
+          jersey_number: 27,
+          is_prospect: false,
+          position: 'D',
+          acquisition_type: 'trade',
+          start_date: '2026-02-24',
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+        {
+          id: 'stint-pit',
+          team_id: 'team-pit',
+          season_id: 'season-2025',
+          team: {
+            id: 'team-pit',
+            name: 'Pittsburgh Penguins',
+            code: 'PIT',
+            logo: null,
+            primary_color: '#000000',
+            text_color: '#ffffff',
+          },
+          jersey_number: 27,
+          is_prospect: false,
+          position: 'D',
+          acquisition_type: 'trade',
+          start_date: '2025-12-12',
+          end_date: '2026-02-24',
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+        {
+          id: 'stint-edm',
+          team_id: 'team-edm',
+          season_id: 'season-2025',
+          team: {
+            id: 'team-edm',
+            name: 'Edmonton Oilers',
+            code: 'EDM',
+            logo: null,
+            primary_color: '#041e42',
+            text_color: '#ffffff',
+          },
+          jersey_number: 27,
+          is_prospect: false,
+          position: 'D',
+          acquisition_type: 'trade',
+          start_date: '2022-03-21',
+          end_date: '2025-12-12',
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'PuckPedia source' }));
+    fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
+      target: {
+        value: `
+          Date	Type	Teams	Details
+          Jun 26, 2026	Signing
+
+          Brett Kulak signs a 5-Year, $22,500,000 deal with the Avalanche
+          Feb 24, 2026	Trade
+
+          The Pittsburgh Penguins acquired Samuel Girard and a 2028 2nd round pick from the Colorado Avalanche for Brett Kulak
+          Dec 12, 2025	Trade
+
+          The Edmonton Oilers acquired Tristan Jarry and Samuel Poulin from the Pittsburgh Penguins for Stuart Skinner, Brett Kulak, and a 2029 2nd round pick
+          Jul 13, 2022	Signing
+
+          Brett Kulak signs a 4-Year, $11,000,000 deal with the Oilers
+          Mar 21, 2022	Trade
+
+          The Edmonton Oilers acquired Brett Kulak from the Montreal Canadiens for William Lagesson, 2022 second round pick, and 2024 seventh round pick
+        `,
+      },
+    });
+    await user.click(screen.getByText('Build report'));
+
+    const reportSection = screen
+      .getByText('Manual Movement Report')
+      .closest('.stintHistorySection') as HTMLElement;
+    const movementRows = within(reportSection)
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+
+    expect(movementRows).toEqual([
+      ['Colorado Avalanche', 'Trade', 'February 24, 2026', 'Present'],
+      ['Pittsburgh Penguins', 'Trade', 'December 12, 2025', 'February 24, 2026'],
+      ['Edmonton Oilers', 'Trade', 'March 21, 2022', 'December 12, 2025'],
     ]);
+    expect(screen.queryByText('June 26, 2026')).not.toBeInTheDocument();
   });
 
   it('auto-fills PWHL player details from HockeyTech profile data', async () => {

@@ -1,0 +1,32 @@
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $space-sm;
+  margin-bottom: $space-md;
+}
+
+.empty {
+  font-size: $font-base;
+  color: var(--app-text-muted, #{$text-dim});
+  font-style: italic;
+  margin: 0;
+}
+
+.loadingList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.loadingRow {
+  height: calc(48px + #{$space-md * 2} + 2px);
+  border-radius: $radius-md;
+  opacity: 0.65;
+}

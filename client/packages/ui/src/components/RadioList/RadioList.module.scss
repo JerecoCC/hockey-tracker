@@ -1,0 +1,61 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.list {
+  --radio-list-border-color: var(--app-field-border, #{$border});
+  --selectable-list-item-bg: transparent;
+  --selectable-list-item-border-color: var(--app-field-border, #{$border});
+  --selectable-list-item-hover-bg: var(
+    --app-field-bg-hover,
+    rgba(255, 255, 255, 0.04)
+  );
+  --selectable-list-item-hover-border-color: var(--app-field-border-hover, #{$text-dim});
+  --selectable-list-item-checked-bg: color-mix(
+    in srgb,
+    transparent 78%,
+    #{$accent}
+  );
+
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  margin: 0;
+  padding: $space-xs;
+  gap: 0;
+  list-style: none;
+  border: 1px solid var(--radio-list-border-color);
+  border-radius: $radius-md;
+  background: var(--selectable-list-item-bg);
+  overflow: hidden;
+
+  &[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.option {
+  border: 0;
+  border-radius: $radius-md;
+
+  &:focus-within {
+    z-index: 1;
+    box-shadow: inset 0 0 0 1px $accent;
+  }
+}
+
+.checked {
+  z-index: 1;
+  box-shadow: inset 0 0 0 1px $accent;
+}
+
+.dividerItem {
+  list-style: none;
+  margin: $space-xs $space-md;
+}
+
+.itemDivider {
+  --divider-color: var(--radio-list-border-color);
+}

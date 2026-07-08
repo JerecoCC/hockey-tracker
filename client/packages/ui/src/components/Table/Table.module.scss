@@ -1,0 +1,231 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+// ── Table wrapper ──────────────────────────────────────────────────────
+.tableWrapper {
+  --table-min-width: 100%;
+  --table-header-bg: var(--app-surface-subtle, #{rgba(#fff, 0.03)});
+  --table-row-hover-bg: rgba(255, 255, 255, 0.04);
+  --table-sorted-column-bg: color-mix(in srgb, #{$accent-light} 10%, transparent);
+  --table-sorted-column-hover-bg: color-mix(in srgb, #{$accent-light} 15%, transparent);
+  --table-sorted-column-header-bg: color-mix(
+    in srgb,
+    #{$accent-light} 14%,
+    var(--table-header-bg)
+  );
+
+  overflow-x: auto;
+  border: 1px solid var(--app-border, #{$border});
+  border-radius: $radius-md;
+}
+
+// ── Table ──────────────────────────────────────────────────────────────
+.tableWrapper table {
+  width: 100%;
+  min-width: var(--table-min-width);
+  border-collapse: collapse;
+  font-size: $font-base;
+
+  thead th {
+    text-align: left;
+    padding: $space-sm $space-md;
+    color: var(--app-text-muted, #{$text-dim});
+    font-size: $font-xs;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--table-header-bg);
+    border-bottom: 1px solid var(--divider-color, var(--app-border, #{$border}));
+
+    &.sortedColumn {
+      color: var(--app-text-strong, #{$text-bright});
+      background: var(--table-sorted-column-header-bg);
+    }
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid var(--app-border, #{$border});
+      transition: background $transition-fast;
+
+      &:hover {
+        background: var(--table-row-hover-bg);
+      }
+
+      &:last-child {
+        border-bottom: 0;
+      }
+
+      &.clickableRow {
+        cursor: pointer;
+      }
+    }
+
+    td {
+      padding: $space-md;
+      color: var(--app-text, #{$text-body});
+      vertical-align: middle;
+
+      &.sortedColumn {
+        background: var(--table-sorted-column-bg);
+      }
+    }
+
+    tr:hover td.sortedColumn {
+      background: var(--table-sorted-column-hover-bg);
+    }
+  }
+}
+
+.cellLink {
+  display: block;
+  margin: -$space-md;
+  padding: $space-md;
+  color: inherit;
+  text-decoration: none;
+
+  &:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: 2px solid var(--app-accent, #{$accent});
+    outline-offset: -2px;
+  }
+}
+
+// ── Loader ─────────────────────────────────────────────────────────────
+.loaderWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem $space-lg 3rem;
+  gap: $space-lg;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid $border;
+  border-top-color: $accent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.loaderText {
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-base;
+  margin: 0;
+}
+
+// ── Empty state ────────────────────────────────────────────────────────
+.emptyMsg {
+  color: var(--app-text-muted, #{$text-dim});
+  text-align: center;
+  padding: $space-4xl;
+}
+
+// ── Sortable header ────────────────────────────────────────────────────
+.thSortable {
+  padding: 0 !important; // button inside provides padding
+}
+
+.sort {
+  &Btn {
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    width: 100%;
+    padding: $space-sm $space-md;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--app-text-muted, #{$text-dim});
+    font-weight: 600;
+    font-size: inherit;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    transition: color $transition-fast;
+
+    &:hover {
+      color: var(--app-text, #{$text-body});
+    }
+  }
+
+  &Icon {
+    font-size: 0.8em;
+    opacity: 0.35;
+    flex-shrink: 0;
+
+    &.sortActive {
+      opacity: 1;
+      color: $accent-light;
+    }
+  }
+}
+
+// ── Logo column ────────────────────────────────────────────────────────
+.logo {
+  &Thumb {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: $radius-sm;
+  }
+
+  &Placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-sm;
+    background: $border;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: var(--app-text, #{$text-body});
+    text-transform: uppercase;
+    cursor: auto;
+    user-select: none;
+  }
+}
+
+:global(:root[data-theme='light']) {
+  .tableWrapper {
+    --table-row-hover-bg: color-mix(
+      in srgb,
+      var(--app-accent-light, #2563eb) 8%,
+      var(--app-surface, #fff)
+    );
+    --table-sorted-column-bg: color-mix(
+      in srgb,
+      var(--app-accent-light, #2563eb) 10%,
+      var(--app-surface, #fff)
+    );
+    --table-sorted-column-hover-bg: color-mix(
+      in srgb,
+      var(--app-accent-light, #2563eb) 16%,
+      var(--app-surface, #fff)
+    );
+    --table-sorted-column-header-bg: color-mix(
+      in srgb,
+      var(--app-accent-light, #2563eb) 14%,
+      var(--app-surface, #fff)
+    );
+
+    table {
+      tbody {
+        tr {
+          border-bottom-color: var(--app-border, #{$border});
+        }
+      }
+    }
+  }
+}

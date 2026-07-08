@@ -1,0 +1,119 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+// ── Row: logo | name+code | right column (view mode) ──────────────────
+.header {
+  display: flex;
+  align-items: center;
+  gap: $space-xl;
+  padding-bottom: $space-2xl;
+}
+
+.divider {
+  margin-bottom: $space-2xl;
+}
+
+// ── Logo ───────────────────────────────────────────────────────────────
+.logo {
+  &Wrapper {
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
+    border-radius: $radius-lg;
+  }
+
+  &Button {
+    display: inline-flex;
+    padding: 0;
+    margin: 0;
+    background: none;
+    border: none;
+    border-radius: $radius-sm;
+    cursor: zoom-in;
+    transition: transform $transition-base;
+
+    &:hover {
+      transform: scale(1.05);
+    }
+
+    &:focus-visible {
+      outline: 2px solid $accent;
+      outline-offset: 2px;
+    }
+  }
+
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 1px 3px var(--app-logo-shadow, rgba(255, 255, 255, 0.1)));
+
+  &Placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: $radius-lg;
+    background: $border;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-2xl;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+}
+
+// ── Name block ─────────────────────────────────────────────────────────
+.name {
+  &Block {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    padding-top: $space-xs;
+  }
+
+  &Row {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+
+  font-size: $font-3xl;
+  font-weight: 700;
+  color: var(--app-text-strong, #{$text-bright});
+  margin: 0;
+}
+
+.code {
+  font-size: $font-base;
+  color: var(--app-text-muted, #{$text-dim});
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+// ── Right column: edit button on top, swatches below ───────────────────
+.rightCol {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: $space-md;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+// ── Color swatches ─────────────────────────────────────────────────────
+.swatches {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: $space-xl;
+  justify-content: flex-end;
+}

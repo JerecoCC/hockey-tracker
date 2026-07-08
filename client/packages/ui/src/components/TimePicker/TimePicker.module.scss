@@ -1,0 +1,223 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+// ── Wrapper ──────────────────────────────────────────────────────────────
+.wrapper {
+  position: relative;
+  width: 100%;
+}
+
+// ── Trigger ───────────────────────────────────────────────────────────────
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
+  border: 1px solid var(--app-field-border, #{$border});
+  border-radius: $radius-md;
+  height: 42px;
+  padding: $space-xs $space-xs $space-xs $space-xs;
+  transition: border-color $transition-base;
+
+  &:focus-within {
+    border-color: $accent;
+  }
+
+  &:hover {
+    border-color: var(--app-field-border-hover, #{$text-dim});
+    background: var(
+      --app-field-bg-hover,
+      var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
+    );
+  }
+
+  &Disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+}
+
+.clockIcon {
+  &Btn {
+    display: flex;
+    align-self: stretch;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 2rem;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  color: var(--app-text-muted, #{$text-dim});
+}
+
+.triggerDivider {
+  --divider-color: var(--app-field-border, #{$border});
+}
+
+.textInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0 0 0 $space-sm;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: $font-base;
+  font-family: inherit;
+  color: var(--app-text, #{$text-body});
+  cursor: text;
+  letter-spacing: 0.03em;
+
+  &[data-empty="true"] {
+    color: var(--app-text-muted, #{$text-dim});
+  }
+}
+
+.clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  color: var(--app-text-muted, #{$text-dim});
+  line-height: 1;
+  cursor: pointer;
+  margin-right: calc((2rem - 0.75rem) / 2);
+  padding: 0;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: var(--app-text, #{$text-body});
+  }
+}
+
+// Reserve the clear button's space even when hidden so the trigger width never shifts
+.clearHidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+// ── Dropdown ─────────────────────────────────────────────────────────────
+.dropdown {
+  position: fixed;
+  z-index: 200;
+  background: var(--app-menu-bg, #{$bg-card});
+  border: 1px solid var(--app-border, #{$border});
+  border-radius: $radius-lg;
+  padding: $space-md $space-lg $space-lg;
+  box-shadow: 0 12px 40px var(--app-shadow, rgba(0, 0, 0, 0.6));
+}
+
+// ── Two-column layout ─────────────────────────────────────────────────────
+.columns {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+}
+
+.column {
+  &Wrap {
+    display: flex;
+    flex-direction: column;
+    width: 68px;
+  }
+
+  &Label {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: var(--app-text-muted, #{$text-dim});
+    text-align: center;
+    padding-bottom: $space-sm;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  display: flex;
+  flex-direction: column;
+  max-height: 192px;
+  overflow-y: auto;
+  gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-field-border, #{$border}) transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--app-field-border, #{$border});
+    border-radius: 2px;
+  }
+
+  &Divider {
+    margin-inline: $space-sm;
+  }
+}
+
+.timeBtn {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--app-text, #{$text-body});
+  font-size: $font-sm;
+  font-family: inherit;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  padding: $space-xs 0;
+  text-align: center;
+  width: 100%;
+  flex-shrink: 0;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    background: var(--app-hover-bg, rgba(255, 255, 255, 0.07));
+    color: var(--app-text-strong, #{$text-bright});
+  }
+}
+
+.selected {
+  background: $accent;
+  color: #fff;
+  font-weight: 600;
+
+  &:hover {
+    background: $accent-hover;
+  }
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────
+.footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: $space-md;
+  padding-top: $space-md;
+  border-top: 1px solid var(--app-border, #{$border});
+
+  &Btn {
+    background: none;
+    border: none;
+    color: $accent-light;
+    font-size: $font-sm;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0 $space-xs;
+    border-radius: $radius-sm;
+    transition: color $transition-fast;
+
+    &:hover {
+      color: var(--app-text-strong, #{$text-bright});
+    }
+  }
+
+  &BtnClear {
+    color: var(--app-text-muted, #{$text-dim});
+  }
+}

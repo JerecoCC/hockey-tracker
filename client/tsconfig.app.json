@@ -20,8 +20,10 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
+      "@hockey-tracker/ui": ["./packages/ui/src/index.ts"],
+      "@hockey-tracker/ui/*": ["./packages/ui/src/*"],
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src"]
+  "include": ["src", "packages/ui/src"]
 }

@@ -1,0 +1,108 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.periodPicker {
+  display: inline-flex;
+  align-items: stretch;
+  min-width: 204px;
+  height: 42px;
+  box-sizing: border-box;
+  padding: $space-xs;
+  gap: $space-xs;
+  border: 1px solid var(--app-field-border, #{$border});
+  border-radius: $radius-md;
+  background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
+  color: var(--app-text, #{$text-body});
+  transition:
+    border-color $transition-base,
+    background $transition-base;
+
+  &:hover {
+    border-color: var(--app-field-border-hover, #{$text-dim});
+    background: var(
+      --app-field-bg-hover,
+      var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
+    );
+  }
+
+  &:focus-within {
+    border-color: $accent;
+  }
+}
+
+.divider {
+  --divider-color: var(--app-field-border, #{$border});
+}
+
+.navButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: $radius-md;
+  background: transparent;
+  color: var(--app-text-muted, #{$text-dim});
+  cursor: pointer;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+
+  &:hover:not(:disabled) {
+    color: var(--app-text-strong, #{$text-bright});
+    background: var(--app-hover-bg, rgba(255, 255, 255, 0.05));
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $accent-light;
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.datePicker {
+  display: inline-flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+}
+
+.trigger {
+  &Wrap {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+  }
+
+  &Button {
+    justify-content: center;
+    width: 100%;
+    min-height: 0;
+    height: 100%;
+    padding: 0 $space-sm;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--app-text, #{$text-body});
+    font: inherit;
+
+    &:hover {
+      border-color: transparent;
+      background: transparent;
+    }
+
+    &:focus-visible {
+      outline: none;
+      border-color: transparent;
+    }
+  }
+}
