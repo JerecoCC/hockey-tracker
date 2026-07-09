@@ -436,7 +436,7 @@ const NHL_FRANCHISE_TRANSFER_TEAM_ALIASES = [
 ] as const;
 
 const PUCKPEDIA_BASE_URL = 'https://puckpedia.com';
-const PUCKPEDIA_MOVEMENT_FILTER_QUERY = 'transaction_type=trade,waiver,signing,roster';
+const PUCKPEDIA_MOVEMENT_FILTER_QUERY = 'transaction_type=trade,waiver,signing';
 const PUCKPEDIA_MONTHS: Record<string, string> = {
   jan: '01',
   feb: '02',

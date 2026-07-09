@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/ImagePreviewModal/ImagePreviewModal';
-export * from '@hockey-tracker/ui/components/ImagePreviewModal/ImagePreviewModal';
+export { default } from 'tracker-ui/components/ImagePreviewModal/ImagePreviewModal';
+export * from 'tracker-ui/components/ImagePreviewModal/ImagePreviewModal';

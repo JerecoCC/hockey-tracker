@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/RadioButton/RadioButton';
-export * from '@hockey-tracker/ui/components/RadioButton/RadioButton';
+export { default } from 'tracker-ui/components/RadioButton/RadioButton';
+export * from 'tracker-ui/components/RadioButton/RadioButton';

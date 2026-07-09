@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/SearchField/SearchField';
-export * from '@hockey-tracker/ui/components/SearchField/SearchField';
+export { default } from 'tracker-ui/components/SearchField/SearchField';
+export * from 'tracker-ui/components/SearchField/SearchField';

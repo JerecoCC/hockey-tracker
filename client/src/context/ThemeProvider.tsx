@@ -1,1 +1,1 @@
-export * from '@hockey-tracker/ui/context/ThemeProvider';
+export * from 'tracker-ui/context/ThemeProvider';

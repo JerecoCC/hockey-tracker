@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/Skeleton/Skeleton';
-export * from '@hockey-tracker/ui/components/Skeleton/Skeleton';
+export { default } from 'tracker-ui/components/Skeleton/Skeleton';
+export * from 'tracker-ui/components/Skeleton/Skeleton';

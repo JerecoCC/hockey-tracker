@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/CheckboxAccordion/CheckboxAccordion';
-export * from '@hockey-tracker/ui/components/CheckboxAccordion/CheckboxAccordion';
+export { default } from 'tracker-ui/components/CheckboxAccordion/CheckboxAccordion';
+export * from 'tracker-ui/components/CheckboxAccordion/CheckboxAccordion';

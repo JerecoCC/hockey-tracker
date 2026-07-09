@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/TimePicker/TimePicker';
-export * from '@hockey-tracker/ui/components/TimePicker/TimePicker';
+export { default } from 'tracker-ui/components/TimePicker/TimePicker';
+export * from 'tracker-ui/components/TimePicker/TimePicker';

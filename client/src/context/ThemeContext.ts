@@ -1,1 +1,1 @@
-export * from '@hockey-tracker/ui/context/ThemeContext';
+export * from 'tracker-ui/context/ThemeContext';

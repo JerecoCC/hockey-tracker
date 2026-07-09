@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/Pagination/Pagination';
-export * from '@hockey-tracker/ui/components/Pagination/Pagination';
+export { default } from 'tracker-ui/components/Pagination/Pagination';
+export * from 'tracker-ui/components/Pagination/Pagination';

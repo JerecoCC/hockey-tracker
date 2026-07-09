@@ -1,1 +1,1 @@
-export * from '@hockey-tracker/ui/components/Modal/backgroundScrollLock';
+export * from 'tracker-ui/components/Modal/backgroundScrollLock';

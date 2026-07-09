@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/Accordion/Accordion';
-export * from '@hockey-tracker/ui/components/Accordion/Accordion';
+export { default } from 'tracker-ui/components/Accordion/Accordion';
+export * from 'tracker-ui/components/Accordion/Accordion';

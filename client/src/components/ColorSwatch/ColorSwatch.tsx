@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/ColorSwatch/ColorSwatch';
-export * from '@hockey-tracker/ui/components/ColorSwatch/ColorSwatch';
+export { default } from 'tracker-ui/components/ColorSwatch/ColorSwatch';
+export * from 'tracker-ui/components/ColorSwatch/ColorSwatch';

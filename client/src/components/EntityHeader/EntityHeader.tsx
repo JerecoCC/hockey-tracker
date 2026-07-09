@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/EntityHeader/EntityHeader';
-export * from '@hockey-tracker/ui/components/EntityHeader/EntityHeader';
+export { default } from 'tracker-ui/components/EntityHeader/EntityHeader';
+export * from 'tracker-ui/components/EntityHeader/EntityHeader';

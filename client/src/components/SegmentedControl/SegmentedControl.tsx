@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/SegmentedControl/SegmentedControl';
-export * from '@hockey-tracker/ui/components/SegmentedControl/SegmentedControl';
+export { default } from 'tracker-ui/components/SegmentedControl/SegmentedControl';
+export * from 'tracker-ui/components/SegmentedControl/SegmentedControl';

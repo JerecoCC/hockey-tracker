@@ -1,1 +1,1 @@
-export * from '@hockey-tracker/ui/lib/color';
+export * from 'tracker-ui/lib/color';

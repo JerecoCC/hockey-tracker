@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/BorderedFieldset/BorderedFieldset';
-export * from '@hockey-tracker/ui/components/BorderedFieldset/BorderedFieldset';
+export { default } from 'tracker-ui/components/BorderedFieldset/BorderedFieldset';
+export * from 'tracker-ui/components/BorderedFieldset/BorderedFieldset';

@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/Tooltip/Tooltip';
-export * from '@hockey-tracker/ui/components/Tooltip/Tooltip';
+export { default } from 'tracker-ui/components/Tooltip/Tooltip';
+export * from 'tracker-ui/components/Tooltip/Tooltip';

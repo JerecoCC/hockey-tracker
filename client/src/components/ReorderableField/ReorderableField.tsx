@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/ReorderableField/ReorderableField';
-export * from '@hockey-tracker/ui/components/ReorderableField/ReorderableField';
+export { default } from 'tracker-ui/components/ReorderableField/ReorderableField';
+export * from 'tracker-ui/components/ReorderableField/ReorderableField';

@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/context/BreadcrumbContext';
-export * from '@hockey-tracker/ui/context/BreadcrumbContext';
+export { default } from 'tracker-ui/context/BreadcrumbContext';
+export * from 'tracker-ui/context/BreadcrumbContext';

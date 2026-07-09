@@ -1,9 +1,0 @@
-@use 'styles/colors' as *;
-@use 'styles/mixins' as *;
-
-.borderedFieldset {
-  margin: 0;
-  background: transparent;
-  border: 1px solid var(--bordered-fieldset-border-color, var(--app-border, #{$border}));
-  border-radius: var(--bordered-fieldset-border-radius, #{$radius-md});
-}

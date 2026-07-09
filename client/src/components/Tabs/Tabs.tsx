@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/Tabs/Tabs';
-export * from '@hockey-tracker/ui/components/Tabs/Tabs';
+export { default } from 'tracker-ui/components/Tabs/Tabs';
+export * from 'tracker-ui/components/Tabs/Tabs';

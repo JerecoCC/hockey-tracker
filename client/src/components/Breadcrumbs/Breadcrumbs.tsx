@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/Breadcrumbs/Breadcrumbs';
-export * from '@hockey-tracker/ui/components/Breadcrumbs/Breadcrumbs';
+export { default } from 'tracker-ui/components/Breadcrumbs/Breadcrumbs';
+export * from 'tracker-ui/components/Breadcrumbs/Breadcrumbs';

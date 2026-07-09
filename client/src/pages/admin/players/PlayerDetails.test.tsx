@@ -1031,7 +1031,7 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getByRole('dialog', { name: 'PuckPedia Source' })).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: 'Open PuckPedia' })).toHaveAttribute(
       'href',
-      'https://puckpedia.com/player/andrew-peeke/transactions?transaction_type=trade,waiver,signing,roster',
+      'https://puckpedia.com/player/andrew-peeke/transactions?transaction_type=trade,waiver,signing',
     );
     expect(mockedAxios.get).not.toHaveBeenCalled();
 
@@ -2146,7 +2146,7 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getByRole('dialog', { name: 'PuckPedia Source' })).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: 'Open PuckPedia' })).toHaveAttribute(
       'href',
-      'https://puckpedia.com/player/john-smith/transactions?transaction_type=trade,waiver,signing,roster',
+      'https://puckpedia.com/player/john-smith/transactions?transaction_type=trade,waiver,signing',
     );
     expect(screen.getByLabelText('PuckPedia transactions text or HTML')).toBeInTheDocument();
 

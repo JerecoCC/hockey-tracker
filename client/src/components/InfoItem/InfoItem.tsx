@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/InfoItem/InfoItem';
-export * from '@hockey-tracker/ui/components/InfoItem/InfoItem';
+export { default } from 'tracker-ui/components/InfoItem/InfoItem';
+export * from 'tracker-ui/components/InfoItem/InfoItem';

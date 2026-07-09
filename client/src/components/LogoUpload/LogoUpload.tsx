@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/LogoUpload/LogoUpload';
-export * from '@hockey-tracker/ui/components/LogoUpload/LogoUpload';
+export { default } from 'tracker-ui/components/LogoUpload/LogoUpload';
+export * from 'tracker-ui/components/LogoUpload/LogoUpload';

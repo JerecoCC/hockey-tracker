@@ -1,2 +1,2 @@
-export { default } from '@hockey-tracker/ui/components/ConfirmModal/ConfirmModal';
-export * from '@hockey-tracker/ui/components/ConfirmModal/ConfirmModal';
+export { default } from 'tracker-ui/components/ConfirmModal/ConfirmModal';
+export * from 'tracker-ui/components/ConfirmModal/ConfirmModal';

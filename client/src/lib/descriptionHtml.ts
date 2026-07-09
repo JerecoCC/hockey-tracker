@@ -1,1 +1,1 @@
-export * from '@hockey-tracker/ui/lib/descriptionHtml';
+export * from 'tracker-ui/lib/descriptionHtml';
