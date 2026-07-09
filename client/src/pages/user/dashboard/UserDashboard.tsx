@@ -27,7 +27,7 @@ const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('toke
 const ADMIN_DATE_OVERRIDE_KEY = 'admin-dashboard-date-override';
 const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
 const ISO_DATE_PREFIX_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
-const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/;
+const ISO_MIDNIGHT_RE = /[T ]00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}(?::?[0-9]{2})?)?$/;
 
 type TzPref = 'ET' | 'local';
 const USER_TIMEZONE: TzPref = 'local';

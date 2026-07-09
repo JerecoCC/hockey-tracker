@@ -263,7 +263,7 @@ const localDateKeyForGame = (game: { scheduled_at: string | null; scheduled_time
     !!game.scheduled_time &&
     game.scheduled_time !== '00:00' &&
     !!rawDateKey &&
-    /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/.test(game.scheduled_at);
+    /[T ]00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}(?::?[0-9]{2})?)?$/.test(game.scheduled_at);
   if (isMidnightPlaceholder) {
     return localDateKeyForEtDateTime(rawDateKey, game.scheduled_time);
   }

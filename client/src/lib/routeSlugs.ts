@@ -26,7 +26,7 @@ const teamNameRouteSlug = ({
   return nameSlug;
 };
 
-const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})?$/;
+const ISO_MIDNIGHT_RE = /[T ]00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}(?::?[0-9]{2})?)?$/;
 
 export const playerRouteSlug = (
   firstName: string | null | undefined,

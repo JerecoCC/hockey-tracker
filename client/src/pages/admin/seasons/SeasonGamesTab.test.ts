@@ -21,6 +21,10 @@ describe('season games date keys', () => {
     expect(toEasternDateKey('2025-12-01T00:00:00.000Z')).toBe('2025-12-01');
   });
 
+  it('keeps Postgres midnight placeholder scheduled dates on their stored ET calendar day', () => {
+    expect(toEasternDateKey('2026-04-18 00:00:00+00')).toBe('2026-04-18');
+  });
+
   it('uses the ET day for real scheduled instants', () => {
     expect(toEasternDateKey('2025-12-01T02:30:00.000Z')).toBe('2025-11-30');
   });

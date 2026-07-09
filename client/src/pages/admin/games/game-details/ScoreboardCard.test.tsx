@@ -3,6 +3,67 @@ import { MemoryRouter } from 'react-router-dom';
 import ScoreboardCard from './ScoreboardCard';
 import styles from './ScoreboardCard.module.scss';
 
+jest.mock('@/components/Tag/Tag', () => {
+  const React = require('react');
+  return {
+    __esModule: true,
+    default: ({ label, className }: { label: string; className?: string }) =>
+      React.createElement('span', { className }, label),
+  };
+});
+
+jest.mock('@/components/Tooltip/Tooltip', () => {
+  const React = require('react');
+  return {
+    __esModule: true,
+    default: ({
+      text,
+      children,
+      className,
+    }: {
+      text: string;
+      children: React.ReactNode;
+      className?: string;
+    }) =>
+      React.createElement(
+        'span',
+        { className },
+        children,
+        React.createElement('span', { role: 'tooltip' }, text),
+      ),
+  };
+});
+
+jest.mock('@/components/StickyHeroCard/StickyHeroCard', () => {
+  const React = require('react');
+  return {
+    __esModule: true,
+    default: React.forwardRef(
+      (
+        {
+          children,
+          className,
+          style,
+        }: {
+          children: React.ReactNode;
+          className?: string;
+          style?: React.CSSProperties;
+        },
+        ref: React.ForwardedRef<HTMLDivElement>,
+      ) => React.createElement('div', { ref, className, style }, children),
+    ),
+  };
+});
+
+jest.mock('@/components/TeamLogo/TeamLogo', () => {
+  const React = require('react');
+  return {
+    __esModule: true,
+    default: ({ code, className }: { code: string; className?: string }) =>
+      React.createElement('span', { className }, code),
+  };
+});
+
 const team = (side: 'home' | 'away') => ({
   id: `${side}-team`,
   name: side === 'home' ? 'Toronto Maple Leafs' : 'Detroit Red Wings',
@@ -18,6 +79,32 @@ const team = (side: 'home' | 'away') => ({
 });
 
 describe('ScoreboardCard', () => {
+  it('shows Postgres midnight placeholder dates on the stored schedule day', () => {
+    render(
+      <MemoryRouter>
+        <ScoreboardCard
+          game={{
+            status: 'scheduled',
+            scheduled_at: '2026-04-18 00:00:00+00',
+            scheduled_time: '15:00',
+            home_team: team('home'),
+            away_team: team('away'),
+          }}
+          isFinal={false}
+          isInProgress={false}
+          liveAwayScore={0}
+          liveHomeScore={0}
+          overtimeSuffix=""
+          leagueId="league-1"
+          leagueCode="NHL"
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Saturday, April 18, 2026')).toBeInTheDocument();
+    expect(screen.queryByText('Friday, April 17, 2026')).not.toBeInTheDocument();
+  });
+
   it('renders playoff matchup meta with stable fixed-size styling', () => {
     render(
       <MemoryRouter>

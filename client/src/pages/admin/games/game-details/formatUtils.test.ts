@@ -37,6 +37,11 @@ describe('game detail time utilities', () => {
     expect(scheduledDateInputValue('2025-10-11T00:00:00.000')).toBe('2025-10-11');
   });
 
+  it('keeps Postgres midnight placeholder scheduled dates on their stored ET calendar day', () => {
+    expect(formatScheduledDate('2026-04-18 00:00:00+00', DATE_FMT_SHORT)).toBe('Apr 18, 2026');
+    expect(scheduledDateInputValue('2026-04-18 00:00:00+00')).toBe('2026-04-18');
+  });
+
   it('formats real instants by their ET calendar day', () => {
     expect(formatScheduledDate('2025-12-01T02:30:00.000Z', DATE_FMT_SHORT)).toBe('Nov 30, 2025');
   });

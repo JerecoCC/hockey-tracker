@@ -98,7 +98,7 @@ const toLocalDateKey = (iso: string) => {
 const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
 const MONTH_ONLY_RE = /^[0-9]{4}-[0-9]{2}$/;
 const ISO_DATE_PREFIX_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
-const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/;
+const ISO_MIDNIGHT_RE = /[T ]00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}(?::?[0-9]{2})?)?$/;
 
 const toDateKeyInZone = (date: Date, timeZone?: string) => {
   const parts = new Intl.DateTimeFormat('en-US', {

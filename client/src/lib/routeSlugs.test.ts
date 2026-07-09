@@ -56,6 +56,20 @@ describe('buildGameDetailsPath', () => {
     ).toBe('/admin/leagues/nhl/seasons/2025-26/games/10-11-2025/mtl-vs-chi');
   });
 
+  it('keeps Postgres midnight placeholder admin routes on their stored date', () => {
+    expect(
+      buildGameDetailsPath({
+        leagueCode: 'NHL',
+        seasonName: '2025-26',
+        gameId: 'game-1',
+        awayTeamCode: 'OTT',
+        homeTeamCode: 'CAR',
+        scheduledAt: '2026-04-18 00:00:00+00',
+        scheduledTime: '15:00',
+      }),
+    ).toBe('/admin/leagues/nhl/seasons/2025-26/games/04-18-2026/ott-vs-car');
+  });
+
   it('falls back to the direct game id route when the matchup slug cannot be built', () => {
     expect(
       buildGameDetailsPath({
