@@ -14,15 +14,15 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import Button from '@/components/Button/Button';
-import CalendarGameListItem from '@/components/CalendarGameListItem/CalendarGameListItem';
-import DatePicker from '@/components/DatePicker/DatePicker';
-import GameCard from '@/components/GameCard/GameCard';
-import UserGameActions from '@/components/GameCard/UserGameActions';
-import Icon from '@/components/Icon/Icon';
-import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
-import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
-import Modal from '@/components/Modal/Modal';
+import Button from '@jerecocc/tracker-ui/Button';
+import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
+import DatePicker from '@jerecocc/tracker-ui/DatePicker';
+import GameCard from '@/shared/GameCard/GameCard';
+import UserGameActions from '@/shared/GameCard/UserGameActions';
+import Icon from '@jerecocc/tracker-ui/Icon';
+import MonthCalendar from '@jerecocc/tracker-ui/MonthCalendar';
+import MultiSelect, { type MultiSelectOption } from '@jerecocc/tracker-ui/MultiSelect';
+import Modal from '@jerecocc/tracker-ui/Modal';
 import {
   ScheduleCalendarCard,
   ScheduleCalendarDayCount,
@@ -35,12 +35,12 @@ import {
   ScheduleWeekSummary,
   scheduleViewSegmentedControlClassName,
   useScheduleWeekSummaryStuck,
-} from '@/components/ScheduleGamesLayout/ScheduleGamesLayout';
-import Section from '@/components/Section/Section';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import Select, { type SelectOption } from '@/components/Select/Select';
-import ToggleButton from '@/components/ToggleButton/ToggleButton';
-import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
+} from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
+import Section from '@jerecocc/tracker-ui/Section';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
+import Select, { type SelectOption } from '@jerecocc/tracker-ui/Select';
+import ToggleButton from '@jerecocc/tracker-ui/ToggleButton';
+import PeriodPicker from '@jerecocc/tracker-ui/PeriodPicker';
 import { type GameRecord } from '@/hooks/useGames';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import { buildUserGameDetailsPath } from '@/lib/routeSlugs';

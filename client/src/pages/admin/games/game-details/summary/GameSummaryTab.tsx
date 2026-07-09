@@ -12,10 +12,10 @@ import {
 import useGameGoals from '@/hooks/useGameGoals';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import { useNavigate } from 'react-router-dom';
-import Button from '@/components/Button/Button';
-import Section from '@/components/Section/Section';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Button from '@jerecocc/tracker-ui/Button';
+import Section from '@jerecocc/tracker-ui/Section';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import GoalieStatsCard from './GoalieStatsCard';
 import type { ShotsNextAction } from '../RecordShotsModal';
 import ScoringCard from '../ScoringCard';

@@ -34,7 +34,7 @@ jest.mock('./pwhlGameAutofill', () => ({
   pwhlAutofillApiError: (_err: unknown, fallback: string) => fallback,
 }));
 
-jest.mock('@/components/Modal/Modal', () => {
+jest.mock('@jerecocc/tracker-ui/Modal', () => {
   const MockModal = ({ open, title, children }: any) =>
     open ? (
       <div

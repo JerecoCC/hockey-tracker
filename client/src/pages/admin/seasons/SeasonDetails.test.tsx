@@ -35,8 +35,8 @@ jest.mock('@/lib/computeClinched', () => ({
   computeClinched: () => new Set<string>(),
   computeEliminated: () => new Set<string>(),
 }));
-jest.mock('@/components/Breadcrumbs/Breadcrumbs', () => () => <div />);
-jest.mock('@/components/Button/Button', () => (props: any) => {
+jest.mock('@jerecocc/tracker-ui/Breadcrumbs', () => () => <div />);
+jest.mock('@jerecocc/tracker-ui/Button', () => (props: any) => {
   const {
     children,
     className,
@@ -70,19 +70,19 @@ jest.mock('@/components/Button/Button', () => (props: any) => {
     </button>
   );
 });
-jest.mock('@/components/Card/Card', () => (props: any) => (
+jest.mock('@jerecocc/tracker-ui/Card', () => (props: any) => (
   <div data-testid="card">
     {props.title}
     {props.action}
     {props.children}
   </div>
 ));
-jest.mock('@/components/ConfirmModal/ConfirmModal', () => () => null);
-jest.mock('@/components/Tag/Tag', () => (props: any) => <span>{props.label}</span>);
-jest.mock('@/components/MoreActionsMenu/MoreActionsMenu', () => (props: any) =>
+jest.mock('@jerecocc/tracker-ui/ConfirmModal', () => () => null);
+jest.mock('@jerecocc/tracker-ui/Tag', () => (props: any) => <span>{props.label}</span>);
+jest.mock('@jerecocc/tracker-ui/MoreActionsMenu', () => (props: any) =>
   mockMoreActionsMenu(props),
 );
-jest.mock('@/components/SegmentedControl/SegmentedControl', () => (props: any) => (
+jest.mock('@jerecocc/tracker-ui/SegmentedControl', () => (props: any) => (
   <div>
     {props.options.map((option: any) => (
       <button
@@ -95,7 +95,7 @@ jest.mock('@/components/SegmentedControl/SegmentedControl', () => (props: any) =
     ))}
   </div>
 ));
-jest.mock('@/components/Tabs/Tabs', () => (props: any) => (
+jest.mock('@jerecocc/tracker-ui/Tabs', () => (props: any) => (
   <div>
     <div role="tablist">
       {props.tabs.map((tab: any, index: number) => (
@@ -112,15 +112,15 @@ jest.mock('@/components/Tabs/Tabs', () => (props: any) => (
     {props.tabs[props.activeIndex ?? 0].content}
   </div>
 ));
-jest.mock('@/components/TitleRow/TitleRow', () => (props: any) => (
+jest.mock('@jerecocc/tracker-ui/TitleRow', () => (props: any) => (
   <div>
     {props.left}
     {props.right}
   </div>
 ));
-jest.mock('@/components/InfoItem/InfoItem', () => () => null);
-jest.mock('@/components/PlayerAvatar/PlayerAvatar', () => () => <span>player</span>);
-jest.mock('@/components/TeamLogo/TeamLogo', () => () => <span>logo</span>);
+jest.mock('@jerecocc/tracker-ui/InfoItem', () => () => null);
+jest.mock('@jerecocc/tracker-ui/PlayerAvatar', () => () => <span>player</span>);
+jest.mock('@jerecocc/tracker-ui/TeamLogo', () => () => <span>logo</span>);
 jest.mock('./SeasonEndModal', () => () => null);
 jest.mock('./SeasonFormModal', () => () => null);
 jest.mock('./SeasonGamesTab', () => () => null);

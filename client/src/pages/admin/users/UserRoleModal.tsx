@@ -1,4 +1,4 @@
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
 import { UserRecord } from './columns';
 
 export interface RoleConfirm {

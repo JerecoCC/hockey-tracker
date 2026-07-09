@@ -10,6 +10,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  optimizeDeps: {
+    exclude: ['@jerecocc/tracker-ui'],
+  },
   css: {
     preprocessorOptions: {
       scss: {

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import Button from '@/components/Button/Button';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
-import Section from '@/components/Section/Section';
+import Button from '@jerecocc/tracker-ui/Button';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/ListItem';
+import Section from '@jerecocc/tracker-ui/Section';
 import useBracketRuleSets, { type BracketRuleSet } from '@/hooks/useBracketRuleSets';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
 import usePlayoffQualificationFormats, {

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import Accordion from '@/components/Accordion/Accordion';
-import Button from '@/components/Button/Button';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import Section from '@/components/Section/Section';
-import ListItem from '@/components/ListItem/ListItem';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Accordion from '@jerecocc/tracker-ui/Accordion';
+import Button from '@jerecocc/tracker-ui/Button';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import Section from '@jerecocc/tracker-ui/Section';
+import ListItem from '@jerecocc/tracker-ui/ListItem';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import useTeamPlayers from '@/hooks/useTeamPlayers';
 import useGameLineup, { type LineupEntry } from '@/hooks/useGameLineup';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';

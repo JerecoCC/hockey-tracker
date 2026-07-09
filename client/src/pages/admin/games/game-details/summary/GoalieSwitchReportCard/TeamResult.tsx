@@ -1,7 +1,7 @@
 import { NhlGoalieSwitchTeamReport } from '../../nhlGoalieSwitchChecker';
 import styles from '../../GameDetailsPage.module.scss';
 import StintRow from './StintRow';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import { TeamInfo } from '@/hooks/useGames';
 
 type Props = {

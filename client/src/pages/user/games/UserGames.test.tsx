@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import calendarItemStyles from '@/components/CalendarGameListItem/CalendarGameListItem.module.scss';
-import gameCardStyles from '@/components/GameCard/GameCard.module.scss';
-import scheduleLayoutStyles from '@/components/ScheduleGamesLayout/ScheduleGamesLayout.module.scss';
+import calendarItemStyles from '@/shared/CalendarGameListItem/CalendarGameListItem.module.scss';
+import gameCardStyles from '@/shared/GameCard/GameCard.module.scss';
+import scheduleLayoutStyles from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout.module.scss';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import UserGames from './UserGames';
 import styles from './UserGames.module.scss';
@@ -37,7 +37,7 @@ jest.mock('react-toastify', () => ({
   },
 }));
 jest.mock(
-  '@/components/Modal/Modal',
+  '@jerecocc/tracker-ui/Modal',
   () =>
     ({
       open,
@@ -66,7 +66,7 @@ jest.mock(
         </div>
       ) : null,
 );
-jest.mock('@/components/Section/Section', () => {
+jest.mock('@jerecocc/tracker-ui/Section', () => {
   const React = require('react');
   return React.forwardRef(({ title, action, children, className }: any, ref: any) => (
     <section
@@ -79,7 +79,7 @@ jest.mock('@/components/Section/Section', () => {
     </section>
   ));
 });
-jest.mock('@/components/Card/Card', () => {
+jest.mock('@jerecocc/tracker-ui/Card', () => {
   const React = require('react');
   return React.forwardRef(({ children, className, style, ...props }: any, ref: any) => (
     <div
@@ -92,7 +92,7 @@ jest.mock('@/components/Card/Card', () => {
     </div>
   ));
 });
-jest.mock('@/components/Badge/Badge', () => ({
+jest.mock('@jerecocc/tracker-ui/Badge', () => ({
   __esModule: true,
   default: ({ value, label, 'aria-label': ariaLabel, className }: any) => (
     <span
@@ -104,11 +104,11 @@ jest.mock('@/components/Badge/Badge', () => ({
     </span>
   ),
 }));
-jest.mock('@/components/Divider/Divider', () => ({
+jest.mock('@jerecocc/tracker-ui/Divider', () => ({
   __esModule: true,
   default: ({ className }: any) => <hr className={className} />,
 }));
-jest.mock('@/components/Skeleton/Skeleton', () => ({
+jest.mock('@jerecocc/tracker-ui/Skeleton', () => ({
   __esModule: true,
   default: ({ className }: any) => (
     <div
@@ -117,7 +117,7 @@ jest.mock('@/components/Skeleton/Skeleton', () => ({
     />
   ),
 }));
-jest.mock('@/components/MonthCalendar/MonthCalendar', () => {
+jest.mock('@jerecocc/tracker-ui/MonthCalendar', () => {
   const React = require('react');
   const dateKey = (date: Date) =>
     `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -177,7 +177,7 @@ jest.mock('@/components/MonthCalendar/MonthCalendar', () => {
   };
 });
 jest.mock(
-  '@/components/DatePicker/DatePicker',
+  '@jerecocc/tracker-ui/DatePicker',
   () => (props: any) =>
     props.triggerLabel ? (
       <button
@@ -194,8 +194,8 @@ jest.mock(
       />
     ),
 );
-jest.mock('@/components/Icon/Icon', () => ({ name }: any) => <span>{name}</span>);
-jest.mock('@/components/SegmentedControl/SegmentedControl', () => ({
+jest.mock('@jerecocc/tracker-ui/Icon', () => ({ name }: any) => <span>{name}</span>);
+jest.mock('@jerecocc/tracker-ui/SegmentedControl', () => ({
   __esModule: true,
   default: ({ options, onChange }: any) => (
     <div>
@@ -212,7 +212,7 @@ jest.mock('@/components/SegmentedControl/SegmentedControl', () => ({
     </div>
   ),
 }));
-jest.mock('@/components/ToggleButton/ToggleButton', () => ({
+jest.mock('@jerecocc/tracker-ui/ToggleButton', () => ({
   __esModule: true,
   default: ({
     active,
@@ -233,7 +233,7 @@ jest.mock('@/components/ToggleButton/ToggleButton', () => ({
     </button>
   ),
 }));
-jest.mock('@/components/PeriodPicker/PeriodPicker', () => ({
+jest.mock('@jerecocc/tracker-ui/PeriodPicker', () => ({
   __esModule: true,
   default: ({ kind, label, onPrevious, onNext }: any) => {
     const period = kind === 'month' ? 'month' : 'week';
@@ -264,7 +264,7 @@ jest.mock('@/components/PeriodPicker/PeriodPicker', () => ({
   },
 }));
 jest.mock(
-  '@/components/Button/Button',
+  '@jerecocc/tracker-ui/Button',
   () =>
     ({ children, tooltip, icon, onClick, disabled, 'aria-label': ariaLabel }: any) => (
       <button
@@ -277,8 +277,8 @@ jest.mock(
       </button>
     ),
 );
-jest.mock('@/components/TeamLogo/TeamLogo', () => ({ code }: any) => <span>{code || 'LOGO'}</span>);
-jest.mock('@/components/Tooltip/Tooltip', () => ({
+jest.mock('@jerecocc/tracker-ui/TeamLogo', () => ({ code }: any) => <span>{code || 'LOGO'}</span>);
+jest.mock('@jerecocc/tracker-ui/Tooltip', () => ({
   __esModule: true,
   default: ({ children, text }: any) => <span title={text}>{children}</span>,
 }));
@@ -304,7 +304,7 @@ jest.mock('@/pages/admin/games/game-details/ScoreImageModal', () => ({
       </div>
     ) : null,
 }));
-jest.mock('@/components/Select/Select', () => ({
+jest.mock('@jerecocc/tracker-ui/Select', () => ({
   __esModule: true,
   default: ({ value, options, onChange, disabled }: any) => (
     <select
@@ -323,7 +323,7 @@ jest.mock('@/components/Select/Select', () => ({
     </select>
   ),
 }));
-jest.mock('@/components/MultiSelect/MultiSelect', () => ({
+jest.mock('@jerecocc/tracker-ui/MultiSelect', () => ({
   __esModule: true,
   default: ({ value, options, onChange, onExit, placeholder }: any) => (
     <div

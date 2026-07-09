@@ -1,9 +1,9 @@
 import { type ReactNode, useCallback } from 'react';
-import Field from '@/components/Field/Field';
+import Field from '@jerecocc/tracker-ui/Field';
 import BulkCreateModal, {
   type BulkCreateRowRenderProps,
-} from '@/components/BulkCreateModal/BulkCreateModal';
-import type { SelectOption } from '@/components/Select/Select';
+} from '@jerecocc/tracker-ui/BulkCreateModal';
+import type { SelectOption } from '@jerecocc/tracker-ui/Select';
 import { type CreateGameData } from '@/hooks/useGames';
 import { type SeasonTeam } from '@/hooks/useSeasonDetails';
 

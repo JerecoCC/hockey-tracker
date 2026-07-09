@@ -1,22 +1,22 @@
 import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import Accordion from '@/components/Accordion/Accordion';
-import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
-import Checklist, { type ChecklistOption } from '@/components/Checklist/Checklist';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import Divider from '@/components/Divider/Divider';
-import Section from '@/components/Section/Section';
-import Field from '@/components/Field/Field';
-import GroupedFields from '@/components/GroupedFields/GroupedFields';
-import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
-import Modal from '@/components/Modal/Modal';
-import RadioList, { type RadioListOption } from '@/components/RadioList/RadioList';
-import ReorderableField from '@/components/ReorderableField/ReorderableField';
-import Select, { type SelectOption } from '@/components/Select/Select';
-import Skeleton from '@/components/Skeleton/Skeleton';
-import StatItem from '@/components/StatItem/StatItem';
-import Tag from '@/components/Tag/Tag';
+import Accordion from '@jerecocc/tracker-ui/Accordion';
+import Button from '@jerecocc/tracker-ui/Button';
+import Card from '@jerecocc/tracker-ui/Card';
+import Checklist, { type ChecklistOption } from '@jerecocc/tracker-ui/Checklist';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import Divider from '@jerecocc/tracker-ui/Divider';
+import Section from '@jerecocc/tracker-ui/Section';
+import Field from '@jerecocc/tracker-ui/Field';
+import GroupedFields from '@jerecocc/tracker-ui/GroupedFields';
+import InfoTooltip from '@jerecocc/tracker-ui/InfoTooltip';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import RadioList, { type RadioListOption } from '@jerecocc/tracker-ui/RadioList';
+import ReorderableField from '@jerecocc/tracker-ui/ReorderableField';
+import Select, { type SelectOption } from '@jerecocc/tracker-ui/Select';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
+import StatItem from '@jerecocc/tracker-ui/StatItem';
+import Tag from '@jerecocc/tracker-ui/Tag';
 import { usePlayoffSeries, type PlayoffSeriesRecord } from '@/hooks/useGames';
 import useLeaguePlayers, { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import useSeasonAwards, {
@@ -45,7 +45,7 @@ import {
   playerMatchesAwardEligibility,
   teamMatchesAwardEligibility,
 } from '@/lib/awardDefinitions';
-import PlayerCard, { formatPlayerPosition } from '@/components/PlayerCard/PlayerCard';
+import PlayerCard, { formatPlayerPosition } from '@/shared/PlayerCard/PlayerCard';
 import styles from './SeasonDetails.module.scss';
 
 const STAT_LABELS: Record<string, string> = {

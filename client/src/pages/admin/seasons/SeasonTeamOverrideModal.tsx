@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import Button from '@/components/Button/Button';
-import Checklist from '@/components/Checklist/Checklist';
-import Modal from '@/components/Modal/Modal';
+import Button from '@jerecocc/tracker-ui/Button';
+import Checklist from '@jerecocc/tracker-ui/Checklist';
+import Modal from '@jerecocc/tracker-ui/Modal';
 import { type SeasonGroupRecord, type LeagueTeam } from '@/hooks/useSeasonDetails';
 import styles from './SeasonDetails.module.scss';
 

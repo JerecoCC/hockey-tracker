@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import Section from '@/components/Section/Section';
-import Button from '@/components/Button/Button';
-import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
-import Skeleton from '@/components/Skeleton/Skeleton';
+import Section from '@jerecocc/tracker-ui/Section';
+import Button from '@jerecocc/tracker-ui/Button';
+import LoadingSpinner from '@jerecocc/tracker-ui/LoadingSpinner';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
-import type { TagIntent } from '@/components/Tag/Tag';
+import type { TagIntent } from '@jerecocc/tracker-ui/Tag';
 import useLeagues from '@/hooks/useLeagues';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
@@ -27,7 +27,7 @@ import {
   UUID_PATTERN,
 } from '@/lib/routeSlugs';
 import ScoreboardCard from '@/pages/admin/games/game-details/ScoreboardCard';
-import GameListItem from '@/components/GameListItem';
+import GameListItem from '@/shared/GameListItem';
 import GameFormModal, { type GameFormTeam } from './GameFormModal';
 import { buildPlayoffSeriesDocumentTitle } from './playoffSeriesDocumentTitle';
 import styles from './PlayoffSeriesDetailsPage.module.scss';

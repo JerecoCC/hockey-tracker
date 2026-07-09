@@ -12,7 +12,7 @@ jest.mock('../../context/AuthContext', () => ({
   useAuth: () => ({ login: jest.fn() }),
 }));
 jest.mock('react-toastify', () => ({ toast: { error: jest.fn() } }));
-jest.mock('../../components/GoogleButton/GoogleButton', () => () => null);
+jest.mock('@/shared/GoogleButton/GoogleButton', () => () => null);
 
 const renderLogin = () => render(<LoginPage />);
 

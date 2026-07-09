@@ -1,10 +1,10 @@
-import Section from '@/components/Section/Section';
-import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
+import Section from '@jerecocc/tracker-ui/Section';
+import LoadingSpinner from '@jerecocc/tracker-ui/LoadingSpinner';
 import TeamResult from './TeamResult';
 import { NhlGoalieSwitchReport } from '../../nhlGoalieSwitchChecker';
 import NhlGoalieSwitchCheckerModal from '../../NhlGoalieSwitchCheckerModal';
 import { useEffect, useState } from 'react';
-import Button from '@/components/Button/Button';
+import Button from '@jerecocc/tracker-ui/Button';
 import styles from '../../GameDetailsPage.module.scss';
 import { GameRecord } from '@/hooks/useGames';
 

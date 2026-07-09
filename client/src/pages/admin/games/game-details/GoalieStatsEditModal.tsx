@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import Accordion from '@/components/Accordion/Accordion';
-import Badge from '@/components/Badge/Badge';
-import Button from '@/components/Button/Button';
-import Modal from '@/components/Modal/Modal';
-import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import Select from '@/components/Select/Select';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
-import TimePicker from '@/components/TimePicker/TimePicker';
-import Tooltip from '@/components/Tooltip/Tooltip';
+import Accordion from '@jerecocc/tracker-ui/Accordion';
+import Badge from '@jerecocc/tracker-ui/Badge';
+import Button from '@jerecocc/tracker-ui/Button';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import PlayerAvatar from '@jerecocc/tracker-ui/PlayerAvatar';
+import Select from '@jerecocc/tracker-ui/Select';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
+import TimePicker from '@jerecocc/tracker-ui/TimePicker';
+import Tooltip from '@jerecocc/tracker-ui/Tooltip';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import {
@@ -17,7 +17,7 @@ import {
   type GoalieStintRecord,
   type UpdateGoalieStintData,
 } from '@/hooks/useGameGoalieStats';
-import fieldStyles from '@/components/Field/Field.module.scss';
+import fieldStyles from '@/shared/trackerFieldStyles.module.scss';
 import styles from './GameDetailsPage.module.scss';
 import { PERIOD, PERIOD_ORDER } from './constants';
 import { compareGoalieStats } from './goalieStatsOrdering';

@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import PlayerInfoEditModal from './PlayerInfoEditModal';
 
-jest.mock('@/components/Modal/Modal', () => {
+jest.mock('@jerecocc/tracker-ui/Modal', () => {
   const MockModal = ({ open, title, children }: any) =>
     open ? (
       <div

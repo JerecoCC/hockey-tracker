@@ -1,8 +1,8 @@
 import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import Field from '@/components/Field/Field';
-import Modal from '@/components/Modal/Modal';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Field from '@jerecocc/tracker-ui/Field';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';

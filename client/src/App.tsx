@@ -4,15 +4,15 @@ import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTheme } from './context/ThemeContext';
 import { ThemeProvider } from './context/ThemeProvider';
-import LoadingSpinner from './components/LoadingSpinner/LoadingSpinner';
+import LoadingSpinner from '@jerecocc/tracker-ui/LoadingSpinner';
 import { gameDateRouteSlugToDateKey } from './lib/routeSlugs';
 
 const LoginPage = lazy(() => import('./pages/login/Login'));
 const SignupPage = lazy(() => import('./pages/signup/Signup'));
 const AuthCallbackPage = lazy(() => import('./pages/auth/callback/AuthCallback'));
 
-const AdminLayout = lazy(() => import('./components/AdminLayout/AdminLayout'));
-const UserLayout = lazy(() => import('./components/UserLayout/UserLayout'));
+const AdminLayout = lazy(() => import('@/shared/AdminLayout/AdminLayout'));
+const UserLayout = lazy(() => import('@/shared/UserLayout/UserLayout'));
 
 const UserDashboard = lazy(() => import('./pages/user/dashboard/UserDashboard'));
 const UserGames = lazy(() => import('./pages/user/games/UserGames'));

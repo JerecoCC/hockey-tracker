@@ -1,4 +1,4 @@
-import Skeleton from '@/components/Skeleton/Skeleton';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
 import styles from './LeagueDetails.module.scss';
 
 export interface TabSkeletonProps {

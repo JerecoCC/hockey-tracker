@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import TeamPlayerEditModal from './TeamPlayerEditModal';
 
-jest.mock('@/components/Modal/Modal', () => {
+jest.mock('@jerecocc/tracker-ui/Modal', () => {
   const MockModal = ({ open, title, children }: any) =>
     open ? (
       <div
@@ -17,7 +17,7 @@ jest.mock('@/components/Modal/Modal', () => {
   return MockModal;
 });
 
-jest.mock('@/components/LogoUpload/LogoUpload', () => () => null);
+jest.mock('@jerecocc/tracker-ui/LogoUpload', () => () => null);
 
 const player = {
   id: 'player-1',

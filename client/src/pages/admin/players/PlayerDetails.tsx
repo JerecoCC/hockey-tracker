@@ -4,33 +4,33 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import { toast, type TypeOptions } from 'react-toastify';
-import Accordion from '@/components/Accordion/Accordion';
-import AwardBanner from '@/components/AwardBanner/AwardBanner';
-import Badge from '@/components/Badge/Badge';
-import Banner from '@/components/Banner/Banner';
-import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
-import Chip from '@/components/Chip/Chip';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import Divider from '@/components/Divider/Divider';
-import Field from '@/components/Field/Field';
-import Icon from '@/components/Icon/Icon';
-import Section from '@/components/Section/Section';
-import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
-import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
-import ListItem from '@/components/ListItem/ListItem';
-import Modal from '@/components/Modal/Modal';
-import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
-import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import StatusTag from '@/components/StatusTag/StatusTag';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
-import StatItem from '@/components/StatItem/StatItem';
-import Table, { type Column } from '@/components/Table/Table';
-import Tabs from '@/components/Tabs/Tabs';
-import Tag, { type TagIntent } from '@/components/Tag/Tag';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
-import Tooltip from '@/components/Tooltip/Tooltip';
+import Accordion from '@jerecocc/tracker-ui/Accordion';
+import AwardBanner from '@/shared/AwardBanner/AwardBanner';
+import Badge from '@jerecocc/tracker-ui/Badge';
+import Banner from '@jerecocc/tracker-ui/Banner';
+import Button from '@jerecocc/tracker-ui/Button';
+import Card from '@jerecocc/tracker-ui/Card';
+import Chip from '@jerecocc/tracker-ui/Chip';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import Divider from '@jerecocc/tracker-ui/Divider';
+import Field from '@jerecocc/tracker-ui/Field';
+import Icon from '@jerecocc/tracker-ui/Icon';
+import Section from '@jerecocc/tracker-ui/Section';
+import InfoTooltip from '@jerecocc/tracker-ui/InfoTooltip';
+import ImagePreviewModal from '@jerecocc/tracker-ui/ImagePreviewModal';
+import ListItem from '@jerecocc/tracker-ui/ListItem';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import MoreActionsMenu from '@jerecocc/tracker-ui/MoreActionsMenu';
+import PlayerAvatar from '@jerecocc/tracker-ui/PlayerAvatar';
+import StatusTag from '@/shared/StatusTag/StatusTag';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
+import SeasonSelect from '@/shared/SeasonSelect/SeasonSelect';
+import StatItem from '@jerecocc/tracker-ui/StatItem';
+import Table, { type Column } from '@jerecocc/tracker-ui/Table';
+import Tabs from '@jerecocc/tracker-ui/Tabs';
+import Tag, { type TagIntent } from '@jerecocc/tracker-ui/Tag';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
+import Tooltip from '@jerecocc/tracker-ui/Tooltip';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import usePlayerDetails, {
   usePlayerAwards,
@@ -3488,6 +3488,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                   className={styles.heroPositionTag}
                   label={positionLabel}
                   intent={positionTagIntent}
+                  variant="outlined"
                 />
               )}
             </div>

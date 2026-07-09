@@ -4,7 +4,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import ScoreboardCard from './ScoreboardCard';
 import styles from './ScoreboardCard.module.scss';
 
-jest.mock('@/components/Tag/Tag', () => {
+jest.mock('@jerecocc/tracker-ui/Tag', () => {
   return {
     __esModule: true,
     default: function MockTag({ label, className }: { label: string; className?: string }) {
@@ -13,7 +13,7 @@ jest.mock('@/components/Tag/Tag', () => {
   };
 });
 
-jest.mock('@/components/Tooltip/Tooltip', () => {
+jest.mock('@jerecocc/tracker-ui/Tooltip', () => {
   return {
     __esModule: true,
     default: function MockTooltip({
@@ -35,7 +35,7 @@ jest.mock('@/components/Tooltip/Tooltip', () => {
   };
 });
 
-jest.mock('@/components/StickyHeroCard/StickyHeroCard', () => {
+jest.mock('@jerecocc/tracker-ui/StickyHeroCard', () => {
   return {
     __esModule: true,
     default: function MockStickyHeroCard({
@@ -59,7 +59,7 @@ jest.mock('@/components/StickyHeroCard/StickyHeroCard', () => {
   };
 });
 
-jest.mock('@/components/TeamLogo/TeamLogo', () => {
+jest.mock('@jerecocc/tracker-ui/TeamLogo', () => {
   return {
     __esModule: true,
     default: function MockTeamLogo({ code, className }: { code: string; className?: string }) {

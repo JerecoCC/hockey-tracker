@@ -1,6 +1,6 @@
 import { type TeamDetailRecord } from '@/hooks/useTeamDetails';
-import InfoItem from '@/components/InfoItem/InfoItem';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import InfoItem from '@jerecocc/tracker-ui/InfoItem';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import styles from './TeamDetails.module.scss';
 
 export interface SeasonOption {

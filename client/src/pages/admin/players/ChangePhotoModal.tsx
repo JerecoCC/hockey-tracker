@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import Banner from '@/components/Banner/Banner';
-import Field from '@/components/Field/Field';
-import LogoUpload from '@/components/LogoUpload/LogoUpload';
-import Modal from '@/components/Modal/Modal';
-import ReadOnlyField from '@/components/ReadOnlyField/ReadOnlyField';
+import Banner from '@jerecocc/tracker-ui/Banner';
+import Field from '@jerecocc/tracker-ui/Field';
+import LogoUpload from '@jerecocc/tracker-ui/LogoUpload';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import ReadOnlyField from '@jerecocc/tracker-ui/ReadOnlyField';
 import {
   type PlayerPhotoEntry,
   type PlayerStintRecord,

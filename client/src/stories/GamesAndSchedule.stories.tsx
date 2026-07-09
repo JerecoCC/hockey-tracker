@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import CalendarGameListItem from '@/components/CalendarGameListItem/CalendarGameListItem';
-import GameCard from '@/components/GameCard/GameCard';
-import UserGameActions from '@/components/GameCard/UserGameActions';
-import GameListItem from '@/components/GameListItem';
-import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
+import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
+import GameCard from '@/shared/GameCard/GameCard';
+import UserGameActions from '@/shared/GameCard/UserGameActions';
+import GameListItem from '@/shared/GameListItem';
+import MonthCalendar from '@jerecocc/tracker-ui/MonthCalendar';
 import {
   ScheduleCalendarCard,
   ScheduleCalendarDayCount,
@@ -19,10 +19,10 @@ import {
   ScheduleWeekList,
   ScheduleWeekSummary,
   type ScheduleDayGroup,
-} from '@/components/ScheduleGamesLayout/ScheduleGamesLayout';
-import TeamCalendarGameCard from '@/components/TeamCalendarGameCard/TeamCalendarGameCard';
-import Button from '@/components/Button/Button';
-import Tag from '@/components/Tag/Tag';
+} from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
+import TeamCalendarGameCard from '@/shared/TeamCalendarGameCard/TeamCalendarGameCard';
+import Button from '@jerecocc/tracker-ui/Button';
+import Tag from '@jerecocc/tracker-ui/Tag';
 import type { GameRecord } from '@/hooks/useGames';
 import {
   noop,

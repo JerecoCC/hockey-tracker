@@ -1,6 +1,6 @@
-import Button from '@/components/Button/Button';
-import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
-import Section from '@/components/Section/Section';
+import Button from '@jerecocc/tracker-ui/Button';
+import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/ListItem';
+import Section from '@jerecocc/tracker-ui/Section';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import styles from './LeagueDetails.module.scss';
 

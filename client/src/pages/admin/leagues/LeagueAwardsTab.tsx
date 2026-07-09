@@ -1,17 +1,17 @@
 import { type DragEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import Button from '@/components/Button/Button';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import Divider from '@/components/Divider/Divider';
-import Field from '@/components/Field/Field';
-import GroupedFields from '@/components/GroupedFields/GroupedFields';
-import Modal from '@/components/Modal/Modal';
-import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
-import RadioList, { type RadioListOption } from '@/components/RadioList/RadioList';
-import ReorderableField from '@/components/ReorderableField/ReorderableField';
-import Section from '@/components/Section/Section';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import Tag, { type TagIntent } from '@/components/Tag/Tag';
+import Button from '@jerecocc/tracker-ui/Button';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import Divider from '@jerecocc/tracker-ui/Divider';
+import Field from '@jerecocc/tracker-ui/Field';
+import GroupedFields from '@jerecocc/tracker-ui/GroupedFields';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import MultiSelect, { type MultiSelectOption } from '@jerecocc/tracker-ui/MultiSelect';
+import RadioList, { type RadioListOption } from '@jerecocc/tracker-ui/RadioList';
+import ReorderableField from '@jerecocc/tracker-ui/ReorderableField';
+import Section from '@jerecocc/tracker-ui/Section';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
+import Tag, { type TagIntent } from '@jerecocc/tracker-ui/Tag';
 import useLeagueAwards, {
   type LeagueAwardPayload,
   type LeagueAwardRecord,

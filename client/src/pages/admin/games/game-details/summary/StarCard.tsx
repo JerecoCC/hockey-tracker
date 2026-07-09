@@ -1,6 +1,6 @@
-import Icon from '@/components/Icon/Icon';
-import PlayerCard from '@/components/PlayerCard/PlayerCard';
-import StatItem from '@/components/StatItem/StatItem';
+import Icon from '@jerecocc/tracker-ui/Icon';
+import PlayerCard from '@/shared/PlayerCard/PlayerCard';
+import StatItem from '@jerecocc/tracker-ui/StatItem';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import styles from './ThreeStarsCard.module.scss';
 import { playerDataComplete } from '../gameUtils';

@@ -11,7 +11,7 @@ const mockAddPlayersModal = jest.fn(() => null);
 jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
 jest.mock('@/hooks/useSeasons', () => jest.fn());
 jest.mock('@/hooks/useTeamPlayers', () => jest.fn());
-jest.mock('@/components/MoreActionsMenu/MoreActionsMenu', () => {
+jest.mock('@jerecocc/tracker-ui/MoreActionsMenu', () => {
   interface MockActionItem {
     label: string;
     disabled?: boolean;

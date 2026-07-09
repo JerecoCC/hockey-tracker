@@ -1,15 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useEffect, type ReactNode } from 'react';
 import { Route, Routes, useNavigate } from 'react-router-dom';
-import AdminLayout from '@/components/AdminLayout/AdminLayout';
-import AdminNav from '@/components/AdminNav/AdminNav';
-import Button from '@/components/Button/Button';
-import PageHeader from '@/components/PageHeader/PageHeader';
-import Section from '@/components/Section/Section';
-import Tag from '@/components/Tag/Tag';
-import TitleRow from '@/components/TitleRow/TitleRow';
-import UserLayout from '@/components/UserLayout/UserLayout';
-import UserNav from '@/components/UserNav/UserNav';
+import AdminLayout from '@/shared/AdminLayout/AdminLayout';
+import AdminNav from '@/shared/AdminNav/AdminNav';
+import Button from '@jerecocc/tracker-ui/Button';
+import PageHeader from '@/shared/PageHeader/PageHeader';
+import Section from '@jerecocc/tracker-ui/Section';
+import Tag from '@jerecocc/tracker-ui/Tag';
+import TitleRow from '@jerecocc/tracker-ui/TitleRow';
+import UserLayout from '@/shared/UserLayout/UserLayout';
+import UserNav from '@/shared/UserNav/UserNav';
 import { noop, StoryGrid, StoryPage, StoryPanel, StorySection } from './storyData';
 
 const meta = {

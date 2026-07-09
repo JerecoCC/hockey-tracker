@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import Accordion from '@/components/Accordion/Accordion';
-import AwardBanner from '@/components/AwardBanner/AwardBanner';
-import Badge from '@/components/Badge/Badge';
-import Icon from '@/components/Icon/Icon';
-import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
-import ListItem from '@/components/ListItem/ListItem';
-import Section from '@/components/Section/Section';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Accordion from '@jerecocc/tracker-ui/Accordion';
+import AwardBanner from '@/shared/AwardBanner/AwardBanner';
+import Badge from '@jerecocc/tracker-ui/Badge';
+import Icon from '@jerecocc/tracker-ui/Icon';
+import InfoTooltip from '@jerecocc/tracker-ui/InfoTooltip';
+import ListItem from '@jerecocc/tracker-ui/ListItem';
+import Section from '@jerecocc/tracker-ui/Section';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import { useTeamAwards, type TeamAwardRecord } from '@/hooks/useTeamDetails';
 import styles from './TeamDetails.module.scss';
 

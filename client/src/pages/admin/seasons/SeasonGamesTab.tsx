@@ -3,13 +3,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { toast, type TypeOptions } from 'react-toastify';
-import Button from '@/components/Button/Button';
-import ToggleButton from '@/components/ToggleButton/ToggleButton';
-import Section from '@/components/Section/Section';
-import CalendarGameListItem from '@/components/CalendarGameListItem/CalendarGameListItem';
-import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
-import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
-import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
+import Button from '@jerecocc/tracker-ui/Button';
+import ToggleButton from '@jerecocc/tracker-ui/ToggleButton';
+import Section from '@jerecocc/tracker-ui/Section';
+import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
+import MoreActionsMenu from '@jerecocc/tracker-ui/MoreActionsMenu';
+import MonthCalendar from '@jerecocc/tracker-ui/MonthCalendar';
+import PeriodPicker from '@jerecocc/tracker-ui/PeriodPicker';
 import {
   ScheduleCalendarCard,
   ScheduleCalendarDayCount,
@@ -22,15 +22,15 @@ import {
   ScheduleWeekSummary,
   scheduleViewSegmentedControlClassName,
   useScheduleWeekSummaryStuck,
-} from '@/components/ScheduleGamesLayout/ScheduleGamesLayout';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import Skeleton from '@/components/Skeleton/Skeleton';
+} from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
 import useGames, { type GameRecord, type GameStatus, type GameType } from '@/hooks/useGames';
-import GameCard from '@/components/GameCard/GameCard';
-import Select from '@/components/Select/Select';
-import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
+import GameCard from '@/shared/GameCard/GameCard';
+import Select from '@jerecocc/tracker-ui/Select';
+import MultiSelect, { type MultiSelectOption } from '@jerecocc/tracker-ui/MultiSelect';
 import { type SeasonTeam } from '@/hooks/useSeasonDetails';
-import type { SelectOption } from '@/components/Select/Select';
+import type { SelectOption } from '@jerecocc/tracker-ui/Select';
 import BulkCreateGamesModal from './BulkCreateGamesModal';
 import GameFormModal from './GameFormModal';
 import { autofillGameFromNhlGamecenter } from '@/pages/admin/games/game-details/nhlGameAutofill';
@@ -42,7 +42,7 @@ import {
 } from '@/pages/admin/games/game-details/gameAutofillTypes';
 import GameAutofillManualMoveReportModal from '@/pages/admin/games/game-details/GameAutofillManualMoveReportModal';
 import { buildGameDetailsPath, buildSeasonDayGamesPath } from '@/lib/routeSlugs';
-import Icon from '@/components/Icon/Icon';
+import Icon from '@jerecocc/tracker-ui/Icon';
 import {
   firstWeekStartForMonth,
   majorityMonthForWeek,

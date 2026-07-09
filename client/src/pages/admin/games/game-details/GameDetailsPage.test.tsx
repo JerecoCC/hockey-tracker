@@ -46,8 +46,8 @@ jest.mock('@/context/AuthContext', () => ({
 jest.mock('@/context/BreadcrumbContext', () => ({
   usePageBreadcrumbs: (...args: any[]) => mockUsePageBreadcrumbs(...args),
 }));
-jest.mock('@/components/Breadcrumbs/Breadcrumbs', () => () => <div>breadcrumbs</div>);
-jest.mock('@/components/Button/Button', () => ({ children, onClick, type = 'button' }: any) => (
+jest.mock('@jerecocc/tracker-ui/Breadcrumbs', () => () => <div>breadcrumbs</div>);
+jest.mock('@jerecocc/tracker-ui/Button', () => ({ children, onClick, type = 'button' }: any) => (
   <button
     type={type}
     onClick={onClick}
@@ -55,8 +55,8 @@ jest.mock('@/components/Button/Button', () => ({ children, onClick, type = 'butt
     {children}
   </button>
 ));
-jest.mock('@/components/Tabs/Tabs', () => (props: any) => mockTabs(props));
-jest.mock('@/components/TitleRow/TitleRow', () => ({ left, right }: any) => (
+jest.mock('@jerecocc/tracker-ui/Tabs', () => (props: any) => mockTabs(props));
+jest.mock('@jerecocc/tracker-ui/TitleRow', () => ({ left, right }: any) => (
   <div>
     {left}
     {right}

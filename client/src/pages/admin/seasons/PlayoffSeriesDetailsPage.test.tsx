@@ -30,7 +30,7 @@ jest.mock('@/context/BreadcrumbContext', () => ({
   usePageBreadcrumbs: jest.fn(),
 }));
 jest.mock(
-  '@/components/Section/Section',
+  '@jerecocc/tracker-ui/Section',
   () =>
     function MockSection({
       title,
@@ -51,21 +51,21 @@ jest.mock(
     },
 );
 jest.mock(
-  '@/components/Button/Button',
+  '@jerecocc/tracker-ui/Button',
   () =>
     function MockButton({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
       return <button {...props}>{children}</button>;
     },
 );
 jest.mock(
-  '@/components/LoadingSpinner/LoadingSpinner',
+  '@jerecocc/tracker-ui/LoadingSpinner',
   () =>
     function MockLoadingSpinner({ message }: { message?: ReactNode }) {
       return <div>{message}</div>;
     },
 );
 jest.mock(
-  '@/components/Skeleton/Skeleton',
+  '@jerecocc/tracker-ui/Skeleton',
   () =>
     function MockSkeleton(props: HTMLAttributes<HTMLDivElement>) {
       return <div {...props} />;
@@ -76,7 +76,7 @@ jest.mock(
   () => (props: unknown) => mockScoreboardCard(props),
 );
 jest.mock(
-  '@/components/GameListItem',
+  '@/shared/GameListItem',
   () =>
     function MockGameListItem() {
       return <li>game item</li>;

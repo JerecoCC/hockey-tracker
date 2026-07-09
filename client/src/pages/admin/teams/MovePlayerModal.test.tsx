@@ -4,7 +4,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MovePlayerModal from './MovePlayerModal';
 
-jest.mock('@/components/Modal/Modal', () => {
+jest.mock('@jerecocc/tracker-ui/Modal', () => {
   interface MockModalProps {
     open: boolean;
     title: string;
@@ -30,7 +30,7 @@ jest.mock('@/components/Modal/Modal', () => {
   return MockModal;
 });
 
-jest.mock('@/components/Field/Field', () => {
+jest.mock('@jerecocc/tracker-ui/Field', () => {
   const { Controller } = jest.requireActual('react-hook-form');
 
   interface MockFieldProps {

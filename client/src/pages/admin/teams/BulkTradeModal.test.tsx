@@ -23,7 +23,7 @@ jest.mock('@/hooks/useTeams', () => ({
   }),
 }));
 
-jest.mock('@/components/Field/Field', () => {
+jest.mock('@jerecocc/tracker-ui/Field', () => {
   const { useController } = jest.requireActual('react-hook-form');
 
   interface MockFieldOption {

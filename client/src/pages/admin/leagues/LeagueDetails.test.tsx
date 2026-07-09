@@ -1,7 +1,7 @@
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import BreadcrumbTitleRow from '@/components/Breadcrumbs/BreadcrumbTitleRow';
+import BreadcrumbTitleRow from '@jerecocc/tracker-ui/BreadcrumbTitleRow';
 import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
@@ -103,7 +103,7 @@ jest.mock('./BulkAddPlayersModal', () => () => null);
 
 // ── Heavy / portal-incompatible child components ───────────────────────
 jest.mock(
-  '../../../components/RichTextEditor/RichTextEditor',
+  '@jerecocc/tracker-ui/RichTextEditor',
   () =>
     function MockRichTextEditor() {
       return <div data-testid="rte" />;
