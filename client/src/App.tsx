@@ -4,7 +4,7 @@ import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTheme } from './context/ThemeContext';
 import { ThemeProvider } from './context/ThemeProvider';
-import LoadingSpinner from '@jerecocc/tracker-ui/LoadingSpinner';
+import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
 import { gameDateRouteSlugToDateKey } from './lib/routeSlugs';
 
 const LoginPage = lazy(() => import('./pages/login/Login'));

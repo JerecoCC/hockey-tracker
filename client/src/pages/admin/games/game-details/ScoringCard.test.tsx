@@ -6,10 +6,10 @@ import type { GoalRecord } from '@/hooks/useGameGoals';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import ScoringCard from './ScoringCard';
 
-jest.mock('@jerecocc/tracker-ui/TeamLogo', () => function MockTeamLogo() {
+jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => function MockTeamLogo() {
   return <span>logo</span>;
 });
-jest.mock('@jerecocc/tracker-ui/PlayerAvatar', () => function MockPlayerAvatar() {
+jest.mock('@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar', () => function MockPlayerAvatar() {
   return <span>avatar</span>;
 });
 

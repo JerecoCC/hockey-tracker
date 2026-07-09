@@ -1,10 +1,10 @@
 import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import Button from '@jerecocc/tracker-ui/Button';
-import MonthCalendar from '@jerecocc/tracker-ui/MonthCalendar';
-import PeriodPicker from '@jerecocc/tracker-ui/PeriodPicker';
-import Section from '@jerecocc/tracker-ui/Section';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
+import PeriodPicker from '@jerecocc/tracker-ui/components/PeriodPicker/PeriodPicker';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import { ScheduleGamesTitle } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
 import TeamCalendarGameCard from '@/shared/TeamCalendarGameCard/TeamCalendarGameCard';
 import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';

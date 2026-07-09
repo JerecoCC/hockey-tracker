@@ -1,6 +1,6 @@
 import { type CSSProperties, type ReactNode } from 'react';
-import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
-import Tooltip from '@jerecocc/tracker-ui/Tooltip';
+import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
+import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import styles from './TeamCalendarGameCard.module.scss';
 
 interface TeamCalendarGameCardProps {

@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { ReactElement, ReactNode } from 'react';
-import Divider from '@jerecocc/tracker-ui/Divider';
-import PlayerAvatar from '@jerecocc/tracker-ui/PlayerAvatar';
-import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
+import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
+import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
+import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { formatPlayerPosition, PLAYER_POSITION_LABELS } from '@/lib/playerPosition';
 import styles from './PlayerCard.module.scss';
 

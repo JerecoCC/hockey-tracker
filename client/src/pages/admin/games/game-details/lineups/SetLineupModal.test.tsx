@@ -4,7 +4,7 @@ import SetLineupModal from './SetLineupModal';
 import { type LineupEntry } from '@/hooks/useGameLineup';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 
-jest.mock('@jerecocc/tracker-ui/Icon', () =>
+jest.mock('@jerecocc/tracker-ui/components/Icon/Icon', () =>
   function MockIcon({ name }: { name: string }) {
     return <span>{name}</span>;
   },

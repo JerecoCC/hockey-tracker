@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '@/context/ThemeContext';
-import Button from '@jerecocc/tracker-ui/Button';
-import Icon from '@jerecocc/tracker-ui/Icon';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import styles from './AdminNav.module.scss';
 
 interface NavItem {

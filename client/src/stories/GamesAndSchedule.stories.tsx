@@ -3,7 +3,7 @@ import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameList
 import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import GameListItem from '@/shared/GameListItem';
-import MonthCalendar from '@jerecocc/tracker-ui/MonthCalendar';
+import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
 import {
   ScheduleCalendarCard,
   ScheduleCalendarDayCount,
@@ -21,8 +21,8 @@ import {
   type ScheduleDayGroup,
 } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
 import TeamCalendarGameCard from '@/shared/TeamCalendarGameCard/TeamCalendarGameCard';
-import Button from '@jerecocc/tracker-ui/Button';
-import Tag from '@jerecocc/tracker-ui/Tag';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import type { GameRecord } from '@/hooks/useGames';
 import {
   noop,

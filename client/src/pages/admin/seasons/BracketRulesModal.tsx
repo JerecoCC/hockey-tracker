@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import BorderedFieldset from '@jerecocc/tracker-ui/BorderedFieldset';
-import Button from '@jerecocc/tracker-ui/Button';
-import Field from '@jerecocc/tracker-ui/Field';
-import InfoTooltip from '@jerecocc/tracker-ui/InfoTooltip';
-import Modal from '@jerecocc/tracker-ui/Modal';
-import Select from '@jerecocc/tracker-ui/Select';
-import ToggleButton from '@jerecocc/tracker-ui/ToggleButton';
+import BorderedFieldset from '@jerecocc/tracker-ui/components/BorderedFieldset/BorderedFieldset';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import Select from '@jerecocc/tracker-ui/components/Select/Select';
+import ToggleButton from '@jerecocc/tracker-ui/components/ToggleButton/ToggleButton';
 /** Minimal group shape used for scope filtering — satisfied by both SeasonGroupRecord and GroupRecord. */
 export interface GroupEntry {
   id: string;

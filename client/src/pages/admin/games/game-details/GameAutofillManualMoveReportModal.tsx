@@ -1,7 +1,7 @@
-import Badge from '@jerecocc/tracker-ui/Badge';
-import Accordion from '@jerecocc/tracker-ui/Accordion';
-import Modal from '@jerecocc/tracker-ui/Modal';
-import Table, { type Column } from '@jerecocc/tracker-ui/Table';
+import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
+import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import Table, { type Column } from '@jerecocc/tracker-ui/components/Table/Table';
 import { buildLeaguePlayerDetailsPath, buildPlayerDetailsPath } from '@/lib/routeSlugs';
 import type {
   GameAutofillManualJerseyChange,

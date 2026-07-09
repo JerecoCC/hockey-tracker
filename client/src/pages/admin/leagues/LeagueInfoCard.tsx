@@ -1,8 +1,8 @@
-import Card from '@jerecocc/tracker-ui/Card';
-import Divider from '@jerecocc/tracker-ui/Divider';
-import EntityHeader from '@jerecocc/tracker-ui/EntityHeader';
-import InfoItem from '@jerecocc/tracker-ui/InfoItem';
-import Skeleton from '@jerecocc/tracker-ui/Skeleton';
+import Card from '@jerecocc/tracker-ui/components/Card/Card';
+import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
+import EntityHeader from '@jerecocc/tracker-ui/components/EntityHeader/EntityHeader';
+import InfoItem from '@jerecocc/tracker-ui/components/InfoItem/InfoItem';
+import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
 import styles from './LeagueDetails.module.scss';
 

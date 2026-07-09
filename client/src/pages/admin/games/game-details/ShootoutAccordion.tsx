@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import ActionOverlay from '@jerecocc/tracker-ui/ActionOverlay';
-import PlayerAvatar from '@jerecocc/tracker-ui/PlayerAvatar';
-import Accordion, { type AccordionAction } from '@jerecocc/tracker-ui/Accordion';
-import Button from '@jerecocc/tracker-ui/Button';
-import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
+import ActionOverlay from '@jerecocc/tracker-ui/components/ActionOverlay/ActionOverlay';
+import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
+import Accordion, { type AccordionAction } from '@jerecocc/tracker-ui/components/Accordion/Accordion';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GoalRecord } from '@/hooks/useGameGoals';
 import { type ShootoutAttempt } from '@/hooks/useShootoutAttempts';

@@ -61,14 +61,14 @@ jest.mock('@/hooks/useFavoriteTeams', () => ({
   __esModule: true,
   default: () => ({ favorites: ['team-home', 'team-away'] }),
 }));
-jest.mock('@jerecocc/tracker-ui/Card', () => ({ title, children }: any) => (
+jest.mock('@jerecocc/tracker-ui/components/Card/Card', () => ({ title, children }: any) => (
   <section>
     {title && <h3>{title}</h3>}
     {children}
   </section>
 ));
 jest.mock(
-  '@jerecocc/tracker-ui/Button',
+  '@jerecocc/tracker-ui/components/Button/Button',
   () =>
     ({ children, tooltip, icon, onClick, disabled }: any) => (
       <button
@@ -81,9 +81,9 @@ jest.mock(
       </button>
     ),
 );
-jest.mock('@jerecocc/tracker-ui/TeamLogo', () => ({ code }: any) => <span>{code}</span>);
+jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => ({ code }: any) => <span>{code}</span>);
 jest.mock(
-  '@jerecocc/tracker-ui/Modal',
+  '@jerecocc/tracker-ui/components/Modal/Modal',
   () =>
     ({
       open,
@@ -111,7 +111,7 @@ jest.mock(
       ) : null,
 );
 jest.mock(
-  '@jerecocc/tracker-ui/ConfirmModal',
+  '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal',
   () =>
     ({ open, title, body, onConfirm, onCancel, confirmLabel }: any) =>
       open ? (
@@ -124,7 +124,7 @@ jest.mock(
       ) : null,
 );
 jest.mock(
-  '@jerecocc/tracker-ui/DatePicker',
+  '@jerecocc/tracker-ui/components/DatePicker/DatePicker',
   () => (props: any) =>
     props.triggerLabel ? (
       <button

@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useMobileTabs } from '@/context/MobileTabsContext';
-import Button from '@jerecocc/tracker-ui/Button';
-import Icon from '@jerecocc/tracker-ui/Icon';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import styles from './PageHeader.module.scss';
 
 const EXACT_TITLES: Record<string, string> = {

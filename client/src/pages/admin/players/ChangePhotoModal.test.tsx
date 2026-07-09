@@ -5,7 +5,7 @@ import type { SeasonRecord } from '@/hooks/useSeasons';
 import type { PlayerPhotoEntry, PlayerStintRecord } from '@/hooks/useTeamPlayers';
 import ChangePhotoModal from './ChangePhotoModal';
 
-jest.mock('@jerecocc/tracker-ui/Modal', () => {
+jest.mock('@jerecocc/tracker-ui/components/Modal/Modal', () => {
   interface MockModalProps {
     open: boolean;
     title: string;
@@ -26,7 +26,7 @@ jest.mock('@jerecocc/tracker-ui/Modal', () => {
   return MockModal;
 });
 
-jest.mock('@jerecocc/tracker-ui/Field', () => {
+jest.mock('@jerecocc/tracker-ui/components/Field/Field', () => {
   const { Controller } = jest.requireActual('react-hook-form');
 
   interface MockFieldProps {
@@ -82,7 +82,7 @@ jest.mock('@jerecocc/tracker-ui/Field', () => {
   return MockField;
 });
 
-jest.mock('@jerecocc/tracker-ui/LogoUpload', () => {
+jest.mock('@jerecocc/tracker-ui/components/LogoUpload/LogoUpload', () => {
   interface MockLogoUploadProps {
     label: string;
   }

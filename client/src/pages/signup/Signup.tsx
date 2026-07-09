@@ -2,12 +2,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/context/AuthContext';
-import Button from '@jerecocc/tracker-ui/Button';
-import Card from '@jerecocc/tracker-ui/Card';
-import Divider from '@jerecocc/tracker-ui/Divider';
-import Field from '@jerecocc/tracker-ui/Field';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Card from '@jerecocc/tracker-ui/components/Card/Card';
+import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
 import GoogleButton from '@/shared/GoogleButton/GoogleButton';
-import Icon from '@jerecocc/tracker-ui/Icon';
+import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import styles from './Signup.module.scss';
 
 interface SignupForm {

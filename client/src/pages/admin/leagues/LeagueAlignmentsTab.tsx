@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import Button from '@jerecocc/tracker-ui/Button';
-import Checklist from '@jerecocc/tracker-ui/Checklist';
-import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
-import Divider from '@jerecocc/tracker-ui/Divider';
-import Field from '@jerecocc/tracker-ui/Field';
-import GroupedFields from '@jerecocc/tracker-ui/GroupedFields';
-import InfoTooltip from '@jerecocc/tracker-ui/InfoTooltip';
-import ListItem from '@jerecocc/tracker-ui/ListItem';
-import Modal from '@jerecocc/tracker-ui/Modal';
-import Section from '@jerecocc/tracker-ui/Section';
-import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
-import Skeleton from '@jerecocc/tracker-ui/Skeleton';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Checklist from '@jerecocc/tracker-ui/components/Checklist/Checklist';
+import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
+import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import GroupedFields from '@jerecocc/tracker-ui/components/GroupedFields/GroupedFields';
+import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
+import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
+import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import useGroupAlignmentSets, {
   type AlignmentGroupRecord,

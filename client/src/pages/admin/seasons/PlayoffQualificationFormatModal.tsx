@@ -1,8 +1,8 @@
 import { useCallback, type ReactNode } from 'react';
-import Field from '@jerecocc/tracker-ui/Field';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
 import BulkCreateModal, {
   type BulkCreateRowRenderProps,
-} from '@jerecocc/tracker-ui/BulkCreateModal';
+} from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
 import { type PlayoffFormatRule } from '@/hooks/useLeagues';
 import styles from './PlayoffQualificationFormatModal.module.scss';
 

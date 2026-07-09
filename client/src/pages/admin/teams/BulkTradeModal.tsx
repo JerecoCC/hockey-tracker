@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect } from 'react';
 import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
-import BulkCreateModal from '@jerecocc/tracker-ui/BulkCreateModal';
-import Field from '@jerecocc/tracker-ui/Field';
+import BulkCreateModal from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
 import useTeams from '@/hooks/useTeams';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { ACQUISITION_TYPE_OPTIONS } from '../players/StintEditModal';

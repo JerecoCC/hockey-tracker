@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import Accordion from '@jerecocc/tracker-ui/Accordion';
-import Badge from '@jerecocc/tracker-ui/Badge';
-import Button from '@jerecocc/tracker-ui/Button';
-import Modal from '@jerecocc/tracker-ui/Modal';
-import PlayerAvatar from '@jerecocc/tracker-ui/PlayerAvatar';
-import Select from '@jerecocc/tracker-ui/Select';
-import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
-import TimePicker from '@jerecocc/tracker-ui/TimePicker';
-import Tooltip from '@jerecocc/tracker-ui/Tooltip';
+import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
+import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
+import Select from '@jerecocc/tracker-ui/components/Select/Select';
+import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
+import TimePicker from '@jerecocc/tracker-ui/components/TimePicker/TimePicker';
+import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import {

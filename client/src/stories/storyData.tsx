@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/Field';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
 import type { GameRecord, TeamInfo } from '@/hooks/useGames';
 
 export const noop = () => {};

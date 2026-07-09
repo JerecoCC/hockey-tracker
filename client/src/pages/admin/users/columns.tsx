@@ -1,7 +1,7 @@
-import { Column } from '@jerecocc/tracker-ui/Table';
-import Button from '@jerecocc/tracker-ui/Button';
-import Icon from '@jerecocc/tracker-ui/Icon';
-import Tag from '@jerecocc/tracker-ui/Tag';
+import { Column } from '@jerecocc/tracker-ui/components/Table/Table';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
+import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import styles from './Users.module.scss';
 
 export interface UserRecord {

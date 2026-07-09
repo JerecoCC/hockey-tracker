@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import Select, { type SelectOption, type SelectWidth } from '@jerecocc/tracker-ui/Select';
+import Select, { type SelectOption, type SelectWidth } from '@jerecocc/tracker-ui/components/Select/Select';
 import {
   getLatestEndedSeasonId,
   getLatestSeasonId,

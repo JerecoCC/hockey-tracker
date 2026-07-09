@@ -1,4 +1,4 @@
-import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import { SeasonRecord } from '@/hooks/useSeasons';
 
 interface Props {

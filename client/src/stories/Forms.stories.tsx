@@ -1,18 +1,18 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import CheckboxField from '@jerecocc/tracker-ui/CheckboxField';
-import DatePicker from '@jerecocc/tracker-ui/DatePicker';
-import DescriptionEditor from '@jerecocc/tracker-ui/DescriptionEditor';
-import LogoUpload from '@jerecocc/tracker-ui/LogoUpload';
-import MultiSelect, { type MultiSelectOption } from '@jerecocc/tracker-ui/MultiSelect';
-import PeriodPicker from '@jerecocc/tracker-ui/PeriodPicker';
-import RichTextEditor from '@jerecocc/tracker-ui/RichTextEditor';
-import SearchField from '@jerecocc/tracker-ui/SearchField';
+import CheckboxField from '@jerecocc/tracker-ui/components/CheckboxField/CheckboxField';
+import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
+import DescriptionEditor from '@jerecocc/tracker-ui/components/DescriptionEditor/DescriptionEditor';
+import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
+import MultiSelect, { type MultiSelectOption } from '@jerecocc/tracker-ui/components/MultiSelect/MultiSelect';
+import PeriodPicker from '@jerecocc/tracker-ui/components/PeriodPicker/PeriodPicker';
+import RichTextEditor from '@jerecocc/tracker-ui/components/RichTextEditor/RichTextEditor';
+import SearchField from '@jerecocc/tracker-ui/components/SearchField/SearchField';
 import SeasonSelect from '@/shared/SeasonSelect/SeasonSelect';
-import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
-import Select, { type SelectOption } from '@jerecocc/tracker-ui/Select';
-import TimePicker from '@jerecocc/tracker-ui/TimePicker';
+import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
+import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
+import TimePicker from '@jerecocc/tracker-ui/components/TimePicker/TimePicker';
 import {
   FormFieldDemo,
   minLogo,

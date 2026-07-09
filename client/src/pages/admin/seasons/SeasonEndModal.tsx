@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/Field';
-import Modal from '@jerecocc/tracker-ui/Modal';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import styles from './SeasonFormModal.module.scss';
 
 interface FormValues {

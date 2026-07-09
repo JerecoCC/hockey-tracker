@@ -1,17 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import Button from '@jerecocc/tracker-ui/Button';
-import ColorSwatch from '@jerecocc/tracker-ui/ColorSwatch';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import ColorSwatch from '@jerecocc/tracker-ui/components/ColorSwatch/ColorSwatch';
 import GoogleButton from '@/shared/GoogleButton/GoogleButton';
-import GroupTeamCount from '@jerecocc/tracker-ui/GroupTeamCount';
-import Icon from '@jerecocc/tracker-ui/Icon';
-import InfoTooltip from '@jerecocc/tracker-ui/InfoTooltip';
-import LoadingSpinner from '@jerecocc/tracker-ui/LoadingSpinner';
-import PlayerAvatar from '@jerecocc/tracker-ui/PlayerAvatar';
-import Skeleton, { type SkeletonType } from '@jerecocc/tracker-ui/Skeleton';
-import Tag, { type TagIntent } from '@jerecocc/tracker-ui/Tag';
-import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
-import ToggleButton from '@jerecocc/tracker-ui/ToggleButton';
-import Tooltip from '@jerecocc/tracker-ui/Tooltip';
+import GroupTeamCount from '@jerecocc/tracker-ui/components/GroupTeamCount/GroupTeamCount';
+import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
+import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
+import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
+import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
+import Skeleton, { type SkeletonType } from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
+import Tag, { type TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
+import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
+import ToggleButton from '@jerecocc/tracker-ui/components/ToggleButton/ToggleButton';
+import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import {
   bosLogo,
   minLogo,

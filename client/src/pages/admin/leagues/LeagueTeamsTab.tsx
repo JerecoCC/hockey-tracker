@@ -1,8 +1,8 @@
-import Button from '@jerecocc/tracker-ui/Button';
-import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/ListItem';
-import SearchableList from '@jerecocc/tracker-ui/SearchableList';
-import Section from '@jerecocc/tracker-ui/Section';
-import Skeleton from '@jerecocc/tracker-ui/Skeleton';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
+import SearchableList from '@jerecocc/tracker-ui/components/SearchableList/SearchableList';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import { buildTeamDetailsPath } from '@/lib/routeSlugs';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import {

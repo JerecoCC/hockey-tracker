@@ -32,7 +32,7 @@ jest.mock('@/hooks/useShootoutAttempts', () => ({
     deleteAttempt: mockDeleteAttempt,
   }),
 }));
-jest.mock('@jerecocc/tracker-ui/Button', () => ({ children, onClick, type = 'button' }: any) => (
+jest.mock('@jerecocc/tracker-ui/components/Button/Button', () => ({ children, onClick, type = 'button' }: any) => (
   <button
     type={type}
     onClick={onClick}
@@ -40,14 +40,14 @@ jest.mock('@jerecocc/tracker-ui/Button', () => ({ children, onClick, type = 'but
     {children}
   </button>
 ));
-jest.mock('@jerecocc/tracker-ui/Section', () => ({ title, action, children }: any) => (
+jest.mock('@jerecocc/tracker-ui/components/Section/Section', () => ({ title, action, children }: any) => (
   <section>
     <h2>{title}</h2>
     {action}
     {children}
   </section>
 ));
-jest.mock('@jerecocc/tracker-ui/TeamLogo', () => () => <span data-testid="team-logo" />);
+jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => () => <span data-testid="team-logo" />);
 jest.mock('../ScoringCard', () => ({ onScoreGoal }: any) => (
   <button
     type="button"
@@ -85,7 +85,7 @@ jest.mock('../RecordShotsModal', () => () => <div />);
 jest.mock('../ShotsEditModal', () => () => <div />);
 jest.mock('../ScoreImageModal', () => () => <div />);
 jest.mock('../GameAutofillManualMoveReportModal', () => () => <div />);
-jest.mock('@jerecocc/tracker-ui/ConfirmModal', () => () => <div />);
+jest.mock('@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal', () => () => <div />);
 
 const game = {
   id: 'game-1',

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/Field';
-import LogoUpload from '@jerecocc/tracker-ui/LogoUpload';
-import Modal from '@jerecocc/tracker-ui/Modal';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type CreateLeagueData, type LeagueRecord } from '@/hooks/useLeagues';
 import styles from './Leagues.module.scss';
 

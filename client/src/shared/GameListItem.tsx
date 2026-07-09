@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom';
-import ActionOverlay from '@jerecocc/tracker-ui/ActionOverlay';
-import Tag from '@jerecocc/tracker-ui/Tag';
-import type { TagIntent } from '@jerecocc/tracker-ui/Tag';
-import Button from '@jerecocc/tracker-ui/Button';
-import type { ButtonIntent } from '@jerecocc/tracker-ui/Button';
-import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
+import ActionOverlay from '@jerecocc/tracker-ui/components/ActionOverlay/ActionOverlay';
+import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
+import type { TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import type { ButtonIntent } from '@jerecocc/tracker-ui/components/Button/Button';
+import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import type { GameType } from '@/hooks/useGames';
 import styles from './GameListItem.module.scss';
 

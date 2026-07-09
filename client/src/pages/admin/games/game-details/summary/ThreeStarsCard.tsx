@@ -1,5 +1,5 @@
-import Button from '@jerecocc/tracker-ui/Button';
-import Section from '@jerecocc/tracker-ui/Section';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { GoalieStatRecord } from '@/hooks/useGameGoalieStats';

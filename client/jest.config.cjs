@@ -22,6 +22,9 @@ module.exports = {
     '\\.(jpg|jpeg|png|gif|svg|ico|webp)$': '<rootDir>/src/__mocks__/fileMock.cjs',
     // Path alias: @/ → src/
     '^@jerecocc/tracker-ui$': '<rootDir>/../../tracker-ui/src/index.ts',
+    '^@jerecocc/tracker-ui/components/Modal/backgroundScrollLock$':
+      '<rootDir>/../../tracker-ui/src/components/Modal/backgroundScrollLock.ts',
+    '^@jerecocc/tracker-ui/components/(.*)$': '<rootDir>/../../tracker-ui/src/components/$1.tsx',
     '^@jerecocc/tracker-ui/BreadcrumbTitleRow$':
       '<rootDir>/../../tracker-ui/src/components/Breadcrumbs/BreadcrumbTitleRow.tsx',
     '^@jerecocc/tracker-ui/backgroundScrollLock$':

@@ -3,8 +3,8 @@ import type { GameRecord } from '@/hooks/useGames';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import ShootoutAccordion from './ShootoutAccordion';
 
-jest.mock('@jerecocc/tracker-ui/TeamLogo', () => () => <span>logo</span>);
-jest.mock('@jerecocc/tracker-ui/PlayerAvatar', () => ({
+jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => () => <span>logo</span>);
+jest.mock('@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar', () => ({
   __esModule: true,
   default: ({ initials }: { initials: string }) => (
     <span data-testid="player-avatar">{initials}</span>

@@ -1,4 +1,4 @@
-import Button from '@jerecocc/tracker-ui/Button';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import { useAuth } from '@/context/AuthContext';
 import styles from './GoogleButton.module.scss';
 

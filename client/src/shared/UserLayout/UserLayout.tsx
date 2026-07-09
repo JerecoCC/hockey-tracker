@@ -4,8 +4,8 @@ import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbCo
 import TitleRowContext from '@/context/TitleRowContext';
 import MobileTabsContext, { type MobileTabsState } from '@/context/MobileTabsContext';
 import QueryProvider from '@/context/QueryProvider';
-import BreadcrumbTitleRow from '@jerecocc/tracker-ui/BreadcrumbTitleRow';
-import Icon from '@jerecocc/tracker-ui/Icon';
+import BreadcrumbTitleRow from '@jerecocc/tracker-ui/components/Breadcrumbs/BreadcrumbTitleRow';
+import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import PageHeader from '@/shared/PageHeader/PageHeader';
 import UserNav from '@/shared/UserNav/UserNav';
 import styles from './UserLayout.module.scss';

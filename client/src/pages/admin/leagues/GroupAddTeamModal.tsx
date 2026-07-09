@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import Button from '@jerecocc/tracker-ui/Button';
-import Checklist from '@jerecocc/tracker-ui/Checklist';
-import Modal from '@jerecocc/tracker-ui/Modal';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Checklist from '@jerecocc/tracker-ui/components/Checklist/Checklist';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type GroupRecord } from '@/hooks/useLeagueGroups';
 import { type TeamRecord } from '@/hooks/useTeams';
 import styles from './LeagueDetails.module.scss';

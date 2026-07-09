@@ -1,9 +1,9 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/Field';
-import GroupedFields from '@jerecocc/tracker-ui/GroupedFields';
-import LogoUpload from '@jerecocc/tracker-ui/LogoUpload';
-import Modal from '@jerecocc/tracker-ui/Modal';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import GroupedFields from '@jerecocc/tracker-ui/components/GroupedFields/GroupedFields';
+import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type TeamDetailRecord } from '@/hooks/useTeamDetails';
 import { type CreateTeamData } from '@/hooks/useTeams';
 import { descriptionHtmlToTextarea, textareaToDescriptionHtml } from '@/lib/descriptionHtml';

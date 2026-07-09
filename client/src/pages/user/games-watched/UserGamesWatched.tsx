@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import InfoTooltip from '@jerecocc/tracker-ui/InfoTooltip';
-import Section from '@jerecocc/tracker-ui/Section';
-import Select, { type SelectOption } from '@jerecocc/tracker-ui/Select';
-import Table, { type Column } from '@jerecocc/tracker-ui/Table';
-import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
+import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
+import Table, { type Column } from '@jerecocc/tracker-ui/components/Table/Table';
+import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import type { GameRecord } from '@/hooks/useGames';
 import {

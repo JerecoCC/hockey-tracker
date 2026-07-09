@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import Card from '@jerecocc/tracker-ui/Card';
-import EntityHeader from '@jerecocc/tracker-ui/EntityHeader';
+import Card from '@jerecocc/tracker-ui/components/Card/Card';
+import EntityHeader from '@jerecocc/tracker-ui/components/EntityHeader/EntityHeader';
 import { type GroupRecord } from '@/hooks/useLeagueGroups';
 import { type TeamDetailRecord } from '@/hooks/useTeamDetails';
 import { type CreateTeamData } from '@/hooks/useTeams';

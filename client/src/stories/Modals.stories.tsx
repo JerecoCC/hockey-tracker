@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import BulkCreateModal from '@jerecocc/tracker-ui/BulkCreateModal';
-import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
-import Field from '@jerecocc/tracker-ui/Field';
-import ImagePreviewModal from '@jerecocc/tracker-ui/ImagePreviewModal';
-import Modal from '@jerecocc/tracker-ui/Modal';
+import BulkCreateModal from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
+import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import ImagePreviewModal from '@jerecocc/tracker-ui/components/ImagePreviewModal/ImagePreviewModal';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { minLogo, noop, StoryPanel } from './storyData';
 
 const meta = {

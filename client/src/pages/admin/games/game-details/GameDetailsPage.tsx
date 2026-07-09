@@ -1,7 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import LoadingSpinner from '@jerecocc/tracker-ui/LoadingSpinner';
-import Tabs from '@jerecocc/tracker-ui/Tabs';
+import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
+import Tabs from '@jerecocc/tracker-ui/components/Tabs/Tabs';
 import { useGameDetails, useGameRouteLookup } from '@/hooks/useGames';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagues from '@/hooks/useLeagues';

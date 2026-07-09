@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import Tabs from '@jerecocc/tracker-ui/Tabs';
+import Tabs from '@jerecocc/tracker-ui/components/Tabs/Tabs';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useDocumentIcon from '@/hooks/useDocumentIcon';

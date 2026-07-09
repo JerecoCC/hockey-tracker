@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties, MutableRefObject, ReactNode, Ref } from 'react';
 import { Link } from 'react-router-dom';
-import Badge from '@jerecocc/tracker-ui/Badge';
-import Divider from '@jerecocc/tracker-ui/Divider';
-import Section from '@jerecocc/tracker-ui/Section';
-import Icon from '@jerecocc/tracker-ui/Icon';
-import MonthCalendar from '@jerecocc/tracker-ui/MonthCalendar';
-import Skeleton from '@jerecocc/tracker-ui/Skeleton';
+import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
+import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
+import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
+import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import styles from './ScheduleGamesLayout.module.scss';
 
 export type ScheduleDayGroup<T> = readonly [dateKey: string, items: T[]];

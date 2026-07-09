@@ -78,9 +78,9 @@ jest.mock('@/hooks/useTeamPlayers', () => ({
 jest.mock('@/context/BreadcrumbContext', () => ({
   usePageBreadcrumbs: (...args: any[]) => mockUsePageBreadcrumbs(...args),
 }));
-jest.mock('@jerecocc/tracker-ui/Breadcrumbs', () => () => <div />);
+jest.mock('@jerecocc/tracker-ui/components/Breadcrumbs/Breadcrumbs', () => () => <div />);
 jest.mock(
-  '@jerecocc/tracker-ui/Button',
+  '@jerecocc/tracker-ui/components/Button/Button',
   () =>
     ({
       children,
@@ -111,7 +111,7 @@ jest.mock(
       </button>
     ),
 );
-jest.mock('@jerecocc/tracker-ui/Card', () => ({ title, action, className, children }: any) => (
+jest.mock('@jerecocc/tracker-ui/components/Card/Card', () => ({ title, action, className, children }: any) => (
   <div className={className}>
     {title}
     {action}
@@ -119,7 +119,7 @@ jest.mock('@jerecocc/tracker-ui/Card', () => ({ title, action, className, childr
   </div>
 ));
 jest.mock(
-  '@jerecocc/tracker-ui/ConfirmModal',
+  '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal',
   () =>
     ({ open, title, body, confirmLabel, onConfirm, onCancel }: any) =>
       open ? (
@@ -134,7 +134,7 @@ jest.mock(
       ) : null,
 );
 jest.mock(
-  '@jerecocc/tracker-ui/Modal',
+  '@jerecocc/tracker-ui/components/Modal/Modal',
   () =>
     ({
       open,
@@ -168,22 +168,22 @@ jest.mock(
         </div>
       ) : null,
 );
-jest.mock('@jerecocc/tracker-ui/TitleRow', () => ({ left, right }: any) => (
+jest.mock('@jerecocc/tracker-ui/components/TitleRow/TitleRow', () => ({ left, right }: any) => (
   <div>
     {left}
     {right}
   </div>
 ));
-jest.mock('@jerecocc/tracker-ui/PlayerAvatar', () => ({ photo }: any) => (
+jest.mock('@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar', () => ({ photo }: any) => (
   <span data-photo={photo ?? ''}>avatar</span>
 ));
-jest.mock('@jerecocc/tracker-ui/TeamLogo', () => ({ size }: any) => (
+jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => ({ size }: any) => (
   <span data-size={size}>logo</span>
 ));
-jest.mock('@jerecocc/tracker-ui/InfoTooltip', () => ({ ariaLabel, text, content }: any) => (
+jest.mock('@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip', () => ({ ariaLabel, text, content }: any) => (
   <span aria-label={ariaLabel ?? text ?? 'Information'}>{content ?? text}</span>
 ));
-jest.mock('@jerecocc/tracker-ui/Table', () => ({ columns, data, rowKey, emptyMessage }: any) => (
+jest.mock('@jerecocc/tracker-ui/components/Table/Table', () => ({ columns, data, rowKey, emptyMessage }: any) => (
   <table>
     <thead>
       <tr>
@@ -215,10 +215,10 @@ jest.mock('@jerecocc/tracker-ui/Table', () => ({ columns, data, rowKey, emptyMes
     </tbody>
   </table>
 ));
-jest.mock('@jerecocc/tracker-ui/Tabs', () => ({ tabs, activeIndex = 0 }: any) => (
+jest.mock('@jerecocc/tracker-ui/components/Tabs/Tabs', () => ({ tabs, activeIndex = 0 }: any) => (
   <div>{tabs[activeIndex].content}</div>
 ));
-jest.mock('@jerecocc/tracker-ui/Tooltip', () => ({ children, className }: any) => (
+jest.mock('@jerecocc/tracker-ui/components/Tooltip/Tooltip', () => ({ children, className }: any) => (
   <span className={className}>{children}</span>
 ));
 jest.mock('../teams/TeamPlayerEditModal', () => () => null);
@@ -253,7 +253,7 @@ jest.mock('./ChangePhotoModal', () => {
   return MockChangePhotoModal;
 });
 jest.mock(
-  '@jerecocc/tracker-ui/ImagePreviewModal',
+  '@jerecocc/tracker-ui/components/ImagePreviewModal/ImagePreviewModal',
   () =>
     ({ open, src, alt }: any) =>
       open ? (

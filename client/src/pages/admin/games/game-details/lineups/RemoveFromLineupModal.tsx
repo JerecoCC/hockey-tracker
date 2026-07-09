@@ -1,4 +1,4 @@
-import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 
 interface Props {

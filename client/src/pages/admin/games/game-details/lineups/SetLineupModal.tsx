@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import Modal from '@jerecocc/tracker-ui/Modal';
-import RadioList, { type RadioListOption } from '@jerecocc/tracker-ui/RadioList';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import RadioList, { type RadioListOption } from '@jerecocc/tracker-ui/components/RadioList/RadioList';
 import { type LineupEntry, type LineupPositionSlot } from '@/hooks/useGameLineup';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';

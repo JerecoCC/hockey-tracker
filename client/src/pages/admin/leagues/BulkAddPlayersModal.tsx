@@ -1,7 +1,7 @@
 import BulkCreateModal, {
   type BulkCreateRowRenderProps,
-} from '@jerecocc/tracker-ui/BulkCreateModal';
-import Field from '@jerecocc/tracker-ui/Field';
+} from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
 import {
   type BulkPlayerInput,
   type PlayerPosition,

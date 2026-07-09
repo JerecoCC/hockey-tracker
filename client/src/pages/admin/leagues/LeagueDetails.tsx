@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import LeagueAlignmentsTab, { LeagueAlignmentsTabSkeleton } from './LeagueAlignmentsTab';
 import LeagueAwardsTab, { LeagueAwardsTabSkeleton } from './LeagueAwardsTab';
 import LeagueEditModal from './LeagueEditModal';
@@ -13,8 +13,8 @@ import BulkAddPlayersModal from './BulkAddPlayersModal';
 import PlayerFormModal from './PlayerFormModal';
 import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
 import SeasonFormModal from '../seasons/SeasonFormModal';
-import Skeleton from '@jerecocc/tracker-ui/Skeleton';
-import Tabs from '@jerecocc/tracker-ui/Tabs';
+import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
+import Tabs from '@jerecocc/tracker-ui/components/Tabs/Tabs';
 import TeamFormModal from '../teams/TeamFormModal';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useDocumentIcon from '@/hooks/useDocumentIcon';

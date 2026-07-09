@@ -1,9 +1,9 @@
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Tag from '@jerecocc/tracker-ui/Tag';
-import Tooltip from '@jerecocc/tracker-ui/Tooltip';
-import StickyHeroCard from '@jerecocc/tracker-ui/StickyHeroCard';
-import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
+import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
+import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
+import StickyHeroCard from '@jerecocc/tracker-ui/components/StickyHeroCard/StickyHeroCard';
+import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import type { GameStatus, TeamInfo } from '@/hooks/useGames';
 import { buildTeamDetailsPath, buildUserTeamDetailsPath } from '@/lib/routeSlugs';
 import {

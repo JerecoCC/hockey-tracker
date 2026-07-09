@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
-import Field from '@jerecocc/tracker-ui/Field';
-import Modal from '@jerecocc/tracker-ui/Modal';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { fetchNhlGoalieSwitchReport, type NhlGoalieSwitchReport } from './nhlGoalieSwitchChecker';
 import type { GameRecord } from '@/hooks/useGames';
 import styles from './GameDetailsPage.module.scss';

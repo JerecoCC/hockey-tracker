@@ -1,28 +1,28 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import type { ListItemAction } from '@jerecocc/tracker-ui/ListItem';
+import type { ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { LineupEntry } from '@/hooks/useGameLineup';
 import GameLineupsTab from './GameLineupsTab';
 
 jest.mock('@/hooks/useTeamPlayers', () => () => ({ createAndRosterPlayers: jest.fn() }));
-jest.mock('@jerecocc/tracker-ui/Accordion', () =>
+jest.mock('@jerecocc/tracker-ui/components/Accordion/Accordion', () =>
   function MockAccordion({ label, children }: { label: ReactNode; children: ReactNode }) {
     return <div><div>{label}</div>{children}</div>;
   },
 );
-jest.mock('@jerecocc/tracker-ui/Card', () =>
+jest.mock('@jerecocc/tracker-ui/components/Card/Card', () =>
   function MockCard({ children, title }: { children: ReactNode; title: ReactNode }) {
     return <div><div>{title}</div>{children}</div>;
   },
 );
-jest.mock('@jerecocc/tracker-ui/SegmentedControl', () =>
+jest.mock('@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl', () =>
   function MockSegmentedControl() {
     return null;
   },
 );
-jest.mock('@jerecocc/tracker-ui/TeamLogo', () =>
+jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () =>
   function MockTeamLogo() {
     return <span>logo</span>;
   },
@@ -47,7 +47,7 @@ jest.mock('./RemoveFromLineupModal', () =>
     return null;
   },
 );
-jest.mock('@jerecocc/tracker-ui/ListItem', () =>
+jest.mock('@jerecocc/tracker-ui/components/ListItem/ListItem', () =>
   function MockListItem({
     name,
     rightContent,

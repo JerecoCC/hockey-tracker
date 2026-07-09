@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Button from '@jerecocc/tracker-ui/Button';
-import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/ListItem';
-import Section from '@jerecocc/tracker-ui/Section';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import useLeagues, { LeagueRecord } from '@/hooks/useLeagues';
 import { buildLeagueDetailsPath } from '@/lib/routeSlugs';
 import LeagueDeleteModal from './LeagueDeleteModal';

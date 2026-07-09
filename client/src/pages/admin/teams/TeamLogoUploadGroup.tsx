@@ -1,5 +1,5 @@
-import GroupedFields from '@jerecocc/tracker-ui/GroupedFields';
-import LogoUpload from '@jerecocc/tracker-ui/LogoUpload';
+import GroupedFields from '@jerecocc/tracker-ui/components/GroupedFields/GroupedFields';
+import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import styles from './TeamLogoUploadGroup.module.scss';
 
 interface Props {

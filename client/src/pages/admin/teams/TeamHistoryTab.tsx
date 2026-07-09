@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import Button from '@jerecocc/tracker-ui/Button';
-import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
-import Field from '@jerecocc/tracker-ui/Field';
-import LogoUpload from '@jerecocc/tracker-ui/LogoUpload';
-import Modal from '@jerecocc/tracker-ui/Modal';
-import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/ListItem';
-import Section from '@jerecocc/tracker-ui/Section';
-import Skeleton from '@jerecocc/tracker-ui/Skeleton';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import useTeamHistory, { type TeamIteration } from '@/hooks/useTeamHistory';
 import styles from './TeamDetails.module.scss';
 

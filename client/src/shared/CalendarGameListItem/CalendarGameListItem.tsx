@@ -1,7 +1,7 @@
 import type { CSSProperties, DragEventHandler, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
-import Tooltip from '@jerecocc/tracker-ui/Tooltip';
+import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
+import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import type { GameType } from '@/hooks/useGames';
 import styles from './CalendarGameListItem.module.scss';
 

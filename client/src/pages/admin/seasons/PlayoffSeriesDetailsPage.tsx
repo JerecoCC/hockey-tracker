@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import Section from '@jerecocc/tracker-ui/Section';
-import Button from '@jerecocc/tracker-ui/Button';
-import LoadingSpinner from '@jerecocc/tracker-ui/LoadingSpinner';
-import Skeleton from '@jerecocc/tracker-ui/Skeleton';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
+import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
-import type { TagIntent } from '@jerecocc/tracker-ui/Tag';
+import type { TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
 import useLeagues from '@/hooks/useLeagues';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useDocumentIcon from '@/hooks/useDocumentIcon';

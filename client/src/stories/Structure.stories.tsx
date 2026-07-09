@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import Accordion from '@jerecocc/tracker-ui/Accordion';
-import ActionOverlay from '@jerecocc/tracker-ui/ActionOverlay';
-import AddRowBar from '@jerecocc/tracker-ui/AddRowBar';
-import Button from '@jerecocc/tracker-ui/Button';
-import Pagination, { PaginatedTable } from '@jerecocc/tracker-ui/Pagination';
-import Section from '@jerecocc/tracker-ui/Section';
-import Table, { type Column } from '@jerecocc/tracker-ui/Table';
-import Tabs from '@jerecocc/tracker-ui/Tabs';
-import Tag from '@jerecocc/tracker-ui/Tag';
+import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
+import ActionOverlay from '@jerecocc/tracker-ui/components/ActionOverlay/ActionOverlay';
+import AddRowBar from '@jerecocc/tracker-ui/components/AddRowBar/AddRowBar';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Pagination, { PaginatedTable } from '@jerecocc/tracker-ui/components/Pagination/Pagination';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import Table, { type Column } from '@jerecocc/tracker-ui/components/Table/Table';
+import Tabs from '@jerecocc/tracker-ui/components/Tabs/Tabs';
+import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import { noop, Stateful, StoryGrid, StoryPage, StoryPanel, StorySection } from './storyData';
 
 const meta = {

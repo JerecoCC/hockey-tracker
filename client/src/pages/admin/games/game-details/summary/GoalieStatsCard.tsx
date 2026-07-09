@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import Button from '@jerecocc/tracker-ui/Button';
-import ListItem from '@jerecocc/tracker-ui/ListItem';
-import Section from '@jerecocc/tracker-ui/Section';
-import StatItem from '@jerecocc/tracker-ui/StatItem';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import StatItem from '@jerecocc/tracker-ui/components/StatItem/StatItem';
 import GoalieStatsEditModal from '../GoalieStatsEditModal';
 import GoalieTimeOnIceModal from '../GoalieTimeOnIceModal';
 import type { GameRecord } from '@/hooks/useGames';

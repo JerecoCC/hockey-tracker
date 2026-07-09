@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import Accordion, { type AccordionAction } from '@jerecocc/tracker-ui/Accordion';
-import Tag from '@jerecocc/tracker-ui/Tag';
-import Button from '@jerecocc/tracker-ui/Button';
-import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
-import Icon from '@jerecocc/tracker-ui/Icon';
-import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/ListItem';
-import Section from '@jerecocc/tracker-ui/Section';
+import Accordion, { type AccordionAction } from '@jerecocc/tracker-ui/components/Accordion/Accordion';
+import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
+import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
+import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import {
   type CreateGroupData,
   type GroupRecord,

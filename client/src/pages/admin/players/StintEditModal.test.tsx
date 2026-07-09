@@ -6,7 +6,7 @@ import type { SeasonRecord } from '@/hooks/useSeasons';
 import type { TeamRecord } from '@/hooks/useTeams';
 import StintEditModal from './StintEditModal';
 
-jest.mock('@jerecocc/tracker-ui/Modal', () => {
+jest.mock('@jerecocc/tracker-ui/components/Modal/Modal', () => {
   interface MockModalProps {
     title: string;
     children: ReactNode;
@@ -29,7 +29,7 @@ jest.mock('@jerecocc/tracker-ui/Modal', () => {
   return MockModal;
 });
 
-jest.mock('@jerecocc/tracker-ui/Field', () => {
+jest.mock('@jerecocc/tracker-ui/components/Field/Field', () => {
   const { Controller } = jest.requireActual('react-hook-form');
 
   interface MockFieldProps {

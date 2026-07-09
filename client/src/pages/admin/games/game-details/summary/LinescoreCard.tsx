@@ -1,7 +1,7 @@
-import Button from '@jerecocc/tracker-ui/Button';
-import MoreActionsMenu from '@jerecocc/tracker-ui/MoreActionsMenu';
-import Section from '@jerecocc/tracker-ui/Section';
-import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import MoreActionsMenu from '@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import type { GameRecord } from '@/hooks/useGames';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import { PERIOD, PERIOD_IDS, otPeriodId } from '../constants';

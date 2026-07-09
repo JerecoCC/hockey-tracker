@@ -1,6 +1,6 @@
-import Accordion from '@jerecocc/tracker-ui/Accordion';
-import Tooltip from '@jerecocc/tracker-ui/Tooltip';
-import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
+import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
+import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
+import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import type { LastFiveGame } from '@/hooks/useGames';
 import { buildFormRecord } from '../gameUtils';
 import LastGameList from './LastGameList';

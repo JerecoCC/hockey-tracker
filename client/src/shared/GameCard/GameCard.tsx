@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
-import Card from '@jerecocc/tracker-ui/Card';
-import Icon from '@jerecocc/tracker-ui/Icon';
-import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
+import Card from '@jerecocc/tracker-ui/components/Card/Card';
+import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
+import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { type GameRecord, type GameType } from '@/hooks/useGames';
 import styles from './GameCard.module.scss';
 

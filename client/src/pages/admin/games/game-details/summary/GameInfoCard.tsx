@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import Button from '@jerecocc/tracker-ui/Button';
-import Section from '@jerecocc/tracker-ui/Section';
-import InfoItem from '@jerecocc/tracker-ui/InfoItem';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import InfoItem from '@jerecocc/tracker-ui/components/InfoItem/InfoItem';
 import type { GameRecord, UpdateGameInfoData } from '@/hooks/useGames';
 import GameInfoEditModal from '../GameInfoEditModal';
 import { GAME_TYPE_LABEL } from '../constants';

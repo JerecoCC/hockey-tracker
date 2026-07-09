@@ -1,4 +1,4 @@
-import Button from '@jerecocc/tracker-ui/Button';
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
 
 type MaybePromise = void | Promise<void>;
 

@@ -7,10 +7,10 @@ import {
 } from 'react';
 import type { Control } from 'react-hook-form';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/Field';
-import Modal from '@jerecocc/tracker-ui/Modal';
-import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
-import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
+import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import {

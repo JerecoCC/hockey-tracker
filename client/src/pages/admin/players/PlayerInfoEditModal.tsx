@@ -1,9 +1,9 @@
 import { useCallback, useLayoutEffect, useMemo, type FocusEvent } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import Divider from '@jerecocc/tracker-ui/Divider';
-import Field from '@jerecocc/tracker-ui/Field';
-import Modal from '@jerecocc/tracker-ui/Modal';
-import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
+import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import {
   type CreatePlayerData,
   type PlayerRecord,

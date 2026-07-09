@@ -1,5 +1,5 @@
 import { useId, type CSSProperties, type ReactNode } from 'react';
-import Icon from '@jerecocc/tracker-ui/Icon';
+import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import styles from './AwardBanner.module.scss';
 
 export type AwardBannerShape = 'rounded' | 'forked' | 'pointed';

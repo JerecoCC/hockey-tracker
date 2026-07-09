@@ -1,4 +1,4 @@
-import Section from '@jerecocc/tracker-ui/Section';
+import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import LeagueSeasonsCard from './LeagueSeasonsCard';
 import { LeagueListRowSkeleton, TabActionSkeleton } from './LeagueTabSkeletonHelpers';
