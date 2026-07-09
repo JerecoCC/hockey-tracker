@@ -436,7 +436,7 @@ const NHL_FRANCHISE_TRANSFER_TEAM_ALIASES = [
 ] as const;
 
 const PUCKPEDIA_BASE_URL = 'https://puckpedia.com';
-const PUCKPEDIA_MOVEMENT_FILTER_QUERY = 'transaction_type=trade,waiver,signing';
+const PUCKPEDIA_MOVEMENT_FILTER_QUERY = 'transaction_type=trade,waiver,signing,roster';
 const PUCKPEDIA_MONTHS: Record<string, string> = {
   jan: '01',
   feb: '02',
@@ -583,8 +583,9 @@ const reportTeamMatchesAliasCurrent = (
 ) => {
   const teamCode = normalizeTeamCode(team.code);
   return (
-    !!teamCode && (alias.currentCodes as readonly string[]).includes(teamCode)
-  ) || alias.currentNames.some((name) => reportTeamTextMatches(team.name, name));
+    (!!teamCode && (alias.currentCodes as readonly string[]).includes(teamCode)) ||
+    alias.currentNames.some((name) => reportTeamTextMatches(team.name, name))
+  );
 };
 
 const reportHasAliasCurrentTeam = (
@@ -626,7 +627,8 @@ const findReportFranchiseTransferAliasByText = (
   value: string | null | undefined,
 ) =>
   NHL_FRANCHISE_TRANSFER_TEAM_ALIASES.find(
-    (alias) => reportHasAliasCurrentTeam(teams, alias) && reportValueMatchesFranchiseAlias(alias, value),
+    (alias) =>
+      reportHasAliasCurrentTeam(teams, alias) && reportValueMatchesFranchiseAlias(alias, value),
   ) ?? null;
 
 const reportTeamsShareFranchiseTransfer = (
@@ -660,10 +662,7 @@ const resolveReportTeamNameByText = (
 
   const matchedTeam = teams.find((team) => {
     const codeKey = normalizeTeamCode(team.code)?.toLowerCase() ?? null;
-    return (
-      codeKey === teamKey ||
-      reportTeamTextMatches(team.name, teamName)
-    );
+    return codeKey === teamKey || reportTeamTextMatches(team.name, teamName);
   });
 
   return (
@@ -727,7 +726,10 @@ const parsePuckPediaJerseyChange = (detail: string) => {
 };
 
 const cleanPuckPediaTradeTeamName = (value: string) =>
-  value.replace(/^the\s+/i, '').replace(/[,\s]+$/g, '').trim();
+  value
+    .replace(/^the\s+/i, '')
+    .replace(/[,\s]+$/g, '')
+    .trim();
 
 const parsePuckPediaAcquiredTrade = (detail: string, playerName: string) => {
   const tradeMatch = detail.match(
@@ -842,7 +844,7 @@ const rawPuckPediaEventFromDetail = ({
 
   if (/\bclaimed\b.*\boff waivers\b/i.test(detail) && isPlayerDetail) {
     const claimedByMatch = detail.match(
-      /\bclaimed off waivers by\s+(?:the\s+)?(.+?)\s+from\s+(?:the\s+)?(.+?)(?:\s+on\b|,|\.|$)/i,
+      /\bclaimed off waivers by\s+(?:the\s+)?(.+?)(?:\s+on\s+\w+)?\s+from\s+(?:the\s+)?(.+?)(?:\s+on\b|,|\.|$)/i,
     );
     if (claimedByMatch) {
       return {
@@ -850,6 +852,18 @@ const rawPuckPediaEventFromDetail = ({
         type: 'waiver',
         toTeamName: claimedByMatch[1].trim(),
         fromTeamName: claimedByMatch[2].trim(),
+        detail,
+      };
+    }
+
+    const claimedByTeamOnlyMatch = detail.match(
+      /\bclaimed off waivers by\s+(?:the\s+)?(.+?)(?:\s+on\b|,|\.|$)/i,
+    );
+    if (claimedByTeamOnlyMatch) {
+      return {
+        date,
+        type: 'waiver',
+        toTeamName: claimedByTeamOnlyMatch[1].trim(),
         detail,
       };
     }
@@ -1041,13 +1055,13 @@ const buildManualMovementReport = ({
   const anchorHasDraftAcquisition =
     movementAnchor?.acquisitionType === MANUAL_MOVEMENT_ACQUISITION_TYPES.draft;
   const anchorIsDraftStint = anchorHasDraftAcquisition || teamsMatch(anchorTeamName, draftTeamName);
-  const anchorDraftStartDate =
-    anchorHasDraftAcquisition ? anchorStintStartDate : null;
+  const anchorDraftStartDate = anchorHasDraftAcquisition ? anchorStintStartDate : null;
   const anchorIsTeamTransferStint =
     movementAnchor?.acquisitionType === MANUAL_MOVEMENT_ACQUISITION_TYPES.teamTransfer ||
     reportTeamsShareFranchiseTransfer(teamLookup, draftTeamName, anchorTeamName);
   let activeTeamName = draftTeamName;
   let anchorAppliedToActiveTeam = false;
+  let activeTeamHasTransactionEvidence = false;
 
   const addMovement = (movement: PlayerManualMovementReportEntry) => {
     const duplicateIndex = movements.findIndex(
@@ -1088,6 +1102,7 @@ const buildManualMovementReport = ({
   const activeTeamNameForEvent = (eventDate: string) => {
     if (
       !anchorAppliedToActiveTeam &&
+      !activeTeamHasTransactionEvidence &&
       anchorTeamName &&
       anchorKnownFromDate &&
       eventDate >= anchorKnownFromDate
@@ -1096,6 +1111,19 @@ const buildManualMovementReport = ({
       anchorAppliedToActiveTeam = true;
     }
     return activeTeamName;
+  };
+
+  const movementsVisibleFromDate = (startDate: string | null) => {
+    if (!startDate) return movements;
+    const activeMovementIndex = movements.findIndex((movement, index) => {
+      const nextMovementStartDate = movements[index + 1]?.startDate ?? null;
+      return (
+        (!movement.startDate || movement.startDate <= startDate) &&
+        (!nextMovementStartDate || nextMovementStartDate > startDate)
+      );
+    });
+    if (activeMovementIndex >= 0) return movements.slice(activeMovementIndex);
+    return movements.filter((movement) => !movement.startDate || movement.startDate >= startDate);
   };
 
   rawEvents.forEach((event) => {
@@ -1132,6 +1160,7 @@ const buildManualMovementReport = ({
         detail: event.detail,
       });
       activeTeamName = toTeamName;
+      activeTeamHasTransactionEvidence = true;
       return;
     }
 
@@ -1145,6 +1174,7 @@ const buildManualMovementReport = ({
       ) {
         if (signingKeepsSameTeam) {
           activeTeamName = toTeamName;
+          activeTeamHasTransactionEvidence = true;
         }
         return;
       }
@@ -1159,6 +1189,7 @@ const buildManualMovementReport = ({
         detail: event.detail,
       });
       activeTeamName = toTeamName;
+      activeTeamHasTransactionEvidence = true;
     }
   });
 
@@ -1205,12 +1236,11 @@ const buildManualMovementReport = ({
         ? (anchorSeasonStartDate ?? reportStartDate)
         : (movements[anchorMovementIndex].startDate ?? reportStartDate);
     } else {
-      visibleMovements = anchorSeasonStartDate
-        ? movements.filter(
-            (movement) => !movement.startDate || movement.startDate >= anchorSeasonStartDate,
-          )
-        : movements;
-      if (!teamsMatch(visibleMovements[0]?.toTeamName, anchorTeamName)) {
+      visibleMovements = movementsVisibleFromDate(anchorSeasonStartDate);
+      const hasVisibleAnchorMovement = visibleMovements.some((movement) =>
+        teamsMatch(movement.toTeamName, anchorTeamName),
+      );
+      if (!hasVisibleAnchorMovement) {
         const anchorAcquisitionType = anchorIsDraftStint
           ? MANUAL_MOVEMENT_ACQUISITION_TYPES.draft
           : anchorIsTeamTransferStint

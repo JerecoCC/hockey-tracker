@@ -1334,6 +1334,170 @@ describe('PlayerDetails info tab', () => {
     expect(report.queryByText('October 5, 2025')).not.toBeInTheDocument();
   });
 
+  it('includes the season-opening team before a later signing to the current team', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8473503',
+        first_name: 'James',
+        last_name: 'Reimer',
+        photo: null,
+        date_of_birth: '1988-03-15',
+        birth_city: 'Morweena',
+        birth_country: 'CAN',
+        height_cm: 188,
+        weight_lbs: 200,
+        position: 'G',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-ott', name: 'Ottawa Senators', code: 'OTT', league_id: 'league-1' },
+        { id: 'team-buf', name: 'Buffalo Sabres', code: 'BUF', league_id: 'league-1' },
+        { id: 'team-ana', name: 'Anaheim Ducks', code: 'ANA', league_id: 'league-1' },
+        { id: 'team-det', name: 'Detroit Red Wings', code: 'DET', league_id: 'league-1' },
+        { id: 'team-sjs', name: 'San Jose Sharks', code: 'SJS', league_id: 'league-1' },
+        { id: 'team-car', name: 'Carolina Hurricanes', code: 'CAR', league_id: 'league-1' },
+        { id: 'team-fla', name: 'Florida Panthers', code: 'FLA', league_id: 'league-1' },
+        { id: 'team-tor', name: 'Toronto Maple Leafs', code: 'TOR', league_id: 'league-1' },
+      ],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2025',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-30',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-ott',
+          team_id: 'team-ott',
+          season_id: 'season-2025',
+          team: {
+            id: 'team-ott',
+            name: 'Ottawa Senators',
+            code: 'OTT',
+            logo: null,
+            primary_color: '#c52032',
+            text_color: '#ffffff',
+          },
+          jersey_number: 47,
+          is_prospect: false,
+          position: 'G',
+          acquisition_type: null,
+          start_date: '2025-10-07',
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'PuckPedia source' }));
+
+    fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
+      target: {
+        value: `
+          Date	Type	Teams	Details
+          Jan 12, 2026	Signing
+
+          James Reimer signs a 1-Year, $850,000 deal with the Senators
+          Jan 9, 2026	Moves
+
+          Reimer agreed to terms on a professional tryout agreement with AHL Belleville on Friday, Darren Dreger of TSN reports.
+          Oct 6, 2025	Moves
+
+          Toronto released Reimer from his professional tryout agreement Monday.
+          Sep 26, 2025	Moves
+
+          Reimer signed a professional tryout agreement with Toronto on Friday, according to Chris Johnston of The Athletic.
+          Nov 13, 2024	Moves
+
+          Reimer was claimed off waivers by Buffalo on Wednesday from Anaheim, Elliotte Friedman of Sportsnet reports.
+          Nov 12, 2024	Moves
+
+          Reimer was waived by the Anaheim Ducks on Tuesday, Elliotte Friedman of Sportsnet reports.
+          Oct 7, 2024	Moves
+
+          Reimer was claimed off waivers by the Anaheim Ducks on Monday, Elliotte Friedman of Sportsnet reports.
+          Oct 6, 2024	Moves
+
+          Reimer was placed on waivers Sunday, per Chris Johnston of The Athletic.
+          Jul 2, 2024	Signing
+
+          James Reimer signs a 1-Year, $1,000,000 deal with the Sabres
+          Jul 1, 2023	Signing
+
+          James Reimer signs a 1-Year, $1,500,000 deal with the Red Wings
+          Dec 12, 2022	Moves
+
+          Reimer (lower body) was removed from injured reserve Monday.
+          Nov 28, 2022	Moves
+
+          Reimer (lower body) has been placed on injured reserve Monday, Sheng Peng of San Jose Hockey Now reports.
+          Jan 15, 2022	Moves
+
+          Reimer (lower body) was activated from injured reserve and will dress as the backup Saturday against the Pittsburgh Penguins, Curtis Pashelka of The San Jose Mercury News reports.
+          Jan 11, 2022	Moves
+
+          Reimer (lower body) was placed on injured reserve Tuesday, per Curtis Pashelka of The San Jose Mercury News.
+          Jul 28, 2021	Signing
+
+          James Reimer signs a 2-Year, $4,500,000 deal with the Sharks
+          Jun 30, 2019	Trade
+
+          The Florida Panthers acquired Scott Darling from the Carolina Hurricanes for James Reimer and 2020 sixth round pick
+          Jul 1, 2016	Signing
+
+          James Reimer signs a 5-Year, $17,000,000 deal with the Panthers
+          Jul 26, 2014	Signing
+
+          James Reimer signs a 2-Year, $4,600,000 deal with the Maple Leafs
+          Jun 9, 2011	Signing
+
+          James Reimer signs a 3-Year, $5,400,000 deal with the Maple Leafs
+          Mar 19, 2008	Signing
+
+          James Reimer signs a 3-Year, $1,790,000 deal with the Maple Leafs
+        `,
+      },
+    });
+    await user.click(screen.getByText('Build report'));
+
+    const reportSection = screen
+      .getByText('Manual Movement Report')
+      .closest('.stintHistorySection') as HTMLElement;
+    const report = within(reportSection);
+    const movementRows = report
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+
+    expect(movementRows).toEqual([
+      ['Ottawa Senators', 'Free Agency', 'January 12, 2026', 'Present'],
+      ['Buffalo Sabres', 'Waivers', 'November 13, 2024', 'January 12, 2026'],
+    ]);
+    expect(report.queryByText('Current stint')).not.toBeInTheDocument();
+    expect(report.queryByText('October 7, 2025')).not.toBeInTheDocument();
+  });
+
   it('matches apostrophized player names when picking signing acquisition dates', async () => {
     const user = userEvent.setup();
     mockUseTabState.mockReturnValue([4, jest.fn()]);
