@@ -577,18 +577,45 @@ describe('PlayerDetails info tab', () => {
     expect(container.querySelector('.currentSeasonCards')).toBeInTheDocument();
   });
 
-  it('copies the league player number from the player info card', async () => {
+  it('links NHL league player numbers to the NHL player page', () => {
+    render(<PlayerDetails />);
+
+    const playerLink = screen.getByRole('link', { name: 'Open league player number 8478402' });
+    expect(playerLink).toHaveAttribute('href', 'https://www.nhl.com/utah/player/8478402');
+    expect(playerLink).toHaveAttribute('target', '_blank');
+    expect(playerLink).toHaveAttribute('rel', 'noreferrer');
+    expect(playerLink.parentElement).toHaveClass('infoCellCopyTooltip');
+    expect(
+      screen.queryByRole('button', { name: 'Copy league player number 8478402' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('keeps copying the league player number for PWHL players', async () => {
     const user = userEvent.setup();
     const writeText = jest.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: { writeText },
     });
+    mockUsePlayerRouteLookup.mockReturnValue({
+      routeLookup: {
+        player_id: 'player-1',
+        team_id: 'team-1',
+        league_id: 'league-1',
+        league_code: 'PWHL',
+        team_code: 'MIN',
+        player_slug: 'lee-stecklein',
+      },
+      loading: false,
+    });
 
     render(<PlayerDetails />);
 
     const copyButton = screen.getByRole('button', { name: 'Copy league player number 8478402' });
     expect(copyButton.parentElement).toHaveClass('infoCellCopyTooltip');
+    expect(
+      screen.queryByRole('link', { name: 'Open league player number 8478402' }),
+    ).not.toBeInTheDocument();
 
     await user.click(copyButton);
 

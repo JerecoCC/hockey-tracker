@@ -91,6 +91,7 @@ const PWHL_BASE_URL = 'https://lscluster.hockeytech.com/feed/index.php';
 const PWHL_APP_KEY = '446521baf8c38984';
 const PWHL_CLIENT_CODE = 'pwhl';
 const PWHL_LEAGUE_ID = '1';
+const NHL_PLAYER_PAGE_BASE_URL = 'https://www.nhl.com/utah/player';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 const apiError = (err: unknown, fallback: string): string =>
   axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
@@ -112,6 +113,9 @@ const PLAYER_POSITION_TAG_INTENTS: Record<PlayerPosition, TagIntent> = {
   RD: 'info',
   G: 'warning',
 };
+
+const buildNhlPlayerPageUrl = (leaguePlayerNumber: string) =>
+  `${NHL_PLAYER_PAGE_BASE_URL}/${encodeURIComponent(leaguePlayerNumber)}`;
 
 interface PlayerAwardGroup {
   awardId: string;
@@ -3011,6 +3015,10 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       toast.error('Failed to copy league player number.');
     }
   };
+  const leaguePlayerNumberHref =
+    currentLeagueCode === 'NHL' && player.league_player_number
+      ? buildNhlPlayerPageUrl(player.league_player_number)
+      : undefined;
   const playerActionItems = [
     ...(canAutoFillPlayerData
       ? [
@@ -3118,7 +3126,11 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           <InfoCell
             label="League Player Number"
             value={player.league_player_number}
-            onCopy={copyLeaguePlayerNumber}
+            href={leaguePlayerNumberHref}
+            onCopy={currentLeagueCode === 'PWHL' ? copyLeaguePlayerNumber : undefined}
+            rel={leaguePlayerNumberHref ? 'noreferrer' : undefined}
+            target={leaguePlayerNumberHref ? '_blank' : undefined}
+            tooltip={leaguePlayerNumberHref ? 'Open NHL player page' : undefined}
           />
           <InfoCell
             label="Rookie Season"
@@ -3894,7 +3906,11 @@ const copyTextToClipboard = async (value: string) => {
 };
 
 interface InfoCellProps {
+  href?: string;
   label: string;
+  rel?: string;
+  target?: string;
+  tooltip?: string;
   value: string | null | undefined;
   onCopy?: () => void | Promise<void>;
 }
@@ -3976,19 +3992,22 @@ const InlineAction = ({
   );
 };
 
-const InfoCell = ({ label, value, onCopy }: InfoCellProps) => (
+const InfoCell = ({ href, label, rel, target, tooltip, value, onCopy }: InfoCellProps) => (
   <div className={styles.infoCell}>
     <span className={styles.infoCellLabel}>{label}</span>
     {value ? (
-      onCopy ? (
+      href || onCopy ? (
         <InlineAction
           className={styles.infoCellCopyButton}
+          href={href}
           onClick={onCopy}
-          ariaLabel={`Copy ${label.toLowerCase()} ${value}`}
-          tooltip={`Copy ${label.toLowerCase()}`}
+          rel={rel}
+          target={target}
+          ariaLabel={`${href ? 'Open' : 'Copy'} ${label.toLowerCase()} ${value}`}
+          tooltip={tooltip ?? `${href ? 'Open' : 'Copy'} ${label.toLowerCase()}`}
           tooltipClassName={styles.infoCellCopyTooltip}
           indicatorClassName={styles.infoCellCopyIndicator}
-          icon="clone"
+          icon={href ? 'open_in_new' : 'clone'}
         >
           <span className={styles.infoCellValue}>{value}</span>
         </InlineAction>
