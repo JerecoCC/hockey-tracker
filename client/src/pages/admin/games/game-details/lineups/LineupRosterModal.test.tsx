@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
@@ -6,9 +6,16 @@ import LineupRosterModal from './LineupRosterModal';
 
 jest.mock('axios');
 jest.mock('react-toastify', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
-jest.mock('@/components/Icon/Icon', () => ({ name }: { name: string }) => <span>{name}</span>);
+jest.mock('@jerecocc/tracker-ui/Icon', () => ({ name }: { name: string }) => <span>{name}</span>);
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+beforeAll(() => {
+  Object.defineProperty(window, 'scrollTo', {
+    configurable: true,
+    value: jest.fn(),
+  });
+});
 
 const player = (overrides: Record<string, unknown>) => ({
   id: 'player-1',
@@ -82,6 +89,13 @@ describe('LineupRosterModal jersey quick-add', () => {
 
     await waitFor(() => expect(mockedAxios.get).toHaveBeenCalled());
 
+    expect(await screen.findByPlaceholderText(/search players/i)).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: /show prospects/i })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: /clear/i })).toBeDisabled();
+
     const user = userEvent.setup();
     await user.type(screen.getByPlaceholderText(/jersey numbers/i), '19 27');
     await user.click(screen.getByRole('button', { name: /apply/i }));
@@ -92,10 +106,54 @@ describe('LineupRosterModal jersey quick-add', () => {
     expect(screen.getByText(/#27 Jane Doe/)).toHaveTextContent(
       'Prospect: #27 Jane Doe - will be moved to roster when added.',
     );
+    expect(screen.getByText('1 player selected')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /clear/i })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: /add to lineup/i }));
 
     expect(addToGameRoster).toHaveBeenCalledWith(['player-2']);
+  });
+
+  it('moves selected players to the top of the list', async () => {
+    mockedAxios.get.mockResolvedValue({
+      data: [
+        player({ id: 'player-1', first_name: 'John', last_name: 'Smith', jersey_number: 19 }),
+        player({
+          id: 'player-2',
+          first_name: 'Jane',
+          last_name: 'Doe',
+          player_team_id: 'pt-2',
+          jersey_number: 27,
+        }),
+        player({
+          id: 'player-3',
+          first_name: 'Megan',
+          last_name: 'Keller',
+          player_team_id: 'pt-3',
+          jersey_number: 5,
+        }),
+      ],
+    });
+
+    renderModal();
+
+    const user = userEvent.setup();
+    const list = await screen.findByRole('list');
+    const names = () =>
+      within(list)
+        .getAllByRole('listitem')
+        .map((item) => {
+          if (item.textContent?.includes('Megan Keller')) return 'Megan Keller';
+          if (item.textContent?.includes('John Smith')) return 'John Smith';
+          if (item.textContent?.includes('Jane Doe')) return 'Jane Doe';
+          return '';
+        });
+
+    expect(names()).toEqual(['Megan Keller', 'John Smith', 'Jane Doe']);
+
+    await user.click(screen.getByText('Jane Doe'));
+
+    expect(names()).toEqual(['Jane Doe', 'Megan Keller', 'John Smith']);
   });
 });
 

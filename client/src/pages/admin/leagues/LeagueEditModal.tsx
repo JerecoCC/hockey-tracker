@@ -1,8 +1,8 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@/components/Field/Field';
-import LogoUpload from '@/components/LogoUpload/LogoUpload';
-import Modal from '@/components/Modal/Modal';
+import Field from '@jerecocc/tracker-ui/Field';
+import LogoUpload from '@jerecocc/tracker-ui/LogoUpload';
+import Modal from '@jerecocc/tracker-ui/Modal';
 import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
 import { type CreateLeagueData } from '@/hooks/useLeagues';
 import { descriptionHtmlToTextarea, textareaToDescriptionHtml } from '@/lib/descriptionHtml';
@@ -35,6 +35,7 @@ interface FormValues {
   best_of_playoff: string;
   best_of_shootout: string;
   scoring_system: '3-2-1-0' | '2-1-0';
+  goalie_min_regular_minutes: string;
   description: string | null;
 }
 
@@ -58,6 +59,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       best_of_playoff: String(league.best_of_playoff),
       best_of_shootout: String(league.best_of_shootout),
       scoring_system: league.scoring_system,
+      goalie_min_regular_minutes: String(league.goalie_min_regular_minutes),
       description: descriptionHtmlToTextarea(league.description),
     }),
     [league],
@@ -104,6 +106,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       best_of_playoff: parseInt(data.best_of_playoff, 10),
       best_of_shootout: parseInt(data.best_of_shootout, 10),
       scoring_system: data.scoring_system,
+      goalie_min_regular_minutes: parseInt(data.goalie_min_regular_minutes, 10),
       description: textareaToDescriptionHtml(data.description) ?? undefined,
     };
     const ok = await updateLeague(league.id, payload);
@@ -141,26 +144,28 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
             disabled={isSubmitting}
           />
         </div>
-        <Field
-          label="Name"
-          required
-          control={control}
-          name="name"
-          rules={{ required: true }}
-          placeholder="e.g. National Hockey League"
-          autoFocus
-          disabled={isSubmitting}
-        />
-        <Field
-          label="Code"
-          required
-          control={control}
-          name="code"
-          rules={{ required: true }}
-          transform={(v) => v.toUpperCase()}
-          placeholder="e.g. NHL"
-          disabled={isSubmitting}
-        />
+        <div className={styles.nameCodeRow}>
+          <Field
+            label="Name"
+            required
+            control={control}
+            name="name"
+            rules={{ required: true }}
+            placeholder="e.g. National Hockey League"
+            autoFocus
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Code"
+            required
+            control={control}
+            name="code"
+            rules={{ required: true }}
+            transform={(v) => v.toUpperCase()}
+            placeholder="e.g. NHL"
+            disabled={isSubmitting}
+          />
+        </div>
         <div className={styles.colorRow}>
           <Field
             label="Primary Color"
@@ -194,7 +199,9 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
             options={SHOOTOUT_OPTIONS}
             disabled={isSubmitting}
           />
-          <div className={styles.settingsGridFull}>
+        </div>
+        <div className={styles.scoringSettingsRow}>
+          <div>
             <Field
               label="Scoring System"
               type="select"
@@ -204,6 +211,22 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
               disabled={isSubmitting}
             />
           </div>
+          <Field
+            label="Goalie Min TOI"
+            type="number"
+            control={control}
+            name="goalie_min_regular_minutes"
+            placeholder="e.g. 240"
+            suffix="min"
+            rules={{
+              required: 'Goalie minimum is required',
+              min: { value: 0, message: 'Must be 0 or higher' },
+              max: { value: 9999, message: 'Too many minutes' },
+              validate: (value) =>
+                Number.isInteger(Number(value)) || 'Must be a whole number',
+            }}
+            disabled={isSubmitting}
+          />
         </div>
         <Field
           label="Description"

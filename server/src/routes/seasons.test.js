@@ -65,13 +65,20 @@ describe('GET /api/admin/seasons', () => {
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/seasons/:id', () => {
   it('returns the season', async () => {
-    sql.mockResolvedValueOnce([SEASON]);
+    sql
+      .mockResolvedValueOnce([SEASON])
+      .mockResolvedValueOnce([{ has_incomplete_regular_team_games: false }]);
     const res = await request(app).get('/api/admin/seasons/season-1');
     expect(res.status).toBe(200);
     expect(res.body.id).toBe('season-1');
+    expect(res.body.has_incomplete_regular_team_games).toBe(false);
     const queryText = sql.mock.calls[0][0].join('');
     expect(queryText).toContain('has_scheduled_games');
     expect(queryText).toContain('has_unfinished_regular_games');
+    const completionQueryText = sql.mock.calls[1][0].join('');
+    expect(completionQueryText).toContain('participant_teams');
+    expect(completionQueryText).toContain('games_per_season');
+    expect(completionQueryText).toContain('has_incomplete_regular_team_games');
   });
 
   it('returns 404 when not found', async () => {
@@ -128,6 +135,44 @@ describe('GET /api/admin/seasons/:id/stats', () => {
     expect(sql.mock.calls[0][0].join('')).toContain('best_player_photo');
     expect(sql.mock.calls[1][0].join('')).toContain('best_player_photo');
   });
+
+  it('filters regular-season goalie leaders by configured minimum minutes', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        player_id: 'goalie-1',
+        first_name: 'Ann',
+        last_name: 'Goalie',
+        time_on_ice: 14400,
+        total: 1,
+      },
+    ]);
+
+    const res = await request(app).get(
+      '/api/admin/seasons/season-1/stats?group=goalies&competition=regular&sort_key=time_on_ice&sort_dir=desc',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      items: [
+        {
+          player_id: 'goalie-1',
+          first_name: 'Ann',
+          last_name: 'Goalie',
+          time_on_ice: 14400,
+        },
+      ],
+      total: 1,
+      page: 1,
+      page_size: 10,
+    });
+    const queryText = sql.mock.calls[0][0].join('');
+    expect(queryText).toContain('goalie_min_regular_minutes');
+    expect(queryText).toContain('league_goalie_min_regular_minutes');
+    expect(queryText).not.toContain("UPPER(l.code) = 'PWHL'");
+    expect(queryText).toContain('time_on_ice >= COALESCE');
+    expect(queryText).toContain("= 'time_on_ice'");
+    expect(queryText).not.toContain('WHERE gp >= 25');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -153,6 +198,173 @@ describe('GET /api/admin/seasons/:id/awards', () => {
     expect(sql).toHaveBeenCalledTimes(2);
     const recipientQueryText = sql.mock.calls[1][0].join('');
     expect(recipientQueryText).toContain('best_player_photo');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/seasons/:id/awards/:seasonAwardId/recipients
+// ---------------------------------------------------------------------------
+describe('POST /api/admin/seasons/:id/awards/:seasonAwardId/recipients', () => {
+  it('rejects player recipients that do not match award eligibility', async () => {
+    sql
+      .mockResolvedValueOnce([
+        {
+          id: 'season-award-1',
+          recipient_type: 'player',
+          player_eligibility: { position_groups: ['goalie'], rookies_only: false },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'player-1',
+          position: 'C',
+          rookie_season_id: 'season-1',
+        },
+      ]);
+
+    const res = await request(app)
+      .post('/api/admin/seasons/season-1/awards/season-award-1/recipients')
+      .send({
+        recipient_type: 'player',
+        player_id: 'player-1',
+        role: 'winner',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Player is not eligible for this award');
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql.mock.calls[1][0].join('')).toContain('FROM players p');
+  });
+
+  it('rejects team recipients that do not match award conference eligibility', async () => {
+    sql
+      .mockResolvedValueOnce([
+        {
+          id: 'season-award-1',
+          recipient_type: 'team',
+          player_eligibility: null,
+          team_eligibility: { conference_names: ['Eastern Conference'] },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'team-1',
+          conference_names: ['Western Conference'],
+          conference_keys: [],
+        },
+      ]);
+
+    const res = await request(app)
+      .post('/api/admin/seasons/season-1/awards/season-award-1/recipients')
+      .send({
+        recipient_type: 'team',
+        team_id: 'team-1',
+        role: 'winner',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Team is not eligible for this award');
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql.mock.calls[1][0].join('')).toContain('conference_memberships');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/admin/seasons/:id/awards/:seasonAwardId/nominees
+// ---------------------------------------------------------------------------
+describe('PUT /api/admin/seasons/:id/awards/:seasonAwardId/nominees', () => {
+  it('replaces nominees in submitted order and stores rank positions', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'season-award-1', recipient_type: 'player' }])
+      .mockResolvedValueOnce([{ id: 'player-2' }])
+      .mockResolvedValueOnce([{ id: 'player-1' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/awards/season-award-1/nominees')
+      .send({
+        nominees: [
+          { recipient_type: 'player', player_id: 'player-2' },
+          { recipient_type: 'player', player_id: 'player-1', stat_value: '10' },
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ count: 2 });
+    expect(sql).toHaveBeenCalledTimes(6);
+    expect(sql.mock.calls[1][0].join('')).toContain('FROM players p');
+    expect(sql.mock.calls[2][0].join('')).toContain('FROM players p');
+    expect(sql.mock.calls[3][0].join('')).toContain("sar.role = 'nominee'");
+    expect(sql.mock.calls[4][0].join('')).toContain('INSERT INTO season_award_recipients');
+    expect(sql.mock.calls[4].slice(1)).toEqual([
+      'season-award-1',
+      'player',
+      'player-2',
+      null,
+      1,
+      null,
+      null,
+      null,
+    ]);
+    expect(sql.mock.calls[5].slice(1)).toEqual([
+      'season-award-1',
+      'player',
+      'player-1',
+      null,
+      2,
+      null,
+      '10',
+      null,
+    ]);
+  });
+
+  it('rejects duplicate nominee recipients before replacing rows', async () => {
+    sql.mockResolvedValueOnce([{ id: 'season-award-1', recipient_type: 'player' }]);
+
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/awards/season-award-1/nominees')
+      .send({
+        nominees: [
+          { recipient_type: 'player', player_id: 'player-1' },
+          { recipient_type: 'player', player_id: 'player-1' },
+        ],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('nominees must be unique');
+    expect(sql).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects team nominees that do not match award conference eligibility', async () => {
+    sql
+      .mockResolvedValueOnce([
+        {
+          id: 'season-award-1',
+          recipient_type: 'team',
+          player_eligibility: null,
+          team_eligibility: { conference_names: ['Eastern Conference'] },
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'team-1',
+          conference_names: ['Western Conference'],
+          conference_keys: [],
+        },
+      ]);
+
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/awards/season-award-1/nominees')
+      .send({
+        nominees: [{ recipient_type: 'team', team_id: 'team-1' }],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('Team is not eligible for this award');
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql.mock.calls[1][0].join('')).toContain('conference_memberships');
   });
 });
 
@@ -331,6 +543,59 @@ describe('PATCH /api/admin/seasons/:id', () => {
     sql.mockRejectedValueOnce(new Error('DB down'));
     const res = await request(app).patch('/api/admin/seasons/season-1').send({ name: 'Crash' });
     expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/seasons/:id/playoffs
+// ---------------------------------------------------------------------------
+describe('PATCH /api/admin/seasons/:id/playoffs', () => {
+  it('starts playoffs when regular-season completion checks pass', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'season-1', has_unfinished_regular_games: false }])
+      .mockResolvedValueOnce([{ has_incomplete_regular_team_games: false }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ ...SEASON, playoffs_started: true }]);
+
+    const res = await request(app).patch('/api/admin/seasons/season-1/playoffs').send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.playoffs_started).toBe(true);
+    expect(res.body.has_incomplete_regular_team_games).toBe(false);
+    expect(sql).toHaveBeenCalledTimes(4);
+    expect(sql.mock.calls[1][0].join('')).toContain('participant_teams');
+    expect(sql.mock.calls[1][0].join('')).toContain('game_team_stats');
+  });
+
+  it('blocks playoffs while regular-season games are scheduled or in progress', async () => {
+    sql.mockResolvedValueOnce([{ id: 'season-1', has_unfinished_regular_games: true }]);
+
+    const res = await request(app).patch('/api/admin/seasons/season-1/playoffs').send({});
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/scheduled or in progress/i);
+    expect(sql).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks playoffs until every team has reached games_per_season', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'season-1', has_unfinished_regular_games: false }])
+      .mockResolvedValueOnce([{ has_incomplete_regular_team_games: true }]);
+
+    const res = await request(app).patch('/api/admin/seasons/season-1/playoffs').send({});
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/games_per_season/i);
+    expect(sql).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns 404 when season not found', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app).patch('/api/admin/seasons/nope/playoffs').send({});
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/not found/i);
   });
 });
 

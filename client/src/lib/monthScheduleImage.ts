@@ -66,9 +66,23 @@ export const downloadMonthScheduleImage = async ({
     }
 
     [data-calendar-export="true"] [class*="grid"] {
+      grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
       width: var(--calendar-export-grid-width, 100%) !important;
       min-width: var(--calendar-export-grid-width, 0px) !important;
       max-width: 100% !important;
+    }
+
+    [data-calendar-export="true"] [class*="dayName"],
+    [data-calendar-export="true"] [class*="emptyCell"] {
+      display: block !important;
+    }
+
+    [data-calendar-export="true"] [class*="emptyPlaceholderCell"] {
+      display: flex !important;
+    }
+
+    [data-calendar-export="true"] [class*="mobileDayLabel"] {
+      display: none !important;
     }
 
     [data-calendar-export="true"] [class*="dayCell"],

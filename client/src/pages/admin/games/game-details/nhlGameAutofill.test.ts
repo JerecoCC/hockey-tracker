@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { autofillGameFromNhlGamecenter } from './nhlGameAutofill';
+import { isManualPlayerMovementRequiredError } from './gameAutofillTypes';
 import type { GameRecord } from '@/hooks/useGames';
 
 jest.mock('axios');
@@ -135,8 +136,10 @@ let existingGoalieStatsData: unknown[];
 // so the post-creation roster re-fetch can return them.
 let extraPlayers: Array<Record<string, unknown>>;
 let createdPlayerStore: Map<string, Record<string, unknown>>;
+let skippedRosterPlayerIds: Set<string>;
 // League-wide roster returned for the cross-team duplicate check (league_id lookup).
 let leagueRosterPlayers: Array<Record<string, unknown>>;
+let seasonGamesData: GameRecord[];
 
 describe('autofillGameFromNhlGamecenter', () => {
   beforeEach(() => {
@@ -152,7 +155,9 @@ describe('autofillGameFromNhlGamecenter', () => {
     existingGoalieStatsData = [];
     extraPlayers = [];
     createdPlayerStore = new Map();
+    skippedRosterPlayerIds = new Set();
     leagueRosterPlayers = [];
+    seasonGamesData = [game];
     mockedAxios.get.mockImplementation((url, config) => {
       if (String(url).endsWith('/admin/games/nhl-api')) {
         const targetUrl = String(config?.params?.url ?? '');
@@ -171,6 +176,9 @@ describe('autofillGameFromNhlGamecenter', () => {
           return Promise.resolve({ data: optionalGoalieToiReportHtml });
         }
         return Promise.reject(new Error('Optional report unavailable'));
+      }
+      if (String(url).includes('/admin/games?season_id=')) {
+        return Promise.resolve({ data: seasonGamesData });
       }
       if (String(url).endsWith('/admin/games/game-1/goals')) return Promise.resolve({ data: existingGoalsData });
       if (String(url).endsWith('/admin/games/game-1/shootout-attempts')) return Promise.resolve({ data: [] });
@@ -202,14 +210,23 @@ describe('autofillGameFromNhlGamecenter', () => {
         return Promise.resolve({ data: { created } });
       }
       if (u.endsWith('/admin/player-teams/bulk')) {
+        let skipped = 0;
         for (const row of body?.players ?? []) {
-          const player = createdPlayerStore.get(row.player_id) ?? {};
+          if (skippedRosterPlayerIds.has(row.player_id)) {
+            skipped += 1;
+            continue;
+          }
+          const player =
+            createdPlayerStore.get(row.player_id) ??
+            leagueRosterPlayers.find((leaguePlayer) => leaguePlayer.id === row.player_id) ??
+            {};
           extraPlayers.push({
             id: row.player_id,
             player_team_id: row.player_id,
             player_id: row.player_id,
             team_id: body.team_id,
             jersey_number: row.jersey_number,
+            league_player_number: player.league_player_number,
             first_name: player.first_name,
             last_name: player.last_name,
             position: player.position,
@@ -219,7 +236,7 @@ describe('autofillGameFromNhlGamecenter', () => {
             is_prospect: false,
           });
         }
-        return Promise.resolve({ data: { created: [] } });
+        return Promise.resolve({ data: { created: [], skipped } });
       }
       return Promise.resolve({ data: {} });
     });
@@ -249,6 +266,46 @@ describe('autofillGameFromNhlGamecenter', () => {
     expect(
       mockedAxios.get.mock.calls.some(([url]) => String(url).endsWith('/admin/games/game-1/goals')),
     ).toBe(false);
+  });
+
+  it('rejects before writing when the local regular season game number is not the NHL game number', async () => {
+    const numberedGame = {
+      ...game,
+      game_number: 318,
+    } as GameRecord;
+    seasonGamesData = [numberedGame];
+
+    await expect(autofillGameFromNhlGamecenter(numberedGame, '317')).rejects.toThrow(
+      /NHL game number 317 does not match local regular season game 318/i,
+    );
+
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+    expect(mockedAxios.patch).not.toHaveBeenCalled();
+    expect(mockedAxios.put).not.toHaveBeenCalled();
+    expect(
+      mockedAxios.get.mock.calls.some(([, config]) => {
+        const targetUrl = String(config?.params?.url ?? '');
+        return targetUrl.includes('/play-by-play') || targetUrl.includes('/RO020317.HTM');
+      }),
+    ).toBe(false);
+  });
+
+  it('accepts Postgres timestamp strings whose Eastern date matches the NHL game date', async () => {
+    const gameFromApi = {
+      ...game,
+      scheduled_at: '2025-11-20 02:30:00+00',
+    } as GameRecord;
+
+    const result = await autofillGameFromNhlGamecenter(gameFromApi, '317');
+
+    expect(result.summary.gameId).toBe('2025020317');
+    expect(
+      mockedAxios.patch.mock.calls.some(
+        ([url, payload]) =>
+          String(url).endsWith('/admin/games/game-1') &&
+          (payload as Record<string, unknown>)?.status === 'final',
+      ),
+    ).toBe(true);
   });
 
   it('records a shorthanded goal with the canonical "shorthanded" goal_type', async () => {
@@ -499,7 +556,7 @@ describe('autofillGameFromNhlGamecenter', () => {
     );
   });
 
-  it('saves roster report starters into forward and defense slots by position', async () => {
+  it('saves roster report starting goalies from bold goalies', async () => {
     optionalRosterReportHtml = `
       <html><body>
         <table id="GameInfo">
@@ -532,29 +589,15 @@ describe('autofillGameFromNhlGamecenter', () => {
       String(url).endsWith('/admin/games/game-1/lineup'),
     );
 
-    expect(result.summary.lineupsSet).toBe(2);
+    expect(result.summary.startingGoaliesSet).toBe(2);
     expect(lineupPuts.map(([, payload]) => payload)).toEqual([
       {
         team_id: 'car-team',
-        slots: [
-          { position_slot: 'F1', player_id: 'jarvis' },
-          { position_slot: 'F2', player_id: 'svechnikov' },
-          { position_slot: 'F3', player_id: 'hall' },
-          { position_slot: 'D1', player_id: 'orlov' },
-          { position_slot: 'D2', player_id: 'slavin' },
-          { position_slot: 'G', player_id: 'andersen' },
-        ],
+        slots: [{ position_slot: 'G', player_id: 'andersen' }],
       },
       {
         team_id: 'min-team',
-        slots: [
-          { position_slot: 'F1', player_id: 'boldy' },
-          { position_slot: 'F2', player_id: 'zuccarello' },
-          { position_slot: 'F3', player_id: 'kaprizov' },
-          { position_slot: 'D1', player_id: 'faber' },
-          { position_slot: 'D2', player_id: 'spurgeon' },
-          { position_slot: 'G', player_id: 'wallstedt' },
-        ],
+        slots: [{ position_slot: 'G', player_id: 'wallstedt' }],
       },
     ]);
   });
@@ -611,8 +654,26 @@ describe('autofillGameFromNhlGamecenter', () => {
 
   it('auto-creates dressed roster-report players missing from the local roster', async () => {
     // #19 is dressed in the report but absent from the local MIN roster; it should
-    // be created (full name + mapped position) and rostered, not error out.
+    // be created (full name + mapped position + NHL player number) and rostered.
     // Mirrors the real report: <td> column headers nested inside a layout table.
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          forwards: [
+            ...boxscore.playerByGameStats.homeTeam.forwards,
+            {
+              playerId: 190019,
+              sweaterNumber: 19,
+              firstName: { default: 'Norman' },
+              lastName: { default: 'Mystery' },
+            },
+          ],
+        },
+      },
+    };
     optionalRosterReportHtml = `
       <html><body>
         <table>
@@ -641,7 +702,7 @@ describe('autofillGameFromNhlGamecenter', () => {
     );
     expect(playerCreates).toHaveLength(1);
     expect(playerCreates[0][1]).toEqual({
-      players: [{ first_name: 'Norman', last_name: 'Mystery', position: 'LW' }],
+      players: [{ first_name: 'Norman', last_name: 'Mystery', league_player_number: '190019', position: 'LW' }],
     });
 
     const rosterAdds = mockedAxios.post.mock.calls.filter(([url]) =>
@@ -654,21 +715,273 @@ describe('autofillGameFromNhlGamecenter', () => {
       }),
     );
     expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining('#19 Norman Mystery')]),
+      expect.arrayContaining([expect.stringContaining('league player number 190019')]),
     );
   });
 
-  it('stops and reports when a missing player already exists on another team', async () => {
+  it('auto-creates dressed boxscore players missing from the local roster when the roster report is unavailable', async () => {
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          forwards: [
+            ...boxscore.playerByGameStats.homeTeam.forwards,
+            {
+              playerId: 190019,
+              sweaterNumber: 19,
+              firstName: { default: 'Norman' },
+              lastName: { default: 'Mystery' },
+            },
+          ],
+        },
+      },
+    };
+
+    const result = await autofillGameFromNhlGamecenter(game, '317');
+
+    const playerCreates = mockedAxios.post.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/players/bulk'),
+    );
+    expect(playerCreates).toHaveLength(1);
+    expect(playerCreates[0][1]).toEqual({
+      players: [{ first_name: 'Norman', last_name: 'Mystery', league_player_number: '190019', position: 'F' }],
+    });
+
+    const rosterAdds = mockedAxios.post.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/player-teams/bulk'),
+    );
+    expect(rosterAdds[0][1]).toEqual(
+      expect.objectContaining({
+        team_id: 'min-team',
+        players: [expect.objectContaining({ jersey_number: 19 })],
+      }),
+    );
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('league player number 190019')]),
+    );
+  });
+
+  it('does not let a stale sweater match hide a missing NHL player number', async () => {
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          forwards: [
+            ...boxscore.playerByGameStats.homeTeam.forwards,
+            {
+              playerId: 190019,
+              sweaterNumber: 19,
+              name: { default: 'N. Mystery' },
+            },
+          ],
+        },
+      },
+    };
+    extraPlayers.push({
+      id: 'old-number-19',
+      player_id: 'old-number-19',
+      team_id: 'min-team',
+      league_player_number: '990019',
+      first_name: 'Oliver',
+      last_name: 'Old',
+      jersey_number: 19,
+      position: 'F',
+    });
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>19</td><td>L</td><td>Norman Mystery</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+
+    const result = await autofillGameFromNhlGamecenter(game, '317');
+
+    const playerCreates = mockedAxios.post.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/players/bulk'),
+    );
+    expect(playerCreates).toHaveLength(1);
+    expect(playerCreates[0][1]).toEqual({
+      players: [{ first_name: 'Norman', last_name: 'Mystery', league_player_number: '190019', position: 'LW' }],
+    });
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('league player number 190019')]),
+    );
+  });
+
+  it('updates a name-confirmed stale NHL player number instead of stopping autofill', async () => {
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          forwards: [
+            ...boxscore.playerByGameStats.homeTeam.forwards,
+            {
+              playerId: 8477952,
+              sweaterNumber: 14,
+              name: { default: 'R. Fabbri' },
+            },
+          ],
+        },
+      },
+    };
+    extraPlayers.push({
+      id: 'fabbri',
+      player_id: 'fabbri',
+      team_id: 'min-team',
+      league_player_number: '8480074',
+      first_name: 'Robby',
+      last_name: 'Fabbri',
+      jersey_number: 14,
+      position: 'F',
+    });
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>14</td><td>L</td><td>R. Fabbri</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+
+    const result = await autofillGameFromNhlGamecenter(game, '317');
+
+    expect(mockedAxios.patch).toHaveBeenCalledWith(
+      '/api/admin/players/fabbri',
+      { league_player_number: '8477952' },
+      expect.any(Object),
+    );
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('league player number 8480074 -> league player number 8477952'),
+      ]),
+    );
+  });
+
+  it('stops before creating a roster-report player when the NHL player number is unavailable', async () => {
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>19</td><td>L</td><td>Norman Mystery</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+
+    await expect(autofillGameFromNhlGamecenter(game, '317')).rejects.toThrow(
+      'NHL player numbers were unavailable for MIN: #19 Norman Mystery',
+    );
+    expect(
+      mockedAxios.post.mock.calls.filter(([url]) => String(url).endsWith('/admin/players/bulk')),
+    ).toHaveLength(0);
+  });
+
+  it('reports a roster-history conflict when the season roster add is skipped', async () => {
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          forwards: [
+            ...boxscore.playerByGameStats.homeTeam.forwards,
+            {
+              playerId: 8478104,
+              sweaterNumber: 19,
+              firstName: { default: 'Norman' },
+              lastName: { default: 'Mystery' },
+            },
+          ],
+        },
+      },
+    };
+    skippedRosterPlayerIds.add('auto-mystery-0');
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>19</td><td>L</td><td>Norman Mystery</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+
+    let error: unknown;
+    try {
+      await autofillGameFromNhlGamecenter(game, '317');
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toMatch(
+      /could not add MIN season roster player: league player number 8478104/i,
+    );
+    expect((error as Error).message).not.toMatch(/Missing MIN player matches/i);
+  });
+
+  it('reports manual player moves when a missing player already exists on another team', async () => {
     const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
     // #19 is dressed for MIN in the report, but the same player ("Nicholas Mystery")
-    // is already rostered on CAR — should halt instead of creating a duplicate.
+    // is already rostered on CAR. Auto-fill must not use the game date as the move date.
     leagueRosterPlayers = [
       {
         id: 'mystery-existing',
         first_name: 'Nicholas',
         last_name: 'Mystery',
-        team_id: 'car-team',
-        team_code: 'CAR',
+        team_id: 'sjs-team',
+        team_code: 'SJS',
+        team_name: 'San Jose Sharks',
+        start_date: '2024-10-10',
+        end_date: null,
+      },
+      {
+        id: 'mystery-existing',
+        first_name: 'Nicholas',
+        last_name: 'Mystery',
+        team_id: 'sea-team',
+        team_code: 'SEA',
+        team_name: 'Seattle Kraken',
+        start_date: '2025-06-19',
+        end_date: '2025-12-19',
       },
     ];
     optionalRosterReportHtml = `
@@ -688,16 +1001,305 @@ describe('autofillGameFromNhlGamecenter', () => {
       </body></html>
     `;
 
-    await expect(autofillGameFromNhlGamecenter(gameWithLeague, '317')).rejects.toThrow(
-      /already exist.* on another team/i,
-    );
-    await expect(autofillGameFromNhlGamecenter(gameWithLeague, '317')).rejects.toThrow(
-      '#19 Nick Mystery → MIN (currently on CAR)',
-    );
+    try {
+      await autofillGameFromNhlGamecenter(gameWithLeague, '317');
+      throw new Error('Expected NHL autofill to require manual player movement');
+    } catch (err) {
+      expect(isManualPlayerMovementRequiredError(err)).toBe(true);
+      if (!isManualPlayerMovementRequiredError(err)) throw err;
+      expect(err.report).toMatchObject({
+        leagueCode: 'NHL',
+        gameId: 'game-1',
+        moves: [
+          expect.objectContaining({
+            playerName: 'Nick Mystery',
+            jerseyNumber: 19,
+            position: 'LW',
+            fromTeamCode: 'SEA',
+            fromTeamName: 'Seattle Kraken',
+            toTeamCode: 'MIN',
+          }),
+        ],
+      });
+    }
     // No duplicate player is created.
     expect(
       mockedAxios.post.mock.calls.filter(([url]) => String(url).endsWith('/admin/players/bulk')),
     ).toHaveLength(0);
+    expect(
+      mockedAxios.post.mock.calls.filter(([url]) => String(url).endsWith('/admin/player-teams/trade')),
+    ).toHaveLength(0);
+  });
+
+  it('does not treat a known NHL player id as a first-initial cross-team match', async () => {
+    const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          forwards: [
+            ...boxscore.playerByGameStats.homeTeam.forwards,
+            {
+              playerId: 8481732,
+              sweaterNumber: 47,
+              firstName: { default: 'Andre' },
+              lastName: { default: 'Lee' },
+            },
+          ],
+        },
+      },
+    };
+    leagueRosterPlayers = [
+      {
+        id: 'anders-lee',
+        league_player_number: '8475314',
+        first_name: 'Anders',
+        last_name: 'Lee',
+        team_id: 'nyi-team',
+        team_code: 'NYI',
+        team_name: 'New York Islanders',
+        start_date: '2025-10-01',
+        end_date: null,
+      },
+    ];
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>47</td><td>L</td><td>Andre Lee</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+
+    await expect(autofillGameFromNhlGamecenter(gameWithLeague, '317')).resolves.toMatchObject({
+      summary: expect.objectContaining({ rosterPlayers: 2 }),
+    });
+
+    const playerBulkPosts = mockedAxios.post.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/players/bulk'),
+    );
+    expect(playerBulkPosts).toHaveLength(1);
+    expect(playerBulkPosts[0][1]).toMatchObject({
+      players: [
+        expect.objectContaining({
+          first_name: 'Andre',
+          last_name: 'Lee',
+          league_player_number: '8481732',
+        }),
+      ],
+    });
+    expect(
+      mockedAxios.post.mock.calls.filter(([url]) => String(url).endsWith('/admin/player-teams/trade')),
+    ).toHaveLength(0);
+  });
+
+  it('does not treat a same-name player with a different known NHL player id as a cross-team match', async () => {
+    const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          goalies: [
+            {
+              playerId: 8483575,
+              sweaterNumber: 33,
+              firstName: { default: 'Matt' },
+              lastName: { default: 'Murray' },
+              toi: '60:00',
+              shotsAgainst: 21,
+              goalsAgainst: 2,
+            },
+          ],
+        },
+      },
+    };
+    leagueRosterPlayers = [
+      {
+        id: 'matt-murray-veteran',
+        league_player_number: '8476899',
+        first_name: 'Matt',
+        last_name: 'Murray',
+        team_id: 'tor-team',
+        team_code: 'TOR',
+        team_name: 'Toronto Maple Leafs',
+        start_date: '2025-10-01',
+        end_date: null,
+      },
+    ];
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>33</td><td>G</td><td>Matt Murray</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+
+    await expect(autofillGameFromNhlGamecenter(gameWithLeague, '317')).resolves.toMatchObject({
+      warnings: expect.arrayContaining([
+        expect.stringContaining('league player number 8483575'),
+      ]),
+    });
+
+    const playerBulkPosts = mockedAxios.post.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/players/bulk'),
+    );
+    expect(playerBulkPosts).toHaveLength(1);
+    expect(playerBulkPosts[0][1]).toMatchObject({
+      players: [
+        expect.objectContaining({
+          first_name: 'Matt',
+          last_name: 'Murray',
+          league_player_number: '8483575',
+        }),
+      ],
+    });
+    expect(
+      mockedAxios.post.mock.calls.filter(([url]) => String(url).endsWith('/admin/player-teams/trade')),
+    ).toHaveLength(0);
+  });
+
+  it('includes jersey changes when a manual move player takes an occupied local number', async () => {
+    const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          defense: [
+            {
+              playerId: 700007,
+              sweaterNumber: 7,
+              name: { default: 'N. Mystery' },
+            },
+          ],
+        },
+      },
+    };
+    leagueRosterPlayers = [
+      {
+        id: 'mystery-existing',
+        league_player_number: '700007',
+        first_name: 'Nicholas',
+        last_name: 'Mystery',
+        team_id: 'car-team',
+        team_code: 'CAR',
+      },
+    ];
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>7</td><td>D</td><td>Nick Mystery</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+
+    try {
+      await autofillGameFromNhlGamecenter(gameWithLeague, '317');
+      throw new Error('Expected NHL autofill to require manual player updates');
+    } catch (err) {
+      expect(isManualPlayerMovementRequiredError(err)).toBe(true);
+      if (!isManualPlayerMovementRequiredError(err)) throw err;
+      expect(err.report).toMatchObject({
+        leagueCode: 'NHL',
+        gameId: 'game-1',
+        moves: [
+          expect.objectContaining({
+            playerName: 'Nick Mystery',
+            leaguePlayerNumber: '700007',
+            jerseyNumber: 7,
+            fromTeamCode: 'CAR',
+            toTeamCode: 'MIN',
+          }),
+        ],
+        jerseyChanges: [
+          expect.objectContaining({
+            playerName: 'Brock Faber',
+            teamCode: 'MIN',
+            currentJerseyNumber: 7,
+            conflictingJerseyNumber: 7,
+            conflictingPlayerName: 'Nick Mystery',
+            conflictingLeaguePlayerNumber: '700007',
+          }),
+        ],
+      });
+    }
+  });
+
+  it('allows a dressed player to share a jersey number with a prospect', async () => {
+    boxscoreData = {
+      ...boxscore,
+      playerByGameStats: {
+        ...boxscore.playerByGameStats,
+        homeTeam: {
+          ...boxscore.playerByGameStats.homeTeam,
+          defense: [
+            {
+              playerId: 700004,
+              sweaterNumber: 4,
+              firstName: { default: 'Carson' },
+              lastName: { default: 'Soucy' },
+            },
+          ],
+        },
+      },
+    };
+    extraPlayers = [
+      {
+        id: 'soucy',
+        league_player_number: '700004',
+        first_name: 'Carson',
+        last_name: 'Soucy',
+        team_id: 'min-team',
+        jersey_number: 4,
+        position: 'D',
+        is_prospect: false,
+      },
+      {
+        id: 'mcward',
+        league_player_number: '700005',
+        first_name: 'Cole',
+        last_name: 'McWard',
+        team_id: 'min-team',
+        jersey_number: 4,
+        position: 'D',
+        is_prospect: true,
+      },
+    ];
+
+    await expect(autofillGameFromNhlGamecenter(game, '317')).resolves.toMatchObject({
+      summary: expect.objectContaining({ rosterPlayers: 7 }),
+    });
   });
 
   it('sets start and end times from the club playing roster header', async () => {
@@ -845,6 +1447,7 @@ describe('autofillGameFromNhlGamecenter', () => {
         exited_time: null,
         shots_against: 30,
         goals_against: 3,
+        time_on_ice: 3900,
       }),
       expect.objectContaining({
         goalie_id: 'wallstedt',
@@ -855,6 +1458,7 @@ describe('autofillGameFromNhlGamecenter', () => {
         exited_time: '20:00',
         shots_against: 10,
         goals_against: 1,
+        time_on_ice: 1200,
       }),
       expect.objectContaining({
         goalie_id: 'gustavsson',
@@ -865,6 +1469,7 @@ describe('autofillGameFromNhlGamecenter', () => {
         exited_time: null,
         shots_against: 20,
         goals_against: 2,
+        time_on_ice: 2700,
       }),
     ]);
   });

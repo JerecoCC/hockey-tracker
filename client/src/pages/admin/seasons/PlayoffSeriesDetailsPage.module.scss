@@ -15,6 +15,61 @@
   padding: 0;
 }
 
+.gameSkeleton {
+  &Item {
+    display: flex;
+    align-items: center;
+    gap: $space-lg;
+    padding: $space-md $space-lg;
+    border: 1px solid var(--app-border, #{$border});
+    border-left: 3px solid $warning-light;
+    border-radius: $radius-md;
+    list-style: none;
+
+    @media (max-width: 640px) {
+      align-items: stretch;
+      flex-direction: column;
+      gap: $space-md;
+    }
+  }
+
+  &Main {
+    display: flex;
+    flex: 0 0 160px;
+    flex-direction: column;
+    gap: $space-sm;
+    min-width: 0;
+
+    @media (max-width: 640px) {
+      flex-basis: auto;
+    }
+  }
+
+  &TeamRow {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+  }
+
+  &Middle {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: $space-sm;
+    min-width: 0;
+  }
+
+  &Status {
+    flex: 0 0 4.5rem;
+    height: 1.5rem;
+
+    @media (max-width: 640px) {
+      flex-basis: auto;
+      width: 4.5rem;
+    }
+  }
+}
+
 .emptyState {
   margin: 0;
   padding: $space-lg 0;

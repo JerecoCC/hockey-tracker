@@ -2,6 +2,8 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+$_goal-time-width: 4.25rem;
+
 // ── Period scoring list ────────────────────────────────────────────────────────
 
 .periodList {
@@ -10,18 +12,29 @@
   gap: $space-sm;
 }
 
-// Passed as className to Accordion to tint the border AND header for the active period.
+// Passed as className to Accordion to tint the border and label for the active period.
 $_active-period-color: color.mix($accent, $bg-card, 50%);
+$_active-period-bg: color.mix($accent, $bg-card, 18%);
+$_active-period-light-bg: color.mix($accent, #fff, 18%);
+$_active-period-light-border: color.mix($accent, #fff, 48%);
 .periodItemActive {
   border-color: $_active-period-color;
-  --accordion-header-bg: #{$_active-period-color};
+  --accordion-border-color: #{$_active-period-color};
+  --accordion-header-bg: #{$_active-period-bg};
+  --accordion-header-text: #{$accent-light};
+  --accordion-header-muted: #{$accent-light};
+  --accordion-toggle-color: #{$accent-light};
+  --accordion-toggle-hover-color: #bfdbfe;
 }
 
-:global(:root[data-theme='light']) .periodItemActive {
-  --accordion-header-text: #ffffff;
-  --accordion-header-muted: #dbeafe;
-  --accordion-toggle-color: #dbeafe;
-  --accordion-toggle-hover-color: #ffffff;
+:global(:root[data-theme="light"]) .periodItemActive {
+  border-color: $_active-period-light-border;
+  --accordion-border-color: #{$_active-period-light-border};
+  --accordion-header-bg: #{$_active-period-light-bg};
+  --accordion-header-text: #1e3a8a;
+  --accordion-header-muted: #2563eb;
+  --accordion-toggle-color: #2563eb;
+  --accordion-toggle-hover-color: #1d4ed8;
 }
 
 // Passed as label slot content to give the period name a fixed-width column.
@@ -79,33 +92,68 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
     display: flex;
     align-items: center;
     gap: $space-sm;
-    padding: $space-sm $space-md;
+    padding: $space-sm $space-md $space-sm 0;
     border-bottom: 1px solid var(--app-border, #{$border});
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
 
     &:last-child {
       border-bottom: none;
     }
 
-    &:hover .goalActions {
-      opacity: 1;
-      pointer-events: auto;
+    &:hover {
+      --goal-actions-bg: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
+      --goal-actions-base-bg: var(--app-surface, #{$bg-card});
+
+      background: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
+
+      .goalActions {
+        opacity: 1;
+        pointer-events: auto;
+      }
     }
   }
 }
 
 // Period time (e.g. "12:34")
+.goalTimeGroup {
+  display: inline-grid;
+  grid-template-columns: $_goal-time-width auto;
+  align-self: stretch;
+  align-items: center;
+  flex: 0 0 auto;
+  width: fit-content;
+  gap: 0;
+}
+
 .goalTime,
 .goalScore {
   font-size: $font-sm;
   color: var(--app-text-muted, #{$text-dim});
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
-  min-width: 2.75rem;
   flex-shrink: 0;
 }
 
+.goalTime {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: $_goal-time-width;
+  box-sizing: border-box;
+  padding: $space-sm $space-md;
+  line-height: 1;
+  text-align: center;
+}
+
 .goalScore {
+  min-width: 2.75rem;
   padding-left: $space-xs;
+}
+
+.goalTimeDivider {
+  --divider-vertical-margin-block: 0;
 }
 
 // Small square team logo / placeholder
@@ -164,5 +212,17 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
 
   &:hover {
     text-decoration: underline;
+  }
+}
+
+.goalActions {
+  background:
+    linear-gradient(var(--goal-actions-bg, transparent), var(--goal-actions-bg, transparent)),
+    var(--goal-actions-base-bg, var(--app-surface, #{$bg-card}));
+
+  &::before {
+    background:
+      linear-gradient(to right, transparent, var(--goal-actions-bg, transparent)),
+      linear-gradient(to right, transparent, var(--goal-actions-base-bg, var(--app-surface, #{$bg-card})));
   }
 }

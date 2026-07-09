@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
+import { invalidateGameStatDependents } from './gameStatCache';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -86,6 +87,7 @@ const useShootoutAttempts = (gameId: string | undefined, options: { enabled?: bo
           (a, b) => a.attempt_order - b.attempt_order,
         ),
       );
+      await invalidateGameStatDependents(queryClient, gameId);
       return data;
     } catch (err) {
       toast.error(apiError(err, 'Failed to record shootout attempt'));
@@ -109,6 +111,7 @@ const useShootoutAttempts = (gameId: string | undefined, options: { enabled?: bo
           .map((attempt) => (attempt.id === attemptId ? data : attempt))
           .sort((a, b) => a.attempt_order - b.attempt_order),
       );
+      await invalidateGameStatDependents(queryClient, gameId);
       return data;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update shootout attempt'));
@@ -126,6 +129,7 @@ const useShootoutAttempts = (gameId: string | undefined, options: { enabled?: bo
       queryClient.setQueryData<ShootoutAttempt[]>(queryKey, (current = []) =>
         current.filter((attempt) => attempt.id !== attemptId),
       );
+      await invalidateGameStatDependents(queryClient, gameId);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete shootout attempt'));

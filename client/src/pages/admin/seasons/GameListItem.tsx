@@ -1,2 +1,2 @@
-export { default } from '@/components/GameListItem';
-export type { GameListItemAction } from '@/components/GameListItem';
+export { default } from '@/shared/GameListItem';
+export type { GameListItemAction } from '@/shared/GameListItem';

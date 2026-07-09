@@ -1,10 +1,16 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
-import Field from '@/components/Field/Field';
-import LogoUpload from '@/components/LogoUpload/LogoUpload';
-import Modal from '@/components/Modal/Modal';
-import { type CreatePlayerData, type PlayerPosition } from '@/hooks/useLeaguePlayers';
+import { Controller, useForm } from 'react-hook-form';
+import Field from '@jerecocc/tracker-ui/Field';
+import LogoUpload from '@jerecocc/tracker-ui/LogoUpload';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
+import {
+  type CreatePlayerData,
+  type PlayerPosition,
+  type PlayerStatus,
+} from '@/hooks/useLeaguePlayers';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
+import { getPlayerStatus } from '@/lib/playerStatus';
 import styles from '../leagues/PlayerFormModal.module.scss';
 
 const POSITION_OPTIONS = [
@@ -18,12 +24,18 @@ const POSITION_OPTIONS = [
   { value: 'G', label: 'Goalie' },
 ];
 
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+];
+
 interface FormValues {
   photo: File | string | null;
   jersey_number: string;
   first_name: string;
   last_name: string;
   position: PlayerPosition | null;
+  status: PlayerStatus;
 }
 
 interface Props {
@@ -52,6 +64,8 @@ const TeamPlayerEditModal = ({
   updatePlayerTeam,
   uploadPlayerPhoto,
 }: Props) => {
+  const playerStatus = editTarget ? getPlayerStatus(editTarget) : 'active';
+  const isRetired = playerStatus === 'retired';
   const formValues = useMemo<FormValues>(
     () => ({
       photo: editTarget?.photo ?? null,
@@ -59,8 +73,9 @@ const TeamPlayerEditModal = ({
       first_name: editTarget?.first_name ?? '',
       last_name: editTarget?.last_name ?? '',
       position: editTarget?.position ?? null,
+      status: playerStatus,
     }),
-    [editTarget],
+    [editTarget, playerStatus],
   );
   const {
     control,
@@ -97,6 +112,7 @@ const TeamPlayerEditModal = ({
       first_name: data.first_name,
       last_name: data.last_name,
       position: data.position || null,
+      ...(!isRetired ? { status: data.status } : {}),
     });
     if (!playerOk) return;
 
@@ -170,17 +186,37 @@ const TeamPlayerEditModal = ({
             disabled={isSubmitting}
           />
         </div>
-        <Field
-          type="select"
-          label="Position"
-          required
-          control={control}
-          name="position"
-          options={POSITION_OPTIONS}
-          placeholder="Select position"
-          rules={{ required: true }}
-          disabled={isSubmitting}
-        />
+        <div className={styles.row}>
+          <Field
+            type="select"
+            label="Position"
+            required
+            control={control}
+            name="position"
+            options={POSITION_OPTIONS}
+            placeholder="Select position"
+            rules={{ required: true }}
+            disabled={isSubmitting}
+          />
+          {!isRetired && (
+            <div className={styles.segmentedField}>
+              <span className={styles.heightGroupLabel}>Status</span>
+              <Controller
+                control={control}
+                name="status"
+                render={({ field }) => (
+                  <SegmentedControl
+                    value={field.value}
+                    onChange={(value) => field.onChange(value as PlayerStatus)}
+                    variant="field"
+                    options={STATUS_OPTIONS}
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            </div>
+          )}
+        </div>
       </form>
     </Modal>
   );

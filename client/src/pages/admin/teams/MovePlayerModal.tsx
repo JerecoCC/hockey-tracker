@@ -1,16 +1,11 @@
-import { useCallback, useLayoutEffect, useMemo } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@/components/Field/Field';
-import Modal from '@/components/Modal/Modal';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Field from '@jerecocc/tracker-ui/Field';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import { type SeasonRecord } from '@/hooks/useSeasons';
 import useTeams from '@/hooks/useTeams';
-import {
-  usePlayerTradeHistory,
-  type PlayerStintRecord,
-  type TeamPlayerRecord,
-} from '@/hooks/useTeamPlayers';
-import { formatPlayerPosition } from '@/lib/playerPosition';
-import { ACQUISITION_TYPE_LABELS, ACQUISITION_TYPE_OPTIONS } from '../players/StintEditModal';
+import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
+import { ACQUISITION_TYPE_OPTIONS } from '../players/StintEditModal';
 import styles from './MovePlayerModal.module.scss';
 
 const POSITION_OPTIONS = [
@@ -30,6 +25,7 @@ interface FormValues {
   jersey_number: string;
   position: string;
   acquisition_type: string;
+  target_season_id: string;
 }
 
 interface Props {
@@ -38,6 +34,7 @@ interface Props {
   currentTeamId: string;
   seasonId: string;
   leagueId: string;
+  seasons?: SeasonRecord[];
   onClose: () => void;
   movePlayer: (
     playerId: string,
@@ -47,16 +44,33 @@ interface Props {
     jerseyNumber?: number | null,
     position?: string | null,
     acquisitionType?: string | null,
+    targetSeasonId?: string | null,
   ) => Promise<boolean>;
 }
 
-const formatDate = (d: string | null) => {
-  if (!d) return '-';
-  return new Date(d + 'T00:00:00').toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+const dateKey = (value?: string | null) => value?.slice(0, 10) ?? null;
+
+const sortSeasonsOldestFirst = (seasons: SeasonRecord[]) =>
+  [...seasons].sort((a, b) => {
+    const startCmp = (a.start_date ?? '').localeCompare(b.start_date ?? '');
+    if (startCmp !== 0) return startCmp;
+    const createdCmp = (a.created_at ?? '').localeCompare(b.created_at ?? '');
+    if (createdCmp !== 0) return createdCmp;
+    return a.name.localeCompare(b.name);
   });
+
+const findNextSeasonId = (sourceSeason: SeasonRecord | null, seasons: SeasonRecord[]) => {
+  if (!sourceSeason) return null;
+  const sourceStart = dateKey(sourceSeason.start_date);
+  const sourceEnd = dateKey(sourceSeason.end_date);
+  const futureSeasons = sortSeasonsOldestFirst(seasons).filter((season) => {
+    if (season.id === sourceSeason.id || season.league_id !== sourceSeason.league_id) return false;
+    const start = dateKey(season.start_date);
+    if (!start) return false;
+    if (sourceStart) return start > sourceStart;
+    return sourceEnd ? start > sourceEnd : true;
+  });
+  return futureSeasons[0]?.id ?? null;
 };
 
 const MovePlayerModal = ({
@@ -65,6 +79,7 @@ const MovePlayerModal = ({
   currentTeamId,
   seasonId,
   leagueId,
+  seasons = [],
   onClose,
   movePlayer,
 }: Props) => {
@@ -75,10 +90,23 @@ const MovePlayerModal = ({
       jersey_number: player?.jersey_number == null ? '' : String(player.jersey_number),
       position: '',
       acquisition_type: 'trade',
+      target_season_id: '',
     }),
     [player?.jersey_number],
   );
   const { teams } = useTeams();
+  const sourceSeason = useMemo(
+    () => seasons.find((season) => season.id === seasonId) ?? null,
+    [seasonId, seasons],
+  );
+  const leagueSeasons = useMemo(
+    () => seasons.filter((season) => season.league_id === leagueId),
+    [leagueId, seasons],
+  );
+  const nextSeasonId = useMemo(
+    () => findNextSeasonId(sourceSeason, seasons),
+    [seasons, sourceSeason],
+  );
 
   const teamOptions = teams
     .filter((t) => t.league_id === leagueId && t.id !== currentTeamId)
@@ -91,21 +119,51 @@ const MovePlayerModal = ({
       code: t.code,
     }));
 
-  const { stints } = usePlayerTradeHistory(player?.id ?? null, seasonId);
-
   const {
     control,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
     mode: 'onChange',
   });
+  const tradeDate = watch('trade_date');
+  const targetSeasonId = watch('target_season_id');
+  const sourceSeasonEnd = dateKey(sourceSeason?.end_date);
+  const showRosterSeasonSelect = !!sourceSeasonEnd && !!tradeDate && tradeDate > sourceSeasonEnd;
+  const seasonOptions = useMemo(
+    () =>
+      [...leagueSeasons]
+        .sort((a, b) => {
+          const startCmp = (b.start_date ?? '').localeCompare(a.start_date ?? '');
+          if (startCmp !== 0) return startCmp;
+          const createdCmp = (b.created_at ?? '').localeCompare(a.created_at ?? '');
+          if (createdCmp !== 0) return createdCmp;
+          return b.name.localeCompare(a.name);
+        })
+        .map((season) => ({
+          value: season.id,
+          label: season.name,
+        })),
+    [leagueSeasons],
+  );
 
   useLayoutEffect(() => {
     reset(formValues);
   }, [formValues, reset]);
+
+  useEffect(() => {
+    if (!showRosterSeasonSelect) {
+      if (targetSeasonId) setValue('target_season_id', '', { shouldDirty: false });
+      return;
+    }
+    if (!targetSeasonId && nextSeasonId) {
+      setValue('target_season_id', nextSeasonId, { shouldDirty: false, shouldValidate: true });
+    }
+  }, [nextSeasonId, setValue, showRosterSeasonSelect, targetSeasonId]);
 
   const handleClose = useCallback(() => {
     reset(formValues);
@@ -116,6 +174,7 @@ const MovePlayerModal = ({
     if (!player || !data.to_team_id) return;
     const jerseyNumber = data.jersey_number ? Number(data.jersey_number) : null;
     const position = data.position || null;
+    const rosterSeasonId = showRosterSeasonSelect ? data.target_season_id || null : null;
     const ok = await movePlayer(
       player.id,
       seasonId,
@@ -124,6 +183,7 @@ const MovePlayerModal = ({
       jerseyNumber,
       position,
       data.acquisition_type || 'trade',
+      rosterSeasonId,
     );
     if (ok) handleClose();
   });
@@ -182,6 +242,14 @@ const MovePlayerModal = ({
             <legend className={styles.groupLabel}>MOVEMENT</legend>
             <div className={styles.movementRow}>
               <Field
+                type="select"
+                label="Type"
+                control={control}
+                name="acquisition_type"
+                options={ACQUISITION_TYPE_OPTIONS}
+                disabled={isSubmitting}
+              />
+              <Field
                 type="datepicker"
                 label="Date"
                 control={control}
@@ -190,61 +258,23 @@ const MovePlayerModal = ({
                 rules={{ required: 'Move date is required' }}
                 disabled={isSubmitting}
               />
+            </div>
+            {showRosterSeasonSelect && (
               <Field
                 type="select"
-                label="Type"
+                label="Roster Season"
                 control={control}
-                name="acquisition_type"
-                options={ACQUISITION_TYPE_OPTIONS}
+                name="target_season_id"
+                options={seasonOptions}
+                placeholder="Select roster season..."
+                searchable
+                required
+                rules={{ required: 'Roster season is required' }}
                 disabled={isSubmitting}
               />
-            </div>
+            )}
           </fieldset>
         </form>
-
-        {stints.length > 0 && (
-          <div className={styles.history}>
-            <h4 className={styles.historyTitle}>Team Moves This Season</h4>
-            <ul className={styles.stintList}>
-              {stints.map((s: PlayerStintRecord) => (
-                <li
-                  key={s.id}
-                  className={styles.stintItem}
-                >
-                  <TeamLogo
-                    logo={s.team.logo}
-                    logoDark={s.team.logo_dark}
-                    logoLight={s.team.logo_light}
-                    code={s.team.code ?? '?'}
-                    alt={s.team.name ?? ''}
-                    primaryColor={s.team.primary_color}
-                    textColor={s.team.text_color}
-                    size={32}
-                    shape="square"
-                    className={styles.stintLogo}
-                  />
-                  <div className={styles.stintInfo}>
-                    <span className={styles.stintTeam}>{s.team.name ?? 'Unknown Team'}</span>
-                    {s.jersey_number != null && (
-                      <span className={styles.stintJersey}>#{s.jersey_number}</span>
-                    )}
-                    {s.position && (
-                      <span className={styles.stintJersey}>{formatPlayerPosition(s.position)}</span>
-                    )}
-                    {s.acquisition_type && (
-                      <span className={styles.stintJersey}>
-                        {ACQUISITION_TYPE_LABELS[s.acquisition_type] ?? s.acquisition_type}
-                      </span>
-                    )}
-                  </div>
-                  <span className={styles.stintDates}>
-                    {formatDate(s.start_date)} - {s.end_date ? formatDate(s.end_date) : 'Present'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
     </Modal>
   );

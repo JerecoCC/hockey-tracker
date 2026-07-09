@@ -50,6 +50,8 @@ const GAME = {
   series_away_wins_at_game: null,
   series_games_to_win: null,
   playoff_round_names: null,
+  playoff_matchup_names: null,
+  bracket_slot_key: null,
   period_scores: [],
   period_shots: [],
   home_team: { id: 'team-1', name: 'Home', code: 'HOM', logo: null, primary_color: '#111', secondary_color: '#222', text_color: '#fff' },
@@ -159,6 +161,159 @@ describe('GET /api/user/seasons', () => {
   });
 });
 
+describe('GET /api/user/players/route-lookup', () => {
+  it('resolves a user player details route to database ids', async () => {
+    const lookup = {
+      player_id: 'player-1',
+      team_id: 'team-1',
+      league_id: 'league-1',
+      league_code: 'NHL',
+      team_code: 'TOR',
+      player_slug: 'auston-matthews',
+    };
+    sql.mockResolvedValueOnce([lookup]);
+
+    const res = await request(app).get(
+      '/api/user/players/route-lookup?league_code=nhl&team_code=tor&player_slug=auston-matthews',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(lookup);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('jersey_number::text');
+    expect(queryText).toContain('league_player_slug');
+  });
+
+  it('resolves a user league-scoped player details route by league player number', async () => {
+    const lookup = {
+      player_id: 'player-1',
+      team_id: null,
+      league_id: 'league-1',
+      league_code: 'NHL',
+      team_code: null,
+      player_slug: '8478402',
+    };
+    sql.mockResolvedValueOnce([lookup]);
+
+    const res = await request(app).get(
+      '/api/user/players/route-lookup?league_code=nhl&player_slug=8478402',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(lookup);
+  });
+});
+
+describe('GET /api/user/players/:id/stats', () => {
+  it('returns career stats using the game_player_stats read model', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        season_id: 'season-1',
+        season_name: '2025-26',
+        jersey_number: 34,
+        gp: 10,
+        goals: 7,
+        assists: 4,
+        points: 11,
+        wins: 6,
+        shootout_wins: 2,
+        goals_against: 20,
+        shots_against: 220,
+        saves: 200,
+        time_on_ice: 30000,
+        save_pct: 0.909,
+      },
+    ]);
+
+    const res = await request(app).get('/api/user/players/player-1/stats');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(res.body[0]).toMatchObject({ season_id: 'season-1', points: 11 });
+    expect(queryText).toMatch(/WITH\s+stat_rows AS/);
+    expect(queryText).toContain('FROM game_player_stats gps');
+    expect(queryText).toContain('gps.goalie_win');
+    expect(queryText).toContain('shootout_wins');
+    expect(queryText).toContain('save_pct');
+  });
+});
+
+describe('GET /api/user/players/:id/latest-season-stats', () => {
+  it('returns latest played season stats split by game type', async () => {
+    sql
+      .mockResolvedValueOnce([
+        { season_id: 'season-1', season_name: '2025-26', player_position: 'C' },
+      ])
+      .mockResolvedValueOnce([
+        {
+          game_type: 'regular',
+          skater_gp: 12,
+          goals: 8,
+          assists: 9,
+          points: 17,
+          goalie_gp: 0,
+        },
+      ]);
+
+    const res = await request(app).get('/api/user/players/player-1/latest-season-stats');
+
+    expect(res.status).toBe(200);
+    expect(res.body.regular).toMatchObject({ gp: 12, goals: 8, points: 17 });
+    expect(res.body.playoffs).toBeNull();
+  });
+
+  it('returns requested season stats when season_id is provided', async () => {
+    sql
+      .mockResolvedValueOnce([
+        { season_id: 'season-2', season_name: '2024-25', player_position: 'C' },
+      ])
+      .mockResolvedValueOnce([
+        {
+          game_type: 'playoff',
+          skater_gp: 3,
+          goals: 1,
+          assists: 2,
+          points: 3,
+          goalie_gp: 0,
+        },
+      ]);
+
+    const res = await request(app).get(
+      '/api/user/players/player-1/latest-season-stats?season_id=season-2',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.season_id).toBe('season-2');
+    expect(res.body.regular).toBeNull();
+    expect(res.body.playoffs).toMatchObject({ gp: 3, goals: 1, assists: 2, points: 3 });
+    expect(sql.mock.calls[0][0].join(' ')).toContain('WHERE s.id =');
+  });
+});
+
+describe('GET /api/user/players/:id', () => {
+  it('returns read-only player details with roster context', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        id: 'player-1',
+        first_name: 'Auston',
+        last_name: 'Matthews',
+        team_id: 'team-1',
+        team_name: 'Maple Leafs',
+        jersey_number: 34,
+      },
+    ]);
+
+    const res = await request(app).get('/api/user/players/player-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: 'player-1',
+      team_name: 'Maple Leafs',
+      jersey_number: 34,
+    });
+  });
+});
+
 describe('GET /api/user/games', () => {
   it('returns games and scopes the query to the authenticated user favorites', async () => {
     sql.mockResolvedValueOnce([GAME]);
@@ -172,9 +327,15 @@ describe('GET /api/user/games', () => {
     expect(res.body[0].watched_by_user).toBe(false);
     expect(res.body[0].skipped_by_user).toBe(false);
     expect(res.body[0].scheduled_for).toBe('2024-10-12');
+    expect(queryText).toContain('ps.bracket_slot_key AS bracket_slot_key');
+    expect(queryText).toContain('brs.matchup_names AS playoff_matchup_names');
+    expect(queryText).toContain('COALESCE(uwg.watched_on, uwg.watched_at::date)::text AS watched_on');
+    expect(queryText).toContain('uwg.scheduled_for::text AS scheduled_for');
     expect(res.body[0]).toMatchObject({ home_score: 0, away_score: 0, winner_team_id: null });
     expect(sql.mock.calls[0].slice(1)).toContain('user-1');
     expect(queryText).toContain('user_favorite_teams');
+    expect(queryText).toContain("AT TIME ZONE 'UTC'");
+    expect(queryText).toContain('user_game_dates.effective_user_date');
     expect(queryText).toContain('::uuid[] IS NULL');
     expect(queryText).toContain('uwg.skipped_at IS NULL');
   });
@@ -254,7 +415,7 @@ describe('GET /api/user/games', () => {
 
     expect(res.status).toBe(200);
     expect(sql.mock.calls[0].slice(1)).toContain('2024-10-07');
-    expect(queryText).toContain('uwg.scheduled_for');
+    expect(queryText).toContain('user_game_dates.effective_user_date');
     expect(queryText).toContain("INTERVAL '1 day'");
     expect(queryText).toContain("INTERVAL '8 days'");
   });
@@ -267,7 +428,7 @@ describe('GET /api/user/games', () => {
 
     expect(res.status).toBe(200);
     expect(sql.mock.calls[0].slice(1)).toContain('2024-10');
-    expect(queryText).toContain('uwg.scheduled_for');
+    expect(queryText).toContain('user_game_dates.effective_user_date');
     expect(queryText).toContain("INTERVAL '1 day'");
     expect(queryText).toContain("INTERVAL '1 month'");
   });
@@ -285,7 +446,7 @@ describe('GET /api/user/games', () => {
 });
 
 describe('GET /api/user/games/route-lookup', () => {
-  it('resolves a visible slug game route to a game id', async () => {
+  it('resolves a favorite-team slug game route to a game id', async () => {
     sql.mockResolvedValueOnce([{ game_id: 'game-1' }]);
 
     const res = await request(app)
@@ -297,11 +458,14 @@ describe('GET /api/user/games/route-lookup', () => {
     expect(sql.mock.calls[0].slice(1)).toContain('user-1');
     expect(sql.mock.calls[0].slice(1)).toContain('2024-10-10');
     expect(sql.mock.calls[0].slice(1)).toContain('awy-vs-hom');
+    expect(queryText).toContain('JOIN seasons');
+    expect(queryText).toContain('JOIN leagues');
+    expect(queryText).not.toContain("lower(l.code) = 'nhl'");
     expect(queryText).toContain("AT TIME ZONE 'America/New_York'");
     expect(queryText).toContain("AT TIME ZONE 'UTC'");
-    expect(queryText).toContain("g.scheduled_time <> '00:00'");
+    expect(queryText).not.toContain("g.scheduled_time <> '00:00'");
     expect(queryText).toContain('user_favorite_teams');
-    expect(queryText).toContain('uwg.skipped_at IS NULL');
+    expect(queryText).not.toContain('uwg.skipped_at IS NULL');
   });
 
   it('rejects invalid route lookup dates', async () => {
@@ -313,7 +477,7 @@ describe('GET /api/user/games/route-lookup', () => {
     expect(sql).not.toHaveBeenCalled();
   });
 
-  it('returns 404 when no visible game matches the slug route', async () => {
+  it('returns 404 when no favorite-team game matches the slug route', async () => {
     sql.mockResolvedValueOnce([]);
 
     const res = await request(app)
@@ -325,7 +489,7 @@ describe('GET /api/user/games/route-lookup', () => {
 });
 
 describe('GET /api/user/games/:id', () => {
-  it('returns a single visible game for the authenticated user', async () => {
+  it('returns a single favorite-team game for the authenticated user', async () => {
     sql.mockResolvedValueOnce([GAME]);
 
     const res = await request(app).get('/api/user/games/game-1');
@@ -337,11 +501,16 @@ describe('GET /api/user/games/:id', () => {
     expect(sql.mock.calls[0].slice(1)).toContain('user-1');
     expect(sql.mock.calls[0].slice(1)).toContain('game-1');
     expect(queryText).toContain('user_favorite_teams');
-    expect(queryText).toContain('uwg.skipped_at IS NULL');
+    expect(queryText).toContain('(uwg.skipped_at IS NOT NULL) AS skipped_by_user');
+    expect(queryText).not.toContain('uwg.skipped_at IS NULL');
     expect(queryText).toContain('series_progress.series_home_wins_at_game');
     expect(queryText).toContain('home_l5.home_last_five');
     expect(queryText).toContain('away_l5.away_last_five');
     expect(queryText).toContain('prev.previous_meetings');
+    expect(queryText).toContain('ps.bracket_slot_key AS bracket_slot_key');
+    expect(queryText).toContain('brs.matchup_names AS playoff_matchup_names');
+    expect(queryText).toContain('COALESCE(uwg.watched_on, uwg.watched_at::date)::text AS watched_on');
+    expect(queryText).toContain('uwg.scheduled_for::text AS scheduled_for');
     expect(queryText).not.toContain('NULL::int AS series_home_wins_at_game');
     expect(queryText).not.toContain("'[]'::json AS home_last_five");
   });
@@ -359,7 +528,7 @@ describe('GET /api/user/games/:id', () => {
 describe('POST /api/user/watched-games/:gameId', () => {
   it('marks a game as watched for the authenticated user', async () => {
     sql
-      .mockResolvedValueOnce([{ id: 'game-1' }])
+      .mockResolvedValueOnce([{ id: 'game-1', status: 'final' }])
       .mockResolvedValueOnce([{ watched_on: '2024-10-15', scheduled_for: null }]);
 
     const res = await request(app).post('/api/user/watched-games/game-1');
@@ -375,7 +544,7 @@ describe('POST /api/user/watched-games/:gameId', () => {
 
   it('keeps a scheduled watch date when a delayed game is marked watched', async () => {
     sql
-      .mockResolvedValueOnce([{ id: 'game-1' }])
+      .mockResolvedValueOnce([{ id: 'game-1', status: 'final' }])
       .mockResolvedValueOnce([{ watched_on: '2024-10-12', scheduled_for: '2024-10-12' }]);
 
     const res = await request(app).post('/api/user/watched-games/game-1');
@@ -396,6 +565,16 @@ describe('POST /api/user/watched-games/:gameId', () => {
 
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/game not found/i);
+  });
+
+  it('rejects marking non-final games as watched', async () => {
+    sql.mockResolvedValueOnce([{ id: 'game-1', status: 'scheduled' }]);
+
+    const res = await request(app).post('/api/user/watched-games/game-1');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/only final games/i);
+    expect(sql).toHaveBeenCalledTimes(1);
   });
 });
 

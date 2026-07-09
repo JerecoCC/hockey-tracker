@@ -1,10 +1,15 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import type { GameRecord } from '@/hooks/useGames';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import ShootoutAccordion from './ShootoutAccordion';
 
-jest.mock('@/components/TeamLogo/TeamLogo', () => () => <span>logo</span>);
-jest.mock('@/components/PlayerAvatar/PlayerAvatar', () => () => <span>avatar</span>);
+jest.mock('@jerecocc/tracker-ui/TeamLogo', () => () => <span>logo</span>);
+jest.mock('@jerecocc/tracker-ui/PlayerAvatar', () => ({
+  __esModule: true,
+  default: ({ initials }: { initials: string }) => (
+    <span data-testid="player-avatar">{initials}</span>
+  ),
+}));
 
 const game = {
   id: 'game-1',
@@ -57,6 +62,29 @@ const game = {
   best_of_shootout: 3,
 } as GameRecord;
 
+const attempt = (overrides: Partial<ShootoutAttempt> = {}): ShootoutAttempt => ({
+  id: 'a1',
+  game_id: game.id,
+  team_id: 'away-team',
+  shooter_id: 'p1',
+  scored: true,
+  attempt_order: 0,
+  created_at: '2024-10-10T00:00:00Z',
+  shooter_first_name: 'Away',
+  shooter_last_name: 'One',
+  shooter_photo: null,
+  shooter_jersey_number: 11,
+  shooter_date_of_birth: null,
+  shooter_start_date: null,
+  shooter_acquisition_type: null,
+  team_name: 'Away',
+  team_code: 'AWY',
+  team_logo: null,
+  team_primary_color: '#333333',
+  team_text_color: '#ffffff',
+  ...overrides,
+});
+
 describe('ShootoutAccordion empty attempts', () => {
   it('pre-renders one alternating empty attempt row per league shootout attempt', () => {
     const { container } = render(
@@ -84,6 +112,25 @@ describe('ShootoutAccordion empty attempts', () => {
       expect(cells[0]).toHaveClass(expectedAway ? 'soAttemptCell' : 'soAttemptSpacer');
       expect(cells[1]).toHaveClass(expectedAway ? 'soAttemptSpacer' : 'soAttemptCell');
     });
+  });
+
+  it('uses first and last initials for recorded attempt avatars', () => {
+    render(
+      <ShootoutAccordion
+        game={game}
+        attempts={[attempt({ shooter_first_name: 'Alex', shooter_last_name: 'Ovechkin' })]}
+        goals={[]}
+        isFinal={false}
+        isInProgress
+        soComplete={false}
+        busy={null}
+        deletingAttemptId={null}
+        onAddAttempt={jest.fn()}
+        onEndGame={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('player-avatar')).toHaveTextContent('AO');
   });
 
   it('does not pre-render empty future attempts once a shootout game is final', () => {

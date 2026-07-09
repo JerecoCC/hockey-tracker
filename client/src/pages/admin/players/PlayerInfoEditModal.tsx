@@ -1,19 +1,25 @@
 import { useCallback, useLayoutEffect, useMemo, type FocusEvent } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import Divider from '@/components/Divider/Divider';
-import Field from '@/components/Field/Field';
-import Modal from '@/components/Modal/Modal';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
+import Divider from '@jerecocc/tracker-ui/Divider';
+import Field from '@jerecocc/tracker-ui/Field';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
 import {
   type CreatePlayerData,
   type PlayerRecord,
   type PlayerShoots,
 } from '@/hooks/useLeaguePlayers';
+import { getPlayerStatus, type PlayerStatus } from '@/lib/playerStatus';
 import styles from '../leagues/PlayerFormModal.module.scss';
 
 const SHOOTS_OPTIONS = [
   { value: 'L', label: 'Left' },
   { value: 'R', label: 'Right' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
 ];
 
 const NO_ROOKIE_SEASON = 'none';
@@ -46,6 +52,8 @@ const validateInches = (value: string) => {
 const isWholeNumberInput = (value: string) => value === '' || /^\d+$/.test(value);
 
 interface FormValues {
+  league_player_number: string;
+  status: PlayerStatus;
   shoots: PlayerShoots | null;
   date_of_birth: string;
   birth_city: string;
@@ -71,12 +79,16 @@ interface Props {
 }
 
 const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: Props) => {
+  const playerStatus = player ? getPlayerStatus(player) : 'active';
+  const isRetired = playerStatus === 'retired';
   const formValues = useMemo<FormValues>(() => {
     const { ft, inches } =
       player?.height_cm != null
         ? cmToFtIn(player.height_cm)
         : { ft: null as null, inches: null as null };
     return {
+      league_player_number: player?.league_player_number ?? '',
+      status: playerStatus,
       shoots: player?.shoots ?? null,
       date_of_birth: player?.date_of_birth ?? '',
       birth_city: player?.birth_city ?? '',
@@ -86,7 +98,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
       weight_lbs: player?.weight_lbs != null ? String(player.weight_lbs) : '',
       rookie_season_id: player?.rookie_season_id ?? NO_ROOKIE_SEASON,
     };
-  }, [player]);
+  }, [player, playerStatus]);
   const rookieSeasonOptions = useMemo(
     () => [
       { value: NO_ROOKIE_SEASON, label: 'No rookie season' },
@@ -135,6 +147,8 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
     const hasFt = data.height_ft !== '';
     const hasIn = data.height_in !== '';
     const ok = await updatePlayer(player.id, {
+      league_player_number: data.league_player_number.trim() || null,
+      ...(!isRetired ? { status: data.status } : {}),
       shoots: data.shoots || null,
       date_of_birth: data.date_of_birth || null,
       birth_city: data.birth_city || null,
@@ -187,6 +201,49 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
         className={styles.form}
         onSubmit={onSubmit}
       >
+        <div className={seasons.length > 0 ? styles.playerInfoIdentityRow : styles.fullRow}>
+          <Field
+            label="League Player Number"
+            control={control}
+            name="league_player_number"
+            placeholder="e.g. 8478402"
+            inputMode="numeric"
+            transform={(value) => value.trim()}
+            disabled={isSubmitting}
+          />
+          {seasons.length > 0 && (
+            <Field
+              type="select"
+              label="Rookie Season"
+              control={control}
+              name="rookie_season_id"
+              options={rookieSeasonOptions}
+              placeholder="Select rookie season"
+              disabled={isSubmitting}
+            />
+          )}
+        </div>
+        {!isRetired && (
+          <div className={styles.fullRow}>
+            <div className={styles.segmentedField}>
+              <span className={styles.heightGroupLabel}>Status</span>
+              <Controller
+                control={control}
+                name="status"
+                render={({ field }) => (
+                  <SegmentedControl
+                    value={field.value}
+                    onChange={(value) => field.onChange(value as PlayerStatus)}
+                    variant="field"
+                    options={STATUS_OPTIONS}
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            </div>
+          </div>
+        )}
+        <Divider className={styles.divider} />
         <div className={styles.playerInfoBirthRow}>
           <Field
             label="Birth City"
@@ -215,19 +272,6 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
             disabled={isSubmitting}
           />
         </div>
-        {seasons.length > 0 && (
-          <div className={styles.fullRow}>
-            <Field
-              type="select"
-              label="Rookie Season"
-              control={control}
-              name="rookie_season_id"
-              options={rookieSeasonOptions}
-              placeholder="Select rookie season"
-              disabled={isSubmitting}
-            />
-          </div>
-        )}
         <div className={styles.playerInfoVitalsRow}>
           <div className={styles.heightGroup}>
             <span className={styles.heightGroupLabel}>Height</span>

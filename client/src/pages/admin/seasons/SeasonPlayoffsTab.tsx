@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import Tag from '@/components/Tag/Tag';
-import Button from '@/components/Button/Button';
-import Chip from '@/components/Chip/Chip';
-import Section from '@/components/Section/Section';
-import InfoItem from '@/components/InfoItem/InfoItem';
-import Icon from '@/components/Icon/Icon';
-import ListItem from '@/components/ListItem/ListItem';
-import Modal from '@/components/Modal/Modal';
-import Skeleton from '@/components/Skeleton/Skeleton';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Tag from '@jerecocc/tracker-ui/Tag';
+import Button from '@jerecocc/tracker-ui/Button';
+import Chip from '@jerecocc/tracker-ui/Chip';
+import Section from '@jerecocc/tracker-ui/Section';
+import InfoItem from '@jerecocc/tracker-ui/InfoItem';
+import Icon from '@jerecocc/tracker-ui/Icon';
+import ListItem from '@jerecocc/tracker-ui/ListItem';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
+import Banner from '@jerecocc/tracker-ui/Banner';
 import { type PlayoffSeriesRecord, type SeriesStatus, usePlayoffSeries } from '@/hooks/useGames';
 import { type PlayoffFormatRule } from '@/hooks/useLeagues';
 import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type CreateSeasonData } from '@/hooks/useSeasons';
-import Select from '@/components/Select/Select';
+import Select from '@jerecocc/tracker-ui/Select';
 import useBracketRuleSets, { type BracketSlotRule } from '@/hooks/useBracketRuleSets';
 import { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
 import { buildPlayoffSeriesDetailsPath } from '@/lib/routeSlugs';
@@ -25,6 +26,11 @@ import {
   getRoundLabel,
   makeSlotKey,
 } from './BracketRulesModal';
+import {
+  getBracketSlotFooterLabel,
+  getBracketSlotHeaderLabel,
+} from './seasonPlayoffBracketLabels';
+import { hasRecordedRegularSeasonGame } from './seasonPlayoffEligibility';
 import styles from './SeasonPlayoffsTab.module.scss';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -299,7 +305,6 @@ const BracketSlot = ({
               variant="filled"
               intent="accent"
               icon="sync"
-              size="sm"
               tooltip="Create next-round series"
               disabled={busy === 'advancing'}
               onClick={onAdvance}
@@ -402,7 +407,6 @@ const BracketSlot = ({
               variant="filled"
               intent="accent"
               icon="play_arrow"
-              size="sm"
               tooltip="Start series"
               disabled={busy === series.id}
               onClick={() => onStart(series)}
@@ -413,7 +417,6 @@ const BracketSlot = ({
               variant="filled"
               intent="accent"
               icon="arrow_forward"
-              size="sm"
               tooltip="Advance winner to next round"
               disabled={!!busy}
               onClick={onForceAdvance}
@@ -497,6 +500,10 @@ interface Props {
   leagueBestOfPlayoff: number;
   standings: TeamStandingRecord[];
   standingsLoading: boolean;
+  canStartPlayoffs?: boolean;
+  startPlayoffsDisabled?: boolean;
+  startPlayoffsBusy?: boolean;
+  onStartPlayoffs?: () => void;
   updateSeason: (id: string, payload: Partial<CreateSeasonData>) => Promise<boolean>;
 }
 
@@ -521,6 +528,10 @@ const SeasonPlayoffsTab = ({
   leagueBestOfPlayoff,
   standings,
   standingsLoading,
+  canStartPlayoffs = false,
+  startPlayoffsDisabled = false,
+  startPlayoffsBusy = false,
+  onStartPlayoffs,
   updateSeason,
 }: Props) => {
   const {
@@ -924,6 +935,7 @@ const SeasonPlayoffsTab = ({
   }, [startingSeriesId, advancingSeriesId, series]);
 
   const hasRoundOneSeries = series.some((s) => s.round === 1);
+  const hasAnyRecordedRegularSeasonGame = hasRecordedRegularSeasonGame(standings);
   const playoffSettingsLocked = isEnded || playoffsStarted;
   const playoffSeriesFormatLabel =
     bestOfPlayoff != null
@@ -972,7 +984,11 @@ const SeasonPlayoffsTab = ({
     }
   };
   const canSimulateFirstRound =
-    !!bracketStructure && !!bracketRuleSetId && !playoffsStarted && !hasRoundOneSeries;
+    !!bracketStructure &&
+    !!bracketRuleSetId &&
+    !playoffsStarted &&
+    !hasRoundOneSeries &&
+    (standingsLoading || hasAnyRecordedRegularSeasonGame);
   const canSeedMatchups =
     !!bracketStructure && !!bracketRuleSetId && playoffsStarted && !hasRoundOneSeries;
   const showBracketAction = canSimulateFirstRound || canSeedMatchups;
@@ -1008,6 +1024,10 @@ const SeasonPlayoffsTab = ({
       : canSimulateFirstRound
         ? 'Uses current standings from final regular-season games'
         : undefined;
+  const bracketActionLabel = canSeedMatchups ? 'Seed Matchups' : 'Simulate First Round';
+  const bracketActionTooltip = simulateTooltip
+    ? `${bracketActionLabel}: ${simulateTooltip}`
+    : bracketActionLabel;
   const seriesDetailsPath = (s: PlayoffSeriesRecord) =>
     buildPlayoffSeriesDetailsPath({
       leagueCode,
@@ -1151,6 +1171,30 @@ const SeasonPlayoffsTab = ({
 
   return (
     <>
+      {canStartPlayoffs && !playoffsStarted && (
+        <Banner
+          intent="success"
+          icon="emoji_events"
+          title="Start Playoffs"
+          closeable={false}
+          className={styles.playoffsBanner}
+          actions={
+            <Button
+              type="button"
+              variant="filled"
+              intent="success"
+              icon="emoji_events"
+              disabled={startPlayoffsDisabled}
+              onClick={onStartPlayoffs}
+            >
+              {startPlayoffsBusy ? 'Starting…' : 'Start Playoffs'}
+            </Button>
+          }
+        >
+          Start playoffs when every regular-season game is final and every team has reached its
+          season game target.
+        </Banner>
+      )}
       {playoffsStarted && !isEnded && series.length === 0 && !seriesLoading && (
         <div className={styles.playoffsCallout}>
           <Icon
@@ -1176,7 +1220,7 @@ const SeasonPlayoffsTab = ({
                     variant="outlined"
                     intent="neutral"
                     icon="close"
-                    size="sm"
+                    size="medium"
                     onClick={() => {
                       setSimulatedSlots(null);
                       setSimulatedSlotTeams(null);
@@ -1186,15 +1230,16 @@ const SeasonPlayoffsTab = ({
                   </Button>
                 ) : (
                   <Button
+                    variant="outlined"
                     intent="success"
                     icon="play_arrow"
-                    size="sm"
-                    tooltip={simulateTooltip}
+                    iconHeight="button"
+                    size="medium"
+                    tooltip={bracketActionTooltip}
+                    aria-label={bracketActionLabel}
                     disabled={simulating || pickModalOpen || simulationStandingsUnavailable}
                     onClick={handleSimulate}
-                  >
-                    {canSeedMatchups ? 'Seed Matchups' : 'Simulate First Round'}
-                  </Button>
+                  />
                 )
               ) : null
             }
@@ -1273,13 +1318,6 @@ const SeasonPlayoffsTab = ({
                         key={roundInfo.round}
                         className={styles.bracketRound}
                       >
-                        <p className={styles.bracketRoundLabel}>
-                          {getRoundLabel(
-                            roundInfo.round,
-                            bracketStructure.rounds.length,
-                            roundNames,
-                          )}
-                        </p>
                         <div className={styles.bracketSlots}>
                           {Array.from({ length: roundInfo.series }, (_, slotIndex) => {
                             const slotKey = `r${roundInfo.round}m${slotIndex}`;
@@ -1302,15 +1340,29 @@ const SeasonPlayoffsTab = ({
                               );
                             const canAdvanceWinner =
                               s?.status === 'complete' && hasNextRound && !winnerAlreadyAdvanced;
-                            const matchupLabel = getMatchupLabel(slotKey, matchupNames);
+                            const headerLabel = getBracketSlotHeaderLabel({
+                              slotIndex,
+                              slotKey,
+                              round: roundInfo.round,
+                              totalRounds: bracketStructure.rounds.length,
+                              roundNames,
+                              matchupNames,
+                            });
+                            const footerLabel = getBracketSlotFooterLabel({
+                              slotIndex,
+                              seriesCount: roundInfo.series,
+                              round: roundInfo.round,
+                              totalRounds: bracketStructure.rounds.length,
+                              roundNames,
+                            });
 
                             return (
                               <div
                                 key={slotKey}
                                 className={styles.bracketSlotGroup}
                               >
-                                {matchupLabel && (
-                                  <span className={styles.bracketMatchupLabel}>{matchupLabel}</span>
+                                {headerLabel && (
+                                  <span className={styles.bracketMatchupLabel}>{headerLabel}</span>
                                 )}
                                 {skeletonSlotKeys.has(slotKey) ? (
                                   <div
@@ -1355,6 +1407,9 @@ const SeasonPlayoffsTab = ({
                                     onAdvance={advanceBracket}
                                     onForceAdvance={s ? () => handleForceAdvance(s) : undefined}
                                   />
+                                )}
+                                {footerLabel && (
+                                  <span className={styles.bracketMatchupLabel}>{footerLabel}</span>
                                 )}
                               </div>
                             );
@@ -1416,7 +1471,6 @@ const SeasonPlayoffsTab = ({
                                     variant="ghost"
                                     intent="accent"
                                     icon="play_arrow"
-                                    size="sm"
                                     tooltip="Start series"
                                     disabled={seriesBusy === s.id}
                                     onClick={() => handleStartSeries(s)}
@@ -1464,7 +1518,7 @@ const SeasonPlayoffsTab = ({
               <Button
                 type="button"
                 icon={playoffSettingsActionIcon}
-                size="sm"
+                size="medium"
                 variant="outlined"
                 intent="neutral"
                 tooltip={playoffSettingsActionTooltip}

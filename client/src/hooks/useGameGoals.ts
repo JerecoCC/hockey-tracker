@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 import type { GameRecord } from './useGames';
+import { invalidateGameStatDependents } from './gameStatCache';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -119,6 +120,15 @@ const applyGoalsToGameCaches = (
   queryClient.invalidateQueries({ queryKey: ['game-goalie-stats', gameId] });
 };
 
+const invalidateGoalDependents = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  gameId: string,
+) =>
+  invalidateGameStatDependents(queryClient, gameId, {
+    includeGameDetails: false,
+    includeGameGoalieStats: false,
+  });
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface GoalRecord {
@@ -216,6 +226,7 @@ const useGameGoals = (gameId: string | undefined, options: { enabled?: boolean }
         return nextGoals;
       });
       applyGoalsToGameCaches(queryClient, gameId, nextGoals);
+      await invalidateGoalDependents(queryClient, gameId);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to record goal'));
@@ -237,6 +248,7 @@ const useGameGoals = (gameId: string | undefined, options: { enabled?: boolean }
         return nextGoals;
       });
       applyGoalsToGameCaches(queryClient, gameId, nextGoals);
+      await invalidateGoalDependents(queryClient, gameId);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update goal'));
@@ -257,6 +269,7 @@ const useGameGoals = (gameId: string | undefined, options: { enabled?: boolean }
         return nextGoals;
       });
       applyGoalsToGameCaches(queryClient, gameId, nextGoals);
+      await invalidateGoalDependents(queryClient, gameId);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete goal'));

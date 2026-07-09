@@ -1,8 +1,8 @@
-import Card from '@/components/Card/Card';
-import Divider from '@/components/Divider/Divider';
-import ListItem from '@/components/ListItem/ListItem';
-import PlayerCard from '@/components/PlayerCard/PlayerCard';
-import Skeleton from '@/components/Skeleton/Skeleton';
+import Card from '@jerecocc/tracker-ui/Card';
+import Divider from '@jerecocc/tracker-ui/Divider';
+import ListItem from '@jerecocc/tracker-ui/ListItem';
+import PlayerCard from '@/shared/PlayerCard/PlayerCard';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
 import type { ReactNode } from 'react';
 import styles from './StatsLeaderCard.module.scss';
 

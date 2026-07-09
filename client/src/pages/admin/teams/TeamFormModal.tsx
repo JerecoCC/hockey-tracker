@@ -1,9 +1,10 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@/components/Field/Field';
-import LogoUpload from '@/components/LogoUpload/LogoUpload';
-import Modal from '@/components/Modal/Modal';
+import Field from '@jerecocc/tracker-ui/Field';
+import LogoUpload from '@jerecocc/tracker-ui/LogoUpload';
+import Modal from '@jerecocc/tracker-ui/Modal';
 import { type CreateTeamData, type TeamRecord } from '@/hooks/useTeams';
+import TeamLogoUploadGroup from './TeamLogoUploadGroup';
 import styles from './TeamFormModal.module.scss';
 
 interface FormValues {
@@ -128,28 +129,21 @@ const TeamFormModal = (props: Props) => {
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <div className={styles.assetRow}>
-          <LogoUpload
-            control={control}
-            name="logo_dark"
-            label="Logo (Dark)"
-            disabled={isSubmitting}
-          />
-          <LogoUpload
-            control={control}
-            name="logo_light"
-            label="Logo (Light)"
-            disabled={isSubmitting}
-          />
-          <LogoUpload
-            control={control}
-            name="icon"
-            label="Header Icon"
-            accept="image/x-icon,image/vnd.microsoft.icon,.ico"
-            hint="Upload .ico"
-            disabled={isSubmitting}
-          />
-        </div>
+        <LogoUpload
+          control={control}
+          name="icon"
+          label="Header Icon"
+          accept="image/x-icon,image/vnd.microsoft.icon,.ico"
+          hint="Upload .ico"
+          full
+          previewSize="icon"
+          pasteMode="focus"
+          disabled={isSubmitting}
+        />
+        <TeamLogoUploadGroup
+          control={control}
+          disabled={isSubmitting}
+        />
         <div className={styles.identityRow}>
           <Field
             label="Code"

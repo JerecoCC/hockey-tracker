@@ -1,5 +1,5 @@
-import Button from '@/components/Button/Button';
-import Section from '@/components/Section/Section';
+import Button from '@jerecocc/tracker-ui/Button';
+import Section from '@jerecocc/tracker-ui/Section';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { GoalieStatRecord } from '@/hooks/useGameGoalieStats';
@@ -18,6 +18,7 @@ interface Props {
     playerId: string,
     firstName: string | null | undefined,
     lastName: string | null | undefined,
+    jerseyNumber?: number | null,
   ) => string;
   onEdit?: () => void;
   showPlayerDataStatus?: boolean;
@@ -49,7 +50,7 @@ const ThreeStarsCard = ({
             variant="outlined"
             intent="neutral"
             icon="edit"
-            size="sm"
+            size="medium"
             tooltip="Edit three stars"
             onClick={onEdit}
           />
@@ -76,6 +77,7 @@ const ThreeStarsCard = ({
                 player.player_id,
                 player.first_name,
                 player.last_name,
+                player.jersey_number,
               )}
               primaryColor={team.primary_color}
               textColor={team.text_color}

@@ -1,6 +1,11 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+.rosterBody {
+  overflow-y: hidden;
+  padding-bottom: 0;
+}
+
 .content {
   display: flex;
   flex-direction: column;
@@ -10,10 +15,10 @@
 
 .controls {
   flex-shrink: 0;
-  margin-bottom: $space-lg;
   display: flex;
   flex-direction: column;
   gap: $space-sm;
+  margin-bottom: $space-md;
 }
 
 .quickAddWrap {
@@ -25,17 +30,6 @@
     flex: 1;
     margin-bottom: 0;
   }
-}
-
-.controlsDivider {
-  height: 1px;
-  background: $border;
-}
-
-.quickAddField {
-  min-height: 36px;
-  padding-top: $space-sm;
-  padding-bottom: $space-sm;
 }
 
 .missingNote {
@@ -65,83 +59,47 @@
   margin: 0;
 }
 
-.search {
-  &Row {
+.footer {
+  &Actions {
+    width: 100%;
     display: flex;
     align-items: center;
-    gap: $space-sm;
-
-    > label {
-      flex: 1;
-      margin-bottom: 0;
-    }
+    gap: $space-md;
   }
 
-  &Field {
-    min-height: 42px;
-  }
-}
-
-.list {
-  list-style: none;
-  margin: 0;
-  margin-bottom: -$space-xl;
-  padding: 0;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.jersey {
-  &Wrap {
-    align-self: stretch;
-    display: flex;
-    align-items: center;
-    gap: $space-xs;
-    flex-shrink: 0;
-  }
-
-  &Label {
-    font-size: $font-sm;
+  &Summary {
+    margin-right: auto;
     color: var(--app-text-muted, #{$text-dim});
-    white-space: nowrap;
-  }
-
-  &Input {
-    align-self: stretch;
-    aspect-ratio: 1 / 1;
-    min-width: 32px;
-    max-width: 52px;
-    background: $bg-input;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    padding: 0;
-    font-size: $font-base;
-    font-weight: 700;
-    color: var(--app-text, #{$text-body});
-    outline: none;
-    text-align: center;
-
-    &:focus {
-      border-color: $accent;
-    }
-
-    &::-webkit-outer-spin-button,
-    &::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-    }
-
-    -moz-appearance: textfield;
+    font-size: $font-sm;
   }
 }
 
-.empty {
-  font-size: $font-base;
-  color: var(--app-text-muted, #{$text-dim});
-  font-style: italic;
-  text-align: center;
-  padding: $space-2xl 0;
+@media (max-width: 768px) {
+  .footer {
+    &Actions {
+      flex-wrap: wrap;
+      gap: $space-sm;
+    }
+
+    &Summary {
+      order: 0;
+      width: 100%;
+      margin-right: 0;
+    }
+
+    &Clear {
+      order: 1;
+      flex: 1;
+    }
+
+    &Save {
+      order: 2;
+      flex: 1;
+    }
+
+    &Cancel {
+      order: 3;
+      width: 100%;
+    }
+  }
 }

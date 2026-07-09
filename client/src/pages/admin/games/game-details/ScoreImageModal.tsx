@@ -12,21 +12,24 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { toPng } from 'html-to-image';
 import { toast } from 'react-toastify';
-import Button from '@/components/Button/Button';
-import CheckboxAccordion from '@/components/CheckboxAccordion/CheckboxAccordion';
-import DatePicker from '@/components/DatePicker/DatePicker';
-import fieldStyles from '@/components/Field/Field.module.scss';
-import GroupedFields from '@/components/GroupedFields/GroupedFields';
-import Icon from '@/components/Icon/Icon';
-import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
-import Modal from '@/components/Modal/Modal';
-import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import Select, { type SelectOption } from '@/components/Select/Select';
+import Button from '@jerecocc/tracker-ui/Button';
+import CheckboxAccordion from '@jerecocc/tracker-ui/CheckboxAccordion';
+import DatePicker from '@jerecocc/tracker-ui/DatePicker';
+import fieldStyles from '@/shared/trackerFieldStyles.module.scss';
+import FitText from '@jerecocc/tracker-ui/FitText';
+import GroupedFields from '@jerecocc/tracker-ui/GroupedFields';
+import Icon from '@jerecocc/tracker-ui/Icon';
+import ImagePreviewModal from '@jerecocc/tracker-ui/ImagePreviewModal';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import SeasonSelect from '@/shared/SeasonSelect/SeasonSelect';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
+import Select, { type SelectOption } from '@jerecocc/tracker-ui/Select';
+import Tooltip from '@jerecocc/tracker-ui/Tooltip';
 import type { GameRecord } from '@/hooks/useGames';
 import useLeagues, { type LeagueRecord } from '@/hooks/useLeagues';
 import { PERIOD_SUFFIX } from './constants';
 import { formatScheduledDate } from './formatUtils';
+import { getPlayoffScoreMetaBaseLabel, getPlayoffScoreMetaLabel } from './playoffScoreMeta';
 import styles from './ScoreImageModal.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -154,6 +157,25 @@ function getDarkScoreCardLogo(team: DrawTeam | null) {
   return team.logo_dark ?? team.logo ?? team.logo_light;
 }
 
+const setCanvasFontToFit = (
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  weight: number,
+  maxFontSize: number,
+  minFontSize: number,
+  maxWidth: number,
+) => {
+  ctx.font = `${weight} ${maxFontSize}px "Inter",system-ui,sans-serif`;
+  const textWidth = ctx.measureText(text).width;
+  if (textWidth <= maxWidth) return;
+
+  const nextFontSize = Math.max(
+    minFontSize,
+    Math.floor((maxFontSize * maxWidth) / textWidth),
+  );
+  ctx.font = `${weight} ${nextFontSize}px "Inter",system-ui,sans-serif`;
+};
+
 /** Draw a logo image or a colored circle-placeholder fallback. */
 function drawLogo(
   ctx: CanvasRenderingContext2D,
@@ -216,7 +238,9 @@ interface DrawGameType {
   series_home_team_id?: string | null;
   game_number_in_series?: number | null;
   playoff_round?: number | null;
-  playoff_round_names?: Record<number, string> | null;
+  playoff_round_names?: Record<string, string> | null;
+  playoff_matchup_names?: Record<string, string> | null;
+  bracket_slot_key?: string | null;
   scheduled_at?: string | null;
 }
 
@@ -648,6 +672,8 @@ const ScoreImageModal = ({
     : null;
   const selectedPlayoffRound = selectedPlayoffOption?.round ?? null;
   const selectedPlayoffRoundLabel = selectedPlayoffOption?.label ?? null;
+  const selectedPlayoffSlotKey =
+    selectedPlayoffOption?.value.match(/^r\d+m\d+$/i) ? selectedPlayoffOption.value : null;
   const formTeamsMatch = Boolean(
     formAwayTeamId && formHomeTeamId && formAwayTeamId === formHomeTeamId,
   );
@@ -864,9 +890,17 @@ const ScoreImageModal = ({
         : null,
       playoff_round: formIsPlayoff ? selectedPlayoffRound : null,
       playoff_round_names:
-        formIsPlayoff && selectedPlayoffRound != null && selectedPlayoffRoundLabel
+        formIsPlayoff &&
+        !selectedPlayoffSlotKey &&
+        selectedPlayoffRound != null &&
+        selectedPlayoffRoundLabel
           ? { [selectedPlayoffRound]: selectedPlayoffRoundLabel }
           : null,
+      playoff_matchup_names:
+        formIsPlayoff && selectedPlayoffSlotKey && selectedPlayoffRoundLabel
+          ? { [selectedPlayoffSlotKey]: selectedPlayoffRoundLabel }
+          : null,
+      bracket_slot_key: formIsPlayoff ? selectedPlayoffSlotKey : null,
       scheduled_at: formGameDate ? `${formGameDate}T00:00:00` : null,
     };
   }, [
@@ -883,6 +917,7 @@ const ScoreImageModal = ({
     numVals.playoffGameNum,
     selectedPlayoffRound,
     selectedPlayoffRoundLabel,
+    selectedPlayoffSlotKey,
     formGameDate,
   ]);
 
@@ -1065,17 +1100,14 @@ const ScoreImageModal = ({
     drawGame?.game_type === 'playoff'
       ? ['Playoffs', gameYear].filter(Boolean).join(' ')
       : (drawGame?.season_name ?? '');
-  const topTitle =
+  const playoffPhaseLabel =
     drawGame?.game_type === 'playoff'
-      ? drawGame.playoff_round != null
-        ? (drawGame.playoff_round_names?.[drawGame.playoff_round] ??
-          `ROUND ${drawGame.playoff_round}`)
-        : 'PLAYOFF'
-      : 'FINAL';
+      ? (getPlayoffScoreMetaBaseLabel(drawGame) ?? 'PLAYOFF')
+      : null;
   const finalLabel = 'FINAL SCORE';
   const scoreCardPhaseLabel =
     drawGame?.game_type === 'playoff'
-      ? topTitle
+      ? playoffPhaseLabel
       : drawGame?.game_type === 'preseason'
         ? 'PRE-SEASON'
         : 'REGULAR SEASON';
@@ -1494,16 +1526,7 @@ const ScoreImageModal = ({
 
         // Playoff indicator — only rendered for playoff games
         if (drawGame.game_type === 'playoff') {
-          const roundLabel =
-            drawGame.playoff_round != null
-              ? (drawGame.playoff_round_names?.[drawGame.playoff_round] ??
-                `Round ${drawGame.playoff_round}`)
-              : null;
-          const gameLabel =
-            drawGame.game_number_in_series != null
-              ? `Game ${drawGame.game_number_in_series}`
-              : null;
-          const seriesLine = [roundLabel, gameLabel].filter(Boolean).join(' · ');
+          const seriesLine = getPlayoffScoreMetaLabel(drawGame);
 
           // "PLAYOFFS" pill
           const pillText = 'PLAYOFFS';
@@ -1529,7 +1552,7 @@ const ScoreImageModal = ({
 
           // Round · Game line below the pill
           if (seriesLine) {
-            ctx.font = '500 40px "Inter",system-ui,sans-serif';
+            setCanvasFontToFit(ctx, seriesLine, 500, 40, 24, W - 160);
             ctx.fillStyle = 'rgba(226,232,240,0.9)';
             ctx.textBaseline = 'top';
             ctx.fillText(seriesLine, W / 2, pillY + pillH + 19);
@@ -2069,29 +2092,33 @@ const ScoreImageModal = ({
                   <strong className={awayScoreClassName}>{drawAwayScore}</strong>
                 </div>
 
-                <span
-                  className={`${styles.scoreCardResultBadge}${
-                    hasOvertimeBadge ? ` ${styles.scoreCardResultBadgeOvertime}` : ''
-                  }`}
-                  title={scoreBadgeTitle}
+                <Tooltip
+                  text={scoreBadgeTitle}
+                  className={styles.scoreCardResultTooltip}
                 >
-                  {scoreBadgeLabel && (
-                    <span className={styles.scoreCardResultLabel}>
-                      {hasOvertimeBadge
-                        ? scoreBadgeLabel.split('').map((letter, index) => (
-                            <span
-                              key={`${letter}-${index}`}
-                              className={`${styles.scoreCardResultLetter}${
-                                letter === 'S' ? ` ${styles.scoreCardResultLetterWide}` : ''
-                              }`}
-                            >
-                              {letter}
-                            </span>
-                          ))
-                        : scoreBadgeLabel}
-                    </span>
-                  )}
-                </span>
+                  <span
+                    className={`${styles.scoreCardResultBadge}${
+                      hasOvertimeBadge ? ` ${styles.scoreCardResultBadgeOvertime}` : ''
+                    }`}
+                  >
+                    {scoreBadgeLabel && (
+                      <span className={styles.scoreCardResultLabel}>
+                        {hasOvertimeBadge
+                          ? scoreBadgeLabel.split('').map((letter, index) => (
+                              <span
+                                key={`${letter}-${index}`}
+                                className={`${styles.scoreCardResultLetter}${
+                                  letter === 'S' ? ` ${styles.scoreCardResultLetterWide}` : ''
+                                }`}
+                              >
+                                {letter}
+                              </span>
+                            ))
+                          : scoreBadgeLabel}
+                      </span>
+                    )}
+                  </span>
+                </Tooltip>
                 <div className={styles.scoreCardScoreBlock}>
                   {homeWon && (
                     <span
@@ -2121,7 +2148,13 @@ const ScoreImageModal = ({
                     />
                   ))}
               </div>
-              <strong>{seriesStatusLine || leagueLine || 'FINAL'}</strong>
+              <FitText
+                as="strong"
+                minFontSize={20}
+                maxFontSize={33}
+              >
+                {seriesStatusLine || leagueLine || 'FINAL'}
+              </FitText>
               <div className={styles.scoreCardSeriesDots}>
                 {isPlayoffScoreCard &&
                   Array.from({ length: seriesTotal }, (_, index) => (

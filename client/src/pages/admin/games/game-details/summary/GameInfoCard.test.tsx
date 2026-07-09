@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { GameRecord } from '@/hooks/useGames';
 import GameInfoCard from './GameInfoCard';
@@ -37,6 +37,7 @@ const baseGame: GameRecord = {
   playoff_series_id: 'series-1',
   game_number_in_series: 3,
   game_number: null,
+  league_game_number: null,
   playoff_round: 2,
   series_home_team_id: null,
   series_away_team_id: null,
@@ -69,6 +70,10 @@ beforeAll(() => {
       dispatchEvent: jest.fn(),
     })),
   });
+  Object.defineProperty(window, 'scrollTo', {
+    writable: true,
+    value: jest.fn(),
+  });
 });
 
 describe('GameInfoCard', () => {
@@ -84,12 +89,49 @@ describe('GameInfoCard', () => {
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 
+  it('shows scheduled watch date as a separate user-view field when available', () => {
+    render(
+      <GameInfoCard
+        game={{ ...baseGame, scheduled_for: '2024-05-04', league_game_number: '210' }}
+        busy={null}
+        showScheduledWatchDate
+      />,
+    );
+
+    expect(screen.getByText('Scheduled Watch Date')).toBeInTheDocument();
+    expect(screen.getByText('May 4, 2024')).toBeInTheDocument();
+    expect(screen.queryByText('League Game Number')).not.toBeInTheDocument();
+  });
+
+  it('shows league game number as a separate admin field when available', () => {
+    render(
+      <GameInfoCard
+        game={{ ...baseGame, league_game_number: '210' }}
+        busy={null}
+      />,
+    );
+
+    expect(screen.getByText('League Game Number')).toBeInTheDocument();
+    expect(screen.getByText('210')).toBeInTheDocument();
+  });
+
+  it('does not show scheduled watch date in the default admin card', () => {
+    render(
+      <GameInfoCard
+        game={{ ...baseGame, scheduled_for: '2024-05-04' }}
+        busy={null}
+      />,
+    );
+
+    expect(screen.queryByText('Scheduled Watch Date')).not.toBeInTheDocument();
+  });
+
   it('shows round and game-in-series fields in the edit modal for playoff games', async () => {
     const user = userEvent.setup();
 
     render(
       <GameInfoCard
-        game={baseGame}
+        game={{ ...baseGame, league_game_number: '210' }}
         busy={null}
         updateGameInfo={jest.fn().mockResolvedValue(true)}
       />,
@@ -100,5 +142,30 @@ describe('GameInfoCard', () => {
     expect(screen.getByText('Edit Game Info')).toBeInTheDocument();
     expect(screen.getByDisplayValue('2')).toBeInTheDocument();
     expect(screen.getByDisplayValue('3')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('210')).toBeInTheDocument();
+  });
+
+  it('submits league game number edits from the edit modal', async () => {
+    const user = userEvent.setup();
+    const updateGameInfo = jest.fn().mockResolvedValue(true);
+
+    render(
+      <GameInfoCard
+        game={{ ...baseGame, league_game_number: '210' }}
+        busy={null}
+        updateGameInfo={updateGameInfo}
+      />,
+    );
+
+    await user.click(screen.getAllByRole('button')[0]);
+    await user.clear(screen.getByLabelText('League Game Number'));
+    await user.type(screen.getByLabelText('League Game Number'), ' 211 ');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(updateGameInfo).toHaveBeenCalledWith(
+        expect.objectContaining({ league_game_number: '211' }),
+      ),
+    );
   });
 });

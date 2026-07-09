@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import Button from '@/components/Button/Button';
-import Section from '@/components/Section/Section';
-import InfoItem from '@/components/InfoItem/InfoItem';
+import Button from '@jerecocc/tracker-ui/Button';
+import Section from '@jerecocc/tracker-ui/Section';
+import InfoItem from '@jerecocc/tracker-ui/InfoItem';
 import type { GameRecord, UpdateGameInfoData } from '@/hooks/useGames';
 import GameInfoEditModal from '../GameInfoEditModal';
 import { GAME_TYPE_LABEL } from '../constants';
@@ -23,13 +23,28 @@ interface Props {
   busy: string | null;
   updateGameInfo?: (data: UpdateGameInfoData) => Promise<boolean>;
   useLocalTimezone?: boolean;
+  showScheduledWatchDate?: boolean;
 }
 
-const GameInfoCard = ({ game, busy, updateGameInfo, useLocalTimezone = false }: Props) => {
+const GameInfoCard = ({
+  game,
+  busy,
+  updateGameInfo,
+  useLocalTimezone = false,
+  showScheduledWatchDate = false,
+}: Props) => {
   const [editOpen, setEditOpen] = useState(false);
   const playoffRoundLabel =
     game.playoff_round != null
       ? (game.playoff_round_names?.[game.playoff_round] ?? `Round ${game.playoff_round}`)
+      : null;
+  const scheduledWatchDate =
+    showScheduledWatchDate && game.scheduled_for
+      ? formatScheduledDateLocal(game.scheduled_for, null)
+      : null;
+  const leagueGameNumber =
+    !showScheduledWatchDate && game.league_game_number?.trim()
+      ? game.league_game_number.trim()
       : null;
 
   return (
@@ -42,7 +57,7 @@ const GameInfoCard = ({ game, busy, updateGameInfo, useLocalTimezone = false }: 
               variant="outlined"
               intent="neutral"
               icon="edit"
-              size="sm"
+              size="medium"
               tooltip="Edit game info"
               onClick={() => setEditOpen(true)}
             />
@@ -81,8 +96,8 @@ const GameInfoCard = ({ game, busy, updateGameInfo, useLocalTimezone = false }: 
               useLocalTimezone
                 ? formatScheduledTimeLocal(game.scheduled_time, game.scheduled_at)
                 : game.scheduled_time
-                ? formatScheduledTime(game.scheduled_time, game.scheduled_at)
-                : null
+                  ? formatScheduledTime(game.scheduled_time, game.scheduled_at)
+                  : null
             }
           />
           {game.status !== 'scheduled' && (
@@ -114,6 +129,28 @@ const GameInfoCard = ({ game, busy, updateGameInfo, useLocalTimezone = false }: 
             data={game.venue ?? null}
             full
           />
+          {(scheduledWatchDate || leagueGameNumber) && (
+            <>
+              <div
+                className={styles.infoDivider}
+                aria-hidden="true"
+              />
+              {scheduledWatchDate && (
+                <InfoItem
+                  label="Scheduled Watch Date"
+                  data={scheduledWatchDate}
+                  full
+                />
+              )}
+              {leagueGameNumber && (
+                <InfoItem
+                  label="League Game Number"
+                  data={leagueGameNumber}
+                  full
+                />
+              )}
+            </>
+          )}
           {game.notes && (
             <InfoItem
               label="Notes"

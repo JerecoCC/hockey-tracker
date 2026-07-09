@@ -32,16 +32,123 @@
   margin: 0;
 }
 
+.autoFillProgressBar.autoFillProgressBar {
+  background: $accent !important;
+  background-color: $accent !important;
+}
+
 // ── Tabs spacing ───────────────────────────────────────────────────────────
 .tabsWrapper {
   margin-top: $page-section-gap;
 }
 
 // ── Hero card ──────────────────────────────────────────────────────────────
-.hero {
+.heroCard.heroCard {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+}
+
+.heroHeader {
+  --hero-header-bg: var(--app-surface-subtle, rgba(255, 255, 255, 0.03));
+
+  position: relative;
+  z-index: 2;
+  min-height: 58px;
   display: flex;
   align-items: center;
-  gap: $space-xl;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  background: var(--hero-header-bg);
+  border-bottom: 1px solid var(--app-border, #{$border});
+}
+
+.heroHeaderIdentity {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.heroHeaderTeamLink,
+.heroHeaderTeamStatic {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: $space-md;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  color: inherit;
+  border-radius: $radius-sm;
+}
+
+.heroHeaderTeamTooltip {
+  min-width: 0;
+}
+
+.heroHeaderTeamLink {
+  text-decoration: none;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast,
+    color $transition-fast;
+
+  &:hover,
+  &:focus-visible {
+    border-color: rgba($accent, 0.65);
+    background: rgba($accent, 0.1);
+    color: var(--app-text-strong, #{$text-bright});
+  }
+
+  &:hover .heroHeaderTeamActionIndicator,
+  &:focus-visible .heroHeaderTeamActionIndicator {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 3px;
+  }
+}
+
+.heroHeaderTeamActionIndicator {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  color: $accent;
+  opacity: 0;
+  transform: translateX(-2px);
+  transition:
+    opacity $transition-fast,
+    transform $transition-fast;
+}
+
+.heroJerseyChip {
+  --chip-size: 32px;
+}
+
+.heroHeaderTeamName {
+  min-width: 0;
+  font-size: $font-lg;
+  font-weight: 500;
+  color: var(--app-text, #{$text-body});
+  @include truncate;
+}
+
+.hero {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: $space-2xl;
+  padding: $space-2xl;
+
+  @media (max-width: 640px) {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 .avatarButton {
@@ -75,49 +182,80 @@
 
   &TitleRow {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: $space-sm;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-md;
     min-width: 0;
   }
 
   &Name {
     min-width: 0;
-    font-size: $font-3xl;
-    font-weight: 700;
-    color: var(--app-text-strong, #{$text-bright});
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
     margin: 0;
     overflow-wrap: anywhere;
   }
 
-  &Meta {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: $space-md;
-    font-size: $font-sm;
-    color: var(--app-text-muted, #{$text-dim});
+  &FirstName {
+    font-size: $font-lg;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.1;
+    letter-spacing: 0;
+    @include truncate;
+  }
 
-    > span + span::before {
-      content: "•";
-      margin-right: $space-md;
-      color: $border;
-    }
+  &LastName {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: var(--app-text-strong, #{$text-bright});
+    line-height: 0.95;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
   }
 }
 
+.heroPositionTag.heroPositionTag {
+  padding: $space-xs $space-sm;
+  font-size: $font-sm;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
 // ── Status badge ──────────────────────────────────────────────────────────
-.heroTeamMeta {
-  display: inline-flex;
+.heroRightCol {
+  align-self: stretch;
+  display: flex;
   align-items: center;
-  gap: $space-xs;
+  justify-content: flex-end;
+  margin-left: auto;
+  flex-shrink: 0;
+
+  @media (max-width: 640px) {
+    align-self: auto;
+    margin-left: 0;
+  }
 }
 
 .heroActions {
+  flex-shrink: 0;
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: $space-sm;
-  flex-shrink: 0;
+}
+
+.inlineActionIndicator {
+  display: inline-flex;
+  align-items: center;
+  color: $accent;
+}
+
+@media (max-width: 640px) {
+  .heroLastName {
+    font-size: $font-3xl;
+  }
 }
 
 .retire {
@@ -168,6 +306,27 @@
 }
 
 .info {
+  &Primary {
+    display: flex;
+    flex-direction: column;
+    gap: $space-lg;
+    margin-bottom: $space-xl;
+  }
+
+  &PrimaryRow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-xl;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &PrimaryDivider {
+    --divider-color: var(--app-border, #{$border});
+  }
+
   &Grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -191,6 +350,77 @@
   &CellValue {
     font-size: $font-body;
     color: var(--app-text, #{$text-body});
+  }
+
+  &CellCopyTooltip {
+    align-self: flex-start;
+    max-width: 100%;
+    justify-content: flex-start;
+  }
+
+  &CellCopyButton {
+    position: relative;
+    isolation: isolate;
+    align-self: flex-start;
+    max-width: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: $space-xs;
+    margin: -2px 0 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--app-text, #{$text-body});
+    font: inherit;
+    cursor: pointer;
+    transition: color $transition-fast;
+
+    &::before {
+      content: "";
+      position: absolute;
+      inset: -2px -6px;
+      z-index: -1;
+      border: 1px solid transparent;
+      border-radius: $radius-sm;
+      background: transparent;
+      pointer-events: none;
+      transition:
+        background $transition-fast,
+        border-color $transition-fast;
+    }
+
+    &:hover,
+    &:focus-visible {
+      color: var(--app-text-strong, #{$text-bright});
+    }
+
+    &:hover::before,
+    &:focus-visible::before {
+      border-color: var(--app-border, #{$border});
+      background: var(--app-surface-subtle, rgba(255, 255, 255, 0.04));
+    }
+
+    &:focus-visible {
+      outline: 2px solid $accent;
+      outline-offset: 6px;
+    }
+
+    &:hover .infoCellCopyIndicator,
+    &:focus-visible .infoCellCopyIndicator {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  &CellCopyIndicator {
+    display: inline-flex;
+    align-items: center;
+    color: $accent;
+    opacity: 0;
+    transform: translateX(-2px);
+    transition:
+      opacity $transition-fast,
+      transform $transition-fast;
   }
 
   &CellMuted {
@@ -220,86 +450,243 @@
     gap: $space-md;
   }
 
-  &Item {
-    --list-item-logo-size: 40px;
-    --list-item-jersey-size: 32px;
-
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid $border;
-    border-radius: $radius-md;
+  &ListItem {
+    list-style: none;
   }
 
-  &Logo {
-    width: 36px;
-    height: 36px;
-    object-fit: contain;
-    flex-shrink: 0;
-    filter: drop-shadow(0 1px 2px var(--app-logo-shadow, rgba(255, 255, 255, 0.1)));
+  &Accordion {
+    --accordion-border-color: var(--app-border, #{$border});
+    --accordion-actions-bg: var(--app-surface, #{$bg-card});
+    --accordion-toggle-divider-padding-block: #{$space-sm};
   }
 
-  &LogoPlaceholder {
+  &Header {
+    box-sizing: border-box;
+    align-items: center;
+    min-height: calc(48px + #{$space-sm * 2});
+    transition: background $transition-fast;
+
+    &:hover,
+    &:focus-within {
+      --accordion-current-header-bg: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
+    }
+  }
+
+  &HeaderLabelWrap {
+    align-items: center;
+  }
+
+  &HeaderAccordionLabel {
+    display: flex;
+    align-items: center;
+  }
+
+  &HeaderLabel {
+    min-width: 0;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: $radius-sm;
-    background: $border;
-    font-size: $font-xs;
-    font-weight: 700;
-    color: var(--app-text, #{$text-body});
-    text-transform: uppercase;
-    flex-shrink: 0;
+    gap: $space-md;
+    line-height: 1;
   }
 
-  &Info {
-    flex: 1;
+  &HeaderInfo {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: $space-xs;
+    justify-content: center;
+    gap: 2px;
+    align-self: center;
+    line-height: 1.2;
   }
 
-  &Team {
-    font-size: $font-body;
-    font-weight: 600;
-    color: var(--app-text-strong, #{$text-bright});
+  &HeaderName {
+    font-size: $font-base;
+    font-weight: 500;
+    color: var(--app-text, #{$text-body});
+    line-height: 1.2;
+    @include truncate;
   }
 
-  &Meta {
-    font-size: $font-sm;
+  &HeaderDates {
+    font-size: $font-xs;
     color: var(--app-text-muted, #{$text-dim});
+    line-height: 1.2;
+    @include truncate;
   }
-}
 
-// ── Current-season stats cards ────────────────────────────────────────────
-.award {
-  &List {
+  &Body {
+    padding: $space-md;
+  }
+
+  &HistoryGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-md;
+
+    @media (max-width: 720px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &HistorySection {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+
+    & + .stintHistorySection {
+      padding-left: $space-md;
+      border-left: 1px solid var(--app-border, #{$border});
+
+      @media (max-width: 720px) {
+        padding-left: 0;
+        padding-top: $space-md;
+        border-left: none;
+        border-top: 1px solid var(--app-border, #{$border});
+      }
+    }
+  }
+
+  &HistoryTitle {
+    font-size: $font-xs;
+    font-weight: 700;
+    color: var(--app-text-muted, #{$text-dim});
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  &HistoryList {
     list-style: none;
     margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
+    gap: $space-xs;
+  }
+
+  &HistoryListItem {
+    --list-item-hover-bg: var(--app-surface-subtle, rgba(255, 255, 255, 0.03));
+  }
+
+  &HistoryEmpty {
+    margin: 0;
+    padding: $space-sm;
+    border: 1px dashed var(--app-border, #{$border});
+    border-radius: $radius-sm;
+    color: var(--app-text-muted, #{$text-dim});
+    font-size: $font-sm;
+    font-style: italic;
+  }
+}
+
+// ── Current-season stats cards ────────────────────────────────────────────
+.award {
+  &Groups,
+  &TeamList,
+  &BannerRack {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &Groups {
     gap: $space-md;
   }
 
-  &SeasonSelect {
-    --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
+  &Group {
+    min-width: 0;
+  }
 
-    width: 180px;
+  &AccordionBody {
+    padding: 0;
+  }
+
+  &GroupLabel {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: $space-xs;
+  }
+
+  &InfoTooltip {
+    display: block;
+    max-width: 18rem;
+    line-height: 1.4;
+  }
+
+  &TeamList {
+    gap: $space-sm;
+  }
+
+  &TeamList {
+    list-style: none;
+  }
+
+  &HeaderRight {
+    margin-left: auto;
+  }
+
+  &ViewControl {
+    min-width: 190px;
+  }
+
+  &ViewOption {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-xs;
+  }
+
+  &BannerRack {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: $space-lg;
+    align-items: start;
   }
 }
 
 .currentSeasonCards {
-  display: flex;
-  flex-direction: column;
-  gap: $page-section-gap;
   grid-column: 3;
   grid-row: 1 / span 2;
 
   @media (max-width: 960px) {
     grid-column: auto;
     grid-row: auto;
+  }
+}
+
+.seasonStats {
+  &Select {
+    --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
+
+    width: 180px;
+  }
+
+  &Groups {
+    display: flex;
+    flex-direction: column;
+    gap: $space-lg;
+  }
+
+  &Group {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+
+    & + .seasonStatsGroup {
+      padding-top: $space-lg;
+      border-top: 1px solid var(--app-border, #{$border});
+    }
+  }
+
+  &GroupTitle {
+    margin: 0;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: var(--app-text-muted, #{$text-dim});
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
   }
 }
 
@@ -387,30 +774,10 @@
   }
 
   &Cell {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $space-xs;
-    text-align: center;
-  }
-
-  &CellLabel {
-    font-size: $font-xs;
-    font-weight: 600;
-    color: var(--app-text-muted, #{$text-dim});
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-  }
-
-  &CellValue {
-    font-size: $font-xl;
-    font-weight: 700;
-    color: var(--app-text-strong, #{$text-bright});
-  }
-
-  &CellMuted {
-    font-size: $font-xl;
-    font-weight: 700;
-    color: var(--app-text-muted, #{$text-dim});
+    --stat-item-gap: #{$space-xs};
+    --stat-item-label-font-weight: 600;
+    --stat-item-label-letter-spacing: 0.07em;
+    --stat-item-value-font-size: #{$font-xl};
+    --stat-item-value-font-weight: 700;
   }
 }

@@ -1,0 +1,62 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.labelText {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.required {
+  color: #f87171;
+}
+
+.errorMsg {
+  font-size: $font-xs;
+  font-weight: 500;
+  color: $danger-light;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.field {
+  background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
+  border: 1px solid var(--app-field-border, #{$border});
+  border-radius: $radius-md;
+  color: var(--app-text, #{$text-body});
+  font-size: $font-base;
+  padding: $space-md $space-lg;
+  outline: none;
+  transition: border-color $transition-base;
+
+  &:focus {
+    border-color: $accent;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: var(--app-field-border-hover, #{$text-dim});
+    background: var(
+      --app-field-bg-hover,
+      var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
+    );
+  }
+
+  &::placeholder {
+    color: var(--app-text-muted, #{$text-dim});
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &[type="number"] {
+    -moz-appearance: textfield;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
+}

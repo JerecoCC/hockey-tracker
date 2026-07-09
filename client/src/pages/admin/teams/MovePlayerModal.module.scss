@@ -15,7 +15,7 @@
 
 .teamRow {
   display: grid;
-  grid-template-columns: 1fr 10rem;
+  grid-template-columns: minmax(0, 1fr) 6rem;
   gap: $space-md;
 }
 
@@ -64,79 +64,5 @@
   .movementRow,
   .dateRow {
     grid-template-columns: 1fr;
-  }
-}
-
-// ── Trade History ──────────────────────────────────────────────────────────
-
-.history {
-  border-top: 1px solid $border;
-  padding-top: $space-xl;
-
-  &Title {
-    margin: 0 0 $space-md;
-    font-size: $font-sm;
-    font-weight: 600;
-    color: var(--app-text-muted, #{$text-dim});
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-}
-
-.stint {
-  &List {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: $space-sm;
-  }
-
-  &Item {
-    display: flex;
-    align-items: center;
-    gap: $space-md;
-    background: var(--app-surface-subtle);
-    border: 1px solid var(--app-border, #{$border});
-    border-radius: $radius-md;
-    padding: $space-sm $space-md;
-  }
-
-  &Logo {
-    width: 28px;
-    height: 28px;
-    object-fit: contain;
-    flex-shrink: 0;
-  }
-
-  &Info {
-    display: flex;
-    align-items: center;
-    gap: $space-sm;
-    flex: 1;
-    min-width: 0;
-  }
-
-  &Team {
-    font-size: $font-base;
-    font-weight: 600;
-    color: var(--app-text, #{$text-body});
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &Jersey {
-    font-size: $font-sm;
-    color: var(--app-text-muted, #{$text-dim});
-    flex-shrink: 0;
-  }
-
-  &Dates {
-    font-size: $font-sm;
-    color: var(--app-text-muted, #{$text-dim});
-    white-space: nowrap;
-    flex-shrink: 0;
   }
 }

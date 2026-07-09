@@ -1,4 +1,4 @@
-import TeamCalendarGameCard from '@/components/TeamCalendarGameCard/TeamCalendarGameCard';
+import TeamCalendarGameCard from '@/shared/TeamCalendarGameCard/TeamCalendarGameCard';
 import type { LastFiveGame } from '@/hooks/useGames';
 import { DATE_FMT_SHORT, formatScheduledDate } from '../formatUtils';
 import { PERIOD_PAREN_SUFFIX } from '../constants';

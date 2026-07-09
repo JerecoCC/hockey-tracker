@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import Section from '@/components/Section/Section';
-import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
+import Section from '@jerecocc/tracker-ui/Section';
+import Button from '@jerecocc/tracker-ui/Button';
+import LoadingSpinner from '@jerecocc/tracker-ui/LoadingSpinner';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
-import type { TagIntent } from '@/components/Tag/Tag';
+import type { TagIntent } from '@jerecocc/tracker-ui/Tag';
 import useLeagues from '@/hooks/useLeagues';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
@@ -25,8 +27,9 @@ import {
   UUID_PATTERN,
 } from '@/lib/routeSlugs';
 import ScoreboardCard from '@/pages/admin/games/game-details/ScoreboardCard';
-import GameListItem from '@/components/GameListItem';
+import GameListItem from '@/shared/GameListItem';
 import GameFormModal, { type GameFormTeam } from './GameFormModal';
+import { buildPlayoffSeriesDocumentTitle } from './playoffSeriesDocumentTitle';
 import styles from './PlayoffSeriesDetailsPage.module.scss';
 
 const STATUS_LABEL: Record<GameStatus, string> = {
@@ -100,10 +103,69 @@ const seriesStatusToGameStatus = (status: PlayoffSeriesRecord['status']): GameSt
   return 'scheduled';
 };
 
+const SeriesGamesSkeleton = ({ count }: { count: number }) => (
+  <ul
+    className={styles.gameList}
+    aria-label="Loading series games"
+  >
+    {Array.from({ length: count }, (_, index) => (
+      <li
+        key={index}
+        className={styles.gameSkeletonItem}
+      >
+        <div className={styles.gameSkeletonMain}>
+          <Skeleton
+            type="text"
+            width="5.75rem"
+          />
+          <div className={styles.gameSkeletonTeamRow}>
+            <Skeleton
+              type="circle"
+              width="1.5rem"
+              height="1.5rem"
+            />
+            <Skeleton
+              type="text"
+              width="3rem"
+            />
+          </div>
+          <div className={styles.gameSkeletonTeamRow}>
+            <Skeleton
+              type="circle"
+              width="1.5rem"
+              height="1.5rem"
+            />
+            <Skeleton
+              type="text"
+              width="3rem"
+            />
+          </div>
+        </div>
+        <div className={styles.gameSkeletonMiddle}>
+          <Skeleton
+            type="text"
+            width="8rem"
+          />
+          <Skeleton
+            type="text"
+            width="12rem"
+          />
+        </div>
+        <Skeleton
+          type="tag"
+          className={styles.gameSkeletonStatus}
+        />
+      </li>
+    ))}
+  </ul>
+);
+
 const teamInfoFromSeries = (series: PlayoffSeriesRecord, side: 'home' | 'away'): TeamInfo => {
   const isHome = side === 'home';
   const id = isHome ? series.home_team_id : series.away_team_id;
   const name = isHome ? series.home_team_name : series.away_team_name;
+  const placeName = isHome ? series.home_team_place_name : series.away_team_place_name;
+  const teamName = isHome ? series.home_team_team_name : series.away_team_team_name;
   const code = isHome ? series.home_team_code : series.away_team_code;
   const logo = isHome ? series.home_team_logo : series.away_team_logo;
   const logoDark = isHome ? series.home_team_logo_dark : series.away_team_logo_dark;
@@ -115,6 +177,8 @@ const teamInfoFromSeries = (series: PlayoffSeriesRecord, side: 'home' | 'away'):
   return {
     id: id ?? `${side}-team`,
     name: name ?? code ?? 'TBD',
+    place_name: placeName ?? null,
+    team_name: teamName ?? null,
     code: code ?? 'TBD',
     logo: logo ?? null,
     logo_dark: logoDark ?? null,
@@ -152,10 +216,16 @@ const PlayoffSeriesDetailsPage = () => {
     ? null
     : seasons.find((item) => toRouteSlug(item.name) === seasonSlug);
   const seasonId = isLegacySeasonRoute ? seasonSlug : routeSeason?.id;
-  const { series, loading: seriesLoading } = usePlayoffSeries(seasonId);
+  const {
+    series,
+    loading: seriesLoading,
+    busy: seriesBusy,
+    startSeries,
+  } = usePlayoffSeries(seasonId);
   const { createGame, updateGame } = useGames({ seasonId });
   const queryClient = useQueryClient();
   const [editTarget, setEditTarget] = useState<GameRecord | null>(null);
+  const [startingSeriesId, setStartingSeriesId] = useState<string | null>(null);
 
   // updateGame only invalidates the games cache; refresh the series so the
   // games list reflects the edit immediately.
@@ -176,6 +246,15 @@ const PlayoffSeriesDetailsPage = () => {
           seriesId: item.id,
         }) === seriesSlug,
     ) ?? null;
+  const handleStartSeries = async () => {
+    if (!playoffSeries) return;
+    setStartingSeriesId(playoffSeries.id);
+    try {
+      await startSeries(playoffSeries.id);
+    } finally {
+      setStartingSeriesId(null);
+    }
+  };
 
   const leagueCode = league?.code ?? routeLeague?.code ?? leagueSlug;
   const leagueHref = buildLeagueDetailsPath({
@@ -190,7 +269,7 @@ const PlayoffSeriesDetailsPage = () => {
     seasonId,
   });
   const loading = leaguesLoading || leagueDetailsLoading || seriesLoading;
-  const title = 'Series Details';
+  const title = buildPlayoffSeriesDocumentTitle(playoffSeries, routeSeason);
   const matchupLabel = playoffSeries
     ? `${playoffSeries.away_team_code ?? 'TBD'} vs ${playoffSeries.home_team_code ?? 'TBD'}`
     : title;
@@ -225,6 +304,8 @@ const PlayoffSeriesDetailsPage = () => {
       scheduled_time: null,
       playoff_round: playoffSeries.round,
       playoff_round_names: playoffSeries.playoff_round_names ?? null,
+      playoff_matchup_names: playoffSeries.playoff_matchup_names ?? null,
+      bracket_slot_key: playoffSeries.bracket_slot_key ?? null,
       game_number_in_series: null,
       home_team: teamInfoFromSeries(playoffSeries, 'home'),
       away_team: teamInfoFromSeries(playoffSeries, 'away'),
@@ -248,6 +329,13 @@ const PlayoffSeriesDetailsPage = () => {
   const homeTeam = scoreboardGame.home_team;
   const awayTeam = scoreboardGame.away_team;
   const visibleGames = playoffSeries.games;
+  const isStartingSeries = startingSeriesId === playoffSeries.id || seriesBusy === playoffSeries.id;
+  const canStartSeries =
+    visibleGames.length === 0 &&
+    playoffSeries.status === 'upcoming' &&
+    !!playoffSeries.home_team_id &&
+    !!playoffSeries.away_team_id;
+  const seriesGamesSkeletonCount = Math.max(1, playoffSeries.games_to_win * 2 - 1);
   const teamForId = (teamId: string) => (teamId === homeTeam.id ? homeTeam : awayTeam);
   const gameHref = (game: SeriesGame) => {
     const gameHome = teamForId(game.home_team_id);
@@ -304,14 +392,36 @@ const PlayoffSeriesDetailsPage = () => {
         isInProgress={playoffSeries.status === 'active'}
         liveAwayScore={playoffSeries.away_wins}
         liveHomeScore={playoffSeries.home_wins}
+        seriesScore={{
+          awayWins: playoffSeries.away_wins,
+          homeWins: playoffSeries.home_wins,
+          winsNeeded: playoffSeries.games_to_win,
+        }}
         overtimeSuffix=""
         leagueId={routeLeagueId}
         leagueCode={leagueCode}
         disabled={!playoffSeries.home_team_id || !playoffSeries.away_team_id}
       />
 
-      <Section title="Series Games">
-        {visibleGames.length === 0 ? (
+      <Section
+        title="Series Games"
+        action={
+          canStartSeries ? (
+            <Button
+              variant="filled"
+              intent="accent"
+              icon="play_arrow"
+              disabled={isStartingSeries}
+              onClick={handleStartSeries}
+            >
+              {isStartingSeries ? 'Starting...' : 'Start Series'}
+            </Button>
+          ) : undefined
+        }
+      >
+        {isStartingSeries ? (
+          <SeriesGamesSkeleton count={seriesGamesSkeletonCount} />
+        ) : visibleGames.length === 0 ? (
           <p className={styles.emptyState}>No games have been generated for this series yet.</p>
         ) : (
           <ul className={styles.gameList}>

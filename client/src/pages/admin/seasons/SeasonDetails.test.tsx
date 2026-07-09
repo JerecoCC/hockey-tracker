@@ -9,7 +9,17 @@ import useTabState from '@/hooks/useTabState';
 import SeasonDetails from './SeasonDetails';
 
 const mockNavigate = jest.fn();
-const mockSeasonPlayoffsTab = jest.fn(() => null);
+const mockSeasonPlayersTab = jest.fn((_props: any) => <div>Season players tab</div>);
+const mockSeasonPlayoffsTab = jest.fn((_props: any) => null);
+const mockMoreActionsMenu = jest.fn((props: any) => (
+  <button
+    type="button"
+    aria-label="More actions"
+    className="trigger"
+    data-variant={props.variant ?? 'ghost'}
+    data-icon-height={props.iconHeight ?? 'default'}
+  />
+));
 
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
@@ -25,10 +35,11 @@ jest.mock('@/lib/computeClinched', () => ({
   computeClinched: () => new Set<string>(),
   computeEliminated: () => new Set<string>(),
 }));
-jest.mock('@/components/Breadcrumbs/Breadcrumbs', () => () => <div />);
-jest.mock('@/components/Button/Button', () => (props: any) => {
+jest.mock('@jerecocc/tracker-ui/Breadcrumbs', () => () => <div />);
+jest.mock('@jerecocc/tracker-ui/Button', () => (props: any) => {
   const {
     children,
+    className,
     icon,
     tooltip,
     tooltipClassName,
@@ -40,19 +51,38 @@ jest.mock('@/components/Button/Button', () => (props: any) => {
     iconHeight,
     ...buttonProps
   } = props;
-  return <button {...buttonProps}>{children ?? icon}</button>;
+  const iconOnlyClass =
+    icon && !children
+      ? iconHeight === 'button'
+        ? 'iconOnlyButton'
+        : iconHeight === 'field'
+          ? 'iconOnlyField'
+          : 'iconOnly'
+      : null;
+  const computedClassName = [className, size ?? 'medium', iconOnlyClass].filter(Boolean).join(' ');
+  return (
+    <button
+      {...buttonProps}
+      className={computedClassName}
+      data-variant={variant}
+    >
+      {children ?? icon}
+    </button>
+  );
 });
-jest.mock('@/components/Card/Card', () => (props: any) => (
+jest.mock('@jerecocc/tracker-ui/Card', () => (props: any) => (
   <div data-testid="card">
     {props.title}
     {props.action}
     {props.children}
   </div>
 ));
-jest.mock('@/components/ConfirmModal/ConfirmModal', () => () => null);
-jest.mock('@/components/Tag/Tag', () => (props: any) => <span>{props.label}</span>);
-jest.mock('@/components/MoreActionsMenu/MoreActionsMenu', () => () => null);
-jest.mock('@/components/SegmentedControl/SegmentedControl', () => (props: any) => (
+jest.mock('@jerecocc/tracker-ui/ConfirmModal', () => () => null);
+jest.mock('@jerecocc/tracker-ui/Tag', () => (props: any) => <span>{props.label}</span>);
+jest.mock('@jerecocc/tracker-ui/MoreActionsMenu', () => (props: any) =>
+  mockMoreActionsMenu(props),
+);
+jest.mock('@jerecocc/tracker-ui/SegmentedControl', () => (props: any) => (
   <div>
     {props.options.map((option: any) => (
       <button
@@ -65,21 +95,36 @@ jest.mock('@/components/SegmentedControl/SegmentedControl', () => (props: any) =
     ))}
   </div>
 ));
-jest.mock('@/components/Tabs/Tabs', () => (props: any) => (
-  <div>{props.tabs[props.activeIndex ?? 0].content}</div>
+jest.mock('@jerecocc/tracker-ui/Tabs', () => (props: any) => (
+  <div>
+    <div role="tablist">
+      {props.tabs.map((tab: any, index: number) => (
+        <button
+          key={tab.label}
+          type="button"
+          role="tab"
+          aria-selected={(props.activeIndex ?? 0) === index}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+    {props.tabs[props.activeIndex ?? 0].content}
+  </div>
 ));
-jest.mock('@/components/TitleRow/TitleRow', () => (props: any) => (
+jest.mock('@jerecocc/tracker-ui/TitleRow', () => (props: any) => (
   <div>
     {props.left}
     {props.right}
   </div>
 ));
-jest.mock('@/components/InfoItem/InfoItem', () => () => null);
-jest.mock('@/components/PlayerAvatar/PlayerAvatar', () => () => <span>player</span>);
-jest.mock('@/components/TeamLogo/TeamLogo', () => () => <span>logo</span>);
+jest.mock('@jerecocc/tracker-ui/InfoItem', () => () => null);
+jest.mock('@jerecocc/tracker-ui/PlayerAvatar', () => () => <span>player</span>);
+jest.mock('@jerecocc/tracker-ui/TeamLogo', () => () => <span>logo</span>);
 jest.mock('./SeasonEndModal', () => () => null);
 jest.mock('./SeasonFormModal', () => () => null);
 jest.mock('./SeasonGamesTab', () => () => null);
+jest.mock('./SeasonPlayersTab', () => (props: any) => mockSeasonPlayersTab(props));
 jest.mock('./SeasonPlayoffsTab', () => (props: any) => mockSeasonPlayoffsTab(props));
 jest.mock('./SeasonTeamsCard', () => () => null);
 
@@ -140,7 +185,7 @@ const makeGroup = (
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUseTabState.mockReturnValue([4, jest.fn()]);
+  mockUseTabState.mockReturnValue([5, jest.fn()]);
   mockUseLeagues.mockReturnValue({ leagues: [], loading: false });
   mockUseLeagueDetails.mockReturnValue({
     seasons: [{ id: 'season-1', name: 'season-1' }],
@@ -206,9 +251,12 @@ beforeEach(() => {
       is_ended: false,
       has_scheduled_games: false,
       has_unfinished_regular_games: false,
+      has_incomplete_regular_team_games: false,
       playoff_format: null,
       scoring_system: '2-1-0',
       league_scoring_system: '2-1-0',
+      goalie_min_regular_minutes: null,
+      league_goalie_min_regular_minutes: 1500,
     },
     groups: [],
     seasonTeams: [],
@@ -229,9 +277,44 @@ beforeEach(() => {
   });
 });
 
+describe('SeasonDetails players tab', () => {
+  it('passes current season context to the players tab', () => {
+    mockUseTabState.mockReturnValue([2, jest.fn()]);
+
+    render(<SeasonDetails />);
+
+    expect(screen.getByText('Season players tab')).toBeInTheDocument();
+    expect(mockSeasonPlayersTab).toHaveBeenCalledWith(
+      expect.objectContaining({
+        leagueId: 'league-1',
+        leagueCode: 'NHL',
+        seasonId: 'season-1',
+        seasonName: '2024-25',
+      }),
+    );
+  });
+});
+
+describe('SeasonDetails tabs', () => {
+  it('places Playoffs before Awards', () => {
+    render(<SeasonDetails />);
+
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Info',
+      'Teams',
+      'Players',
+      'Games',
+      'Stats',
+      'Standings',
+      'Playoffs',
+      'Awards',
+    ]);
+  });
+});
+
 describe('SeasonDetails standings tab', () => {
   it('defers season stats and standings until their tabs need them', () => {
-    mockUseTabState.mockReturnValue([2, jest.fn()]);
+    mockUseTabState.mockReturnValue([3, jest.fn()]);
 
     render(<SeasonDetails />);
 
@@ -264,6 +347,12 @@ describe('SeasonDetails standings tab', () => {
     expect(mockUseSeasonStandings).toHaveBeenCalledWith('season-1', { enabled: true });
   });
 
+  it('labels the league standings subpage', () => {
+    render(<SeasonDetails />);
+
+    expect(screen.getByRole('heading', { name: 'League' })).toBeInTheDocument();
+  });
+
   it('enables cached standings and passes them to playoffs when the playoffs tab is active', () => {
     const standings = [makeStanding('team-1', 'Toronto Maple Leafs', 112)];
     mockUseTabState.mockReturnValue([6, jest.fn()]);
@@ -279,6 +368,10 @@ describe('SeasonDetails standings tab', () => {
       expect.objectContaining({
         standings,
         standingsLoading: false,
+        canStartPlayoffs: true,
+        startPlayoffsDisabled: false,
+        startPlayoffsBusy: false,
+        onStartPlayoffs: expect.any(Function),
       }),
     );
   });
@@ -365,12 +458,15 @@ describe('SeasonDetails standings tab', () => {
         is_ended: false,
         has_scheduled_games: false,
         has_unfinished_regular_games: false,
+        has_incomplete_regular_team_games: false,
         playoff_format: [
           { scope: 'division', method: 'top', count: 3 },
           { scope: 'conference', method: 'wildcard', count: 2 },
         ],
         scoring_system: '2-1-0',
         league_scoring_system: '2-1-0',
+        goalie_min_regular_minutes: null,
+        league_goalie_min_regular_minutes: 1500,
       },
       groups: [
         makeGroup('east', 'Eastern', 'conference', null, [], teamNames),
@@ -419,7 +515,14 @@ describe('SeasonDetails standings tab', () => {
     expect(within(standingsHeader as HTMLElement).getByRole('button', { name: 'Division' }))
       .toBeInTheDocument();
 
+    expect(screen.getByRole('heading', { name: 'League' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Conference' }));
+    expect(screen.getByRole('heading', { name: 'Eastern Conference' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Western Conference' })).toBeInTheDocument();
+
     await user.click(screen.getByRole('button', { name: 'Division' }));
+    expect(screen.getByRole('heading', { name: 'Atlantic Division' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Metropolitan Division' })).toBeInTheDocument();
 
     const atlanticThreeRow = screen.getByText('Atlantic Three').closest('tr');
     expect(atlanticThreeRow).toHaveClass('standingsQualifierRow');
@@ -434,6 +537,8 @@ describe('SeasonDetails standings tab', () => {
 
     await user.click(screen.getByRole('button', { name: 'Wildcard' }));
 
+    expect(screen.getByRole('heading', { name: 'Eastern Conference' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Western Conference' })).toBeInTheDocument();
     expect(screen.queryByText('Atlantic Three')).not.toBeInTheDocument();
     expect(screen.queryByText('Metro Three')).not.toBeInTheDocument();
     expect(screen.getByText('Metro Four')).toBeInTheDocument();
@@ -446,9 +551,72 @@ describe('SeasonDetails standings tab', () => {
   });
 });
 
+describe('SeasonDetails info tab', () => {
+  it('renders season actions at the top right with the expected icon styles', () => {
+    mockUseTabState.mockReturnValue([0, jest.fn()]);
+
+    const { container } = render(<SeasonDetails />);
+
+    expect(container.querySelector('.seasonInfoHeader')).toBeInTheDocument();
+    expect(container.querySelector('.seasonInfoActions')).toBeInTheDocument();
+
+    const editButton = screen.getByRole('button', { name: 'Edit season' });
+    expect(editButton).not.toHaveTextContent('Edit season');
+    expect(editButton).toHaveClass('large', 'iconOnlyButton');
+    expect(editButton).not.toHaveClass('iconOnly');
+
+    expect(mockMoreActionsMenu).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: expect.arrayContaining([
+          expect.objectContaining({ label: 'Start Playoffs' }),
+        ]),
+        iconHeight: 'button',
+      }),
+    );
+    expect(mockMoreActionsMenu.mock.calls[0][0]).not.toHaveProperty('useDefaultButtonStyle');
+    const moreButton = screen.getByRole('button', { name: 'More actions' });
+    expect(moreButton).toHaveClass('trigger');
+    expect(moreButton).toHaveAttribute('data-variant', 'ghost');
+    expect(moreButton).toHaveAttribute('data-icon-height', 'button');
+  });
+
+  it('keeps the start playoffs action visible but disabled while a team is short', () => {
+    mockUseTabState.mockReturnValue([0, jest.fn()]);
+    const details = mockUseSeasonDetails();
+    mockUseSeasonDetails.mockClear();
+    mockUseSeasonDetails.mockReturnValue({
+      ...details,
+      season: {
+        ...details.season,
+        has_incomplete_regular_team_games: true,
+      },
+    });
+
+    render(<SeasonDetails />);
+
+    expect(mockMoreActionsMenu).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: expect.arrayContaining([
+          expect.objectContaining({ label: 'Start Playoffs', disabled: true }),
+        ]),
+      }),
+    );
+  });
+
+  it('keeps season actions scoped to the info tab', () => {
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+
+    const { container } = render(<SeasonDetails />);
+
+    expect(container.querySelector('.seasonInfoHeader')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit season' })).not.toBeInTheDocument();
+    expect(mockMoreActionsMenu).not.toHaveBeenCalled();
+  });
+});
+
 describe('SeasonDetails stats tab', () => {
   it('enables summary stats without enabling standings when the stats tab is active', () => {
-    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
 
     render(<SeasonDetails />);
 
@@ -472,7 +640,7 @@ describe('SeasonDetails stats tab', () => {
   });
 
   it('renders skeletons for the cards inside each summary section while stats load', () => {
-    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
     mockUseSeasonStats.mockReturnValue({
       skaters: [],
       goalies: [],
@@ -493,7 +661,7 @@ describe('SeasonDetails stats tab', () => {
 
   it('renders a bare card skeleton while a full stats list loads', async () => {
     const user = userEvent.setup();
-    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
     mockUseSeasonStats.mockReturnValue({
       skaters: [],
       goalies: [],
@@ -514,17 +682,17 @@ describe('SeasonDetails stats tab', () => {
 
   it('navigates to the player details page when a summary leader is clicked', async () => {
     const user = userEvent.setup();
-    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
     render(<SeasonDetails />);
 
     await user.click(screen.getByRole('button', { name: 'View John Smith' }));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor/players/john-smith');
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor/players/19-john-smith');
   });
 
   it('opens full leader lists from the summary header icon buttons', async () => {
     const user = userEvent.setup();
-    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
     render(<SeasonDetails />);
 
     expect(screen.getByRole('button', { name: 'View all forward leaders' })).toBeInTheDocument();
@@ -538,12 +706,12 @@ describe('SeasonDetails stats tab', () => {
 
   it('navigates to the player details page when a stats table row is clicked', async () => {
     const user = userEvent.setup();
-    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
     render(<SeasonDetails />);
 
     await user.click(screen.getByRole('button', { name: 'Forwards' }));
     await user.click(screen.getByText('Smith, John'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor/players/john-smith');
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor/players/19-john-smith');
   });
 });

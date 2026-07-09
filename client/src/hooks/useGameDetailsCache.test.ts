@@ -90,11 +90,11 @@ const ROSTER_ENTRY: GameRosterEntry = {
 };
 
 const LINEUP_ENTRY: LineupEntry = {
-  id: 'lineup-1-F1',
+  id: 'lineup-1-G',
   game_id: 'game-1',
   team_id: 'team-1',
   player_id: 'player-1',
-  position_slot: 'F1',
+  position_slot: 'G',
   player_first_name: 'John',
   player_last_name: 'Smith',
   player_photo: null,
@@ -182,8 +182,10 @@ describe('game details mutation cache updates', () => {
   it('updates game roster cache after adding players without refetching', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const rosterKey = ['game-roster', 'game-1'];
+    const playerStatsKey = ['player-game-logs', 'player-1'];
     const nextEntry = { ...ROSTER_ENTRY, id: 'roster-2', player_id: 'player-2' };
     queryClient.setQueryData(rosterKey, [ROSTER_ENTRY]);
+    queryClient.setQueryData(playerStatsKey, []);
     mockedAxios.get.mockResolvedValue({ data: [ROSTER_ENTRY] });
     mockedAxios.post.mockResolvedValueOnce({ data: [ROSTER_ENTRY, nextEntry] });
 
@@ -199,14 +201,19 @@ describe('game details mutation cache updates', () => {
 
     expect(queryClient.getQueryData<GameRosterEntry[]>(rosterKey)).toEqual([ROSTER_ENTRY, nextEntry]);
     expect(queryClient.getQueryState(rosterKey)?.isInvalidated).toBe(false);
+    expect(queryClient.getQueryState(playerStatsKey)?.isInvalidated).toBe(true);
     expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 
   it('updates lineup cache after saving team lineup without refetching', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const lineupKey = ['game-lineup', 'game-1'];
-    const nextEntry = { ...LINEUP_ENTRY, position_slot: 'F2' as const };
+    const goalieKey = ['game-goalie-stats', 'game-1'];
+    const playerStatsKey = ['player-game-logs', 'player-1'];
+    const nextEntry = { ...LINEUP_ENTRY, player_id: 'player-2' };
     queryClient.setQueryData(lineupKey, [LINEUP_ENTRY]);
+    queryClient.setQueryData(goalieKey, [GOALIE_STAT]);
+    queryClient.setQueryData(playerStatsKey, []);
     mockedAxios.get.mockResolvedValue({ data: [LINEUP_ENTRY] });
     mockedAxios.put.mockResolvedValueOnce({ data: [nextEntry] });
 
@@ -217,18 +224,47 @@ describe('game details mutation cache updates', () => {
     mockedAxios.get.mockClear();
 
     await act(async () => {
-      await result.current.saveTeamLineup('team-1', [{ position_slot: 'F2', player_id: 'player-1' }]);
+      await result.current.saveTeamLineup('team-1', [{ position_slot: 'G', player_id: 'player-2' }]);
     });
 
     expect(queryClient.getQueryData<LineupEntry[]>(lineupKey)).toEqual([nextEntry]);
     expect(queryClient.getQueryState(lineupKey)?.isInvalidated).toBe(false);
+    expect(queryClient.getQueryState(goalieKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(playerStatsKey)?.isInvalidated).toBe(true);
+    expect(mockedAxios.get).not.toHaveBeenCalled();
+  });
+
+  it('updates lineup cache and player stat dependents after clearing team lineup', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const lineupKey = ['game-lineup', 'game-1'];
+    const playerStatsKey = ['player-game-logs', 'player-1'];
+    queryClient.setQueryData(lineupKey, [LINEUP_ENTRY]);
+    queryClient.setQueryData(playerStatsKey, []);
+    mockedAxios.get.mockResolvedValue({ data: [LINEUP_ENTRY] });
+    mockedAxios.delete.mockResolvedValueOnce({});
+
+    const { result } = renderHook(() => useGameLineup('game-1'), {
+      wrapper: createWrapper(queryClient),
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    mockedAxios.get.mockClear();
+
+    await act(async () => {
+      await result.current.clearTeamLineup('team-1');
+    });
+
+    expect(queryClient.getQueryData<LineupEntry[]>(lineupKey)).toEqual([]);
+    expect(queryClient.getQueryState(lineupKey)?.isInvalidated).toBe(false);
+    expect(queryClient.getQueryState(playerStatsKey)?.isInvalidated).toBe(true);
     expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 
   it('updates goalie stat cache after upsert without refetching', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const goalieKey = ['game-goalie-stats', 'game-1'];
+    const playerStatsKey = ['player-game-logs', 'goalie-1'];
     queryClient.setQueryData(goalieKey, []);
+    queryClient.setQueryData(playerStatsKey, []);
     mockedAxios.get.mockResolvedValue({ data: [] });
     mockedAxios.post.mockResolvedValueOnce({ data: [GOALIE_STAT] });
 
@@ -249,13 +285,16 @@ describe('game details mutation cache updates', () => {
 
     expect(queryClient.getQueryData<GoalieStatRecord[]>(goalieKey)).toEqual([GOALIE_STAT]);
     expect(queryClient.getQueryState(goalieKey)?.isInvalidated).toBe(false);
+    expect(queryClient.getQueryState(playerStatsKey)?.isInvalidated).toBe(true);
     expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 
   it('updates shootout attempt cache after adding an attempt without refetching', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const attemptsKey = ['shootout-attempts', 'game-1'];
+    const playerStatsKey = ['player-game-logs', 'player-1'];
     queryClient.setQueryData(attemptsKey, []);
+    queryClient.setQueryData(playerStatsKey, []);
     mockedAxios.get.mockResolvedValue({ data: [] });
     mockedAxios.post.mockResolvedValueOnce({ data: ATTEMPT });
 
@@ -271,6 +310,7 @@ describe('game details mutation cache updates', () => {
 
     expect(queryClient.getQueryData<ShootoutAttempt[]>(attemptsKey)).toEqual([ATTEMPT]);
     expect(queryClient.getQueryState(attemptsKey)?.isInvalidated).toBe(false);
+    expect(queryClient.getQueryState(playerStatsKey)?.isInvalidated).toBe(true);
     expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 });

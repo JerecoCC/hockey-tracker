@@ -1,18 +1,28 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react';
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type DragEvent,
+} from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import Button from '@/components/Button/Button';
-import CalendarGameListItem from '@/components/CalendarGameListItem/CalendarGameListItem';
-import DatePicker from '@/components/DatePicker/DatePicker';
-import GameCard from '@/components/GameCard/GameCard';
-import UserGameActions from '@/components/GameCard/UserGameActions';
-import Icon from '@/components/Icon/Icon';
-import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
-import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
-import Modal from '@/components/Modal/Modal';
+import Button from '@jerecocc/tracker-ui/Button';
+import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
+import DatePicker from '@jerecocc/tracker-ui/DatePicker';
+import GameCard from '@/shared/GameCard/GameCard';
+import UserGameActions from '@/shared/GameCard/UserGameActions';
+import Icon from '@jerecocc/tracker-ui/Icon';
+import MonthCalendar from '@jerecocc/tracker-ui/MonthCalendar';
+import MultiSelect, { type MultiSelectOption } from '@jerecocc/tracker-ui/MultiSelect';
+import Modal from '@jerecocc/tracker-ui/Modal';
 import {
   ScheduleCalendarCard,
   ScheduleCalendarDayCount,
@@ -25,17 +35,18 @@ import {
   ScheduleWeekSummary,
   scheduleViewSegmentedControlClassName,
   useScheduleWeekSummaryStuck,
-} from '@/components/ScheduleGamesLayout/ScheduleGamesLayout';
-import Section from '@/components/Section/Section';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import Select, { type SelectOption } from '@/components/Select/Select';
-import ToggleButton from '@/components/ToggleButton/ToggleButton';
-import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
-import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
+} from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
+import Section from '@jerecocc/tracker-ui/Section';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
+import Select, { type SelectOption } from '@jerecocc/tracker-ui/Select';
+import ToggleButton from '@jerecocc/tracker-ui/ToggleButton';
+import PeriodPicker from '@jerecocc/tracker-ui/PeriodPicker';
 import { type GameRecord } from '@/hooks/useGames';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import { buildUserGameDetailsPath } from '@/lib/routeSlugs';
 import styles from './UserGames.module.scss';
+
+const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/ScoreImageModal'));
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
@@ -87,7 +98,7 @@ const toLocalDateKey = (iso: string) => {
 const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
 const MONTH_ONLY_RE = /^[0-9]{4}-[0-9]{2}$/;
 const ISO_DATE_PREFIX_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
-const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/;
+const ISO_MIDNIGHT_RE = /[T ]00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}(?::?[0-9]{2})?)?$/;
 
 const toDateKeyInZone = (date: Date, timeZone?: string) => {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -267,8 +278,10 @@ const getScheduledInstant = (scheduledAt: string | null, scheduledTime: string |
 };
 
 const getOriginalGameDateKey = (game: GameRecord, tzPref: TzPref) => {
-  if (game.scheduled_at && DATE_ONLY_RE.test(game.scheduled_at) && !game.scheduled_time) {
-    return game.scheduled_at;
+  if (game.scheduled_at && !game.scheduled_time) {
+    if (DATE_ONLY_RE.test(game.scheduled_at)) return game.scheduled_at;
+    const rawDateKey = getRawDateKey(game.scheduled_at);
+    if (rawDateKey && ISO_MIDNIGHT_RE.test(game.scheduled_at)) return rawDateKey;
   }
   const instant = getScheduledInstant(game.scheduled_at, game.scheduled_time);
   if (!instant) return null;
@@ -289,10 +302,15 @@ const isInvalidWatchScheduleDate = (
   return !!gameDateKey && watchDateKey <= gameDateKey;
 };
 
+const canDropGameOnCalendarDate = (game: GameRecord, dateKey: string, tzPref: TzPref) => {
+  const originalDateKey = getOriginalGameDateKey(game, tzPref);
+  if (originalDateKey === dateKey) return true;
+  return !isInvalidWatchScheduleDate(game, dateKey, tzPref);
+};
+
 const getScheduledWatchDateKey = (value: string | null | undefined) => {
   if (!value) return null;
-  if (DATE_ONLY_RE.test(value)) return value;
-  return toLocalDateKey(value);
+  return getRawDateKey(value) ?? toLocalDateKey(value);
 };
 
 const getEffectiveUserDateKey = (game: GameRecord, tzPref: TzPref) =>
@@ -328,6 +346,15 @@ const isDateKeyInWeek = (dateKey: string, weekStartKey: string) => {
   return date >= weekStart && date <= weekEnd;
 };
 
+const isDateKeyInMonthQueryWindow = (dateKey: string, monthKey: string) => {
+  if (!DATE_ONLY_RE.test(dateKey) || !MONTH_ONLY_RE.test(monthKey)) return false;
+  const month = fromMonthPickerValue(monthKey);
+  const start = addDays(month, -1);
+  const end = addDays(addMonths(month, 1), 1);
+  const date = dateKeyToDate(dateKey);
+  return date >= start && date < end;
+};
+
 const userGameMatchesCachedQuery = (
   game: GameRecord,
   query: UserGamesCacheQuery,
@@ -346,7 +373,7 @@ const userGameMatchesCachedQuery = (
 
   const dateKey = getEffectiveUserDateKey(game, tzPref);
   if (query.week) return !!dateKey && isDateKeyInWeek(dateKey, query.week);
-  if (query.month) return !!dateKey && dateKey.slice(0, 7) === query.month;
+  if (query.month) return !!dateKey && isDateKeyInMonthQueryWindow(dateKey, query.month);
   return true;
 };
 
@@ -500,6 +527,7 @@ const SCHEDULE_TOAST_DATE_FMT = new Intl.DateTimeFormat('en-US', {
 const getGameActionLabel = (game: GameRecord) => `${game.away_team.code} @ ${game.home_team.code}`;
 const formatScheduleToastDate = (dateKey: string) =>
   SCHEDULE_TOAST_DATE_FMT.format(dateKeyToDate(dateKey));
+const canMarkGameWatched = (game: GameRecord) => game.status === 'final';
 
 // ── Playoff series markers ───────────────────────────────────────────────────
 
@@ -650,6 +678,7 @@ const CalendarGameCard = ({
   dragging?: boolean;
   busy: boolean;
 }) => {
+  const canMarkWatched = canMarkGameWatched(game);
   const showRecordedScore = shouldShowWatchedScore(game);
   const showMissingScore = !!game.watched_by_user && !showRecordedScore;
   const showScore = showRecordedScore || showMissingScore;
@@ -683,6 +712,7 @@ const CalendarGameCard = ({
     <CalendarGameListItem
       className={[
         styles.calendarGameLeagueTint,
+        !game.watched_by_user ? styles.calendarGameUnwatched : '',
         game.skipped_by_user ? styles.calendarGameSkipped : '',
       ]
         .filter(Boolean)
@@ -740,6 +770,7 @@ const CalendarGameCard = ({
           watched={!!game.watched_by_user}
           skipped={!!game.skipped_by_user}
           scheduled={!!game.scheduled_for}
+          canMarkWatched={canMarkWatched}
           busy={busy}
           onView={onOpen}
           onDownloadScoreCard={onDownloadScoreCard}
@@ -781,7 +812,7 @@ const UserGames = () => {
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
   const [calendarDownloadBusy, setCalendarDownloadBusy] = useState(false);
-  const hasSeededTeamFilterRef = useRef(false);
+  const seededTeamFilterLeagueRef = useRef<string | null>(null);
   const calendarGridRef = useRef<HTMLDivElement>(null);
 
   const weekEnd = addDays(weekStart, 6);
@@ -893,11 +924,12 @@ const UserGames = () => {
 
     const availableIds = new Set(teamOptions.map((option) => option.value));
     const availableFavoriteIds = favoriteTeamIds.filter((teamId) => availableIds.has(teamId));
-    const shouldSeedFavorites =
-      !hasSeededTeamFilterRef.current &&
-      (!teamsLoading || teamOptions.length > 0 || favoriteTeamIds.length === 0);
+    const canSeedFavorites =
+      !teamsLoading || teamOptions.length > 0 || favoriteTeamIds.length === 0;
+    if (!canSeedFavorites) return;
 
-    if (shouldSeedFavorites) hasSeededTeamFilterRef.current = true;
+    const shouldSeedFavorites = seededTeamFilterLeagueRef.current !== leagueId;
+    seededTeamFilterLeagueRef.current = leagueId;
 
     const getNextTeamFilter = (current: string[]) =>
       shouldSeedFavorites
@@ -912,7 +944,7 @@ const UserGames = () => {
       const next = getNextTeamFilter(current);
       return stableStringArray(current, next);
     });
-  }, [favoriteTeamIds, favoriteTeamIdsData, teamOptions, teamsLoading]);
+  }, [favoriteTeamIds, favoriteTeamIdsData, leagueId, teamOptions, teamsLoading]);
 
   const applyTeamFilter = () => {
     setAppliedTeamFilter((current) => stableStringArray(current, teamFilter));
@@ -986,26 +1018,26 @@ const UserGames = () => {
     });
   }, [groupedByDate, todayKey]);
 
-  const clearWeekSummaryScrollTarget = () => {
+  const clearWeekSummaryScrollTarget = useCallback(() => {
     weekSummaryScrollTargetRef.current = null;
     if (weekSummaryScrollTimeoutRef.current !== null) {
       window.clearTimeout(weekSummaryScrollTimeoutRef.current);
       weekSummaryScrollTimeoutRef.current = null;
     }
-  };
+  }, []);
 
-  const holdWeekSummaryScrollTarget = (
-    dateKey: string,
-    delay = USER_WEEK_SUMMARY_AUTO_SCROLL_IDLE_MS,
-  ) => {
-    weekSummaryScrollTargetRef.current = dateKey;
-    if (weekSummaryScrollTimeoutRef.current !== null) {
-      window.clearTimeout(weekSummaryScrollTimeoutRef.current);
-    }
-    weekSummaryScrollTimeoutRef.current = window.setTimeout(() => {
-      clearWeekSummaryScrollTarget();
-    }, delay);
-  };
+  const holdWeekSummaryScrollTarget = useCallback(
+    (dateKey: string, delay = USER_WEEK_SUMMARY_AUTO_SCROLL_IDLE_MS) => {
+      weekSummaryScrollTargetRef.current = dateKey;
+      if (weekSummaryScrollTimeoutRef.current !== null) {
+        window.clearTimeout(weekSummaryScrollTimeoutRef.current);
+      }
+      weekSummaryScrollTimeoutRef.current = window.setTimeout(() => {
+        clearWeekSummaryScrollTarget();
+      }, delay);
+    },
+    [clearWeekSummaryScrollTarget],
+  );
 
   const scrollToDay = (dateKey: string) => {
     const dayNode = dayRefs.current[dateKey];
@@ -1067,7 +1099,7 @@ const UserGames = () => {
       scrollEl.removeEventListener('scroll', scheduleUpdate);
       window.removeEventListener('resize', scheduleUpdate);
     };
-  }, [groupedByDate, isLoading, view]);
+  }, [clearWeekSummaryScrollTarget, groupedByDate, holdWeekSummaryScrollTarget, isLoading, view]);
 
   const leagueOptions: SelectOption[] = [
     { value: 'all', label: 'All Leagues' },
@@ -1131,6 +1163,10 @@ const UserGames = () => {
   const markGameWatched = async (game: GameRecord) => {
     const gameId = game.id;
     if (actionGameId === gameId) return;
+    if (!canMarkGameWatched(game)) {
+      toast.error('Only final games can be marked as watched');
+      return;
+    }
     setActionGameId(gameId);
     try {
       await axios.post(`${API}/user/watched-games/${gameId}`, {}, { headers: authHeaders() });
@@ -1262,27 +1298,30 @@ const UserGames = () => {
   const setCalendarDropTarget = (dateKey: string, event: DragEvent<HTMLDivElement>) => {
     const draggedGame = getCalendarDraggedGame(event);
     if (!draggedGame) return null;
+    if (!canDropGameOnCalendarDate(draggedGame, dateKey, tzPref)) {
+      event.dataTransfer.dropEffect = 'none';
+      setCalendarDropDateKey(null);
+      return null;
+    }
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
     setCalendarDropDateKey((current) => (current === dateKey ? current : dateKey));
     return draggedGame;
   };
 
-  const handleCalendarDragEnter =
-    (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
-      setCalendarDropTarget(dateKey, event);
-    };
+  const handleCalendarDragEnter = (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
+    setCalendarDropTarget(dateKey, event);
+  };
 
   const handleCalendarDragOver = (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
     setCalendarDropTarget(dateKey, event);
   };
 
-  const handleCalendarDragLeave =
-    (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
-      const nextTarget = event.relatedTarget;
-      if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return;
-      setCalendarDropDateKey((current) => (current === dateKey ? null : current));
-    };
+  const handleCalendarDragLeave = (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return;
+    setCalendarDropDateKey((current) => (current === dateKey ? null : current));
+  };
 
   const handleCalendarDrop = (dateKey: string) => async (event: DragEvent<HTMLDivElement>) => {
     const draggedGame = setCalendarDropTarget(dateKey, event);
@@ -1349,6 +1388,7 @@ const UserGames = () => {
     const watched = !!game.watched_by_user;
     const skipped = !!game.skipped_by_user;
     const canOpen = watched || skipped;
+    const canMarkWatched = canMarkGameWatched(game);
     const busy = actionGameId === game.id;
 
     return (
@@ -1364,6 +1404,7 @@ const UserGames = () => {
             watched={watched}
             skipped={skipped}
             scheduled={!!game.scheduled_for}
+            canMarkWatched={canMarkWatched}
             busy={busy}
             onView={() => openGame(game)}
             onDownloadScoreCard={() => openScoreCardModal(game)}
@@ -1534,7 +1575,7 @@ const UserGames = () => {
                 type="button"
                 variant="outlined"
                 intent="neutral"
-                size="sm"
+                size="medium"
                 icon="download"
                 iconHeight="field"
                 aria-label="Download monthly schedule"
@@ -1548,9 +1589,15 @@ const UserGames = () => {
               ref={calendarGridRef}
               month={calendarMonth}
               loading={isLoading}
-              getDayLabelSuffix={({ dateKey }) => (
-                <ScheduleCalendarDayCount count={gamesByCalendarDate.get(dateKey)?.length ?? 0} />
-              )}
+              getDayHeaderRight={({ dateKey }) => {
+                const gameCount = gamesByCalendarDate.get(dateKey)?.length ?? 0;
+                return gameCount > 0 ? (
+                  <ScheduleCalendarDayCount
+                    count={gameCount}
+                    showLabel
+                  />
+                ) : undefined;
+              }}
               getDayProps={({ dateKey }) => ({
                 'data-date-key': dateKey,
                 onDragEnter: handleCalendarDragEnter(dateKey),
@@ -1558,7 +1605,7 @@ const UserGames = () => {
                 onDragLeave: handleCalendarDragLeave(dateKey),
                 onDrop: handleCalendarDrop(dateKey),
               })}
-              getDayBodyClassName={({ dateKey }) =>
+              getDayClassName={({ dateKey }) =>
                 calendarDropDateKey === dateKey ? styles.calendarDayDropTarget : undefined
               }
               renderDayContent={({ dateKey }) => {
@@ -1595,33 +1642,39 @@ const UserGames = () => {
         </div>
       )}
 
-      <ScheduleWatchModal
-        open={!!scheduleTarget}
-        game={scheduleTarget}
-        value={scheduleDate}
-        busy={scheduleBusy}
-        onChange={setScheduleDate}
-        onClose={() => {
-          if (scheduleBusy) return;
-          setScheduleTarget(null);
-          setScheduleDate('');
-        }}
-        onSave={saveSchedule}
-      />
+      {scheduleTarget && (
+        <ScheduleWatchModal
+          open
+          game={scheduleTarget}
+          value={scheduleDate}
+          busy={scheduleBusy}
+          onChange={setScheduleDate}
+          onClose={() => {
+            if (scheduleBusy) return;
+            setScheduleTarget(null);
+            setScheduleDate('');
+          }}
+          onSave={saveSchedule}
+        />
+      )}
 
-      <ScoreImageModal
-        open={scoreImageOpen || !!scoreCardTarget}
-        game={scoreCardTarget ?? undefined}
-        liveAwayScore={scoreCardTarget?.away_score}
-        liveHomeScore={scoreCardTarget?.home_score}
-        overtimeSuffix={scoreCardTarget ? getOvertimeSuffix(scoreCardTarget) : ''}
-        showForm={scoreImageOpen}
-        allowPreview
-        onClose={() => {
-          setScoreImageOpen(false);
-          setScoreCardTarget(null);
-        }}
-      />
+      {(scoreImageOpen || scoreCardTarget) && (
+        <Suspense fallback={null}>
+          <ScoreImageModal
+            open
+            game={scoreCardTarget ?? undefined}
+            liveAwayScore={scoreCardTarget?.away_score}
+            liveHomeScore={scoreCardTarget?.home_score}
+            overtimeSuffix={scoreCardTarget ? getOvertimeSuffix(scoreCardTarget) : ''}
+            showForm={scoreImageOpen}
+            allowPreview
+            onClose={() => {
+              setScoreImageOpen(false);
+              setScoreCardTarget(null);
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

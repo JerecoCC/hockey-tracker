@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import Field from '@/components/Field/Field';
-import LogoUpload from '@/components/LogoUpload/LogoUpload';
-import Modal from '@/components/Modal/Modal';
+import Banner from '@jerecocc/tracker-ui/Banner';
+import Field from '@jerecocc/tracker-ui/Field';
+import LogoUpload from '@jerecocc/tracker-ui/LogoUpload';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import ReadOnlyField from '@jerecocc/tracker-ui/ReadOnlyField';
 import {
   type PlayerPhotoEntry,
   type PlayerStintRecord,
@@ -18,6 +20,8 @@ interface FormValues {
 interface Props {
   open: boolean;
   stint: PlayerStintRecord | null;
+  initialSeasonId?: string | null;
+  mode?: 'set' | 'edit';
   seasons: SeasonRecord[];
   history: PlayerPhotoEntry[];
   onClose: () => void;
@@ -29,24 +33,33 @@ interface Props {
   ) => Promise<boolean>;
 }
 
+const isSavedPhotoEntry = (entry: PlayerPhotoEntry | undefined) =>
+  Boolean(entry?.has_saved_photo ?? entry?.id);
+
 const ChangePhotoModal = ({
   open,
   stint,
+  initialSeasonId,
+  mode = 'set',
   seasons,
   history,
   onClose,
   uploadPhoto,
   changePlayerPhoto,
 }: Props) => {
+  const [inheritedBannerDismissed, setInheritedBannerDismissed] = useState(false);
   const formValues = useMemo<FormValues>(
-    () => ({
-      season_id: stint?.season_id ?? '',
-      photo:
-        history.find(
-          (entry) => entry.team_id === stint?.team_id && entry.season_id === stint?.season_id,
-        )?.photo ?? null,
-    }),
-    [history, stint],
+    () => {
+      const seasonId = initialSeasonId ?? stint?.season_id ?? '';
+      const teamSeasonPhoto = history.find(
+        (entry) => entry.team_id === stint?.team_id && entry.season_id === seasonId,
+      );
+      return {
+        season_id: seasonId,
+        photo: teamSeasonPhoto?.photo ?? null,
+      };
+    },
+    [history, initialSeasonId, stint],
   );
   const {
     control,
@@ -60,14 +73,24 @@ const ChangePhotoModal = ({
   });
 
   const selectedSeasonId = useWatch({ control, name: 'season_id' });
-  const explicitPhoto = history.find(
+  const isEditMode = mode === 'edit';
+  const teamSeasonPhoto = history.find(
     (entry) => entry.team_id === stint?.team_id && entry.season_id === selectedSeasonId,
   );
+  const explicitPhoto = isSavedPhotoEntry(teamSeasonPhoto) ? teamSeasonPhoto : undefined;
   const inheritedSeasonPhoto = history.find(
-    (entry) => entry.season_id === selectedSeasonId && entry.team_id !== stint?.team_id,
+    (entry) =>
+      entry.season_id === selectedSeasonId &&
+      entry.team_id !== stint?.team_id &&
+      isSavedPhotoEntry(entry),
   );
   const inheritedPhoto = !explicitPhoto ? (inheritedSeasonPhoto?.photo ?? stint?.photo ?? null) : null;
   const inheritedTeamName = inheritedSeasonPhoto?.team_name ?? 'another team';
+  const selectedSeasonName =
+    seasons.find((season) => season.id === selectedSeasonId)?.name ??
+    teamSeasonPhoto?.season_name ??
+    'Season unavailable';
+  const showInheritedBanner = Boolean(inheritedPhoto) && !inheritedBannerDismissed;
 
   useLayoutEffect(() => {
     reset(formValues);
@@ -80,8 +103,12 @@ const ChangePhotoModal = ({
 
   useEffect(() => {
     if (!open || !selectedSeasonId) return;
-    setValue('photo', explicitPhoto?.photo ?? null, { shouldValidate: true });
-  }, [open, selectedSeasonId, explicitPhoto, setValue]);
+    setValue('photo', teamSeasonPhoto?.photo ?? null, { shouldValidate: true });
+  }, [open, selectedSeasonId, teamSeasonPhoto, setValue]);
+
+  useEffect(() => {
+    setInheritedBannerDismissed(false);
+  }, [open, selectedSeasonId, inheritedPhoto]);
 
   const onSubmit = handleSubmit(async (data) => {
     if (!stint || !data.season_id) return;
@@ -99,7 +126,7 @@ const ChangePhotoModal = ({
   return (
     <Modal
       open={open}
-      title="Change Season Photo"
+      title={isEditMode ? 'Edit Season Photo' : 'Set Team Photo'}
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving...' : 'Save'}
       confirmForm="change-photo-form"
@@ -111,17 +138,25 @@ const ChangePhotoModal = ({
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <Field
-          type="select"
-          label="Season"
-          control={control}
-          name="season_id"
-          options={seasons.map((s) => ({ value: s.id, label: s.name }))}
-          placeholder="Select season..."
-          required
-          rules={{ required: true }}
-          disabled={isSubmitting}
-        />
+        {isEditMode ? (
+          <ReadOnlyField
+            label="Season"
+            value={selectedSeasonName}
+            title="This photo record already belongs to this season."
+          />
+        ) : (
+          <Field
+            type="select"
+            label="Season"
+            control={control}
+            name="season_id"
+            options={seasons.map((s) => ({ value: s.id, label: s.name }))}
+            placeholder="Select season..."
+            required
+            rules={{ required: true }}
+            disabled={isSubmitting}
+          />
+        )}
         <LogoUpload
           control={control}
           name="photo"
@@ -129,39 +164,17 @@ const ChangePhotoModal = ({
           shape="circle"
           disabled={isSubmitting}
         />
-        {inheritedPhoto && (
-          <div className={styles.photoInheritanceNotice}>
-            <span className={styles.photoInheritanceLabel}>Inherited photo</span>
-            <span>
-              No photo is saved for {stint?.team.name ?? 'this team'} in this season.
-              Until you upload one, the player uses the latest season photo
-              {inheritedSeasonPhoto ? ` from ${inheritedTeamName}` : ''}.
-            </span>
-          </div>
-        )}
-
-        {history.length > 0 && (
-          <>
-            <hr className={styles.divider} />
-            <div className={styles.historySection}>
-              <span className={styles.historyLabel}>History</span>
-              <div className={styles.historyList}>
-                {history.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className={styles.historyEntry}
-                  >
-                    <span className={styles.historyEntryNumber}>
-                      {entry.season_name ?? 'Season'}
-                    </span>
-                    <span className={styles.historyEntryDates}>
-                      {entry.team_name ?? stint?.team.name ?? 'Team'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
+        {showInheritedBanner && (
+          <Banner
+            intent="info"
+            icon="info"
+            title="Inherited photo"
+            onClose={() => setInheritedBannerDismissed(true)}
+          >
+            No photo is saved for {stint?.team.name ?? 'this team'} in this season. Until you
+            upload one, the player uses the latest season photo
+            {inheritedSeasonPhoto ? ` from ${inheritedTeamName}` : ''}.
+          </Banner>
         )}
       </form>
     </Modal>

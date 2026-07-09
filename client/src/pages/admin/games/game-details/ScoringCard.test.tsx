@@ -1,11 +1,17 @@
+import type { ComponentProps } from 'react';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { GameRecord } from '@/hooks/useGames';
+import type { GoalRecord } from '@/hooks/useGameGoals';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import ScoringCard from './ScoringCard';
 
-jest.mock('@/components/TeamLogo/TeamLogo', () => () => <span>logo</span>);
-jest.mock('@/components/PlayerAvatar/PlayerAvatar', () => () => <span>avatar</span>);
+jest.mock('@jerecocc/tracker-ui/TeamLogo', () => function MockTeamLogo() {
+  return <span>logo</span>;
+});
+jest.mock('@jerecocc/tracker-ui/PlayerAvatar', () => function MockPlayerAvatar() {
+  return <span>avatar</span>;
+});
 
 const baseGame = {
   id: 'game-1',
@@ -69,7 +75,7 @@ const decidedAttempts: ShootoutAttempt[] = [
   attempt(6, 'home', false),
 ];
 
-const renderCard = (overrides: Partial<React.ComponentProps<typeof ScoringCard>>) =>
+const renderCard = (overrides: Partial<ComponentProps<typeof ScoringCard>>) =>
   render(
     <MemoryRouter>
       <ScoringCard
@@ -110,5 +116,61 @@ describe('ScoringCard shootout End Game', () => {
       game: { ...baseGame, status: 'final' } as GameRecord,
     });
     expect(queryByText('End Game')).toBeNull();
+  });
+});
+
+describe('ScoringCard goal rows', () => {
+  const goal: GoalRecord = {
+    id: 'goal-1',
+    game_id: 'game-1',
+    team_id: 'away',
+    period: '1',
+    goal_type: 'even-strength',
+    empty_net: false,
+    penalty_shot: false,
+    period_time: '12:34',
+    scorer_id: 'scorer-1',
+    assist_1_id: 'assist-1',
+    assist_2_id: null,
+    created_at: '2025-11-20T02:40:00Z',
+    team_name: 'Away',
+    team_code: 'AWY',
+    team_logo: null,
+    team_primary_color: '#333',
+    team_text_color: '#fff',
+    scorer_first_name: 'Alex',
+    scorer_last_name: 'Goal',
+    scorer_photo: null,
+    scorer_jersey_number: 9,
+    scorer_date_of_birth: null,
+    scorer_start_date: null,
+    scorer_acquisition_type: null,
+    assist_1_first_name: 'Sam',
+    assist_1_last_name: 'Helper',
+    assist_1_photo: null,
+    assist_1_jersey_number: 12,
+    assist_2_first_name: null,
+    assist_2_last_name: null,
+    assist_2_photo: null,
+    assist_2_jersey_number: null,
+    scorer_prior_goals: 0,
+    assist_1_prior_assists: 0,
+    assist_2_prior_assists: 0,
+  };
+
+  it('keeps scorer and assist player links clickable inside goal rows', () => {
+    const { getByRole } = renderCard({
+      goals: [goal],
+      getPlayerHref: (playerId) => `/players/${playerId}`,
+    });
+
+    expect(getByRole('link', { name: 'Alex Goal' })).toHaveAttribute(
+      'href',
+      '/players/scorer-1',
+    );
+    expect(getByRole('link', { name: 'Sam Helper' })).toHaveAttribute(
+      'href',
+      '/players/assist-1',
+    );
   });
 });

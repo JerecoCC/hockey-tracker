@@ -1,19 +1,10 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 .form {
   display: flex;
   flex-direction: column;
   gap: $space-md;
-}
-
-.assetRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  column-gap: $space-md;
-  row-gap: $space-lg;
 }
 
 .identityRow {

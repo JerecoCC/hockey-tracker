@@ -1,16 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Tag from '@/components/Tag/Tag';
-import Card from '@/components/Card/Card';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Tag from '@jerecocc/tracker-ui/Tag';
+import Tooltip from '@jerecocc/tracker-ui/Tooltip';
+import StickyHeroCard from '@jerecocc/tracker-ui/StickyHeroCard';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import type { GameStatus, TeamInfo } from '@/hooks/useGames';
-import { buildTeamDetailsPath } from '@/lib/routeSlugs';
+import { buildTeamDetailsPath, buildUserTeamDetailsPath } from '@/lib/routeSlugs';
 import {
   DATE_FMT_LONG,
   LOCAL_DATE_FMT_LONG,
   formatScheduledDate,
   formatScheduledDateLocal,
 } from './formatUtils';
+import { getPlayoffScoreMetaDisplay } from './playoffScoreMeta';
 import styles from './ScoreboardCard.module.scss';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -37,6 +39,8 @@ interface ScoreboardGame {
   scheduled_time?: string | null;
   playoff_round?: number | null;
   playoff_round_names?: Record<string, string> | null;
+  playoff_matchup_names?: Record<string, string> | null;
+  bracket_slot_key?: string | null;
   game_number_in_series?: number | null;
   home_team: TeamInfo;
   away_team: TeamInfo;
@@ -49,10 +53,16 @@ interface Props {
   isEditMode?: boolean;
   liveAwayScore: number;
   liveHomeScore: number;
+  seriesScore?: {
+    awayWins: number;
+    homeWins: number;
+    winsNeeded: number;
+  };
   overtimeSuffix: string;
-  /** When omitted, team logo buttons don't navigate anywhere (read-only user view). */
+  /** When omitted, team logo buttons don't navigate anywhere. */
   leagueId?: string;
   leagueCode?: string | null;
+  mode?: 'admin' | 'user';
   disabled?: boolean;
   useLocalTimezone?: boolean;
 }
@@ -92,19 +102,45 @@ function teamTextShadow(textHex: string, bgHex: string, threshold = 3): string {
 
 const teamPlaceLabel = (team: TeamInfo) => team.place_name?.trim() || '';
 const teamNameLabel = (team: TeamInfo) => team.team_name?.trim() || team.name?.trim() || team.code;
+const teamScoreLabel = (team: TeamInfo) => team.name?.trim() || teamNameLabel(team);
+const clampSeriesWins = (wins: number, total: number) =>
+  Math.min(Math.max(Math.trunc(wins), 0), total);
+
+const SeriesScoreDots = ({
+  label,
+  wins,
+  total,
+  isLoser,
+}: {
+  label: string;
+  wins: number;
+  total: number;
+  isLoser: boolean;
+}) => {
+  const safeWins = clampSeriesWins(wins, total);
+
+  return (
+    <span
+      role="img"
+      aria-label={`${label} series wins ${safeWins} of ${total}`}
+      className={[styles.scoreSeriesDots, isLoser ? styles.scoreSeriesDotsLoser : '']
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {Array.from({ length: total }, (_, index) => (
+        <span
+          key={index}
+          aria-hidden="true"
+          className={[styles.scoreSeriesDot, index < safeWins ? styles.scoreSeriesDotFilled : '']
+            .filter(Boolean)
+            .join(' ')}
+        />
+      ))}
+    </span>
+  );
+};
 
 // ── Component ─────────────────────────────────────────────────────────────────
-
-// Walk up the DOM to find the nearest scrollable ancestor.
-const getScrollParent = (el: HTMLElement): HTMLElement => {
-  let p = el.parentElement;
-  while (p) {
-    const { overflowY } = getComputedStyle(p);
-    if (overflowY === 'auto' || overflowY === 'scroll') return p;
-    p = p.parentElement;
-  }
-  return document.documentElement;
-};
 
 const ScoreboardCard = ({
   game,
@@ -112,52 +148,41 @@ const ScoreboardCard = ({
   isInProgress,
   liveAwayScore,
   liveHomeScore,
+  seriesScore,
   overtimeSuffix,
   leagueId,
   leagueCode,
+  mode = 'admin',
   disabled = false,
   useLocalTimezone = false,
 }: Props) => {
   const navigate = useNavigate();
+  const playoffScoreMeta = getPlayoffScoreMetaDisplay(game);
+  const seriesWinsNeeded =
+    seriesScore && Number.isFinite(seriesScore.winsNeeded)
+      ? Math.max(Math.trunc(seriesScore.winsNeeded), 0)
+      : 0;
+  const showSeriesScoreDots = !!seriesScore && seriesWinsNeeded > 0;
+  const showNumberScore = !showSeriesScoreDots && (isFinal || isInProgress);
+  const buildTeamPath = (team: TeamInfo) =>
+    mode === 'user'
+      ? buildUserTeamDetailsPath({
+          leagueCode,
+          leagueId,
+          teamCode: team.code,
+          teamId: team.id,
+        })
+      : buildTeamDetailsPath({
+          leagueCode,
+          leagueId,
+          teamCode: team.code,
+          teamId: team.id,
+        });
 
-  // sentinelRef: zero-height div that stays in-place at all times so we can
-  // track where the card's natural top is relative to the viewport.
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  const [isStuck, setIsStuck] = useState(false);
-
-  // Detect when the sentinel's top edge passes under the PageHeader.
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const isMobile = () => window.innerWidth <= 768;
-    const headerHeight = () => (isMobile() ? 88 : 52);
-    const scrollEl = getScrollParent(sentinel);
-
-    const check = () => {
-      if (isMobile()) {
-        setIsStuck(false);
-        return;
-      }
-      const rect = sentinel.getBoundingClientRect();
-      setIsStuck(rect.top <= headerHeight());
-    };
-
-    scrollEl.addEventListener('scroll', check, { passive: true });
-    window.addEventListener('resize', check, { passive: true });
-    check(); // evaluate immediately on mount
-
-    return () => {
-      scrollEl.removeEventListener('scroll', check);
-      window.removeEventListener('resize', check);
-    };
-  }, []);
-
-  const card = (
-    <Card
-      className={[styles.scoreboardCard, isStuck ? styles.scoreboardCardStuck : '']
-        .filter(Boolean)
-        .join(' ')}
+  return (
+    <StickyHeroCard
+      className={styles.scoreboardCard}
+      stuckClassName={styles.scoreboardCardStuck}
       style={{ padding: 0 }}
     >
       <div className={styles.scoreboard}>
@@ -178,7 +203,7 @@ const ScoreboardCard = ({
                 game.away_team.text_color,
                 game.away_team.primary_color,
               ),
-            } as React.CSSProperties
+            } as CSSProperties
           }
         >
           <div className={styles.teamStripe}>
@@ -200,17 +225,7 @@ const ScoreboardCard = ({
             className={styles.teamLogoBtn}
             disabled={disabled}
             onClick={
-              leagueId && !disabled
-                ? () =>
-                    navigate(
-                      buildTeamDetailsPath({
-                        leagueCode,
-                        leagueId,
-                        teamCode: game.away_team.code,
-                        teamId: game.away_team.id,
-                      }),
-                    )
-                : undefined
+              leagueId && !disabled ? () => navigate(buildTeamPath(game.away_team)) : undefined
             }
           >
             <TeamLogo
@@ -251,7 +266,14 @@ const ScoreboardCard = ({
 
         {/* ── Center: score + status ── */}
         <div className={styles.scoreCenter}>
-          {(isFinal || isInProgress) && (
+          {showSeriesScoreDots ? (
+            <SeriesScoreDots
+              label={teamScoreLabel(game.away_team)}
+              wins={seriesScore.awayWins}
+              total={seriesWinsNeeded}
+              isLoser={isFinal && liveAwayScore < liveHomeScore}
+            />
+          ) : showNumberScore ? (
             <span
               className={[
                 styles.scoreNumber,
@@ -262,19 +284,24 @@ const ScoreboardCard = ({
             >
               {liveAwayScore}
             </span>
-          )}
+          ) : null}
           <div className={styles.scoreBlock}>
-            {game.playoff_round != null && (
-              <span className={styles.scoreMeta}>
-                {(() => {
-                  const roundLabel =
-                    game.playoff_round_names?.[game.playoff_round] ?? `Round ${game.playoff_round}`;
-                  return game.game_number_in_series != null
-                    ? `${roundLabel} · Game ${game.game_number_in_series}`
-                    : roundLabel;
-                })()}
-              </span>
-            )}
+            {playoffScoreMeta &&
+              (playoffScoreMeta.tooltip ? (
+                <Tooltip
+                  text={playoffScoreMeta.tooltip}
+                  className={styles.scoreMetaTooltip}
+                >
+                  <span
+                    className={styles.scoreMeta}
+                    aria-label={playoffScoreMeta.tooltip}
+                  >
+                    {playoffScoreMeta.label}
+                  </span>
+                </Tooltip>
+              ) : (
+                <span className={styles.scoreMeta}>{playoffScoreMeta.label}</span>
+              ))}
             {isFinal ? (
               <Tag
                 label={`Final${overtimeSuffix}`}
@@ -298,7 +325,14 @@ const ScoreboardCard = ({
               </span>
             )}
           </div>
-          {(isFinal || isInProgress) && (
+          {showSeriesScoreDots ? (
+            <SeriesScoreDots
+              label={teamScoreLabel(game.home_team)}
+              wins={seriesScore.homeWins}
+              total={seriesWinsNeeded}
+              isLoser={isFinal && liveHomeScore < liveAwayScore}
+            />
+          ) : showNumberScore ? (
             <span
               className={[
                 styles.scoreNumber,
@@ -309,7 +343,7 @@ const ScoreboardCard = ({
             >
               {liveHomeScore}
             </span>
-          )}
+          ) : null}
         </div>
 
         {/* ── Home side ── */}
@@ -330,7 +364,7 @@ const ScoreboardCard = ({
                 game.home_team.text_color,
                 game.home_team.primary_color,
               ),
-            } as React.CSSProperties
+            } as CSSProperties
           }
         >
           <div className={`${styles.teamStripe} ${styles.teamStripeHome}`}>
@@ -352,17 +386,7 @@ const ScoreboardCard = ({
             className={`${styles.teamLogoBtn} ${styles.teamLogoBtnHome}`}
             disabled={disabled}
             onClick={
-              leagueId && !disabled
-                ? () =>
-                    navigate(
-                      buildTeamDetailsPath({
-                        leagueCode,
-                        leagueId,
-                        teamCode: game.home_team.code,
-                        teamId: game.home_team.id,
-                      }),
-                    )
-                : undefined
+              leagueId && !disabled ? () => navigate(buildTeamPath(game.home_team)) : undefined
             }
           >
             <div className={`${styles.teamInfo} ${styles.teamInfoHome}`}>
@@ -401,18 +425,7 @@ const ScoreboardCard = ({
           </div>
         </div>
       </div>
-    </Card>
-  );
-
-  return (
-    <>
-      {/* Sentinel stays in the natural position at all times for scroll tracking */}
-      <div
-        ref={sentinelRef}
-        style={{ height: 0 }}
-      />
-      {card}
-    </>
+    </StickyHeroCard>
   );
 };
 

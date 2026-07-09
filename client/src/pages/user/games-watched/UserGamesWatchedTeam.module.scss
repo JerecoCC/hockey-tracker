@@ -2,6 +2,9 @@
 @use 'styles/mixins' as *;
 
 $hero-strip-width: 64px;
+$hero-strip-slant-offset: $hero-strip-width * 0.3;
+$hero-strip-fill-overlap: 2px;
+$hero-strip-meet-offset: ($hero-strip-slant-offset * 0.5) + $hero-strip-fill-overlap;
 $hero-strip-duration: 0.42s;
 
 .page {
@@ -22,27 +25,7 @@ $hero-strip-duration: 0.42s;
 }
 
 .heroCard {
-  position: sticky;
-  top: 52px;
-  z-index: 4;
-  overflow: hidden;
-  margin-bottom: $space-lg;
-  transition:
-    border-color $transition-layout ease,
-    border-radius $transition-layout ease,
-    box-shadow $transition-layout ease;
-
-  @media (max-width: $bp-tablet) {
-    position: static;
-    top: auto;
-    z-index: auto;
-  }
-}
-
-.heroCardStuck {
-  border-radius: 0 0 $radius-lg $radius-lg !important;
-  border-color: transparent !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  min-width: 0;
 }
 
 .hero {
@@ -60,19 +43,26 @@ $hero-strip-duration: 0.42s;
 
 .heroPrimaryFill {
   position: absolute;
-  inset: 0 auto 0 0;
+  top: 0;
+  bottom: 0;
   width: $hero-strip-width;
   z-index: 0;
   background: var(--team-primary);
-  clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%);
-  transition:
-    clip-path $hero-strip-duration ease,
-    width $hero-strip-duration ease;
+  transition: width $hero-strip-duration ease;
+}
+
+.heroPrimaryFillLeft {
+  left: 0;
+  clip-path: polygon(0 0, 100% 0, calc(100% - #{$hero-strip-slant-offset}) 100%, 0 100%);
+}
+
+.heroPrimaryFillRight {
+  right: 0;
+  clip-path: polygon(#{$hero-strip-slant-offset} 0, 100% 0, 100% 100%, 0 100%);
 }
 
 .heroCardStuck .heroPrimaryFill {
-  width: 100%;
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  width: calc(50% + #{$hero-strip-meet-offset});
 }
 
 .heroStrip {
@@ -86,7 +76,7 @@ $hero-strip-duration: 0.42s;
 
 .heroStripLeft {
   left: 0;
-  clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%);
+  clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
 }
 
 .heroStripRight {
@@ -131,15 +121,25 @@ $hero-strip-duration: 0.42s;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: $space-md;
+  gap: $space-2xl;
   max-width: min(720px, calc(100% - #{$hero-strip-width * 2} - #{$space-xl * 2}));
   padding: $space-md $space-lg;
   text-align: left;
 
   @media (max-width: 768px) {
-    gap: $space-sm;
+    gap: $space-lg;
     max-width: calc(100% - #{$space-2xl});
     text-align: center;
+  }
+}
+
+.heroStripLeft {
+  .heroStripSecondary {
+    clip-path: polygon(42.5% 0%, 55% 0%, 25% 100%, 12.5% 100%);
+  }
+
+  .heroStripSecondary2 {
+    clip-path: polygon(67.5% 0%, 80% 0%, 50% 100%, 37.5% 100%);
   }
 }
 
@@ -168,12 +168,12 @@ $hero-strip-duration: 0.42s;
 .heroTeamInfo {
   display: inline-flex;
   align-items: center;
-  gap: $space-2xl;
+  gap: $space-md;
   min-width: 0;
 
   @media (max-width: 768px) {
     justify-content: center;
-    gap: $space-lg;
+    gap: $space-sm;
   }
 }
 
@@ -194,7 +194,7 @@ $hero-strip-duration: 0.42s;
   transition: color $transition-layout ease;
 }
 
-.heroRecord {
+.heroSeen {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -202,7 +202,7 @@ $hero-strip-duration: 0.42s;
   flex-shrink: 0;
 }
 
-.heroRecordValue {
+.heroSeenValue {
   color: var(--app-text-strong, #{$text-bright});
   font-size: 2.75rem;
   font-weight: 700;
@@ -222,24 +222,10 @@ $hero-strip-duration: 0.42s;
   .heroPlace,
   .heroTeamMeta,
   .heroName,
-  .heroRecordValue {
+  .heroSeenValue {
     color: var(--team-text);
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
   }
-}
-
-.sectionSeenCount {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 0 $space-sm;
-  border: 1px solid var(--app-border, #{$border});
-  border-radius: $radius-sm;
-  color: var(--app-text-muted, #{$text-dim});
-  font-size: $font-xs;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
 }
 
 .gameList {
@@ -248,6 +234,15 @@ $hero-strip-duration: 0.42s;
   gap: $space-sm;
   margin: 0;
   padding: 0;
+}
+
+.skeletonGameItem {
+  list-style: none;
+}
+
+.skeletonGameCard {
+  min-height: 96px;
+  border-radius: $radius-md;
 }
 
 .emptyState {

@@ -1,11 +1,13 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@/components/Field/Field';
-import LogoUpload from '@/components/LogoUpload/LogoUpload';
-import Modal from '@/components/Modal/Modal';
+import Field from '@jerecocc/tracker-ui/Field';
+import GroupedFields from '@jerecocc/tracker-ui/GroupedFields';
+import LogoUpload from '@jerecocc/tracker-ui/LogoUpload';
+import Modal from '@jerecocc/tracker-ui/Modal';
 import { type TeamDetailRecord } from '@/hooks/useTeamDetails';
 import { type CreateTeamData } from '@/hooks/useTeams';
 import { descriptionHtmlToTextarea, textareaToDescriptionHtml } from '@/lib/descriptionHtml';
+import TeamLogoUploadGroup from './TeamLogoUploadGroup';
 import styles from './TeamEditModal.module.scss';
 
 interface FormValues {
@@ -141,28 +143,21 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <div className={styles.assetRow}>
-          <LogoUpload
-            control={control}
-            name="logo_dark"
-            label="Logo (Dark)"
-            disabled={isSubmitting}
-          />
-          <LogoUpload
-            control={control}
-            name="logo_light"
-            label="Logo (Light)"
-            disabled={isSubmitting}
-          />
-          <LogoUpload
-            control={control}
-            name="icon"
-            label="Header Icon"
-            accept="image/x-icon,image/vnd.microsoft.icon,.ico"
-            hint="Upload .ico"
-            disabled={isSubmitting}
-          />
-        </div>
+        <LogoUpload
+          control={control}
+          name="icon"
+          label="Header Icon"
+          accept="image/x-icon,image/vnd.microsoft.icon,.ico"
+          hint="Upload .ico"
+          full
+          previewSize="icon"
+          pasteMode="focus"
+          disabled={isSubmitting}
+        />
+        <TeamLogoUploadGroup
+          control={control}
+          disabled={isSubmitting}
+        />
         <div className={styles.identityRow}>
           <Field
             label="Code"
@@ -192,29 +187,6 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
             disabled={isSubmitting}
           />
         </div>
-        <div className={styles.colorRow}>
-          <Field
-            label="Primary Color"
-            type="color"
-            control={control}
-            name="primary_color"
-            disabled={isSubmitting}
-          />
-          <Field
-            label="Secondary Color"
-            type="color"
-            control={control}
-            name="secondary_color"
-            disabled={isSubmitting}
-          />
-          <Field
-            label="Text Color"
-            type="color"
-            control={control}
-            name="text_color"
-            disabled={isSubmitting}
-          />
-        </div>
         <div className={styles.locationRow}>
           <Field
             label="City"
@@ -231,6 +203,32 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
             disabled={isSubmitting}
           />
         </div>
+        <GroupedFields
+          legend="Team Colors"
+          className={styles.colorGroup}
+        >
+          <Field
+            label="Primary"
+            type="color"
+            control={control}
+            name="primary_color"
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Secondary"
+            type="color"
+            control={control}
+            name="secondary_color"
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Text"
+            type="color"
+            control={control}
+            name="text_color"
+            disabled={isSubmitting}
+          />
+        </GroupedFields>
         <Field
           label="Description"
           type="textarea"

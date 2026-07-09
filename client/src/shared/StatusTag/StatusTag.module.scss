@@ -1,0 +1,50 @@
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
+
+.tag {
+  width: auto;
+  min-width: 6.25rem;
+  height: 40px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border: 2px solid var(--player-status-bg);
+  border-radius: $radius-md;
+  background: transparent;
+  color: var(--player-status-color);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.label {
+  align-self: stretch;
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 $space-lg;
+  border-radius: $radius-sm;
+  background: var(--player-status-bg);
+}
+
+.active {
+  --player-status-color: #fff;
+  --player-status-bg: #{$success};
+}
+
+.inactive {
+  --player-status-color: var(--app-text, #{$text-body});
+  --player-status-bg: var(--app-border, #{$border});
+}
+
+.retired {
+  --player-status-color: #fff;
+  --player-status-bg: #{$warning};
+}

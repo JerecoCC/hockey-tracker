@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import Section from '@/components/Section/Section';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Section from '@jerecocc/tracker-ui/Section';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import type { GameRecord, PreviousMeeting } from '@/hooks/useGames';
 import styles from './SeasonSeriesCard.module.scss';
 import { PERIOD_SUFFIX } from '../constants';

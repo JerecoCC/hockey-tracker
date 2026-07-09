@@ -165,9 +165,11 @@ describe('useGameGoals – addGoal', () => {
   it('updates game caches without invalidating game list queries', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const goalieKey = ['game-goalie-stats', 'game-1'];
+    const playerStatsKey = ['player-game-logs', 'player-1'];
     queryClient.setQueryData(['games', 'game-1'], GAME);
     queryClient.setQueryData(['games', {}], [GAME]);
     queryClient.setQueryData(goalieKey, []);
+    queryClient.setQueryData(playerStatsKey, []);
     mockedAxios.post.mockResolvedValueOnce({ data: GOAL });
 
     const { result } = renderHook(() => useGameGoals('game-1'), {
@@ -199,6 +201,7 @@ describe('useGameGoals – addGoal', () => {
     ]);
     expect(queryClient.getQueryState(['games', {}])?.isInvalidated).toBe(false);
     expect(queryClient.getQueryState(goalieKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(playerStatsKey)?.isInvalidated).toBe(true);
     expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 
@@ -231,7 +234,9 @@ describe('useGameGoals – updateGoal', () => {
   it('puts to /admin/games/:id/goals/:goalId and returns true', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const goalieKey = ['game-goalie-stats', 'game-1'];
+    const playerStatsKey = ['player-game-logs', 'player-1'];
     queryClient.setQueryData(goalieKey, []);
+    queryClient.setQueryData(playerStatsKey, []);
     const updatedGoal = { ...GOAL, period: '2' };
     mockedAxios.put.mockResolvedValueOnce({ data: updatedGoal });
     const { result } = renderHook(() => useGameGoals('game-1'), {
@@ -252,6 +257,7 @@ describe('useGameGoals – updateGoal', () => {
       expect.objectContaining({ headers: expect.any(Object) }),
     );
     expect(queryClient.getQueryState(goalieKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(playerStatsKey)?.isInvalidated).toBe(true);
   });
 
   it('returns false and shows error toast on failure', async () => {
@@ -282,7 +288,9 @@ describe('useGameGoals – deleteGoal', () => {
   it('deletes /admin/games/:id/goals/:goalId and returns true', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const goalieKey = ['game-goalie-stats', 'game-1'];
+    const playerStatsKey = ['player-game-logs', 'player-1'];
     queryClient.setQueryData(goalieKey, []);
+    queryClient.setQueryData(playerStatsKey, []);
     mockedAxios.delete.mockResolvedValueOnce({});
     mockedAxios.get.mockResolvedValueOnce({ data: [GOAL, GOAL_2] });
     const { result } = renderHook(() => useGameGoals('game-1'), {
@@ -302,6 +310,7 @@ describe('useGameGoals – deleteGoal', () => {
       expect.objectContaining({ headers: expect.any(Object) }),
     );
     expect(queryClient.getQueryState(goalieKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(playerStatsKey)?.isInvalidated).toBe(true);
   });
 
   it('returns false and shows error toast on failure', async () => {

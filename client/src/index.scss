@@ -30,6 +30,7 @@ $color-bg: #fff;
   --app-surface: #1e293b;
   --app-surface-muted: #0f172a;
   --app-surface-subtle: color-mix(in srgb, var(--app-surface) 97%, var(--app-text-strong));
+  --app-card-light-bg: #f8fafc;
   --app-field-bg: color-mix(in srgb, #0f172a 45%, #1e293b);
   --app-field-bg-hover: color-mix(in srgb, #0f172a 30%, #1e293b);
   --app-modal-field-bg: #0b1120;
@@ -55,18 +56,19 @@ $color-bg: #fff;
   --list-item-hover-bg: rgba(255, 255, 255, 0.04);
 }
 
-:root[data-theme='light'] {
+:root[data-theme='light'],
+[data-theme='light'] {
   color-scheme: light;
   --app-bg: #f3f6fb;
-  --app-surface: #ffffff;
-  --app-surface-muted: #f8fafc;
+  --app-surface: #f8fafc;
+  --app-surface-muted: #eef4fb;
   --app-field-bg: #edf3fa;
   --app-field-bg-hover: #e5edf7;
   --app-modal-field-bg: #e2e8f0;
   --app-modal-field-bg-hover: #d8e3ef;
   --app-field-border: #bfccd9;
   --app-field-border-hover: #94a3b8;
-  --app-menu-bg: #ffffff;
+  --app-menu-bg: var(--app-surface);
   --app-border: #cbd5e1;
   --app-text-muted: #5b6778;
   --app-text-subtle: #334155;
@@ -79,8 +81,9 @@ $color-bg: #fff;
   --app-logo-shadow: rgba(15, 23, 42, 0.1);
   --app-skeleton-base: #d8e1ec;
   --app-skeleton-highlight: #eef4fb;
-  --app-tooltip-bg: #ffffff;
+  --app-tooltip-bg: var(--app-surface);
   --app-tooltip-border: #cbd5e1;
+  --filter-field-background: var(--app-field-bg);
   --list-item-hover-bg: rgba(37, 99, 235, 0.06);
 }
 
@@ -133,7 +136,17 @@ button {
   line-height: 1;
 }
 
-// ── Font Awesome icon baseline fix ─────────────────────────────────────
+// Filled shared card surfaces collapse to full-width slabs on mobile.
+@media (max-width: 768px) {
+  #root [data-testid='card'][class*='_filled_'] {
+    border-width: 1px 0 !important;
+    border-style: solid !important;
+    border-color: var(--app-border) !important;
+    border-radius: 0 !important;
+  }
+}
+
+// Font Awesome icon baseline fix.
 svg[aria-hidden] {
   vertical-align: -0.15em;
   user-select: none;

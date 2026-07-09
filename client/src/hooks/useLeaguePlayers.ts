@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
+import { type PlayerStatus } from '@/lib/playerStatus';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -14,9 +15,11 @@ const apiError = (err: unknown, fallback: string): string =>
 
 export type PlayerPosition = 'C' | 'LW' | 'RW' | 'F' | 'D' | 'LD' | 'RD' | 'G';
 export type PlayerShoots = 'L' | 'R';
+export type { PlayerStatus } from '@/lib/playerStatus';
 
 export interface PlayerRecord {
   id: string;
+  league_player_number?: string | null;
   first_name: string;
   last_name: string;
   photo: string | null;
@@ -29,6 +32,7 @@ export interface PlayerRecord {
   shoots: PlayerShoots | null;
   rookie_season_id?: string | null;
   rookie_season_name?: string | null;
+  status?: PlayerStatus;
   is_active: boolean;
   created_at: string;
   // Roster fields — populated when fetching by league_id or team_id
@@ -46,12 +50,16 @@ export interface PlayerRecord {
   acquisition_type?: string | null;
   start_date?: string | null;
   has_games?: boolean;
+  games_played?: number | null;
   season_points?: number | null;
+  last_season_id?: string | null;
+  last_season_name?: string | null;
 }
 
 export interface CreatePlayerData {
   first_name: string;
   last_name: string;
+  league_player_number?: string | null;
   position?: PlayerPosition | null;
   shoots?: PlayerShoots | null;
   date_of_birth?: string | null;
@@ -60,6 +68,7 @@ export interface CreatePlayerData {
   height_cm?: number | null;
   weight_lbs?: number | null;
   rookie_season_id?: string | null;
+  status?: PlayerStatus;
   is_active?: boolean;
 }
 
@@ -67,6 +76,7 @@ export interface CreatePlayerData {
 export interface BulkPlayerInput {
   first_name: string;
   last_name: string;
+  league_player_number?: string | null;
   position: PlayerPosition;
   shoots: PlayerShoots;
   rookie_season_id?: string | null;
@@ -77,8 +87,12 @@ interface UseLeaguePlayersOptions {
   pageSize?: number;
   search?: string;
   rookiesOnly?: boolean;
-  includeRetired?: boolean;
+  inactiveOnly?: boolean;
+  includeInactive?: boolean;
   includeProspects?: boolean;
+  recentSeasons?: number;
+  warningsOnly?: boolean;
+  enabled?: boolean;
 }
 
 interface PaginatedPlayersResponse {
@@ -108,8 +122,11 @@ const useLeaguePlayers = (
         page_size: options.pageSize,
         search: options.search,
         rookies_only: options.rookiesOnly,
-        include_retired: options.includeRetired,
+        inactive_only: options.inactiveOnly,
+        include_inactive: options.includeInactive,
         include_prospects: options.includeProspects,
+        recent_seasons: options.recentSeasons,
+        warnings_only: options.warningsOnly,
       },
     ],
     queryFn: async () => {
@@ -121,8 +138,11 @@ const useLeaguePlayers = (
         if (options.pageSize !== undefined) params.page_size = String(options.pageSize);
         if (options.search !== undefined) params.search = options.search;
         if (options.rookiesOnly) params.rookies_only = 'true';
-        if (options.includeRetired) params.include_retired = 'true';
+        if (options.inactiveOnly) params.inactive_only = 'true';
+        else if (options.includeInactive) params.include_inactive = 'true';
         if (options.includeProspects) params.include_prospects = 'true';
+        if (options.recentSeasons !== undefined) params.recent_seasons = String(options.recentSeasons);
+        if (options.warningsOnly) params.warnings_only = 'true';
         const { data } = await axios.get<PlayerRecord[] | PaginatedPlayersResponse>(
           `${API}/admin/players`,
           { headers: authHeaders(), params: Object.keys(params).length ? params : undefined },
@@ -133,6 +153,7 @@ const useLeaguePlayers = (
         return isPaginated ? { players: [], total: 0, page: options.page ?? 1, page_size: options.pageSize ?? 20 } : [];
       }
     },
+    enabled: options.enabled ?? true,
     placeholderData: keepPreviousData,
   });
 

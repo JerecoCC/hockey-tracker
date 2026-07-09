@@ -382,6 +382,69 @@ describe('TeamGamesTab', () => {
     expect(screen.queryByText('Select a season to view games.')).not.toBeInTheDocument();
   });
 
+  it('places admin games on their Eastern calendar day', () => {
+    mockUseGames.mockReturnValueOnce({
+      games: [
+        {
+          ...games[0],
+          id: 'late-et-game',
+          scheduled_at: '2026-01-02T02:00:00.000Z',
+          scheduled_time: '21:00',
+        },
+      ],
+      loading: false,
+    });
+
+    const { container } = renderTeamGamesTab({
+      calendarMonth: new Date(2026, 0, 1),
+    });
+
+    const gameDayCell = container.querySelector('.calendarDayGameCell');
+    expect(gameDayCell).not.toBeNull();
+    expect(gameDayCell).toHaveTextContent(/^01/);
+  });
+
+  it('keeps timezone-less midnight admin games on their stored calendar day', () => {
+    mockUseGames.mockReturnValueOnce({
+      games: [
+        {
+          ...games[0],
+          id: 'midnight-placeholder-game',
+          scheduled_at: '2026-01-02T00:00:00.000',
+          scheduled_time: '19:00',
+        },
+      ],
+      loading: false,
+    });
+
+    const { container } = renderTeamGamesTab({
+      calendarMonth: new Date(2026, 0, 1),
+    });
+
+    const gameDayCell = container.querySelector('.calendarDayGameCell');
+    expect(gameDayCell).not.toBeNull();
+    expect(gameDayCell).toHaveTextContent(/^02/);
+  });
+
+  it('uses user game detail routes in user mode', async () => {
+    const user = userEvent.setup();
+    const currentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+
+    renderTeamGamesTab({ mode: 'user' });
+
+    expect(mockUseGames).toHaveBeenCalledWith(
+      expect.objectContaining({
+        teamId: 'team-1',
+        month: monthParam(currentMonth),
+      }),
+      { mode: 'user' },
+    );
+
+    await user.click(screen.getByLabelText('Open game vs Away Team'));
+
+    expect(mockNavigate).toHaveBeenCalledWith(`/games/${routeDateSegment(5)}/awy-vs-hom`);
+  });
+
   it('downloads the current calendar month as an image', async () => {
     const user = userEvent.setup();
     const originalCreateElement = document.createElement.bind(document);
@@ -494,9 +557,7 @@ describe('TeamGamesTab', () => {
       width: '840px',
       minWidth: '840px',
     });
-    expect(capturedCalendar?.style.getPropertyValue('--calendar-export-grid-width')).toBe(
-      '840px',
-    );
+    expect(capturedCalendar?.style.getPropertyValue('--calendar-export-grid-width')).toBe('840px');
     expect(capturedCalendar?.style.getPropertyValue('--calendar-export-day-min-height')).toBe(
       '115px',
     );

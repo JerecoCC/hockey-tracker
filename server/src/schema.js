@@ -40,6 +40,7 @@ const leagues = pgTable('leagues', {
   bestOfPlayoff: smallint('best_of_playoff').notNull().default(7),
   bestOfShootout: smallint('best_of_shootout').notNull().default(3),
   scoringSystem: text('scoring_system').notNull().default('2-1-0'),
+  goalieMinRegularMinutes: smallint('goalie_min_regular_minutes').notNull().default(1500),
   playoffFormat: jsonb('playoff_format'),
   createdAt: createdAt(),
 });
@@ -75,6 +76,7 @@ const seasons = pgTable('seasons', {
   bestOfPlayoff: smallint('best_of_playoff'),
   bestOfShootout: smallint('best_of_shootout'),
   scoringSystem: text('scoring_system'),
+  goalieMinRegularMinutes: smallint('goalie_min_regular_minutes'),
   playoffsStarted: boolean('playoffs_started').notNull().default(false),
   createdAt: createdAt(),
 });
@@ -168,11 +170,14 @@ const leagueAwards = pgTable('league_awards', {
   description: text('description'),
   recipientType: text('recipient_type').notNull().default('player'),
   selectionMethod: text('selection_method').notNull().default('manual'),
+  competitionScope: text('competition_scope').notNull().default('full_season'),
   statKey: text('stat_key'),
   awardedAfterPlayoffs: boolean('awarded_after_playoffs').notNull().default(true),
   usesNominees: boolean('uses_nominees').notNull().default(false),
   allowMultipleWinners: boolean('allow_multiple_winners').notNull().default(false),
   usesTeamSelection: boolean('uses_team_selection').notNull().default(false),
+  playerEligibility: jsonb('player_eligibility').notNull().default({}),
+  teamEligibility: jsonb('team_eligibility').notNull().default({}),
   active: boolean('active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: createdAt(),
@@ -226,6 +231,7 @@ const teamIterations = pgTable('team_iterations', {
 
 const players = pgTable('players', {
   id: id(),
+  leaguePlayerNumber: text('league_player_number'),
   firstName: text('first_name').notNull(),
   lastName: text('last_name').notNull(),
   photo: text('photo'),
@@ -237,6 +243,7 @@ const players = pgTable('players', {
   position: text('position'),
   shoots: text('shoots'),
   rookieSeasonId: uuid('rookie_season_id').references(() => seasons.id, { onDelete: 'set null' }),
+  status: text('status').notNull().default('active'),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: createdAt(),
 });
@@ -319,6 +326,7 @@ const playoffSeries = pgTable('playoff_series', {
   awayWins: smallint('away_wins').notNull().default(0),
   status: text('status').notNull().default('upcoming'),
   winnerTeamId: uuid('winner_team_id').references(() => teams.id, { onDelete: 'set null' }),
+  bracketSlotKey: text('bracket_slot_key'),
   createdAt: createdAt(),
 });
 
@@ -327,6 +335,8 @@ const games = pgTable('games', {
   seasonId: uuid('season_id').notNull().references(() => seasons.id, { onDelete: 'cascade' }),
   homeTeamId: uuid('home_team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   awayTeamId: uuid('away_team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  homeStartingGoalieId: uuid('home_starting_goalie_id').references(() => players.id, { onDelete: 'set null' }),
+  awayStartingGoalieId: uuid('away_starting_goalie_id').references(() => players.id, { onDelete: 'set null' }),
   scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
   scheduledTime: text('scheduled_time'),
   venue: text('venue'),
@@ -338,6 +348,7 @@ const games = pgTable('games', {
   playoffSeriesId: uuid('playoff_series_id').references(() => playoffSeries.id, { onDelete: 'set null' }),
   gameNumberInSeries: smallint('game_number_in_series'),
   gameNumber: smallint('game_number'),
+  leagueGameNumber: text('league_game_number'),
   notes: text('notes'),
   currentPeriod: text('current_period'),
   periodShots: jsonb('period_shots').notNull().default(sql`'[]'::jsonb`),

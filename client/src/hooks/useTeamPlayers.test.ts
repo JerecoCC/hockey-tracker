@@ -2,7 +2,11 @@ import React from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
-import useTeamPlayers, { usePlayerTradeHistory, type TeamPlayerRecord } from './useTeamPlayers';
+import useTeamPlayers, {
+  usePlayerTradeHistory,
+  useStintActions,
+  type TeamPlayerRecord,
+} from './useTeamPlayers';
 
 jest.mock('axios');
 jest.mock('react-toastify', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
@@ -179,6 +183,109 @@ describe('usePlayerTradeHistory', () => {
 
     expect(second.result.current.stints).toEqual([PLAYER]);
     expect(mockedAxios.get).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useStintActions', () => {
+  it('updates a jersey history row and refreshes related player data', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+    mockedAxios.patch.mockResolvedValueOnce({});
+
+    const { result } = renderHook(() => useStintActions('player-1'), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(
+        result.current.updateJerseyHistoryEntry('jersey-1', {
+          jersey_number: 72,
+          effective_from: '2026-01-25',
+        }),
+      ).resolves.toBe(true);
+    });
+
+    expect(mockedAxios.patch).toHaveBeenCalledWith(
+      '/api/admin/player-teams/history/jerseys/jersey-1',
+      { jersey_number: 72, effective_from: '2026-01-25' },
+      { headers: { Authorization: 'Bearer test-token' } },
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['jersey-history', 'player-1'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['player-trade-history', 'player-1'],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['players'] });
+  });
+
+  it('deletes a jersey history row and refreshes related player data', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+    mockedAxios.delete.mockResolvedValueOnce({});
+
+    const { result } = renderHook(() => useStintActions('player-1'), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(result.current.deleteJerseyHistoryEntry('jersey-1')).resolves.toBe(true);
+    });
+
+    expect(mockedAxios.delete).toHaveBeenCalledWith(
+      '/api/admin/player-teams/history/jerseys/jersey-1',
+      { headers: { Authorization: 'Bearer test-token' } },
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['jersey-history', 'player-1'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['player-trade-history', 'player-1'],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['players'] });
+  });
+
+  it('deletes a season photo and refreshes related player data', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+    mockedAxios.delete.mockResolvedValueOnce({});
+
+    const { result } = renderHook(() => useStintActions('player-1'), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(result.current.deletePlayerPhoto('photo-1')).resolves.toBe(true);
+    });
+
+    expect(mockedAxios.delete).toHaveBeenCalledWith(
+      '/api/admin/player-teams/history/photos/photo-1',
+      { headers: { Authorization: 'Bearer test-token' } },
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['player-photo-history', 'player-1'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['player-trade-history', 'player-1'],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['players'] });
+  });
+
+  it('deletes a stint and refreshes related player data', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+    mockedAxios.delete.mockResolvedValueOnce({});
+
+    const { result } = renderHook(() => useStintActions('player-1'), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(result.current.deleteStint('stint-1')).resolves.toBe(true);
+    });
+
+    expect(mockedAxios.delete).toHaveBeenCalledWith('/api/admin/player-teams/stint-1', {
+      headers: { Authorization: 'Bearer test-token' },
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['player-trade-history', 'player-1'],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['player', 'player-1'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['players'] });
   });
 });
 

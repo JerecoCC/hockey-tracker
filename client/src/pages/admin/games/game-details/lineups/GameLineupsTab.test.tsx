@@ -1,28 +1,28 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import type { ListItemAction } from '@/components/ListItem/ListItem';
+import type { ListItemAction } from '@jerecocc/tracker-ui/ListItem';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { LineupEntry } from '@/hooks/useGameLineup';
 import GameLineupsTab from './GameLineupsTab';
 
 jest.mock('@/hooks/useTeamPlayers', () => () => ({ createAndRosterPlayers: jest.fn() }));
-jest.mock('@/components/Accordion/Accordion', () =>
+jest.mock('@jerecocc/tracker-ui/Accordion', () =>
   function MockAccordion({ label, children }: { label: ReactNode; children: ReactNode }) {
     return <div><div>{label}</div>{children}</div>;
   },
 );
-jest.mock('@/components/Card/Card', () =>
+jest.mock('@jerecocc/tracker-ui/Card', () =>
   function MockCard({ children, title }: { children: ReactNode; title: ReactNode }) {
     return <div><div>{title}</div>{children}</div>;
   },
 );
-jest.mock('@/components/SegmentedControl/SegmentedControl', () =>
+jest.mock('@jerecocc/tracker-ui/SegmentedControl', () =>
   function MockSegmentedControl() {
     return null;
   },
 );
-jest.mock('@/components/TeamLogo/TeamLogo', () =>
+jest.mock('@jerecocc/tracker-ui/TeamLogo', () =>
   function MockTeamLogo() {
     return <span>logo</span>;
   },
@@ -47,7 +47,7 @@ jest.mock('./RemoveFromLineupModal', () =>
     return null;
   },
 );
-jest.mock('@/components/ListItem/ListItem', () =>
+jest.mock('@jerecocc/tracker-ui/ListItem', () =>
   function MockListItem({
     name,
     rightContent,
@@ -126,7 +126,7 @@ const awayRoster: GameRosterEntry[] = [
     last_name: 'Smith',
     photo: null,
     jersey_number: 19,
-    position: 'F',
+    position: 'G',
     inherited: false,
   },
 ] as GameRosterEntry[];
@@ -137,8 +137,8 @@ const inheritedLineup: LineupEntry[] = [
     game_id: 'game-1',
     team_id: 'team-away',
     player_id: 'player-1',
-    position_slot: 'F1',
-    inherited: true,
+    position_slot: 'G',
+    inherited: false,
   },
 ] as LineupEntry[];
 
@@ -165,23 +165,36 @@ const renderTab = (
     />,
   );
 
-describe('GameLineupsTab starter tags', () => {
-  it('shows Starter for inherited starters when the game is final and not in edit mode', () => {
+beforeAll(() => {
+  Object.defineProperty(window, 'scrollTo', {
+    configurable: true,
+    value: jest.fn(),
+  });
+});
+
+describe('GameLineupsTab starting goalies', () => {
+  it('shows the Starting Goalie tag for saved starting goalies', () => {
     renderTab(false);
 
-    expect(screen.getByText('Starter')).toBeInTheDocument();
-    expect(screen.getByText('Forward')).toBeInTheDocument();
-    expect(screen.queryByText('Last Starter')).not.toBeInTheDocument();
+    expect(screen.getByText('Starting Goalie')).toBeInTheDocument();
+    expect(screen.getByText('Goalie')).toBeInTheDocument();
   });
 
-  it('keeps Last Starter for inherited starters while editing a final game', () => {
-    renderTab(true);
+  it('locks final admin starting goalies until correction is confirmed', () => {
+    renderTab(true, { lineup: [] });
 
-    expect(screen.getByText('Last Starter')).toBeInTheDocument();
-    expect(screen.queryByText('Starter')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Set as starting goalie' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /correct final starting goalie/i }));
+    expect(screen.getByText(/corrections can change goalie game logs/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /start correction/i }));
+
+    expect(screen.getByRole('button', { name: 'Set as starting goalie' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove from lineup' })).toBeInTheDocument();
   });
 
-  it('adds a roster player to the first matching empty starting lineup slot', async () => {
+  it('sets a roster goalie as the starting goalie', async () => {
     const saveTeamLineup = jest.fn().mockResolvedValue(true);
 
     renderTab(false, {
@@ -191,25 +204,18 @@ describe('GameLineupsTab starter tags', () => {
       saveTeamLineup,
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add to starting lineup' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Set as starting goalie' }));
 
     await waitFor(() =>
       expect(saveTeamLineup).toHaveBeenCalledWith(
         'team-away',
-        [
-          { position_slot: 'F1', player_id: 'player-1' },
-          { position_slot: 'F2', player_id: null },
-          { position_slot: 'F3', player_id: null },
-          { position_slot: 'D1', player_id: null },
-          { position_slot: 'D2', player_id: null },
-          { position_slot: 'G', player_id: null },
-        ],
+        [{ position_slot: 'G', player_id: 'player-1' }],
         'Away Team',
       ),
     );
   });
 
-  it('overrides an inherited starter without persisting the rest of the inherited lineup', async () => {
+  it('replaces an existing starting goalie', async () => {
     const saveTeamLineup = jest.fn().mockResolvedValue(true);
     const rosterWithReplacement = [
       awayRoster[0],
@@ -222,51 +228,38 @@ describe('GameLineupsTab starter tags', () => {
         last_name: 'Doe',
         photo: null,
         jersey_number: 20,
-        position: 'F',
+        position: 'G',
         inherited: false,
       },
     ] as GameRosterEntry[];
-    const fullInheritedForwards = [
-      { ...inheritedLineup[0], position_slot: 'F1' as const, player_id: 'player-1' },
-      { ...inheritedLineup[0], id: 'lineup-2', position_slot: 'F2' as const, player_id: 'player-3' },
-      { ...inheritedLineup[0], id: 'lineup-3', position_slot: 'F3' as const, player_id: 'player-4' },
-    ];
 
     renderTab(false, {
       game: { ...game, status: 'scheduled' },
       isFinal: false,
       awayRoster: rosterWithReplacement,
-      lineup: fullInheritedForwards,
+      lineup: inheritedLineup,
       saveTeamLineup,
     });
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Add to starting lineup' })[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Set as starting goalie' }));
 
     await waitFor(() =>
       expect(saveTeamLineup).toHaveBeenCalledWith(
         'team-away',
-        [
-          { position_slot: 'F1', player_id: 'player-2' },
-          { position_slot: 'F2', player_id: null },
-          { position_slot: 'F3', player_id: null },
-          { position_slot: 'D1', player_id: null },
-          { position_slot: 'D2', player_id: null },
-          { position_slot: 'G', player_id: null },
-        ],
+        [{ position_slot: 'G', player_id: 'player-2' }],
         'Away Team',
       ),
     );
   });
 
-  it('keeps existing saved starters when adding another starter', async () => {
+  it('does not offer starting goalie actions for skaters', () => {
     const saveTeamLineup = jest.fn().mockResolvedValue(true);
-    const rosterWithReplacement = [
-      awayRoster[0],
+    const skaterRoster = [
       {
-        id: 'entry-2',
+        id: 'entry-skater',
         game_id: 'game-1',
         team_id: 'team-away',
-        player_id: 'player-2',
+        player_id: 'player-skater',
         first_name: 'Jane',
         last_name: 'Doe',
         photo: null,
@@ -275,36 +268,16 @@ describe('GameLineupsTab starter tags', () => {
         inherited: false,
       },
     ] as GameRosterEntry[];
-    const savedLineup = [
-      {
-        ...inheritedLineup[0],
-        inherited: false,
-      },
-    ];
 
     renderTab(false, {
       game: { ...game, status: 'scheduled' },
       isFinal: false,
-      awayRoster: rosterWithReplacement,
-      lineup: savedLineup,
+      awayRoster: skaterRoster,
+      lineup: [],
       saveTeamLineup,
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add to starting lineup' }));
-
-    await waitFor(() =>
-      expect(saveTeamLineup).toHaveBeenCalledWith(
-        'team-away',
-        [
-          { position_slot: 'F1', player_id: 'player-1' },
-          { position_slot: 'F2', player_id: 'player-2' },
-          { position_slot: 'F3', player_id: null },
-          { position_slot: 'D1', player_id: null },
-          { position_slot: 'D2', player_id: null },
-          { position_slot: 'G', player_id: null },
-        ],
-        'Away Team',
-      ),
-    );
+    expect(screen.queryByRole('button', { name: 'Set as starting goalie' })).not.toBeInTheDocument();
+    expect(saveTeamLineup).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,4 @@
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
 import { TeamRecord } from '@/hooks/useTeams';
 
 interface Props {

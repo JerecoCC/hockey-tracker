@@ -29,6 +29,14 @@
   }
 
   &Full {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(120px, 0.7fr);
+    align-items: end;
+    gap: $space-md;
     min-width: 0;
+
+    @media (max-width: 760px) {
+      grid-template-columns: 1fr;
+    }
   }
 }

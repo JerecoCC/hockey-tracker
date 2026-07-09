@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Accordion from '@/components/Accordion/Accordion';
-import Button from '@/components/Button/Button';
-import Section from '@/components/Section/Section';
-import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
-import Select from '@/components/Select/Select';
-import Skeleton from '@/components/Skeleton/Skeleton';
-import Tag from '@/components/Tag/Tag';
+import Accordion from '@jerecocc/tracker-ui/Accordion';
+import Badge from '@jerecocc/tracker-ui/Badge';
+import Button from '@jerecocc/tracker-ui/Button';
+import Divider from '@jerecocc/tracker-ui/Divider';
+import Section from '@jerecocc/tracker-ui/Section';
+import ListItem from '@jerecocc/tracker-ui/ListItem';
+import Select from '@jerecocc/tracker-ui/Select';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
+import Tag from '@jerecocc/tracker-ui/Tag';
+import Tooltip from '@jerecocc/tracker-ui/Tooltip';
 import { type AlignmentGroupRecord, type GroupAlignmentSet } from '@/hooks/useGroupAlignmentSets';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import { type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
@@ -29,105 +31,6 @@ const countGroupTeams = (group: SeasonGroupRecord, allGroups: SeasonGroupRecord[
   return teamIds.size;
 };
 
-interface GroupNodeProps {
-  group: SeasonGroupRecord;
-  allGroups: SeasonGroupRecord[];
-  leagueCode: string | null | undefined;
-  seasonId: string;
-  seasonName: string | null | undefined;
-}
-
-const GroupNode = ({ group, allGroups, leagueCode, seasonId, seasonName }: GroupNodeProps) => {
-  const children = allGroups
-    .filter((g) => g.parent_id === group.id)
-    .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
-  const roleLabel = group.role ? ROLE_LABELS[group.role] : null;
-  const isLeaf = children.length === 0;
-  const teamCount = countGroupTeams(group, allGroups);
-
-  return (
-    <li className={styles.groupItem}>
-      <Accordion
-        headerType="light"
-        className={styles.groupAccordion}
-        rowClassName={styles.groupHeader}
-        bodyClassName={styles.groupBody}
-        label={<span className={styles.groupLabel}>{group.name}</span>}
-        labelMeta={
-          <span
-            className={styles.groupTeamCount}
-            title={`${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
-          >
-            ({teamCount} {teamCount === 1 ? 'team' : 'teams'})
-          </span>
-        }
-        headerRight={
-          roleLabel ? (
-            <Tag
-              label={roleLabel}
-              intent={group.role === 'division' ? 'success' : 'accent'}
-            />
-          ) : null
-        }
-      >
-        {isLeaf && group.teams.length > 0 && (
-          <ul className={styles.groupTeamList}>
-            {group.teams.map((team) => (
-              <ListItem
-                key={team.id}
-                image={team.logo}
-                imageDark={team.logo_dark}
-                imageLight={team.logo_light}
-                eyebrow={team.place_name || ''}
-                name={team.team_name || team.name}
-                variant="plain"
-                rightContent={{ type: 'code', value: team.code }}
-                primaryColor={team.primary_color}
-                textColor={team.text_color}
-                href={buildTeamDetailsPath({
-                  leagueCode,
-                  leagueId: group.league_id,
-                  teamCode: team.code,
-                  teamId: team.id,
-                  seasonName,
-                  seasonId,
-                })}
-              />
-            ))}
-          </ul>
-        )}
-        {isLeaf && group.teams.length === 0 && (
-          <p className={styles.emptyMsg}>No teams assigned to this group.</p>
-        )}
-        {children.length > 0 && (
-          <div className={styles.groupNestedList}>
-            <ul className={styles.groupList}>
-              {children.map((child) => (
-                <GroupNode
-                  key={child.id}
-                  group={child}
-                  allGroups={allGroups}
-                  leagueCode={leagueCode}
-                  seasonId={seasonId}
-                  seasonName={seasonName}
-                />
-              ))}
-            </ul>
-          </div>
-        )}
-      </Accordion>
-    </li>
-  );
-};
-
-interface TeamListProps {
-  teams: TeamDisplayRecord[];
-  leagueCode: string | null | undefined;
-  leagueId: string;
-  seasonId: string;
-  seasonName: string | null | undefined;
-}
-
 type TeamDisplayRecord = Pick<
   SeasonTeam | GroupTeamRecord,
   | 'id'
@@ -142,6 +45,153 @@ type TeamDisplayRecord = Pick<
   | 'text_color'
 >;
 
+interface TeamListProps {
+  teams: TeamDisplayRecord[];
+  leagueCode: string | null | undefined;
+  leagueId: string;
+  seasonId: string;
+  seasonName: string | null | undefined;
+}
+
+const TeamList = ({ teams, leagueCode, leagueId, seasonId, seasonName }: TeamListProps) => (
+  <ul className={styles.teamList}>
+    {teams.map((team) => {
+      const teamHref = buildTeamDetailsPath({
+        leagueCode,
+        leagueId,
+        teamCode: team.code,
+        teamId: team.id,
+        seasonName,
+        seasonId,
+      });
+
+      return (
+        <ListItem
+          key={team.id}
+          image={team.logo}
+          imageDark={team.logo_dark}
+          imageLight={team.logo_light}
+          eyebrow={team.place_name || ''}
+          name={team.team_name || team.name}
+          rightContent={{ type: 'code', value: team.code }}
+          primaryColor={team.primary_color}
+          textColor={team.text_color}
+          href={teamHref}
+        />
+      );
+    })}
+  </ul>
+);
+
+interface GroupNodeProps {
+  group: SeasonGroupRecord;
+  allGroups: SeasonGroupRecord[];
+  leagueCode: string | null | undefined;
+  seasonId: string;
+  seasonName: string | null | undefined;
+  depth?: number;
+}
+
+const GroupNode = ({
+  group,
+  allGroups,
+  leagueCode,
+  seasonId,
+  seasonName,
+  depth = 0,
+}: GroupNodeProps) => {
+  const children = allGroups
+    .filter((g) => g.parent_id === group.id)
+    .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  const roleLabel = group.role ? ROLE_LABELS[group.role] : null;
+  const isLeaf = children.length === 0;
+  const teamCount = countGroupTeams(group, allGroups);
+  const teamCountLabel = teamCount === 1 ? 'team' : 'teams';
+  const groupName = roleLabel ? `${group.name} ${roleLabel}` : group.name;
+
+  const groupBody = (
+    <>
+      {isLeaf && group.teams.length > 0 && (
+        <TeamList
+          teams={group.teams}
+          leagueCode={leagueCode}
+          leagueId={group.league_id}
+          seasonId={seasonId}
+          seasonName={seasonName}
+        />
+      )}
+      {isLeaf && group.teams.length === 0 && (
+        <p className={styles.emptyMsg}>No teams assigned to this group.</p>
+      )}
+      {children.length > 0 && (
+        <div className={styles.groupNestedList}>
+          <ul className={`${styles.groupList} ${styles.groupSubgroupList}`}>
+            {children.map((child) => (
+              <GroupNode
+                key={child.id}
+                group={child}
+                allGroups={allGroups}
+                leagueCode={leagueCode}
+                seasonId={seasonId}
+                seasonName={seasonName}
+                depth={depth + 1}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+    </>
+  );
+
+  return (
+    <li className={styles.groupItem}>
+      {depth === 0 ? (
+        <div className={styles.alignmentParentGroup}>
+          <div className={styles.alignmentParentGroupHeader}>
+            <div className={styles.alignmentParentGroupTitle}>
+              <span className={styles.alignmentParentGroupName}>
+                {groupName}
+                <Badge
+                  className={styles.alignmentGroupNameCount}
+                  value={teamCount}
+                  label={teamCountLabel}
+                />
+              </span>
+            </div>
+            <Divider className={styles.alignmentParentGroupHeaderDivider} />
+          </div>
+          <div className={styles.alignmentParentGroupBody}>{groupBody}</div>
+        </div>
+      ) : (
+        <Accordion
+          headerType="light"
+          className={styles.groupAccordion}
+          rowClassName={styles.groupHeader}
+          bodyClassName={styles.groupBody}
+          label={<span className={styles.groupLabel}>{group.name}</span>}
+          labelMeta={
+            <Badge
+              className={styles.groupTeamCount}
+              value={teamCount}
+              label={teamCountLabel}
+            />
+          }
+          headerRight={
+            roleLabel ? (
+              <Tag
+                label={roleLabel}
+                intent={group.role === 'division' ? 'success' : 'accent'}
+              />
+            ) : null
+          }
+        >
+          {groupBody}
+        </Accordion>
+      )}
+    </li>
+  );
+};
+
 const alignmentGroupsToSeasonGroups = (
   alignmentGroups: AlignmentGroupRecord[] | undefined,
 ): SeasonGroupRecord[] =>
@@ -151,50 +201,6 @@ const alignmentGroupsToSeasonGroups = (
     is_inherited: group.is_inherited ?? false,
     is_auto: group.is_auto ?? false,
   }));
-
-const TeamList = ({ teams, leagueCode, leagueId, seasonId, seasonName }: TeamListProps) => {
-  const navigate = useNavigate();
-
-  return (
-    <ul className={styles.teamList}>
-      {teams.map((team) => {
-        const teamHref = buildTeamDetailsPath({
-          leagueCode,
-          leagueId,
-          teamCode: team.code,
-          teamId: team.id,
-          seasonName,
-          seasonId,
-        });
-
-        return (
-          <ListItem
-            key={team.id}
-            image={team.logo}
-            imageDark={team.logo_dark}
-            imageLight={team.logo_light}
-            eyebrow={team.place_name || ''}
-            name={team.team_name || team.name}
-            rightContent={{ type: 'code', value: team.code }}
-            primaryColor={team.primary_color}
-            textColor={team.text_color}
-            href={teamHref}
-            actions={
-              [
-                {
-                  icon: 'open_in_new',
-                  intent: 'neutral',
-                  tooltip: 'View team',
-                  onClick: () => navigate(teamHref),
-                },
-              ] satisfies ListItemAction[]
-            }
-          />
-        );
-      })}
-    </ul>
-  );
-};
 
 const SeasonTeamsSkeleton = () => (
   <ul
@@ -293,13 +299,18 @@ const SeasonTeamsCard = ({
     [draftAlignmentDetails?.groups],
   );
   const showPreview = hasDraftAlignmentChange && !!draftAlignment;
-  const userGroups =
-    showPreview && draftAlignment?.structure_type === 'groups' ? previewGroups : savedUserGroups;
+  const isLeagueWideAlignment = draftAlignment?.structure_type === 'league';
+  const isGroupedAlignment = draftAlignment?.structure_type === 'groups';
+  const userGroups = isLeagueWideAlignment
+    ? []
+    : showPreview && isGroupedAlignment
+      ? previewGroups
+      : savedUserGroups;
   const userRoots = userGroups
     .filter((group) => group.parent_id === null)
     .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
   const flatTeams: TeamDisplayRecord[] =
-    showPreview && draftAlignment?.structure_type === 'league'
+    showPreview && isLeagueWideAlignment
       ? (draftAlignmentDetails?.teams ?? [])
       : savedFlatTeams;
   const alignmentOptions = alignmentSets.map((set) => ({
@@ -312,6 +323,9 @@ const SeasonTeamsCard = ({
       ? `${selectedAlignment.name} (league-wide)`
       : selectedAlignment.name
     : 'No alignment assigned';
+  const alignmentLockedTooltip = hasScheduledGames
+    ? 'Alignment cannot be changed after games are scheduled.'
+    : 'Alignment cannot be changed after the season ends.';
   const handleSaveAlignment = async () => {
     if (!hasDraftAlignmentChange || !draftAlignmentSetId) return;
     await updateSeason(seasonId, {
@@ -321,16 +335,14 @@ const SeasonTeamsCard = ({
   const alignmentControl = (
     <div className={styles.alignmentHeaderControl}>
       {alignmentLocked ? (
-        <div
-          className={styles.readonlyAlignmentBox}
-          title={
-            hasScheduledGames
-              ? 'Alignment cannot be changed after games are scheduled.'
-              : 'Alignment cannot be changed after the season ends.'
-          }
+        <Tooltip
+          text={alignmentLockedTooltip}
+          className={styles.readonlyAlignmentTooltip}
         >
-          <span className={styles.readonlyAlignmentLabel}>{alignmentLabel}</span>
-        </div>
+          <div className={styles.readonlyAlignmentBox}>
+            <span className={styles.readonlyAlignmentLabel}>{alignmentLabel}</span>
+          </div>
+        </Tooltip>
       ) : (
         <>
           <div className={styles.alignmentSelectField}>
@@ -350,7 +362,7 @@ const SeasonTeamsCard = ({
             <Button
               type="button"
               icon="save"
-              size="sm"
+              size="medium"
               variant="filled"
               intent="accent"
               iconHeight="field"
@@ -366,7 +378,7 @@ const SeasonTeamsCard = ({
 
   return (
     <Section
-      title={draftAlignment?.structure_type === 'groups' ? 'Team Groups' : 'Teams'}
+      title={isGroupedAlignment ? 'Team Groups' : 'Teams'}
       action={alignmentControl}
     >
       {loading || (showPreview && previewLoading) ? (

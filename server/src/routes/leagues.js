@@ -5,6 +5,12 @@ const { put } = require('@vercel/blob');
 const { requireAdmin } = require('../middleware/auth');
 const { sql } = require('../db');
 const { normalizeIcoBuffer } = require('../lib/ico');
+const {
+  DEFAULT_PLAYER_ELIGIBILITY,
+  DEFAULT_TEAM_ELIGIBILITY,
+  normalizeAwardPlayerEligibility,
+  normalizeAwardTeamEligibility,
+} = require('../lib/awardEligibility');
 
 // ---------------------------------------------------------------------------
 // Multer – memory storage only (buffer passed to Vercel Blob)
@@ -38,6 +44,34 @@ const uploadBuffer = (file) => {
 // All league routes require the admin role
 router.use(requireAdmin);
 
+const parseOptionalNonNegativeInteger = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : Number.NaN;
+};
+
+const REGULAR_SEASON_AWARD_STAT_KEYS = new Set([
+  'points',
+  'goals',
+  'assists',
+  'save_pct',
+  'gaa',
+  'shutouts',
+  'standings_points',
+  'wins',
+]);
+const AWARD_SELECTION_METHODS = new Set(['manual', 'voted', 'automatic']);
+const AWARD_COMPETITION_SCOPES = new Set(['full_season', 'regular_season', 'playoffs']);
+
+const normalizeAwardSelectionMethod = (selectionMethod = 'manual') =>
+  selectionMethod === 'playoff' ? 'manual' : selectionMethod;
+
+const inferAwardCompetitionScope = (selectionMethod, statKey, fallback = 'full_season') => {
+  if (selectionMethod === 'playoff' || statKey === 'playoff_champion') return 'playoffs';
+  if (REGULAR_SEASON_AWARD_STAT_KEYS.has(statKey)) return 'regular_season';
+  return AWARD_COMPETITION_SCOPES.has(fallback) ? fallback : 'full_season';
+};
+
 // ---------------------------------------------------------------------------
 // POST /api/admin/leagues/upload  – upload a logo image to Vercel Blob
 // ---------------------------------------------------------------------------
@@ -65,7 +99,8 @@ router.get('/', async (_req, res) => {
     const leagues = await sql`
       SELECT
         l.id, l.name, l.code, l.logo, l.icon, l.primary_color, l.text_color,
-        l.best_of_playoff, l.best_of_shootout, l.scoring_system, l.playoff_format,
+        l.best_of_playoff, l.best_of_shootout, l.scoring_system,
+        l.goalie_min_regular_minutes, l.playoff_format,
         CASE
           WHEN cs.id IS NULL OR cs.is_ended THEN 'postseason'
           WHEN cs.playoffs_started THEN 'playoffs'
@@ -91,7 +126,8 @@ router.get('/:id', async (req, res) => {
     const rows = await sql`
       SELECT
         l.id, l.name, l.code, l.description, l.logo, l.icon, l.primary_color, l.text_color,
-        l.best_of_playoff, l.best_of_shootout, l.scoring_system, l.playoff_format,
+        l.best_of_playoff, l.best_of_shootout, l.scoring_system,
+        l.goalie_min_regular_minutes, l.playoff_format,
         CASE
           WHEN cs.id IS NULL OR cs.is_ended THEN 'postseason'
           WHEN cs.playoffs_started THEN 'playoffs'
@@ -150,7 +186,8 @@ router.get('/:id', async (req, res) => {
 // POST /api/admin/leagues  – create a league
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
-  const { name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format } = req.body;
+  const { name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes, playoff_format } = req.body;
+  const goalieMinRegularMinutes = parseOptionalNonNegativeInteger(goalie_min_regular_minutes);
 
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return res.status(400).json({ error: 'name is required' });
@@ -158,10 +195,15 @@ router.post('/', async (req, res) => {
   if (!code || typeof code !== 'string' || code.trim() === '') {
     return res.status(400).json({ error: 'code is required' });
   }
+  if (Number.isNaN(goalieMinRegularMinutes)) {
+    return res
+      .status(400)
+      .json({ error: 'goalie_min_regular_minutes must be a non-negative integer' });
+  }
 
   try {
     const rows = await sql`
-      INSERT INTO leagues (name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format)
+      INSERT INTO leagues (name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes, playoff_format)
       VALUES (
         ${name.trim()},
         ${code.trim().toUpperCase()},
@@ -173,9 +215,10 @@ router.post('/', async (req, res) => {
         ${best_of_playoff ?? 7},
         ${best_of_shootout ?? 3},
         ${scoring_system ?? '2-1-0'},
+        ${goalieMinRegularMinutes ?? 1500},
         ${playoff_format ? JSON.stringify(playoff_format) : null}
       )
-      RETURNING id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format, created_at
+      RETURNING id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes, playoff_format, created_at
     `;
     return res.status(201).json(rows[0]);
   } catch (err) {
@@ -192,7 +235,8 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format } = req.body;
+  const { name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes, playoff_format } = req.body;
+  const goalieMinRegularMinutes = parseOptionalNonNegativeInteger(goalie_min_regular_minutes);
   const logoInBody           = 'logo' in req.body;
   const iconInBody           = 'icon' in req.body;
   const playoffFormatInBody  = 'playoff_format' in req.body;
@@ -202,6 +246,11 @@ router.patch('/:id', async (req, res) => {
   }
   if (code !== undefined && (typeof code !== 'string' || code.trim() === '')) {
     return res.status(400).json({ error: 'code cannot be empty' });
+  }
+  if (Number.isNaN(goalieMinRegularMinutes)) {
+    return res
+      .status(400)
+      .json({ error: 'goalie_min_regular_minutes must be a non-negative integer' });
   }
 
   try {
@@ -218,9 +267,10 @@ router.patch('/:id', async (req, res) => {
         best_of_playoff  = COALESCE(${best_of_playoff ?? null}, best_of_playoff),
         best_of_shootout = COALESCE(${best_of_shootout ?? null}, best_of_shootout),
         scoring_system   = COALESCE(${scoring_system ?? null}, scoring_system),
+        goalie_min_regular_minutes = COALESCE(${goalieMinRegularMinutes}, goalie_min_regular_minutes),
         playoff_format   = CASE WHEN ${playoffFormatInBody} THEN ${playoff_format ? JSON.stringify(playoff_format) : null}::jsonb ELSE playoff_format END
       WHERE id = ${id}
-      RETURNING id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format, created_at
+      RETURNING id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes, playoff_format, created_at
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'League not found' });
     return res.json(rows[0]);
@@ -243,9 +293,9 @@ router.get('/:id/awards', async (req, res) => {
   const { id } = req.params;
   try {
     const awards = await sql`
-      SELECT id, league_id, name, description, recipient_type, selection_method,
+      SELECT id, league_id, name, description, recipient_type, selection_method, competition_scope,
              stat_key, awarded_after_playoffs, uses_nominees, allow_multiple_winners,
-             uses_team_selection, active, sort_order, created_at
+             uses_team_selection, player_eligibility, team_eligibility, active, sort_order, created_at
       FROM league_awards
       WHERE league_id = ${id} AND active = true
       ORDER BY sort_order ASC, name ASC
@@ -267,11 +317,14 @@ router.post('/:id/awards', async (req, res) => {
     description,
     recipient_type = 'player',
     selection_method = 'manual',
+    competition_scope,
     stat_key,
     awarded_after_playoffs = true,
     uses_nominees = selection_method === 'voted',
     allow_multiple_winners = false,
     uses_team_selection = false,
+    player_eligibility,
+    team_eligibility,
     sort_order = 0,
   } = req.body;
 
@@ -281,28 +334,56 @@ router.post('/:id/awards', async (req, res) => {
   if (!['player', 'team'].includes(recipient_type)) {
     return res.status(400).json({ error: 'recipient_type must be player or team' });
   }
-  if (!['manual', 'voted', 'automatic', 'playoff'].includes(selection_method)) {
+  const normalizedSelectionMethod = normalizeAwardSelectionMethod(selection_method);
+  const normalizedCompetitionScope = inferAwardCompetitionScope(
+    selection_method,
+    stat_key,
+    competition_scope,
+  );
+
+  if (!AWARD_SELECTION_METHODS.has(normalizedSelectionMethod)) {
     return res.status(400).json({ error: 'selection_method is invalid' });
   }
+  if (competition_scope !== undefined && !AWARD_COMPETITION_SCOPES.has(competition_scope)) {
+    return res.status(400).json({ error: 'competition_scope is invalid' });
+  }
+  if (!AWARD_COMPETITION_SCOPES.has(normalizedCompetitionScope)) {
+    return res.status(400).json({ error: 'competition_scope is invalid' });
+  }
+  const parsedEligibility = normalizeAwardPlayerEligibility(player_eligibility);
+  if (parsedEligibility.error) {
+    return res.status(400).json({ error: parsedEligibility.error });
+  }
+  const parsedTeamEligibility = normalizeAwardTeamEligibility(team_eligibility);
+  if (parsedTeamEligibility.error) {
+    return res.status(400).json({ error: parsedTeamEligibility.error });
+  }
+  const normalizedPlayerEligibility =
+    recipient_type === 'player' ? parsedEligibility.value : DEFAULT_PLAYER_ELIGIBILITY;
+  const normalizedTeamEligibility =
+    recipient_type === 'team' ? parsedTeamEligibility.value : DEFAULT_TEAM_ELIGIBILITY;
 
   try {
     const rows = await sql`
       INSERT INTO league_awards (
-        league_id, name, description, recipient_type, selection_method, stat_key,
+        league_id, name, description, recipient_type, selection_method, competition_scope, stat_key,
         awarded_after_playoffs, uses_nominees, allow_multiple_winners, uses_team_selection,
-        sort_order, active
+        player_eligibility, team_eligibility, sort_order, active
       )
       VALUES (
         ${id},
         ${name.trim()},
         ${description?.trim() || null},
         ${recipient_type},
-        ${selection_method},
+        ${normalizedSelectionMethod},
+        ${normalizedCompetitionScope},
         ${stat_key || null},
         ${!!awarded_after_playoffs},
         ${!!uses_nominees},
         ${!!allow_multiple_winners},
         ${!!uses_team_selection},
+        ${JSON.stringify(normalizedPlayerEligibility)}::jsonb,
+        ${JSON.stringify(normalizedTeamEligibility)}::jsonb,
         ${Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0},
         true
       )
@@ -310,11 +391,14 @@ router.post('/:id/awards', async (req, res) => {
         description = EXCLUDED.description,
         recipient_type = EXCLUDED.recipient_type,
         selection_method = EXCLUDED.selection_method,
+        competition_scope = EXCLUDED.competition_scope,
         stat_key = EXCLUDED.stat_key,
         awarded_after_playoffs = EXCLUDED.awarded_after_playoffs,
         uses_nominees = EXCLUDED.uses_nominees,
         allow_multiple_winners = EXCLUDED.allow_multiple_winners,
         uses_team_selection = EXCLUDED.uses_team_selection,
+        player_eligibility = EXCLUDED.player_eligibility,
+        team_eligibility = EXCLUDED.team_eligibility,
         sort_order = EXCLUDED.sort_order,
         active = true
       RETURNING *
@@ -337,11 +421,14 @@ router.patch('/:id/awards/:awardId', async (req, res) => {
     description,
     recipient_type,
     selection_method,
+    competition_scope,
     stat_key,
     awarded_after_playoffs,
     uses_nominees,
     allow_multiple_winners,
     uses_team_selection,
+    player_eligibility,
+    team_eligibility,
     sort_order,
   } = req.body;
 
@@ -351,19 +438,54 @@ router.patch('/:id/awards/:awardId', async (req, res) => {
   if (recipient_type !== undefined && !['player', 'team'].includes(recipient_type)) {
     return res.status(400).json({ error: 'recipient_type must be player or team' });
   }
-  if (
-    selection_method !== undefined &&
-    !['manual', 'voted', 'automatic', 'playoff'].includes(selection_method)
-  ) {
+  const normalizedSelectionMethod =
+    selection_method === undefined ? undefined : normalizeAwardSelectionMethod(selection_method);
+  const normalizedCompetitionScope =
+    competition_scope === undefined && selection_method === undefined && stat_key === undefined
+      ? undefined
+      : inferAwardCompetitionScope(selection_method, stat_key, competition_scope);
+
+  if (normalizedSelectionMethod !== undefined && !AWARD_SELECTION_METHODS.has(normalizedSelectionMethod)) {
     return res.status(400).json({ error: 'selection_method is invalid' });
   }
+  if (competition_scope !== undefined && !AWARD_COMPETITION_SCOPES.has(competition_scope)) {
+    return res.status(400).json({ error: 'competition_scope is invalid' });
+  }
+  if (
+    normalizedCompetitionScope !== undefined &&
+    !AWARD_COMPETITION_SCOPES.has(normalizedCompetitionScope)
+  ) {
+    return res.status(400).json({ error: 'competition_scope is invalid' });
+  }
+  const playerEligibilityInBody = 'player_eligibility' in req.body;
+  const parsedEligibility = playerEligibilityInBody
+    ? normalizeAwardPlayerEligibility(player_eligibility)
+    : { value: DEFAULT_PLAYER_ELIGIBILITY };
+  if (parsedEligibility.error) {
+    return res.status(400).json({ error: parsedEligibility.error });
+  }
+  const teamEligibilityInBody = 'team_eligibility' in req.body;
+  const parsedTeamEligibility = teamEligibilityInBody
+    ? normalizeAwardTeamEligibility(team_eligibility)
+    : { value: DEFAULT_TEAM_ELIGIBILITY };
+  if (parsedTeamEligibility.error) {
+    return res.status(400).json({ error: parsedTeamEligibility.error });
+  }
+  const normalizedPlayerEligibility =
+    recipient_type === 'team' ? DEFAULT_PLAYER_ELIGIBILITY : parsedEligibility.value;
+  const normalizedTeamEligibility =
+    recipient_type === 'player' ? DEFAULT_TEAM_ELIGIBILITY : parsedTeamEligibility.value;
 
   const descriptionInBody = 'description' in req.body;
+  const competitionScopeInBody =
+    'competition_scope' in req.body || selection_method === 'playoff' || 'stat_key' in req.body;
   const statKeyInBody = 'stat_key' in req.body;
   const awardedAfterInBody = 'awarded_after_playoffs' in req.body;
   const usesNomineesInBody = 'uses_nominees' in req.body;
   const allowMultipleWinnersInBody = 'allow_multiple_winners' in req.body;
   const usesTeamSelectionInBody = 'uses_team_selection' in req.body;
+  const updatePlayerEligibility = playerEligibilityInBody || recipient_type === 'team';
+  const updateTeamEligibility = teamEligibilityInBody || recipient_type === 'player';
   const sortOrderInBody = 'sort_order' in req.body;
 
   try {
@@ -373,12 +495,15 @@ router.patch('/:id/awards/:awardId', async (req, res) => {
         name = COALESCE(${name?.trim() ?? null}, name),
         description = CASE WHEN ${descriptionInBody} THEN ${description?.trim() || null} ELSE description END,
         recipient_type = COALESCE(${recipient_type ?? null}, recipient_type),
-        selection_method = COALESCE(${selection_method ?? null}, selection_method),
+        selection_method = COALESCE(${normalizedSelectionMethod ?? null}, selection_method),
+        competition_scope = CASE WHEN ${competitionScopeInBody} THEN ${normalizedCompetitionScope ?? 'full_season'} ELSE competition_scope END,
         stat_key = CASE WHEN ${statKeyInBody} THEN ${stat_key || null} ELSE stat_key END,
         awarded_after_playoffs = CASE WHEN ${awardedAfterInBody} THEN ${!!awarded_after_playoffs} ELSE awarded_after_playoffs END,
         uses_nominees = CASE WHEN ${usesNomineesInBody} THEN ${!!uses_nominees} ELSE uses_nominees END,
         allow_multiple_winners = CASE WHEN ${allowMultipleWinnersInBody} THEN ${!!allow_multiple_winners} ELSE allow_multiple_winners END,
         uses_team_selection = CASE WHEN ${usesTeamSelectionInBody} THEN ${!!uses_team_selection} ELSE uses_team_selection END,
+        player_eligibility = CASE WHEN ${updatePlayerEligibility} THEN ${JSON.stringify(normalizedPlayerEligibility)}::jsonb ELSE player_eligibility END,
+        team_eligibility = CASE WHEN ${updateTeamEligibility} THEN ${JSON.stringify(normalizedTeamEligibility)}::jsonb ELSE team_eligibility END,
         sort_order = CASE WHEN ${sortOrderInBody} THEN ${Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0} ELSE sort_order END,
         active = true
       WHERE id = ${awardId} AND league_id = ${id}

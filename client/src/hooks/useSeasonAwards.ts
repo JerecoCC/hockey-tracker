@@ -1,6 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
+import type {
+  AwardCompetitionScope,
+  AwardPlayerEligibility,
+  AwardTeamEligibility,
+} from '@/lib/awardDefinitions';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
@@ -42,11 +47,14 @@ export interface SeasonAwardRecord {
   description: string | null;
   recipient_type: AwardRecipientType;
   selection_method: AwardSelectionMethod;
+  competition_scope: AwardCompetitionScope;
   stat_key: string | null;
   awarded_after_playoffs: boolean;
   uses_nominees: boolean;
   allow_multiple_winners: boolean;
   uses_team_selection: boolean;
+  player_eligibility: AwardPlayerEligibility | null;
+  team_eligibility: AwardTeamEligibility | null;
   sort_order: number;
   season_award_id: string | null;
   awarded_at: string | null;
@@ -60,11 +68,14 @@ export interface CreateSeasonAwardPayload {
   description?: string | null;
   recipient_type?: AwardRecipientType;
   selection_method?: AwardSelectionMethod;
+  competition_scope?: AwardCompetitionScope;
   stat_key?: string | null;
   awarded_after_playoffs?: boolean;
   uses_nominees?: boolean;
   allow_multiple_winners?: boolean;
   uses_team_selection?: boolean;
+  player_eligibility?: AwardPlayerEligibility | null;
+  team_eligibility?: AwardTeamEligibility | null;
   awarded_at?: string | null;
   notes?: string | null;
 }
@@ -219,6 +230,26 @@ const useSeasonAwards = (seasonId: string | undefined) => {
     }
   };
 
+  const saveNominees = async (
+    seasonAwardId: string,
+    nominees: AddAwardRecipientPayload[],
+    options: AwardMutationOptions = {},
+  ): Promise<boolean> => {
+    try {
+      await axios.put(
+        `${API}/admin/seasons/${seasonId}/awards/${seasonAwardId}/nominees`,
+        { nominees },
+        { headers: authHeaders() },
+      );
+      if (!options.silent) toast.success('Nominees saved');
+      if (options.refresh !== false) refresh();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to save nominees'));
+      return false;
+    }
+  };
+
   const deleteRecipient = async (
     seasonAwardId: string,
     recipientId: string,
@@ -238,6 +269,33 @@ const useSeasonAwards = (seasonId: string | undefined) => {
     }
   };
 
+  const clearWinners = async (
+    seasonAwardId: string,
+    recipientIds: string[],
+    options: AwardMutationOptions = {},
+  ): Promise<boolean> => {
+    if (recipientIds.length === 0) return true;
+
+    try {
+      await Promise.all(
+        recipientIds.map((recipientId) =>
+          axios.delete(
+            `${API}/admin/seasons/${seasonId}/awards/${seasonAwardId}/recipients/${recipientId}`,
+            { headers: authHeaders() },
+          ),
+        ),
+      );
+      if (!options.silent) {
+        toast.success(recipientIds.length === 1 ? 'Winner cleared' : 'Winners cleared');
+      }
+      if (options.refresh !== false) refresh();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to clear winners'));
+      return false;
+    }
+  };
+
   return {
     awards: data,
     loading: isLoading,
@@ -246,7 +304,9 @@ const useSeasonAwards = (seasonId: string | undefined) => {
     updateTrackedAwards,
     updateSeasonAward,
     addRecipient,
+    saveNominees,
     deleteRecipient,
+    clearWinners,
     refresh,
   };
 };

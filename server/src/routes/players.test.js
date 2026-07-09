@@ -26,6 +26,7 @@ const PLAYER = {
   weight_lbs: 185,
   position: 'C',
   shoots: 'L',
+  status: 'active',
   is_active: true,
   created_at: new Date().toISOString(),
 };
@@ -39,6 +40,27 @@ const PLAYER_WITH_ROSTER = {
   acquisition_type: 'draft',
   start_date: '2024-10-01',
   has_games: true,
+};
+
+const expectLatestStintStartBeforeOpenTieBreaker = (queryText) => {
+  const latestStartIndex = queryText.indexOf('COALESCE(pt.start_date');
+  const openTieBreakerIndex = queryText.indexOf('CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END');
+  expect(latestStartIndex).toBeGreaterThanOrEqual(0);
+  expect(openTieBreakerIndex).toBeGreaterThan(latestStartIndex);
+};
+
+const expectCareerStintPreferenceBeforeRosterRecency = (queryText) => {
+  const normalized = queryText.replace(/\s+/g, ' ');
+  const orderByIndex = normalized.indexOf('ORDER BY p.id');
+  const careerPreferenceIndex = normalized.indexOf('FROM player_team_stints pts', orderByIndex);
+  const openTieBreakerIndex = normalized.indexOf(
+    'CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END',
+    orderByIndex,
+  );
+
+  expect(orderByIndex).toBeGreaterThanOrEqual(0);
+  expect(careerPreferenceIndex).toBeGreaterThan(orderByIndex);
+  expect(openTieBreakerIndex).toBeGreaterThan(careerPreferenceIndex);
 };
 
 afterEach(() => jest.clearAllMocks());
@@ -74,6 +96,7 @@ describe('GET /api/admin/players', () => {
     expect(queryText).toContain('AS has_games');
     expect(queryText).toContain('FROM game_rosters gr');
     expect(queryText).toContain('JOIN seasons rs');
+    expectLatestStintStartBeforeOpenTieBreaker(queryText);
   });
 
   it('returns unassigned players for a league', async () => {
@@ -119,6 +142,122 @@ describe('GET /api/admin/players', () => {
     expect(queryText).toContain("sg.goal_type != 'own'");
     expect(queryText).toContain('FROM game_rosters gr');
     expect(queryText).toContain('rg.season_id');
+    expectLatestStintStartBeforeOpenTieBreaker(queryText);
+  });
+
+  it('returns paginated recent league players with last season metadata', async () => {
+    const recentPlayer = {
+      ...PLAYER_WITH_ROSTER,
+      games_played: 16,
+      last_season_id: 'season-1',
+      last_season_name: '2025-26',
+    };
+    sql
+      .mockResolvedValueOnce([recentPlayer])
+      .mockResolvedValueOnce([{ total: 1 }]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&page=1&page_size=15&recent_seasons=5&include_inactive=true');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(res.body).toEqual({
+      players: [recentPlayer],
+      total: 1,
+      page: 1,
+      page_size: 15,
+    });
+
+    const rowQueryText = sql.mock.calls[0][0].join(' ');
+    const countQueryText = sql.mock.calls[1][0].join(' ');
+    expect(rowQueryText).toContain('WITH recent_seasons AS');
+    expect(rowQueryText).toContain('last_season_name');
+    expect(rowQueryText).toContain('AS games_played');
+    expect(rowQueryText).toContain('COUNT(DISTINCT gr.game_id)::int');
+    expect(rowQueryText).toContain('recent_games.games_played > 0 AS has_games');
+    expect(rowQueryText).toContain('JOIN recent_seasons s ON s.id');
+    expect(countQueryText).toContain('WITH recent_seasons AS');
+    expectCareerStintPreferenceBeforeRosterRecency(rowQueryText);
+    expectCareerStintPreferenceBeforeRosterRecency(countQueryText);
+    expect(sql.mock.calls[0]).toContain(5);
+    expect(sql.mock.calls[1]).toContain(5);
+  });
+
+  it('filters paginated recent league players to warning candidates', async () => {
+    sql
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ total: 0 }]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&page=1&page_size=15&recent_seasons=5&warnings_only=true');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+
+    const rowCall = sql.mock.calls[0];
+    const countCall = sql.mock.calls[1];
+    const rowQueryText = rowCall[0].join(' ');
+    const countQueryText = countCall[0].join(' ');
+
+    expect(rowQueryText).toContain("position = 'G' AND games_played >=");
+    expect(rowQueryText).toContain("COALESCE(position, '') <> 'G' AND games_played >=");
+    expect(rowQueryText).toContain(
+      'date_of_birth IS NULL OR start_date IS NULL OR acquisition_type IS NULL',
+    );
+    expect(countQueryText).toContain("position = 'G' AND games_played >=");
+    expect(countQueryText).toContain("COALESCE(position, '') <> 'G' AND games_played >=");
+    expect(countQueryText).toContain(
+      'date_of_birth IS NULL OR start_date IS NULL OR acquisition_type IS NULL',
+    );
+    expect(countQueryText).toContain('COUNT(DISTINCT gr.game_id)::int AS games_played');
+
+    const rowGoalieMinimumIndex = rowCall[0].findIndex((segment) =>
+      segment.includes('position = \'G\' AND games_played >='),
+    );
+    const rowSkaterMinimumIndex = rowCall[0].findIndex((segment) =>
+      segment.includes('COALESCE(position, \'\') <> \'G\' AND games_played >='),
+    );
+    const countGoalieMinimumIndex = countCall[0].findIndex((segment) =>
+      segment.includes('position = \'G\' AND games_played >='),
+    );
+    const countSkaterMinimumIndex = countCall[0].findIndex((segment) =>
+      segment.includes('COALESCE(position, \'\') <> \'G\' AND games_played >='),
+    );
+    expect(rowGoalieMinimumIndex).toBeGreaterThanOrEqual(0);
+    expect(rowSkaterMinimumIndex).toBeGreaterThanOrEqual(0);
+    expect(countGoalieMinimumIndex).toBeGreaterThanOrEqual(0);
+    expect(countSkaterMinimumIndex).toBeGreaterThanOrEqual(0);
+    expect(rowCall[rowGoalieMinimumIndex + 1]).toBe(15);
+    expect(rowCall[rowSkaterMinimumIndex + 1]).toBe(41);
+    expect(countCall[countGoalieMinimumIndex + 1]).toBe(15);
+    expect(countCall[countSkaterMinimumIndex + 1]).toBe(41);
+  });
+
+  it('normalizes Maksim and Maxim player name aliases in paginated search', async () => {
+    sql
+      .mockResolvedValueOnce([PLAYER_WITH_ROSTER])
+      .mockResolvedValueOnce([{ total: 1 }]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&season_id=season-1&page=1&page_size=20&search=maksim');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+    const rowCall = sql.mock.calls[0];
+    const rowQueryText = rowCall[0].join(' ');
+    expect(rowQueryText).toContain("REPLACE(first_name || ' ' || last_name, 'ks', 'x')");
+    expect(rowCall).toContain('%maxim%');
+  });
+
+  it('orders season league player rows by latest stint before open-ended fallback', async () => {
+    sql.mockResolvedValueOnce([PLAYER_WITH_ROSTER]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&season_id=season-1&include_prospects=true');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(1);
+    expectLatestStintStartBeforeOpenTieBreaker(sql.mock.calls[0][0].join(' '));
   });
 
   it('applies rookie and active filters to paginated league player rows and counts', async () => {
@@ -139,6 +278,38 @@ describe('GET /api/admin/players', () => {
     expect(rowQueryText).toContain('rookie_season_id =');
     expect(countQueryText).toContain('is_active = TRUE');
     expect(countQueryText).toContain('rookie_season_id =');
+  });
+
+  it('includes inactive and retired players in paginated league player rows and counts', async () => {
+    sql
+      .mockResolvedValueOnce([PLAYER_WITH_ROSTER])
+      .mockResolvedValueOnce([{ total: 1 }]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&season_id=season-1&page=1&page_size=20&include_inactive=true');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+
+    expect(sql.mock.calls[0]).toContain(true);
+    expect(sql.mock.calls[1]).toContain(true);
+  });
+
+  it('filters paginated league player rows and counts to inactive or retired players only', async () => {
+    sql
+      .mockResolvedValueOnce([{ ...PLAYER_WITH_ROSTER, status: 'retired', is_active: false }])
+      .mockResolvedValueOnce([{ total: 1 }]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&season_id=season-1&page=1&page_size=20&inactive_only=true');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+
+    const rowQueryText = sql.mock.calls[0][0].join(' ');
+    const countQueryText = sql.mock.calls[1][0].join(' ');
+    expect(rowQueryText).toContain('is_active = FALSE');
+    expect(countQueryText).toContain('is_active = FALSE');
   });
 
   it('filters by team_id and returns roster fields', async () => {
@@ -173,6 +344,7 @@ describe('GET /api/admin/players', () => {
   });
 });
 
+
 // ---------------------------------------------------------------------------
 // GET /api/admin/players/route-lookup
 // ---------------------------------------------------------------------------
@@ -194,21 +366,62 @@ describe('GET /api/admin/players/route-lookup', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(lookup);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('jersey_number::text');
+    expect(queryText).toContain('league_player_slug');
   });
 
-  it('resolves a league-scoped player URL without a team code', async () => {
+  it('resolves a team-scoped jersey-name player URL to database ids', async () => {
+    const lookup = {
+      player_id: 'player-1',
+      team_id: 'team-1',
+      league_id: 'league-1',
+      league_code: 'NHL',
+      team_code: 'VAN',
+      player_slug: '40-elias-pettersson',
+    };
+    sql.mockResolvedValueOnce([lookup]);
+
+    const res = await request(app).get(
+      '/api/admin/players/route-lookup?league_code=nhl&team_code=van&player_slug=40-elias-pettersson',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(lookup);
+  });
+
+  it('resolves a league-scoped player URL by league player number', async () => {
     const lookup = {
       player_id: 'player-1',
       team_id: null,
       league_id: 'league-1',
       league_code: 'NHL',
       team_code: null,
-      player_slug: 'kyle-masters',
+      player_slug: '8478402',
     };
     sql.mockResolvedValueOnce([lookup]);
 
     const res = await request(app).get(
-      '/api/admin/players/route-lookup?league_code=nhl&player_slug=kyle-masters',
+      '/api/admin/players/route-lookup?league_code=nhl&player_slug=8478402',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(lookup);
+  });
+
+  it('still resolves a league-scoped player URL by name slug', async () => {
+    const lookup = {
+      player_id: 'player-1',
+      team_id: null,
+      league_id: 'league-1',
+      league_code: 'NHL',
+      team_code: null,
+      player_slug: '8478402',
+    };
+    sql.mockResolvedValueOnce([lookup]);
+
+    const res = await request(app).get(
+      '/api/admin/players/route-lookup?league_code=nhl&player_slug=john-smith',
     );
 
     expect(res.status).toBe(200);
@@ -237,14 +450,20 @@ describe('GET /api/admin/players/:id/awards', () => {
       award_id: 'award-1',
       season_award_id: 'season-award-1',
       award_name: 'Forward of the Year',
+      award_description: 'Awarded to the top forward.',
       season_id: 'season-1',
       season_name: '2025-26',
       awarded_at: '2026-05-01',
+      recipient_type: 'player',
+      player_photo: 'gretzky-2026.png',
       team_id: 'team-1',
       team_name: 'Oilers',
+      team_place_name: 'Edmonton',
+      team_team_name: 'Oilers',
       team_code: 'EDM',
       team_logo: 'oilers.png',
       team_primary_color: '#ff4500',
+      team_secondary_color: '#041e42',
       team_text_color: '#ffffff',
     };
     const teamAward = {
@@ -252,14 +471,20 @@ describe('GET /api/admin/players/:id/awards', () => {
       award_id: 'award-2',
       season_award_id: 'season-award-2',
       award_name: 'Walter Cup Winner',
+      award_description: 'Awarded to the playoff champion.',
       season_id: 'season-1',
       season_name: '2025-26',
       awarded_at: '2026-05-20',
+      recipient_type: 'team',
+      player_photo: null,
       team_id: 'team-1',
       team_name: 'Oilers',
+      team_place_name: 'Edmonton',
+      team_team_name: 'Oilers',
       team_code: 'EDM',
       team_logo: 'oilers.png',
       team_primary_color: '#ff4500',
+      team_secondary_color: '#041e42',
       team_text_color: '#ffffff',
     };
     sql.mockResolvedValueOnce([playerAward, teamAward]);
@@ -274,10 +499,19 @@ describe('GET /api/admin/players/:id/awards', () => {
     expect(queryText).toContain("sar.role = 'winner'");
     expect(queryText).toContain("sar.recipient_type = 'player'");
     expect(queryText).toContain("sar.recipient_type = 'team'");
+    expect(queryText).toContain("'player' AS recipient_type");
+    expect(queryText).toContain("'team' AS recipient_type");
+    expect(queryText).toContain('player_photo');
+    expect(queryText).toContain('ti.place_name AS team_place_name');
+    expect(queryText).toContain('ti.team_name AS team_team_name');
     expect(queryText).toContain('sar.player_id');
     expect(queryText).toContain('latest_pt.team_id = sar.team_id');
     expect(queryText).toContain('season_awards');
     expect(queryText).toContain('league_awards');
+    expect(queryText).toContain('la.description AS award_description');
+    expect(queryText).toContain('la.competition_scope');
+    expect(queryText).toContain('la.stat_key');
+    expect(queryText).toContain('t.secondary_color AS team_secondary_color');
     const finalOrderBy = queryText.slice(queryText.lastIndexOf('ORDER BY'));
     expect(finalOrderBy).toContain('season_start_date DESC NULLS LAST');
     expect(finalOrderBy).toContain('sort_order ASC');
@@ -295,6 +529,57 @@ describe('GET /api/admin/players/:id/awards', () => {
   it('returns 500 on DB error', async () => {
     sql.mockRejectedValueOnce(new Error('DB down'));
     const res = await request(app).get('/api/admin/players/player-1/awards');
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/players/:id/stats
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/players/:id/stats', () => {
+  it('returns career stats using a valid stat_rows CTE', async () => {
+    const statRow = {
+      season_id: 'season-1',
+      season_name: '2025-26',
+      jersey_number: 97,
+      gp: 12,
+      goals: 8,
+      assists: 10,
+      points: 18,
+      wins: 7,
+      shootout_wins: 1,
+      goals_against: 24,
+      shots_against: 250,
+      saves: 226,
+      time_on_ice: 36000,
+      save_pct: 0.904,
+      team_id: 'team-1',
+      team_name: 'Oilers',
+      team_logo: 'oilers.png',
+      primary_color: '#ff4500',
+      text_color: '#ffffff',
+    };
+    sql.mockResolvedValueOnce([statRow]);
+
+    const res = await request(app).get('/api/admin/players/player-1/stats');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([statRow]);
+    expect(sql).toHaveBeenCalledTimes(1);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toMatch(/WITH\s+stat_rows AS/);
+    expect(queryText).toContain('FROM game_player_stats gps');
+    expect(queryText).toContain('WHERE gps.player_id =');
+    expect(queryText).toContain('gps.goalie_win');
+    expect(queryText).toContain('shootout_wins');
+    expect(queryText).toContain('save_pct');
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+
+    const res = await request(app).get('/api/admin/players/player-1/stats');
+
     expect(res.status).toBe(500);
   });
 });
@@ -352,6 +637,24 @@ describe('GET /api/admin/players/:id/latest-season-stats', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toBeNull();
+  });
+
+  it('returns requested season stats when season_id is provided', async () => {
+    sql
+      .mockResolvedValueOnce([{ season_id: 'season-1', season_name: '2022-23', player_position: 'C' }])
+      .mockResolvedValueOnce([{ game_type: 'regular', gp: 4, goals: 2, assists: 3, points: 5 }])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app).get(
+      '/api/admin/players/player-1/latest-season-stats?season_id=season-1',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.season_id).toBe('season-1');
+    expect(res.body.season_name).toBe('2022-23');
+    expect(res.body.regular).toMatchObject({ gp: 4, goals: 2, assists: 3, points: 5 });
+    expect(res.body.playoffs).toBeNull();
+    expect(sql.mock.calls[0][0].join(' ')).toContain('WHERE s.id =');
   });
 
   it('uses goalie stints, not roster presence, for goalie games played', async () => {
@@ -508,11 +811,36 @@ describe('GET /api/admin/players/:id/game-logs', () => {
 // GET /api/admin/players/:id
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/players/:id', () => {
-  it('returns the player', async () => {
-    sql.mockResolvedValueOnce([PLAYER]);
+  it('returns the player with latest team logo fields', async () => {
+    sql.mockResolvedValueOnce([{
+      ...PLAYER,
+      player_team_id: 'player-team-1',
+      team_id: 'team-1',
+      jersey_number: 99,
+      is_prospect: false,
+      team_name: 'Oilers',
+      team_code: 'EDM',
+      team_logo: 'oilers.svg',
+      team_logo_dark: 'oilers-dark.svg',
+      team_logo_light: 'oilers-light.svg',
+      primary_color: '#ff4500',
+      text_color: '#ffffff',
+    }]);
     const res = await request(app).get('/api/admin/players/player-1');
     expect(res.status).toBe(200);
     expect(res.body.id).toBe('player-1');
+    expect(res.body).toMatchObject({
+      team_id: 'team-1',
+      team_code: 'EDM',
+      team_logo: 'oilers.svg',
+      team_logo_dark: 'oilers-dark.svg',
+      team_logo_light: 'oilers-light.svg',
+    });
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('latest_ti.logo AS team_logo');
+    expect(queryText).toContain('latest_ti.logo_dark AS team_logo_dark');
+    expect(queryText).toContain('latest_ti.logo_light AS team_logo_light');
+    expect(queryText).toContain('WHERE pt.player_id = p.id');
   });
 
   it('returns 404 when not found', async () => {
@@ -539,6 +867,29 @@ describe('POST /api/admin/players', () => {
       .send({ first_name: 'Wayne', last_name: 'Gretzky', position: 'C', shoots: 'L' });
     expect(res.status).toBe(201);
     expect(res.body.first_name).toBe('Wayne');
+  });
+
+  it('creates an inactive player when status is provided', async () => {
+    sql.mockResolvedValueOnce([{ ...PLAYER, status: 'inactive', is_active: false }]);
+    const res = await request(app).post('/api/admin/players')
+      .send({
+        first_name: 'Wayne',
+        last_name: 'Gretzky',
+        position: 'C',
+        shoots: 'L',
+        status: 'inactive',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe('inactive');
+    expect(sql.mock.calls[0][0].join(' ')).toContain('status, is_active');
+  });
+
+  it('returns 400 when status is invalid', async () => {
+    const res = await request(app).post('/api/admin/players')
+      .send({ first_name: 'Wayne', last_name: 'Gretzky', status: 'hurt' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/status/i);
+    expect(sql).not.toHaveBeenCalled();
   });
 
   it('returns 400 when first_name is missing', async () => {
@@ -655,6 +1006,7 @@ describe('PATCH /api/admin/players/:id/retire', () => {
   it('marks the player inactive and closes current stint records', async () => {
     const retiredPlayer = {
       ...PLAYER,
+      status: 'retired',
       is_active: false,
       retirement_date: '2025-06-30',
       retired_stint_id: 'career-stint-1',
@@ -670,6 +1022,7 @@ describe('PATCH /api/admin/players/:id/retire', () => {
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       id: 'player-1',
+      status: 'retired',
       is_active: false,
       retirement_date: '2025-06-30',
       retired_stint_id: 'career-stint-1',
@@ -679,7 +1032,7 @@ describe('PATCH /api/admin/players/:id/retire', () => {
 
     const queryText = sql.mock.calls[0][0].join(' ');
     expect(queryText).toContain('UPDATE players');
-    expect(queryText).toContain('SET is_active = FALSE');
+    expect(queryText).toContain("SET status = 'retired', is_active = FALSE");
     expect(queryText).toContain('player_team_stints');
     expect(queryText).toContain('player_teams');
     expect(queryText).toContain('SET end_date =');
@@ -714,6 +1067,62 @@ describe('PATCH /api/admin/players/:id/retire', () => {
 });
 
 // ---------------------------------------------------------------------------
+// PATCH /api/admin/players/:id/unretire
+// ---------------------------------------------------------------------------
+describe('PATCH /api/admin/players/:id/unretire', () => {
+  it('marks the player active and reopens latest closed stint records', async () => {
+    const unretiredPlayer = {
+      ...PLAYER,
+      status: 'active',
+      is_active: true,
+      unretired_stint_id: 'career-stint-1',
+      unretired_team_id: 'team-1',
+      unretired_player_team_id: 'player-team-1',
+      unretired_season_id: 'season-1',
+    };
+    sql.mockResolvedValueOnce([unretiredPlayer]);
+
+    const res = await request(app).patch('/api/admin/players/player-1/unretire')
+      .send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: 'player-1',
+      status: 'active',
+      is_active: true,
+      unretired_stint_id: 'career-stint-1',
+      unretired_player_team_id: 'player-team-1',
+    });
+    expect(sql).toHaveBeenCalledTimes(1);
+
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('UPDATE players');
+    expect(queryText).toContain("SET status = 'active', is_active = TRUE");
+    expect(queryText).toContain('player_team_stints');
+    expect(queryText).toContain('player_teams');
+    expect(queryText).toContain('SET end_date = NULL');
+  });
+
+  it('returns 404 when the player is not found', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app).patch('/api/admin/players/nope/unretire')
+      .send({});
+
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+
+    const res = await request(app).patch('/api/admin/players/player-1/unretire')
+      .send({});
+
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // PATCH /api/admin/players/:id
 // ---------------------------------------------------------------------------
 describe('PATCH /api/admin/players/:id', () => {
@@ -723,6 +1132,27 @@ describe('PATCH /api/admin/players/:id', () => {
       .send({ weight_lbs: 190 });
     expect(res.status).toBe(200);
     expect(res.body.weight_lbs).toBe(190);
+  });
+
+  it('updates player status and derived active flag', async () => {
+    sql.mockResolvedValueOnce([{ ...PLAYER, status: 'inactive', is_active: false }]);
+    const res = await request(app).patch('/api/admin/players/player-1')
+      .send({ status: 'inactive' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ status: 'inactive', is_active: false });
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('status        = CASE');
+    expect(queryText).toContain('is_active     = CASE');
+  });
+
+  it('returns 400 when updating to an invalid status', async () => {
+    const res = await request(app).patch('/api/admin/players/player-1')
+      .send({ status: 'injured' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/status/i);
+    expect(sql).not.toHaveBeenCalled();
   });
 
   it('returns 404 when not found', async () => {
@@ -763,4 +1193,3 @@ describe('DELETE /api/admin/players/:id', () => {
     expect(res.status).toBe(500);
   });
 });
-

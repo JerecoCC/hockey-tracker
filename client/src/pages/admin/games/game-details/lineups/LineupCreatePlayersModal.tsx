@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import Button from '@/components/Button/Button';
-import BulkCreateModal from '@/components/BulkCreateModal/BulkCreateModal';
-import Field from '@/components/Field/Field';
-import Icon from '@/components/Icon/Icon';
+import Button from '@jerecocc/tracker-ui/Button';
+import BulkCreateModal from '@jerecocc/tracker-ui/BulkCreateModal';
+import Field from '@jerecocc/tracker-ui/Field';
+import Icon from '@jerecocc/tracker-ui/Icon';
 import { type PlayerPosition } from '@/hooks/useLeaguePlayers';
 import styles from './LineupCreatePlayersModal.module.scss';
 
@@ -437,7 +437,6 @@ const LineupCreatePlayersModal = ({
                   type="button"
                   variant="outlined"
                   intent="warning"
-                  size="sm"
                   onClick={handleCreateAnyway}
                 >
                   Create Anyway

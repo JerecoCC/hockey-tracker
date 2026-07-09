@@ -24,6 +24,7 @@ app.use('/api/admin/games', gamesRouter);
 
 let selectRows = [];
 let selectError = null;
+const originalFetch = global.fetch;
 
 const makeSelectChain = () => {
   const chain = {
@@ -36,6 +37,23 @@ const makeSelectChain = () => {
     )),
   };
   return chain;
+};
+
+const sqlFragmentText = (fragment) => {
+  const seen = new WeakSet();
+  const walk = (value) => {
+    if (value == null) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (typeof value !== 'object') return '';
+    if (seen.has(value)) return '';
+    seen.add(value);
+    if (Array.isArray(value)) return value.map(walk).join(' ');
+    if (Array.isArray(value.queryChunks)) return value.queryChunks.map(walk).join(' ');
+    if (Array.isArray(value.value)) return value.value.map(walk).join(' ');
+    return Object.values(value).map(walk).join(' ');
+  };
+  return walk(fragment);
 };
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
@@ -64,6 +82,8 @@ const GAME = {
   game_number: null, game_number_in_series: null,
   playoff_round: null,
   playoff_round_names: null,
+  playoff_matchup_names: null,
+  bracket_slot_key: null,
   playoff_series_id: null, notes: null, created_at: new Date().toISOString(),
   home_last_five: [LAST_FIVE_GAME],
   away_last_five: [],
@@ -86,6 +106,10 @@ beforeEach(() => {
   selectRows = [];
   selectError = null;
   db.select.mockImplementation(() => makeSelectChain());
+});
+
+afterEach(() => {
+  global.fetch = originalFetch;
 });
 
 // ---------------------------------------------------------------------------
@@ -124,6 +148,32 @@ describe('GET /api/admin/games', () => {
     expect(db.select).toHaveBeenCalledTimes(1);
     expect(db.execute).not.toHaveBeenCalled();
     expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('uses the schedule date key for week filters', async () => {
+    selectRows = [GAME];
+    const res = await request(app)
+      .get('/api/admin/games?season_id=season-1&week=2026-01-01');
+
+    expect(res.status).toBe(200);
+    const chain = db.select.mock.results[0].value;
+    const whereText = sqlFragmentText(chain.where.mock.calls[0][0]);
+    expect(whereText).toContain('UTC');
+    expect(whereText).toContain('00:00:00');
+    expect(whereText).toContain('America/New_York');
+  });
+
+  it('uses the schedule date key for month filters', async () => {
+    selectRows = [GAME];
+    const res = await request(app)
+      .get('/api/admin/games?season_id=season-1&month=2026-01');
+
+    expect(res.status).toBe(200);
+    const chain = db.select.mock.results[0].value;
+    const whereText = sqlFragmentText(chain.where.mock.calls[0][0]);
+    expect(whereText).toContain('UTC');
+    expect(whereText).toContain('00:00:00');
+    expect(whereText).toContain('America/New_York');
   });
 
   it('rejects invalid week query values', async () => {
@@ -249,6 +299,29 @@ describe('GET /api/admin/games/:id', () => {
     expect(prevMeetingsSection).not.toMatch(/g2\.scheduled_at\s*<\s*g\.scheduled_at/);
   });
 
+  it('includes playoff matchup label fields for game details', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        ...GAME,
+        game_type: 'playoff',
+        playoff_round: 1,
+        bracket_slot_key: 'r1m0',
+        playoff_round_names: { 1: 'Semifinal' },
+        playoff_matchup_names: { r1m0: 'Eastern Semifinal' },
+      },
+    ]);
+
+    const res = await request(app).get('/api/admin/games/game-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.bracket_slot_key).toBe('r1m0');
+    expect(res.body.playoff_matchup_names).toEqual({ r1m0: 'Eastern Semifinal' });
+
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('ps2.bracket_slot_key AS bracket_slot_key');
+    expect(queryText).toContain('brs.matchup_names AS playoff_matchup_names');
+  });
+
   it('returns 404 when game not found', async () => {
     sql.mockResolvedValueOnce([]);
     const res = await request(app).get('/api/admin/games/nope');
@@ -292,6 +365,24 @@ describe('POST /api/admin/games', () => {
     expect(res.status).toBe(201);
     expect(res.body.id).toBe('game-1');
     expect(res.body.status).toBe('scheduled');
+  });
+
+  it('normalizes date-only scheduled_at values as Eastern-local timestamps', async () => {
+    sql
+      .mockResolvedValueOnce([])                    // duplicate check miss
+      .mockResolvedValueOnce([{ id: 'game-1' }])     // INSERT RETURNING id
+      .mockResolvedValueOnce([GAME]);                // SELECT re-fetch
+
+    const res = await request(app).post('/api/admin/games').send({
+      season_id: 'season-1',
+      home_team_id: 'team-1',
+      away_team_id: 'team-2',
+      scheduled_at: '2026-01-17',
+    });
+
+    expect(res.status).toBe(201);
+    expect(sql.mock.calls[0][0].join(' ')).toContain("AT TIME ZONE 'America/New_York'");
+    expect(sql.mock.calls[1].slice(1)).toContain('2026-01-17 00:00:00');
   });
 
   it('returns 409 for a duplicate matchup on the same date', async () => {
@@ -350,7 +441,17 @@ describe('POST /api/admin/games', () => {
 describe('PATCH /api/admin/games/:id', () => {
   it('updates a game and returns the updated record', async () => {
     sql
-      .mockResolvedValueOnce([{ id: 'game-1', playoff_series_id: null }]) // existence check
+      .mockResolvedValueOnce([{
+        id: 'game-1',
+        season_id: 'season-1',
+        home_team_id: 'team-1',
+        away_team_id: 'team-2',
+        scheduled_at: null,
+        playoff_series_id: null,
+        star_1_id: 'player-1',
+        star_2_id: 'player-2',
+        star_3_id: 'player-3',
+      }]) // existence check
       .mockResolvedValueOnce([])                             // UPDATE
       .mockResolvedValueOnce([{ playoff_series_id: null, home_team_id: 'team-1', away_team_id: 'team-2' }]) // final-status follow-up
       .mockResolvedValueOnce([{ ...GAME, status: 'final', home_score: 3, away_score: 2 }]); // re-fetch
@@ -361,12 +462,56 @@ describe('PATCH /api/admin/games/:id', () => {
     expect(res.body.home_score).toBe(3);
   });
 
+  it('requires all three stars before finalizing a game', async () => {
+    sql.mockResolvedValueOnce([{
+      id: 'game-1',
+      season_id: 'season-1',
+      home_team_id: 'team-1',
+      away_team_id: 'team-2',
+      scheduled_at: null,
+      playoff_series_id: null,
+      star_1_id: 'player-1',
+      star_2_id: 'player-2',
+      star_3_id: null,
+    }]);
+
+    const res = await request(app).patch('/api/admin/games/game-1')
+      .send({ status: 'final' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/three stars/i);
+    expect(sql).toHaveBeenCalledTimes(1);
+  });
+
   it('returns 404 when game not found', async () => {
     sql.mockResolvedValueOnce([]); // existence check → empty
     const res = await request(app).patch('/api/admin/games/nope')
       .send({ status: 'final' });
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/not found/i);
+  });
+
+  it('normalizes no-zone game timestamps as Eastern local time on update', async () => {
+    sql
+      .mockResolvedValueOnce([{
+        id: 'game-1',
+        season_id: 'season-1',
+        home_team_id: 'team-1',
+        away_team_id: 'team-2',
+        scheduled_at: null,
+        playoff_series_id: null,
+      }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([GAME]);
+
+    const res = await request(app).patch('/api/admin/games/game-1').send({
+      time_start: '2026-01-17T19:05:00',
+      time_end: '2026-01-18T02:42:00.000Z',
+    });
+
+    expect(res.status).toBe(200);
+    expect(sql.mock.calls[1].slice(1)).toContain('2026-01-17 19:05:00');
+    expect(sql.mock.calls[1].slice(1)).toContain('2026-01-18T02:42:00.000Z');
   });
 
   it('updates playoff round and game number in series when provided', async () => {
@@ -466,6 +611,11 @@ describe('GET /api/admin/games/playoff-series', () => {
     expect(queryText).toContain('ti.latest_season_id');
     expect(queryText).toContain('ss.start_date <= s.start_date');
     expect(queryText).toContain('ls.start_date >= s.start_date');
+    expect(queryText).toContain('brs.matchup_names AS playoff_matchup_names');
+    expect(queryText).toContain('ht.place_name AS home_team_place_name');
+    expect(queryText).toContain('ht.team_name AS home_team_team_name');
+    expect(queryText).toContain('at.place_name AS away_team_place_name');
+    expect(queryText).toContain('at.team_name AS away_team_team_name');
   });
 });
 
@@ -867,127 +1017,119 @@ describe('POST /api/admin/games/:id/roster', () => {
 // PUT /api/admin/games/:id/lineup
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/games/:id/lineup', () => {
-  it('joins player_teams by the game season to avoid cross-season duplicate lineup rows', async () => {
+  it('joins starting goalie metadata by the game season', async () => {
     sql
-      .mockResolvedValueOnce([{ home_team_id: 'home-1', away_team_id: 'away-1' }])
-      .mockResolvedValueOnce([{ team_id: 'home-1' }, { team_id: 'away-1' }])
+      .mockResolvedValueOnce([{ id: 'game-1' }])
       .mockResolvedValueOnce([]);
 
     const res = await request(app).get('/api/admin/games/game-1/lineup');
 
     expect(res.status).toBe(200);
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
-    expect(queries[2]).toMatch(/pt\.season_id = g\.season_id/);
-    expect(queries[2]).toMatch(/p\.date_of_birth/);
-    expect(queries[2]).toMatch(/player_team_stints/);
-    expect(queries[2]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
-    expect(queries[2]).toMatch(/acquisition_type/);
+    expect(queries[1]).toMatch(/home_starting_goalie_id/);
+    expect(queries[1]).toMatch(/away_starting_goalie_id/);
+    expect(queries[1]).toMatch(/pt\.season_id = slot\.season_id/);
+    expect(queries[1]).toMatch(/p\.date_of_birth/);
+    expect(queries[1]).toMatch(/player_team_stints/);
+    expect(queries[1]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
+    expect(queries[1]).toMatch(/acquisition_type/);
+    expect(queries.join(' ')).not.toMatch(/game_starting_lineup/);
   });
 
-  it('inherits from one previous saved lineup row before unpivoting slots', async () => {
+  it('returns only current game starting goalie rows', async () => {
     sql
-      .mockResolvedValueOnce([{ home_team_id: 'home-1', away_team_id: 'away-1' }])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ id: 'home-lineup-F1', team_id: 'home-1', inherited: true }])
-      .mockResolvedValueOnce([{ id: 'away-lineup-F1', team_id: 'away-1', inherited: true }]);
+      .mockResolvedValueOnce([{ id: 'game-1' }])
+      .mockResolvedValueOnce([{ id: 'game-1-home-G', team_id: 'home-1', inherited: false }]);
 
     const res = await request(app).get('/api/admin/games/game-1/lineup');
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([
-      { id: 'home-lineup-F1', team_id: 'home-1', inherited: true },
-      { id: 'away-lineup-F1', team_id: 'away-1', inherited: true },
-    ]);
+    expect(res.body).toEqual([{ id: 'game-1-home-G', team_id: 'home-1', inherited: false }]);
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
-    expect(queries[3]).toMatch(/target_game AS/);
-    expect(queries[3]).toMatch(/source_lineup AS/);
-    expect(queries[3]).toMatch(/LIMIT 1/);
-    expect(queries[3]).toMatch(/CROSS JOIN LATERAL \(VALUES/);
-    expect(queries[3]).not.toMatch(/LIMIT 6/);
+    expect(queries[1]).toMatch(/goalie_slots AS/);
+    expect(queries[1]).not.toMatch(/source_lineup AS/);
+    expect(queries[1]).not.toMatch(/CROSS JOIN LATERAL \(VALUES/);
   });
 });
 
 describe('PUT /api/admin/games/:id/lineup', () => {
-  it('returns 400 when the same player is used in multiple starting lineup slots', async () => {
+  it('returns 400 when a non-goalie starting slot is provided', async () => {
     const res = await request(app).put('/api/admin/games/game-1/lineup').send({
       team_id: 'team-1',
-      slots: [
-        { position_slot: 'F1', player_id: 'player-1' },
-        { position_slot: 'F2', player_id: 'player-1' },
-        { position_slot: 'F3', player_id: 'player-2' },
-        { position_slot: 'D1', player_id: 'player-3' },
-        { position_slot: 'D2', player_id: 'player-4' },
-        { position_slot: 'G', player_id: 'player-5' },
-      ],
+      slots: [{ position_slot: 'F1', player_id: 'player-1' }],
     });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/forward_1_id and forward_2_id must be different/i);
+    expect(res.body.error).toMatch(/only the g starting goalie slot is supported/i);
     expect(sql).not.toHaveBeenCalled();
   });
 
-  it('joins returned lineup player metadata by the game season', async () => {
+  it('joins returned starting goalie metadata by the game season', async () => {
     sql
-      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'game-1' }])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
 
     const res = await request(app).put('/api/admin/games/game-1/lineup').send({
       team_id: 'team-1',
-      slots: [
-        { position_slot: 'F1', player_id: 'player-1' },
-        { position_slot: 'F2', player_id: 'player-2' },
-      ],
+      slots: [{ position_slot: 'G', player_id: 'goalie-1' }],
     });
 
     expect(res.status).toBe(200);
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
-    expect(queries[2]).toMatch(/pt\.season_id = g\.season_id/);
+    expect(queries[2]).toMatch(/pt\.season_id = slot\.season_id/);
     expect(queries[2]).toMatch(/p\.date_of_birth/);
     expect(queries[2]).toMatch(/player_team_stints/);
     expect(queries[2]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
     expect(queries[2]).toMatch(/acquisition_type/);
+    expect(queries.join(' ')).not.toMatch(/game_starting_lineup/);
     expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
   });
 
-  it('does not save a consecutive unchanged starting lineup', async () => {
+  it('syncs a final game starting goalie stint when the lineup goalie changes', async () => {
     sql
-      .mockResolvedValueOnce([{
-        forward_1_id: 'forward-2',
-        forward_2_id: 'forward-1',
-        forward_3_id: 'forward-3',
-        defense_1_id: 'defense-2',
-        defense_2_id: 'defense-1',
-        goalie_id: 'goalie-1',
-      }])
+      .mockResolvedValueOnce([{ id: 'game-1' }])
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ id: 'lineup-previous-F1', inherited: true }]);
+      .mockResolvedValueOnce([{ id: 'lineup-G', position_slot: 'G', player_id: 'goalie-2' }]);
 
     const res = await request(app).put('/api/admin/games/game-1/lineup').send({
       team_id: 'team-1',
-      slots: [
-        { position_slot: 'F1', player_id: 'forward-1' },
-        { position_slot: 'F2', player_id: 'forward-2' },
-        { position_slot: 'F3', player_id: 'forward-3' },
-        { position_slot: 'D1', player_id: 'defense-1' },
-        { position_slot: 'D2', player_id: 'defense-2' },
-        { position_slot: 'G', player_id: 'goalie-1' },
-      ],
+      slots: [{ position_slot: 'G', player_id: 'goalie-2' }],
     });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual([{ id: 'lineup-previous-F1', inherited: true }]);
+    expect(res.body).toEqual([{ id: 'lineup-G', position_slot: 'G', player_id: 'goalie-2' }]);
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
-    expect(queries[1]).toMatch(/DELETE FROM game_starting_lineup/);
-    expect(queries.join(' ')).not.toMatch(/INSERT INTO game_starting_lineup/);
+    expect(queries[1]).toMatch(/UPDATE game_goalie_stints st/);
+    expect(queries[1]).toMatch(/g\.status = 'final'/);
+    expect(queries[1]).toMatch(/st\.stint_ord = 1/);
+    expect(queries[1]).toMatch(/st\.entered_period = '1'/);
+    expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
+  });
+
+  it('does not write legacy starting lineup rows', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'game-1' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'lineup-G', inherited: false }]);
+
+    const res = await request(app).put('/api/admin/games/game-1/lineup').send({
+      team_id: 'team-1',
+      slots: [{ position_slot: 'G', player_id: 'goalie-1' }],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([{ id: 'lineup-G', inherited: false }]);
+    const queries = sql.mock.calls.map((call) => call[0].join(' '));
+    expect(queries[0]).toMatch(/UPDATE games/);
+    expect(queries.join(' ')).not.toMatch(/game_starting_lineup/);
     expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
   });
 });
 
 describe('DELETE /api/admin/games/:id/lineup/:teamId', () => {
   it('clears a lineup and refreshes cached stats', async () => {
-    sql.mockResolvedValueOnce([{ id: 'lineup-1' }]);
+    sql.mockResolvedValueOnce([{ game_exists: true, changed: true }]);
 
     const res = await request(app).delete('/api/admin/games/game-1/lineup/team-1');
 
@@ -996,7 +1138,7 @@ describe('DELETE /api/admin/games/:id/lineup/:teamId', () => {
   });
 
   it('returns 404 when lineup not found', async () => {
-    sql.mockResolvedValueOnce([]);
+    sql.mockResolvedValueOnce([{ game_exists: true, changed: false }]);
 
     const res = await request(app).delete('/api/admin/games/game-1/lineup/team-1');
 
@@ -1050,5 +1192,35 @@ describe('GET /api/admin/games/:id/goalie-stints', () => {
     sql.mockRejectedValueOnce(new Error('DB down'));
     const res = await request(app).get('/api/admin/games/game-1/goalie-stints');
     expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/games/:id/goalie-stints/:stintId
+// ---------------------------------------------------------------------------
+describe('DELETE /api/admin/games/:id/goalie-stints/:stintId', () => {
+  it('deletes a goalie stint, returns refreshed goalie stats, and rebuilds stat snapshots', async () => {
+    sql
+      .mockResolvedValueOnce([{ team_id: 'team-1' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    mockSqlFragments(1); // goalieStintsCTE(id)
+    sql.mockResolvedValueOnce([GOALIE_STAT]);
+
+    const res = await request(app).delete('/api/admin/games/game-1/goalie-stints/stint-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([expect.objectContaining({ id: 'gs-1', shots_against: 30 })]);
+    expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
+  });
+
+  it('returns 404 without rebuilding stats when the goalie stint is missing', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app).delete('/api/admin/games/game-1/goalie-stints/missing-stint');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/stint not found/i);
+    expect(rebuildGameStats).not.toHaveBeenCalled();
   });
 });

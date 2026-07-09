@@ -1,4 +1,4 @@
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import type { LastFiveGame } from '@/hooks/useGames';
 import { DATE_FMT_SHORT, formatScheduledDate } from '../formatUtils';
 import { PERIOD_PAREN_SUFFIX } from '../constants';

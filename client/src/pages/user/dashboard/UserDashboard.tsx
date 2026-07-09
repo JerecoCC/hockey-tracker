@@ -1,24 +1,25 @@
-import { useMemo, useState } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import Button from '@/components/Button/Button';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import DatePicker from '@/components/DatePicker/DatePicker';
-import GameCard from '@/components/GameCard/GameCard';
-import UserGameActions from '@/components/GameCard/UserGameActions';
-import ListItem from '@/components/ListItem/ListItem';
-import Modal from '@/components/Modal/Modal';
-import Section from '@/components/Section/Section';
+import Button from '@jerecocc/tracker-ui/Button';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import DatePicker from '@jerecocc/tracker-ui/DatePicker';
+import GameCard from '@/shared/GameCard/GameCard';
+import UserGameActions from '@/shared/GameCard/UserGameActions';
+import ListItem from '@jerecocc/tracker-ui/ListItem';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import Section from '@jerecocc/tracker-ui/Section';
 import { useAuth } from '@/context/AuthContext';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
 import { type GameRecord } from '@/hooks/useGames';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import { buildUserWatchedTeamPath } from '@/lib/routeSlugs';
 import { getWatchedTeamSummaries, type TeamWatchSummary } from '@/lib/watchedTeams';
-import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import styles from './UserDashboard.module.scss';
+
+const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/ScoreImageModal'));
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
@@ -26,7 +27,7 @@ const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('toke
 const ADMIN_DATE_OVERRIDE_KEY = 'admin-dashboard-date-override';
 const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
 const ISO_DATE_PREFIX_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
-const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/;
+const ISO_MIDNIGHT_RE = /[T ]00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}(?::?[0-9]{2})?)?$/;
 
 type TzPref = 'ET' | 'local';
 const USER_TIMEZONE: TzPref = 'local';
@@ -117,13 +118,14 @@ const getScheduledInstant = (scheduledAt: string | null, scheduledTime: string |
 
 const getScheduledWatchDateKey = (value: string | null | undefined) => {
   if (!value) return null;
-  if (DATE_ONLY_RE.test(value)) return value;
-  return toLocalDateKey(value);
+  return getRawDateKey(value) ?? toLocalDateKey(value);
 };
 
 const getOriginalGameDateKey = (game: GameRecord, tzPref: TzPref) => {
-  if (game.scheduled_at && DATE_ONLY_RE.test(game.scheduled_at) && !game.scheduled_time) {
-    return game.scheduled_at;
+  if (game.scheduled_at && !game.scheduled_time) {
+    if (DATE_ONLY_RE.test(game.scheduled_at)) return game.scheduled_at;
+    const rawDateKey = getRawDateKey(game.scheduled_at);
+    if (rawDateKey && ISO_MIDNIGHT_RE.test(game.scheduled_at)) return rawDateKey;
   }
   const instant = getScheduledInstant(game.scheduled_at, game.scheduled_time);
   if (!instant) return null;
@@ -164,6 +166,8 @@ const getScoreCardGame = (game: GameRecord): GameRecord => ({
   series_home_wins: game.series_home_wins_at_game ?? null,
   series_away_wins: game.series_away_wins_at_game ?? null,
 });
+
+const canMarkGameWatched = (game: GameRecord) => game.status === 'final';
 
 const sortWatchedTeamSummaries = (a: TeamWatchSummary, b: TeamWatchSummary) => {
   if (b.count !== a.count) return b.count - a.count;
@@ -332,8 +336,13 @@ const UserDashboard = () => {
     }
   };
 
-  const markGameWatched = async (gameId: string) => {
+  const markGameWatched = async (game: GameRecord) => {
+    const gameId = game.id;
     if (actionGameId === gameId) return;
+    if (!canMarkGameWatched(game)) {
+      toast.error('Only final games can be marked as watched');
+      return;
+    }
     setActionGameId(gameId);
     try {
       await axios.post(
@@ -457,7 +466,7 @@ const UserDashboard = () => {
                     <Button
                       variant="ghost"
                       intent="neutral"
-                      size="sm"
+                      size="medium"
                       icon="close"
                       tooltip="Reset to today"
                       aria-label="Reset dashboard date to today"
@@ -477,6 +486,7 @@ const UserDashboard = () => {
                 {todayGames.map((game) => {
                   const watched = !!game.watched_by_user;
                   const skipped = !!game.skipped_by_user;
+                  const canMarkWatched = canMarkGameWatched(game);
                   const busy = actionGameId === game.id;
                   return (
                     <GameCard
@@ -490,10 +500,11 @@ const UserDashboard = () => {
                           watched={watched}
                           skipped={skipped}
                           scheduled={!!game.scheduled_for}
+                          canMarkWatched={canMarkWatched}
                           busy={busy}
                           onView={() => navigate(`/games/${game.id}`)}
                           onDownloadScoreCard={() => setScoreCardTarget(getScoreCardGame(game))}
-                          onMarkWatched={() => markGameWatched(game.id)}
+                          onMarkWatched={() => markGameWatched(game)}
                           onUnwatch={() => unwatchGame(game.id)}
                           onUndoSkip={() => unwatchGame(game.id)}
                           onSchedule={() => openScheduleModal(game)}
@@ -515,7 +526,7 @@ const UserDashboard = () => {
               <Button
                 variant="outlined"
                 intent="neutral"
-                size="sm"
+                size="medium"
                 icon="table_rows"
                 tooltip="View all games watched"
                 aria-label="View all games watched"
@@ -590,7 +601,7 @@ const UserDashboard = () => {
             />
             {scheduleDateInvalid && (
               <p className={styles.scheduleModalError}>
-                Choose a watch date after the game's scheduled date.
+                Choose a watch date after the scheduled game date.
               </p>
             )}
           </div>
@@ -620,15 +631,19 @@ const UserDashboard = () => {
         }}
       />
 
-      <ScoreImageModal
-        open={!!scoreCardTarget}
-        game={scoreCardTarget ?? undefined}
-        liveAwayScore={scoreCardTarget?.away_score}
-        liveHomeScore={scoreCardTarget?.home_score}
-        overtimeSuffix={scoreCardTarget ? getOvertimeSuffix(scoreCardTarget) : ''}
-        showForm={false}
-        onClose={() => setScoreCardTarget(null)}
-      />
+      {scoreCardTarget && (
+        <Suspense fallback={null}>
+          <ScoreImageModal
+            open
+            game={scoreCardTarget}
+            liveAwayScore={scoreCardTarget.away_score}
+            liveHomeScore={scoreCardTarget.home_score}
+            overtimeSuffix={getOvertimeSuffix(scoreCardTarget)}
+            showForm={false}
+            onClose={() => setScoreCardTarget(null)}
+          />
+        </Suspense>
+      )}
     </div>
   );
 };

@@ -1,8 +1,8 @@
-import Button from '@/components/Button/Button';
-import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
-import SearchableList from '@/components/SearchableList/SearchableList';
-import Section from '@/components/Section/Section';
-import Skeleton from '@/components/Skeleton/Skeleton';
+import Button from '@jerecocc/tracker-ui/Button';
+import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/ListItem';
+import SearchableList from '@jerecocc/tracker-ui/SearchableList';
+import Section from '@jerecocc/tracker-ui/Section';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
 import { buildTeamDetailsPath } from '@/lib/routeSlugs';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import {
@@ -31,7 +31,7 @@ const LeagueTeamsTab = (props: Props) => {
         action={
           <Button
             icon="add"
-            size="sm"
+            size="medium"
             onClick={onAddTeam}
           >
             Create Team

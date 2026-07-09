@@ -38,18 +38,21 @@ const authHeaders = () => {
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-const useLeagueDetails = (id: string | undefined) => {
+type LeagueDetailsMode = 'admin' | 'user';
+
+const useLeagueDetails = (id: string | undefined, options: { mode?: LeagueDetailsMode } = {}) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const mode = options.mode ?? 'admin';
+  const basePath = mode === 'user' ? 'user' : 'admin';
 
   const { data, isLoading: loading } = useQuery({
-    queryKey: ['leagues', id],
+    queryKey: [mode === 'user' ? 'user-league-details' : 'leagues', id],
     queryFn: async () => {
       try {
-        const { data } = await axios.get<LeagueDetailsRecord>(
-          `${API}/admin/leagues/${id}`,
-          { headers: authHeaders() },
-        );
+        const { data } = await axios.get<LeagueDetailsRecord>(`${API}/${basePath}/leagues/${id}`, {
+          headers: authHeaders(),
+        });
         return data;
       } catch (err) {
         toast.error(apiError(err, 'Failed to load league'));
@@ -62,8 +65,7 @@ const useLeagueDetails = (id: string | undefined) => {
   const teams: TeamRecord[] = data?.teams ?? [];
   const seasons: LeagueSeasonRecord[] = data?.seasons ?? [];
   const league: LeagueFullRecord | null = useMemo(
-    () =>
-      data ? (({ teams: _t, seasons: _s, ...rest }) => rest as LeagueFullRecord)(data) : null,
+    () => (data ? (({ teams: _t, seasons: _s, ...rest }) => rest as LeagueFullRecord)(data) : null),
     [data],
   );
 
@@ -71,11 +73,9 @@ const useLeagueDetails = (id: string | undefined) => {
     const formData = new FormData();
     formData.append('logo', file);
     try {
-      const { data } = await axios.post<{ url: string }>(
-        `${API}/admin/leagues/upload`,
-        formData,
-        { headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' } },
-      );
+      const { data } = await axios.post<{ url: string }>(`${API}/admin/leagues/upload`, formData, {
+        headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' },
+      });
       return data.url;
     } catch (err) {
       toast.error(apiError(err, 'Failed to upload logo'));
@@ -87,11 +87,9 @@ const useLeagueDetails = (id: string | undefined) => {
     const formData = new FormData();
     formData.append('logo', file);
     try {
-      const { data } = await axios.post<{ url: string }>(
-        `${API}/admin/teams/upload`,
-        formData,
-        { headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' } },
-      );
+      const { data } = await axios.post<{ url: string }>(`${API}/admin/teams/upload`, formData, {
+        headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' },
+      });
       return data.url;
     } catch (err) {
       toast.error(apiError(err, 'Failed to upload logo'));
@@ -120,7 +118,9 @@ const useLeagueDetails = (id: string | undefined) => {
 
   const addTeam = async (payload: CreateTeamData): Promise<string | null> => {
     try {
-      const { data } = await axios.post<TeamRecord>(`${API}/admin/teams`, payload, { headers: authHeaders() });
+      const { data } = await axios.post<TeamRecord>(`${API}/admin/teams`, payload, {
+        headers: authHeaders(),
+      });
       toast.success('Team created!');
       await queryClient.invalidateQueries({ queryKey: ['leagues', id] });
       await queryClient.invalidateQueries({ queryKey: ['teams'] });
@@ -175,7 +175,10 @@ const useLeagueDetails = (id: string | undefined) => {
     }
   };
 
-  const updateSeason = async (seasonId: string, payload: Partial<CreateSeasonData>): Promise<boolean> => {
+  const updateSeason = async (
+    seasonId: string,
+    payload: Partial<CreateSeasonData>,
+  ): Promise<boolean> => {
     setBusy(seasonId);
     try {
       await axios.patch(`${API}/admin/seasons/${seasonId}`, payload, { headers: authHeaders() });
@@ -205,7 +208,22 @@ const useLeagueDetails = (id: string | undefined) => {
     }
   };
 
-  return { league, teams, seasons, loading, busy, uploadLogo, uploadTeamLogo, updateLeague, addTeam, updateTeam, deleteTeam, addSeason, updateSeason, deleteSeason };
+  return {
+    league,
+    teams,
+    seasons,
+    loading,
+    busy,
+    uploadLogo,
+    uploadTeamLogo,
+    updateLeague,
+    addTeam,
+    updateTeam,
+    deleteTeam,
+    addSeason,
+    updateSeason,
+    deleteSeason,
+  };
 };
 
 export default useLeagueDetails;

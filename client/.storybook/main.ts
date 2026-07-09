@@ -23,7 +23,9 @@ const config: StorybookConfig = {
         scss: {
           ...(viteConfig.css?.preprocessorOptions?.scss ?? {}),
           api: 'modern-compiler',
-          loadPaths: [path.resolve(__dirname, '../src')],
+          loadPaths: [
+            path.resolve(__dirname, '../src'),
+          ],
         },
       },
     },

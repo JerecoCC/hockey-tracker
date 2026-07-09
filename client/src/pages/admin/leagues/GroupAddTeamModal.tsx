@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import Button from '@/components/Button/Button';
-import Modal from '@/components/Modal/Modal';
-import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
+import Button from '@jerecocc/tracker-ui/Button';
+import Checklist from '@jerecocc/tracker-ui/Checklist';
+import Modal from '@jerecocc/tracker-ui/Modal';
 import { type GroupRecord } from '@/hooks/useLeagueGroups';
 import { type TeamRecord } from '@/hooks/useTeams';
 import styles from './LeagueDetails.module.scss';
@@ -53,27 +53,22 @@ const GroupAddTeamModal = (props: Props) => {
       title={title}
       onClose={onClose}
     >
-      {unassignedTeams.length === 0 ? (
-        <p className={styles.teamsEmpty}>
-          All teams in this league are already assigned to a group.
-        </p>
-      ) : (
-        <ul className={styles.teamSelectList}>
-          {unassignedTeams.map((t) => (
-            <SelectableListItem
-              key={t.id}
-              checked={selectedIds.has(t.id)}
-              onToggle={() => toggle(t.id)}
-              image={t.logo}
-              imageDark={t.logo_dark}
-              imageLight={t.logo_light}
-              imagePlaceholder={t.code.slice(0, 3)}
-              name={t.name}
-              rightContent={<span className={styles.seasonListDates}>{t.code}</span>}
-            />
-          ))}
-        </ul>
-      )}
+      <Checklist
+        options={unassignedTeams.map((team) => ({
+          id: team.id,
+          image: team.logo,
+          imageDark: team.logo_dark,
+          imageLight: team.logo_light,
+          imagePlaceholder: team.code.slice(0, 3),
+          name: team.name,
+          rightContent: <span className={styles.seasonListDates}>{team.code}</span>,
+        }))}
+        selectedIds={selectedIds}
+        onToggle={(option) => toggle(option.id)}
+        listClassName={styles.teamSelectList}
+        emptyClassName={styles.teamsEmpty}
+        emptyMessage="All teams in this league are already assigned to a group."
+      />
 
       <div className={styles.formActions}>
         <Button

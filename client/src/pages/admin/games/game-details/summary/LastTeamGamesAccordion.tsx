@@ -1,6 +1,6 @@
-import Accordion from '@/components/Accordion/Accordion';
-import Tooltip from '@/components/Tooltip/Tooltip';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Accordion from '@jerecocc/tracker-ui/Accordion';
+import Tooltip from '@jerecocc/tracker-ui/Tooltip';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import type { LastFiveGame } from '@/hooks/useGames';
 import { buildFormRecord } from '../gameUtils';
 import LastGameList from './LastGameList';
@@ -41,6 +41,7 @@ export default function LastTeamGamesAccordion({
   return (
     <Accordion
       variant="static"
+      headerType="light"
       label={
         <span className={styles.lastFiveTeamHeader}>
           <TeamLogo

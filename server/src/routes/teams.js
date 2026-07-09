@@ -196,6 +196,80 @@ router.get('/:id', async (req, res) => {
 // ---------------------------------------------------------------------------
 // POST /api/admin/teams  – create a team + auto-create its base iteration
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// GET /api/admin/teams/:id/awards - winner awards for one team.
+// ---------------------------------------------------------------------------
+router.get('/:id/awards', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      SELECT
+        sar.id,
+        la.id AS award_id,
+        sa.id AS season_award_id,
+        la.name AS award_name,
+        la.description AS award_description,
+        la.competition_scope,
+        la.stat_key,
+        s.id AS season_id,
+        s.name AS season_name,
+        sa.awarded_at::text AS awarded_at,
+        t.id AS team_id,
+        ti.name AS team_name,
+        ti.place_name AS team_place_name,
+        ti.team_name AS team_team_name,
+        ti.code AS team_code,
+        ti.logo AS team_logo,
+        ti.logo_dark AS team_logo_dark,
+        ti.logo_light AS team_logo_light,
+        t.primary_color AS team_primary_color,
+        t.secondary_color AS team_secondary_color,
+        t.text_color AS team_text_color
+      FROM season_award_recipients sar
+      JOIN season_awards sa ON sa.id = sar.season_award_id
+      JOIN league_awards la ON la.id = sa.award_id
+      JOIN seasons s ON s.id = sa.season_id
+      LEFT JOIN teams t ON t.id = sar.team_id
+      LEFT JOIN LATERAL (
+        SELECT
+          name,
+          place_name,
+          team_name,
+          code,
+          team_logo_default(logo_dark, logo_light) AS logo,
+          team_logo_dark(logo_dark, logo_light) AS logo_dark,
+          team_logo_light(logo_dark, logo_light) AS logo_light
+        FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(sa.awarded_at, s.end_date, s.start_date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(sa.awarded_at, s.start_date, CURRENT_DATE))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) ti ON TRUE
+      WHERE sar.recipient_type = 'team'
+        AND sar.role = 'winner'
+        AND sar.team_id = ${id}
+      ORDER BY
+        s.start_date DESC NULLS LAST,
+        s.created_at DESC,
+        la.sort_order ASC,
+        la.name ASC,
+        sar.id ASC
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('team awards error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.post('/', async (req, res) => {
   const {
     code, description, location, city, home_arena,

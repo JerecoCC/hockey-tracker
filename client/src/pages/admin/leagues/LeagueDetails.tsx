@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
 import LeagueAlignmentsTab, { LeagueAlignmentsTabSkeleton } from './LeagueAlignmentsTab';
 import LeagueAwardsTab, { LeagueAwardsTabSkeleton } from './LeagueAwardsTab';
 import LeagueEditModal from './LeagueEditModal';
@@ -13,8 +13,8 @@ import BulkAddPlayersModal from './BulkAddPlayersModal';
 import PlayerFormModal from './PlayerFormModal';
 import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
 import SeasonFormModal from '../seasons/SeasonFormModal';
-import Skeleton from '@/components/Skeleton/Skeleton';
-import Tabs from '@/components/Tabs/Tabs';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
+import Tabs from '@jerecocc/tracker-ui/Tabs';
 import TeamFormModal from '../teams/TeamFormModal';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
@@ -90,11 +90,9 @@ const LeagueDetailsPage = () => {
   const [playerModalOpen, setPlayerModalOpen] = useState(false);
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
   const [editTargetPlayer, setEditTargetPlayer] = useState<PlayerRecord | null>(null);
-  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
   const [playersPage, setPlayersPage] = useState(1);
   const [playersSearch, setPlayersSearch] = useState('');
-  const [playersRookiesOnly, setPlayersRookiesOnly] = useState(false);
-  const [playersIncludeRetired, setPlayersIncludeRetired] = useState(false);
+  const [playersWarningsOnly, setPlayersWarningsOnly] = useState(false);
 
   usePageBreadcrumbs(
     leagueLoading
@@ -136,13 +134,6 @@ const LeagueDetailsPage = () => {
     navigate('/admin/leagues', { replace: true });
   }, [league, leagueLoading, navigate]);
 
-  useEffect(() => {
-    if (selectedSeasonId === null && seasons.length > 0) {
-      const current = seasons.find((s) => s.is_current);
-      setSelectedSeasonId(current?.id ?? seasons[0].id);
-    }
-  }, [seasons.length]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const {
     players,
     total: playersTotal,
@@ -153,13 +144,14 @@ const LeagueDetailsPage = () => {
     bulkAddPlayers,
     updatePlayer,
     deletePlayer,
-  } = useLeaguePlayers(id, selectedSeasonId ?? undefined, {
+  } = useLeaguePlayers(id, undefined, {
     page: playersPage,
     pageSize: PLAYERS_PAGE_SIZE,
     search: playersSearch,
-    rookiesOnly: playersRookiesOnly,
-    includeRetired: playersIncludeRetired,
+    includeInactive: true,
     includeProspects: true,
+    recentSeasons: 5,
+    warningsOnly: playersWarningsOnly,
   });
   const leagueContextValue = useMemo(
     () =>
@@ -176,10 +168,7 @@ const LeagueDetailsPage = () => {
               page: playersPage,
               pageSize: PLAYERS_PAGE_SIZE,
               search: playersSearch,
-              seasons,
-              selectedSeasonId,
-              rookiesOnly: playersRookiesOnly,
-              includeRetiredPlayers: playersIncludeRetired,
+              warningsOnly: playersWarningsOnly,
               loading: playersLoading,
               fetching: playersFetching,
               busy: playerBusy,
@@ -188,17 +177,9 @@ const LeagueDetailsPage = () => {
                 setPlayersPage(1);
                 setPlayersSearch(query);
               },
-              onSeasonChange: (seasonId: string) => {
+              onWarningsOnlyChange: (warningsOnly: boolean) => {
                 setPlayersPage(1);
-                setSelectedSeasonId(seasonId);
-              },
-              onRookiesOnlyChange: (active: boolean) => {
-                setPlayersPage(1);
-                setPlayersRookiesOnly(active);
-              },
-              onIncludeRetiredPlayersChange: (active: boolean) => {
-                setPlayersPage(1);
-                setPlayersIncludeRetired(active);
+                setPlayersWarningsOnly(warningsOnly);
               },
               onAdd: () => {
                 setEditTargetPlayer(null);
@@ -248,16 +229,14 @@ const LeagueDetailsPage = () => {
       loading,
       navigate,
       playerBusy,
-      playersIncludeRetired,
       players,
       playersFetching,
       playersLoading,
       playersPage,
-      playersRookiesOnly,
       playersSearch,
       playersTotal,
+      playersWarningsOnly,
       seasons,
-      selectedSeasonId,
       teams,
     ],
   );
@@ -284,14 +263,14 @@ const LeagueDetailsPage = () => {
             content: <LeagueTeamsTabSkeleton />,
           },
           {
-            label: 'Alignments',
-            icon: 'account_tree',
-            content: <LeagueAlignmentsTabSkeleton />,
-          },
-          {
             label: 'Players',
             icon: 'groups',
             content: <LeaguePlayersTabSkeleton />,
+          },
+          {
+            label: 'Alignments',
+            icon: 'account_tree',
+            content: <LeagueAlignmentsTabSkeleton />,
           },
           {
             label: 'Playoffs',
@@ -344,14 +323,14 @@ const LeagueDetailsPage = () => {
               content: <LeagueTeamsTab />,
             },
             {
-              label: 'Alignments',
-              icon: 'account_tree',
-              content: <LeagueAlignmentsTab />,
-            },
-            {
               label: 'Players',
               icon: 'groups',
               content: <LeaguePlayersTab />,
+            },
+            {
+              label: 'Alignments',
+              icon: 'account_tree',
+              content: <LeagueAlignmentsTab />,
             },
             {
               label: 'Playoffs',

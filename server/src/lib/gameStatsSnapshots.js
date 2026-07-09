@@ -527,6 +527,19 @@ async function insertGamePlayerStats(sql, gameId) {
       FROM stints_resolved
       ORDER BY game_id, team_id, stint_ord DESC
     ),
+    goalie_scoring_stats AS (
+      SELECT
+        gg.game_id,
+        gg.team_id,
+        gg.goalie_id,
+        COUNT(gl.id) FILTER (WHERE gl.scorer_id = gg.goalie_id AND gl.goal_type != 'own')::int AS goals,
+        COUNT(gl.id) FILTER (WHERE gl.assist_1_id = gg.goalie_id OR gl.assist_2_id = gg.goalie_id)::int AS assists
+      FROM goalie_game gg
+      LEFT JOIN goals gl
+        ON gl.game_id = gg.game_id
+       AND gl.team_id = gg.team_id
+      GROUP BY gg.game_id, gg.team_id, gg.goalie_id
+    ),
     goalie_stats AS (
       SELECT
         gg.game_id,
@@ -538,8 +551,8 @@ async function insertGamePlayerStats(sql, gameId) {
         'G'::text AS position,
         true AS is_goalie,
         gg.is_home,
-        0::int AS goals,
-        0::int AS assists,
+        COALESCE(gss.goals, 0)::int AS goals,
+        COALESCE(gss.assists, 0)::int AS assists,
         gg.shots_against,
         gg.goals_against,
         (gg.shots_against - gg.save_goals_against)::int AS saves,
@@ -558,6 +571,10 @@ async function insertGamePlayerStats(sql, gameId) {
       LEFT JOIN game_team_stats gts
         ON gts.game_id = gg.game_id
        AND gts.team_id = gg.team_id
+      LEFT JOIN goalie_scoring_stats gss
+        ON gss.game_id = gg.game_id
+       AND gss.team_id = gg.team_id
+       AND gss.goalie_id = gg.goalie_id
     ),
     combined_stats AS (
       SELECT

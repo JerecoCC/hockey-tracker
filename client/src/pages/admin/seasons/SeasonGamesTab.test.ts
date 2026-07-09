@@ -4,6 +4,7 @@ import {
   toEasternDateKey,
   weekBelongsToCalendarMonth,
 } from './seasonDateUtils';
+import { partitionAutofillingGames } from './seasonGamesAutofillUtils';
 
 const dateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -18,6 +19,10 @@ describe('season games date keys', () => {
 
   it('keeps midnight placeholder scheduled dates on their stored ET calendar day', () => {
     expect(toEasternDateKey('2025-12-01T00:00:00.000Z')).toBe('2025-12-01');
+  });
+
+  it('keeps Postgres midnight placeholder scheduled dates on their stored ET calendar day', () => {
+    expect(toEasternDateKey('2026-04-18 00:00:00+00')).toBe('2026-04-18');
   });
 
   it('uses the ET day for real scheduled instants', () => {
@@ -44,5 +49,24 @@ describe('season games view date sync', () => {
 
   it('detects when the calendar month moved away from the selected week', () => {
     expect(weekBelongsToCalendarMonth(new Date(2026, 0, 28), new Date(2026, 1, 1))).toBe(false);
+  });
+});
+
+describe('season games auto-fill placeholders', () => {
+  it('keeps revealed games first and returns one loading game per auto-filling id', () => {
+    const games = [
+      { id: 'already-visible' },
+      { id: 'loading-1' },
+      { id: 'also-visible' },
+      { id: 'loading-2' },
+    ];
+
+    const { revealedGames, loadingGames } = partitionAutofillingGames(
+      games,
+      new Set(['loading-1', 'loading-2']),
+    );
+
+    expect(revealedGames.map((game) => game.id)).toEqual(['already-visible', 'also-visible']);
+    expect(loadingGames.map((game) => game.id)).toEqual(['loading-1', 'loading-2']);
   });
 });

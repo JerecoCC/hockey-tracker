@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import Modal from '@/components/Modal/Modal';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import Select from '@/components/Select/Select';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
+import Select from '@jerecocc/tracker-ui/Select';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type PostAttemptData, type PutAttemptData } from '@/hooks/useShootoutAttempts';

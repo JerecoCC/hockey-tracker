@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@/components/Field/Field';
-import Modal from '@/components/Modal/Modal';
+import Field from '@jerecocc/tracker-ui/Field';
+import Modal from '@jerecocc/tracker-ui/Modal';
 import { type GameRecord, type GameType, type UpdateGameInfoData } from '@/hooks/useGames';
 import styles from './GameDetailsPage.module.scss';
 import { etHHMMtoISO, isoToETHHMM, scheduledDateInputValue } from './formatUtils';
@@ -25,6 +25,7 @@ type FormValues = {
   game_type: GameType;
   playoff_round: string;
   game_number_in_series: string;
+  league_game_number: string;
   time_start: string;
   time_end: string;
 };
@@ -48,6 +49,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
       playoff_round: game.playoff_round != null ? String(game.playoff_round) : '',
       game_number_in_series:
         game.game_number_in_series != null ? String(game.game_number_in_series) : '',
+      league_game_number: game.league_game_number ?? '',
       time_start: game.time_start ? isoToETHHMM(game.time_start) : '',
       time_end: game.time_end ? isoToETHHMM(game.time_end) : '',
     }),
@@ -113,6 +115,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
             ? Number(data.game_number_in_series)
             : null
           : undefined,
+      league_game_number: data.league_game_number.trim() || null,
       time_start: startISO,
       time_end: endISO,
     });
@@ -180,7 +183,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
           </>
         )}
         <Field
-          label="Date"
+          label="Scheduled Date"
           type="datepicker"
           control={control}
           name="scheduled_date"
@@ -223,6 +226,15 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
             control={control}
             name="venue"
             placeholder="e.g. Scotiabank Arena"
+            disabled={isSubmitting || disabled}
+          />
+        </div>
+        <div className={styles.formFieldFull}>
+          <Field
+            label="League Game Number"
+            control={control}
+            name="league_game_number"
+            placeholder="e.g. 210"
             disabled={isSubmitting || disabled}
           />
         </div>

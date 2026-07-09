@@ -1,10 +1,11 @@
-import Button from '@/components/Button/Button';
-import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
-import Section from '@/components/Section/Section';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Button from '@jerecocc/tracker-ui/Button';
+import MoreActionsMenu from '@jerecocc/tracker-ui/MoreActionsMenu';
+import Section from '@jerecocc/tracker-ui/Section';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import type { GameRecord } from '@/hooks/useGames';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import { PERIOD, PERIOD_IDS, otPeriodId } from '../constants';
+import { GAME_AUTOFILL_ACTION_ICON } from '../gameAutofillTypes';
 import styles from '../GameDetailsPage.module.scss';
 
 interface LinescorePeriod {
@@ -22,7 +23,7 @@ interface Props {
   linescorePeriods: LinescorePeriod[];
   attempts: ShootoutAttempt[];
   rosterReady: boolean;
-  lineupsReady: boolean;
+  startingGoaliesReady: boolean;
   /** True when the End Game button should be shown (in-progress + period/score conditions met). */
   canEndGame: boolean;
   // ── Action callbacks ──
@@ -43,7 +44,7 @@ const LinescoreCard = ({
   linescorePeriods,
   attempts,
   rosterReady,
-  lineupsReady,
+  startingGoaliesReady,
   canEndGame,
   onStartGame,
   onAutofillGame,
@@ -91,9 +92,9 @@ const LinescoreCard = ({
             <Button
               variant="outlined"
               intent="info"
-              icon="sports_hockey"
-              size="sm"
-              tooltip="Auto-fill NHL game"
+              icon={GAME_AUTOFILL_ACTION_ICON}
+              size="medium"
+              tooltip="Auto-fill game"
               disabled={!!busy}
               onClick={onAutofillGame}
             />
@@ -104,20 +105,21 @@ const LinescoreCard = ({
                 variant="filled"
                 intent="success"
                 icon="play_arrow"
-                size="sm"
+                size="medium"
                 tooltip={
                   !rosterReady
-                    ? 'Set lineups for both teams first'
-                    : !lineupsReady
-                      ? 'Set starting lineups for both teams'
+                    ? 'Add game rosters for both teams first'
+                    : !startingGoaliesReady
+                      ? 'Set starting goalies for both teams'
                       : 'Start Game'
                 }
-                tooltipIntent={rosterReady && lineupsReady ? undefined : 'error'}
-                disabled={!!busy || !rosterReady || !lineupsReady}
+                tooltipIntent={rosterReady && startingGoaliesReady ? undefined : 'error'}
+                disabled={!!busy || !rosterReady || !startingGoaliesReady}
                 onClick={onStartGame}
               />
               <MoreActionsMenu
                 disabled={!!busy}
+                size="medium"
                 items={[
                   { label: 'Reschedule Game', icon: 'calendar', onClick: onReschedule },
                   { label: 'Delete Game', icon: 'delete', intent: 'danger', onClick: onDelete },
@@ -130,7 +132,7 @@ const LinescoreCard = ({
               variant="filled"
               intent="danger"
               icon="flag"
-              size="sm"
+              size="medium"
               tooltip="End Game"
               disabled={!!busy}
               onClick={onEndGame}
@@ -141,7 +143,7 @@ const LinescoreCard = ({
               variant="outlined"
               intent="neutral"
               icon="download"
-              size="sm"
+              size="medium"
               tooltip="Download score card"
               onClick={onDownloadScoreCard}
             />
@@ -149,6 +151,7 @@ const LinescoreCard = ({
           {game.status !== 'scheduled' && onDelete && (
             <MoreActionsMenu
               disabled={!!busy}
+              size="medium"
               items={[
                 {
                   label: 'Delete Game',

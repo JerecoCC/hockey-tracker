@@ -1,0 +1,76 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.intro {
+  margin: 0;
+  color: var(--app-text-muted, #{$text-dim});
+}
+
+.games {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.gameAccordion {
+  overflow: hidden;
+}
+
+.gameAccordionBody {
+  padding: $space-md;
+}
+
+.gameHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  min-width: 0;
+
+  strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.gameBody {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.reportSection {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+
+  h4 {
+    margin: 0;
+    color: var(--app-text, #{$text-body});
+    font-size: $font-sm;
+    font-weight: 700;
+  }
+}
+
+.playerCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+
+  strong,
+  span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  span {
+    color: var(--app-text-muted, #{$text-dim});
+    font-size: $font-sm;
+  }
+}

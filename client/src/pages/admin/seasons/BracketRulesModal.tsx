@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import BorderedFieldset from '@/components/BorderedFieldset/BorderedFieldset';
-import Button from '@/components/Button/Button';
-import Field from '@/components/Field/Field';
-import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
-import Modal from '@/components/Modal/Modal';
-import Select from '@/components/Select/Select';
-import ToggleButton from '@/components/ToggleButton/ToggleButton';
+import BorderedFieldset from '@jerecocc/tracker-ui/BorderedFieldset';
+import Button from '@jerecocc/tracker-ui/Button';
+import Field from '@jerecocc/tracker-ui/Field';
+import InfoTooltip from '@jerecocc/tracker-ui/InfoTooltip';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import Select from '@jerecocc/tracker-ui/Select';
+import ToggleButton from '@jerecocc/tracker-ui/ToggleButton';
 /** Minimal group shape used for scope filtering — satisfied by both SeasonGroupRecord and GroupRecord. */
 export interface GroupEntry {
   id: string;
@@ -353,7 +353,6 @@ const PoolEditor = ({ control, slotIndex, groups }: PoolEditorProps) => {
         variant="outlined"
         intent="neutral"
         icon="add"
-        size="sm"
         onClick={() => append({ rank: '1', scope: 'league', groupId: '' })}
       >
         Add position

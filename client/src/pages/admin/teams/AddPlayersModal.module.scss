@@ -1,48 +1,17 @@
 @use 'styles/colors' as *;
 @use 'styles/mixins' as *;
 
-.controls {
-  display: flex;
-  gap: $space-md;
-  margin-bottom: $space-lg;
-  align-items: center;
-
-  @media (max-width: $bp-tablet) {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  &Gap {
-    margin-top: $space-xl;
-  }
+.rosterBody {
+  overflow-y: hidden;
+  padding-bottom: 0;
 }
-
-.searchWrap {
-  flex: 1;
-}
-
-.list {
-  --selectable-list-item-image-size: 48px;
-  --selectable-list-item-image-font-size: #{$font-base};
-
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-height: min(70vh, 680px);
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
 .jersey {
   &Wrap {
     align-self: center;
     display: flex;
     align-items: center;
-    gap: $space-xs;
+    gap: $space-sm;
     flex-shrink: 0;
-    height: 30px;
   }
 
   &Label {
@@ -51,36 +20,19 @@
     white-space: nowrap;
   }
 
+  &Field {
+    flex: 0 0 3.25rem;
+  }
+
   &Input {
-    width: 42px;
-    height: 30px;
-    background: $bg-input;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    padding: 0;
-    font-size: $font-base;
+    box-sizing: border-box;
+    width: 100%;
+    padding-inline: $space-sm;
     font-weight: 700;
-    color: var(--app-text, #{$text-body});
-    outline: none;
     text-align: center;
 
-    &:focus {
-      border-color: $accent;
+    &::placeholder {
+      font-weight: 400;
     }
-
-    &::-webkit-outer-spin-button,
-    &::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-    }
-
-    -moz-appearance: textfield;
   }
-}
-
-.empty {
-  font-size: $font-base;
-  color: var(--app-text-muted, #{$text-dim});
-  font-style: italic;
-  text-align: center;
-  padding: $space-2xl 0;
 }

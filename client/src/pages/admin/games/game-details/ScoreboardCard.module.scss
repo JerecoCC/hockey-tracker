@@ -12,36 +12,11 @@ $scoreboard-stripe-overlap: 8px;
 // Default: normal in-place card appearance.
 .scoreboard {
   &Card {
-    --scoreboard-main-inline-padding: var(--main-inline-padding, #{$space-4xl});
-    --scoreboard-main-inline-padding-offset: var(--main-inline-padding-offset, -#{$space-4xl});
-
-    position: sticky;
-    top: 52px;
-    z-index: 4;
-    width: 100%;
-    overflow: hidden;
-    margin-inline: 0;
-    margin-bottom: $space-lg;
-    transition:
-      border-color $transition-layout ease,
-      border-radius $transition-layout ease,
-      box-shadow $transition-layout ease,
-      margin-inline $transition-layout ease,
-      width $transition-layout ease;
-
-    @media (max-width: $bp-tablet) {
-      position: static;
-      top: auto;
-      z-index: auto;
-    }
+    min-width: 0;
   }
 
   &CardStuck {
-    width: calc(100% + var(--scoreboard-main-inline-padding) + var(--scoreboard-main-inline-padding));
-    margin-inline: var(--scoreboard-main-inline-padding-offset);
-    border-radius: 0 0 $radius-lg $radius-lg !important;
-    border-color: transparent !important;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    min-width: 0;
   }
 
   display: flex;
@@ -343,6 +318,12 @@ $scoreboard-stripe-overlap: 8px;
   &LogoResponsive {
     width: 60px !important;
     height: 60px !important;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.18));
+    transition: filter $scoreboard-logo-duration ease;
+
+    img {
+      filter: none;
+    }
 
     @media (max-width: 900px) {
       width: 40px !important;
@@ -395,13 +376,22 @@ $scoreboard-stripe-overlap: 8px;
   }
 }
 
-// The place name also switches to the team's own text colour.
+// Team identity text switches to the team's own text colour when the card is stuck.
 // A shadow is applied only when the JS-computed contrast ratio is too low
 // (--team-text-shadow is 'transparent' when contrast is sufficient).
 .scoreboardCardStuck {
+  .teamLogoResponsive {
+    filter: drop-shadow(0 0px 4px rgba(0, 0, 0, 0.45));
+  }
+
   .teamInfo {
+    .teamFullName,
+    .teamMobileCode,
     .teamPlaceName {
       color: var(--team-text);
+    }
+
+    .teamPlaceName {
       font-weight: 500;
     }
 
@@ -438,6 +428,8 @@ $scoreboard-stripe-overlap: 8px;
     align-items: center;
     gap: $space-xs;
     flex-shrink: 0;
+    width: clamp(5rem, 18vw, 14rem);
+    min-width: 0;
   }
 
   &Number {
@@ -460,12 +452,66 @@ $scoreboard-stripe-overlap: 8px;
     color: var(--app-text-muted, #{$text-dim});
   }
 
+  &SeriesDots {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 5rem;
+    height: 2.75rem;
+    transition: opacity 0.15s;
+
+    @media (max-width: 900px) {
+      gap: 4px;
+      min-width: 4rem;
+      height: 2rem;
+    }
+  }
+
+  &SeriesDotsLoser {
+    opacity: 0.58;
+  }
+
+  &SeriesDot {
+    width: 0.85rem;
+    height: 0.85rem;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    border: 2px solid color-mix(in srgb, var(--app-text-muted, #{$text-dim}) 58%, transparent);
+    border-radius: 999px;
+    background: transparent;
+
+    @media (max-width: 900px) {
+      width: 0.68rem;
+      height: 0.68rem;
+      border-width: 1.5px;
+    }
+  }
+
+  &SeriesDotFilled {
+    border-color: $success;
+    background: $success;
+    box-shadow: 0 0 0 1px color-mix(in srgb, $success 28%, transparent);
+  }
+
   &Meta {
+    display: block;
+    width: 100%;
     font-size: $font-xs;
     font-weight: 600;
     color: var(--app-text-muted, #{$text-dim});
     text-transform: uppercase;
     letter-spacing: 0.06em;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+  }
+
+  &MetaTooltip {
+    width: 100%;
+    min-width: 0;
   }
 
   &Date {

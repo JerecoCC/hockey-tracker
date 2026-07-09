@@ -1,10 +1,15 @@
 import axios, { AxiosError } from 'axios';
-import type { GameRecord } from '@/hooks/useGames';
+import type { GameRecord, GameType } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { GoalRecord, PostGoalData } from '@/hooks/useGameGoals';
 import type { GoalieStatRecord, UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
 import type { LineupPositionSlot } from '@/hooks/useGameLineup';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
+import {
+  ManualPlayerMovementRequiredError,
+  type GameAutofillManualMoveReport,
+  type GameAutofillProgress,
+} from './gameAutofillTypes';
 import {
   buildGoalieStints,
   buildGoalieStintsFromToiHtml,
@@ -14,8 +19,17 @@ import {
   type GoaliesByTeam,
   type NhlGameIdContext,
 } from './nhlGoalieSwitchChecker';
+import {
+  validateAutofillGamePreflight,
+  type AutofillOfficialGameMeta,
+} from './gameAutofillPreflight';
 
 const API = import.meta.env.VITE_API_URL || '/api';
+const NHL_GAME_TYPE_BY_CODE: Record<string, GameType> = {
+  '01': 'preseason',
+  '02': 'regular',
+  '03': 'playoff',
+};
 
 const authHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -29,11 +43,13 @@ type TeamSide = 'away' | 'home';
 
 interface TeamPlayerRecord {
   id: string;
+  league_player_number?: string | null;
   first_name: string;
   last_name: string;
   jersey_number: number | null;
   team_id: string;
   position: string | null;
+  is_prospect?: boolean | null;
 }
 
 interface NhlPlayer {
@@ -45,6 +61,8 @@ interface NhlPlayer {
 
 interface MatchedPlayer extends NhlPlayer {
   localId: string;
+  localLeaguePlayerNumber?: string | null;
+  canSyncLeaguePlayerNumber?: boolean;
 }
 
 interface ReportRosterPlayer {
@@ -100,6 +118,7 @@ interface GoalieStintPayload {
   exited_time?: string | null;
   shots_against?: number;
   goals_against?: number | null;
+  time_on_ice?: number | null;
 }
 
 interface ExistingGoalieStint extends GoalieStintPayload {
@@ -133,7 +152,7 @@ interface FillSummary {
   periodShots: Array<{ period: string; away_shots: number; home_shots: number }>;
   goalieStats: number;
   starsSet: number;
-  lineupsSet: number;
+  startingGoaliesSet: number;
   shootoutAttempts: number;
   usedRosterReport: boolean;
 }
@@ -143,13 +162,7 @@ export interface NhlAutofillResult {
   warnings: string[];
 }
 
-export interface NhlAutofillProgress {
-  step: string;
-  message: string;
-  completed?: number;
-  total?: number;
-  refresh?: boolean;
-}
+export type NhlAutofillProgress = GameAutofillProgress;
 
 interface NhlAutofillOptions {
   onProgress?: (progress: NhlAutofillProgress) => void | Promise<void>;
@@ -157,19 +170,20 @@ interface NhlAutofillOptions {
 
 type ShootoutAttemptPayload = Pick<ShootoutAttempt, 'team_id' | 'shooter_id' | 'scored'>;
 
+interface PlayerTeamBulkResult {
+  skipped?: number;
+}
+
+function leaguePlayerNumberLabel(value: string | number | null | undefined) {
+  return value == null || value === '' ? null : `league player number ${value}`;
+}
+
 async function emitAutofillProgress(
   onProgress: NhlAutofillOptions['onProgress'],
   progress: NhlAutofillProgress,
 ) {
   if (!onProgress) return;
   await onProgress(progress);
-  await new Promise<void>((resolve) => {
-    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
-      setTimeout(resolve, 0);
-      return;
-    }
-    window.requestAnimationFrame(() => resolve());
-  });
 }
 
 function formatAutofillPeriod(periodNumber: number) {
@@ -221,6 +235,7 @@ export async function autofillGameFromNhlGamecenter(
   });
 
   assertGameMatches(game, boxscore);
+  await validateNhlAutofillPreflight(game, gamecenterId);
 
   const [playByPlay, rosterReport, gameSummaryReport, shootoutReport, goalieToiReports] = await Promise.all([
     fetchNhlJson(`${base}/play-by-play`),
@@ -253,6 +268,13 @@ export async function autofillGameFromNhlGamecenter(
     fetchTeamPlayers(game.away_team.id, game.season_id, rosterDate),
     fetchTeamPlayers(game.home_team.id, game.season_id, rosterDate),
   ]);
+  let baseAwayPlayers = initialAwayPlayers;
+  let baseHomePlayers = initialHomePlayers;
+  const nhlPlayers = {
+    away: getNhlPlayers(boxscore, 'away'),
+    home: getNhlPlayers(boxscore, 'home'),
+  };
+  const leaguePlayers = game.league_id ? await fetchLeaguePlayers(game) : [];
 
   await emitProgress({
     step: 'roster',
@@ -260,10 +282,9 @@ export async function autofillGameFromNhlGamecenter(
   });
 
   // Before auto-creating, make sure a "missing" player isn't simply on the wrong
-  // team in the database (e.g. a trade not yet recorded). Creating a duplicate
-  // would be wrong, so stop and tell the user to move that player first.
+  // team in the database. Creating a duplicate would be wrong; movement recording
+  // requires an official acquisition date, never the game date as a stand-in.
   if (rosterReport) {
-    const leaguePlayers = await fetchLeaguePlayers(game);
     if (leaguePlayers.length > 0) {
       const conflicts = [
         ...findCrossTeamPlayerConflicts(
@@ -271,44 +292,63 @@ export async function autofillGameFromNhlGamecenter(
           game.away_team.id,
           rosterReport.players.away,
           initialAwayPlayers,
-        ).map((conflict) => ({ ...conflict, targetCode: game.away_team.code })),
+          nhlPlayers.away,
+        ).map((conflict) => ({
+          ...conflict,
+          targetCode: game.away_team.code,
+          targetTeamId: game.away_team.id,
+        })),
         ...findCrossTeamPlayerConflicts(
           leaguePlayers,
           game.home_team.id,
           rosterReport.players.home,
           initialHomePlayers,
-        ).map((conflict) => ({ ...conflict, targetCode: game.home_team.code })),
+          nhlPlayers.home,
+        ).map((conflict) => ({
+          ...conflict,
+          targetCode: game.home_team.code,
+          targetTeamId: game.home_team.id,
+        })),
       ];
       if (conflicts.length > 0) {
-        const lines = conflicts
-          .map(
-            (conflict) =>
-              `• #${conflict.reportPlayer.sweaterNumber} ${conflict.reportPlayer.name} → ${conflict.targetCode} (currently on ${conflict.existing.team_code ?? 'another team'})`,
-          )
-          .join('\n');
-        throw new Error(
-          `Auto-fill stopped — ${conflicts.length} ${pluralize('player', conflicts.length)} in the roster ` +
-            `report already ${conflicts.length === 1 ? 'exists' : 'exist'} on another team. ` +
-            `Move ${conflicts.length === 1 ? 'this player' : 'these players'} to the correct team ` +
-            `first, then re-run auto-fill:\n${lines}`,
+        await moveCrossTeamPlayerConflicts(
+          game,
+          conflicts,
+          null,
+          warnings,
         );
+        [baseAwayPlayers, baseHomePlayers] = await Promise.all([
+          fetchTeamPlayers(game.away_team.id, game.season_id, rosterDate),
+          fetchTeamPlayers(game.home_team.id, game.season_id, rosterDate),
+        ]);
       }
     }
   }
 
-  // Auto-create any dressed roster-report players missing from the local season
+  // Auto-create or roster any dressed NHL players missing from the local season
   // roster so matching below doesn't fail on recent call-ups/trades.
-  const awayPlayers = rosterReport
-    ? await ensureReportPlayersRostered(game, game.away_team.id, game.away_team.code, rosterReport.players.away, initialAwayPlayers, rosterDate, warnings)
-    : initialAwayPlayers;
-  const homePlayers = rosterReport
-    ? await ensureReportPlayersRostered(game, game.home_team.id, game.home_team.code, rosterReport.players.home, initialHomePlayers, rosterDate, warnings)
-    : initialHomePlayers;
-
-  const nhlPlayers = {
-    away: getNhlPlayers(boxscore, 'away'),
-    home: getNhlPlayers(boxscore, 'home'),
-  };
+  const awayPlayers = await ensureNhlPlayersRostered(
+    game,
+    game.away_team.id,
+    game.away_team.code,
+    rosterReport?.players.away ?? [],
+    nhlPlayers.away,
+    baseAwayPlayers,
+    leaguePlayers,
+    rosterDate,
+    warnings,
+  );
+  const homePlayers = await ensureNhlPlayersRostered(
+    game,
+    game.home_team.id,
+    game.home_team.code,
+    rosterReport?.players.home ?? [],
+    nhlPlayers.home,
+    baseHomePlayers,
+    leaguePlayers,
+    rosterDate,
+    warnings,
+  );
   const matched = {
     away: matchNhlPlayers(nhlPlayers.away, awayPlayers, game.away_team.code, rosterReport?.players.away),
     home: matchNhlPlayers(nhlPlayers.home, homePlayers, game.home_team.code, rosterReport?.players.home),
@@ -319,24 +359,25 @@ export async function autofillGameFromNhlGamecenter(
 
   const rosterMatched = rosterReport
     ? {
-        away: matchReportPlayers(rosterReport.players.away, awayPlayers, game.away_team.code),
-        home: matchReportPlayers(rosterReport.players.home, homePlayers, game.home_team.code),
+        away: matchReportPlayers(rosterReport.players.away, awayPlayers, game.away_team.code, nhlPlayers.away),
+        home: matchReportPlayers(rosterReport.players.home, homePlayers, game.home_team.code, nhlPlayers.home),
       }
     : matched;
 
+  await syncLeaguePlayerNumbers(matched, warnings);
   await syncGameRoster(game, rosterMatched);
   await emitProgress({
     step: 'roster',
     message: `Roster saved (${rosterMatched.away.length + rosterMatched.home.length} players).`,
     refresh: true,
   });
-  const lineupsSet = rosterReport
-    ? await syncStartingLineups(game, rosterMatched, warnings)
+  const startingGoaliesSet = rosterReport
+    ? await syncStartingGoalies(game, rosterMatched, warnings)
     : 0;
-  if (lineupsSet > 0) {
+  if (startingGoaliesSet > 0) {
     await emitProgress({
       step: 'lineups',
-      message: 'Starting lineups saved.',
+      message: 'Starting goalies saved.',
       refresh: true,
     });
   }
@@ -353,6 +394,7 @@ export async function autofillGameFromNhlGamecenter(
   const gameStartIso = reportTimes.startIso ?? validIsoOrUndefined(boxscore.startTimeUTC);
 
   await apiPatch(`/admin/games/${game.id}`, {
+    league_game_number: extractLeagueGameNumber(gamecenterId),
     scheduled_at: boxscore.gameDate ?? undefined,
     scheduled_time: boxscore.startTimeUTC ? easternScheduledTime(boxscore.startTimeUTC) : undefined,
     venue: rosterReport?.venue ?? readText(boxscore.venue) ?? undefined,
@@ -590,7 +632,7 @@ export async function autofillGameFromNhlGamecenter(
       periodShots,
       goalieStats: goalieStats.length,
       starsSet: stars.length,
-      lineupsSet,
+      startingGoaliesSet,
       shootoutAttempts: shootoutAttemptsCreated,
       usedRosterReport: !!rosterReport,
     },
@@ -695,6 +737,13 @@ async function apiGet<T>(path: string): Promise<T> {
   return data;
 }
 
+async function validateNhlAutofillPreflight(game: GameRecord, gamecenterId: string) {
+  const seasonGames = await apiGet<GameRecord[]>(
+    `/admin/games?season_id=${encodeURIComponent(game.season_id)}`,
+  );
+  validateAutofillGamePreflight(game, seasonGames, nhlOfficialGameMeta(gamecenterId));
+}
+
 async function apiPost<TResponse, TBody>(path: string, body: TBody): Promise<TResponse> {
   const { data } = await axios.post<TResponse>(`${API}${path}`, body, { headers: authHeaders() });
   return data;
@@ -795,10 +844,14 @@ function splitReportName(fullName: string): { firstName: string; lastName: strin
 
 interface LeaguePlayer {
   id: string;
+  league_player_number?: string | null;
   first_name: string;
   last_name: string;
   team_id: string | null;
   team_code: string | null;
+  team_name?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 /** All players rostered in this game's league for the season, with their team. */
@@ -818,14 +871,80 @@ async function fetchLeaguePlayers(game: GameRecord): Promise<LeaguePlayer[]> {
   return Array.isArray(data) ? data : (data.players ?? []);
 }
 
+function leaguePlayerTimelineDate(player: LeaguePlayer) {
+  return player.start_date?.slice(0, 10) ?? player.end_date?.slice(0, 10) ?? '';
+}
+
+function laterLeaguePlayerRow(current: LeaguePlayer, next: LeaguePlayer) {
+  const currentDate = leaguePlayerTimelineDate(current);
+  const nextDate = leaguePlayerTimelineDate(next);
+  if (nextDate !== currentDate) return nextDate > currentDate ? next : current;
+
+  const currentOpen = !current.end_date;
+  const nextOpen = !next.end_date;
+  if (nextOpen !== currentOpen) return nextOpen ? next : current;
+
+  return next;
+}
+
+function setLatestLeaguePlayerRow(
+  map: Map<string, LeaguePlayer>,
+  key: string,
+  player: LeaguePlayer,
+) {
+  const current = map.get(key);
+  map.set(key, current ? laterLeaguePlayerRow(current, player) : player);
+}
+
 /** Last-name + first-initial key — catches "Nick Paul" vs "Nicholas Paul". */
 function lastNameInitialKey(firstName: string, lastName: string) {
   return `${normalizeNameKey(lastName)}|${normalizeNameKey(firstName).slice(0, 1)}`;
 }
 
+function localPlayerMatchesName(player: Pick<TeamPlayerRecord, 'first_name' | 'last_name'>, name: string) {
+  const { firstName, lastName } = splitReportName(name);
+  return (
+    normalizeNameKey(`${player.first_name} ${player.last_name}`) ===
+      normalizeNameKey(`${firstName} ${lastName}`) ||
+    lastNameInitialKey(player.first_name, player.last_name) ===
+      lastNameInitialKey(firstName, lastName)
+  );
+}
+
+function reportPlayerIdentifier(reportPlayer: ReportRosterPlayer, leaguePlayerNumber?: string | number) {
+  return leaguePlayerNumberLabel(leaguePlayerNumber) ?? `#${reportPlayer.sweaterNumber} ${reportPlayer.name}`;
+}
+
+function gameLabel(game: GameRecord) {
+  const date = (game.scheduled_at ?? '').slice(0, 10);
+  const matchup = `${game.away_team.code} @ ${game.home_team.code}`;
+  return date ? `${date} ${matchup}` : matchup;
+}
+
+function reportPlayerDisplayName(reportPlayer: ReportRosterPlayer) {
+  const { firstName, lastName } = splitReportName(reportPlayer.name);
+  return `${firstName} ${lastName}`.trim();
+}
+
 interface PlayerConflict {
   reportPlayer: ReportRosterPlayer;
   existing: LeaguePlayer;
+  leaguePlayerNumber?: string;
+  jerseyConflicts?: TeamPlayerRecord[];
+}
+
+interface MovePlayerConflict extends PlayerConflict {
+  targetCode: string;
+  targetTeamId: string;
+}
+
+interface RosterCandidate {
+  sweaterNumber: number;
+  name: string;
+  nhlName: string;
+  position: string;
+  leaguePlayerNumber: string;
+  reportPlayer?: ReportRosterPlayer;
 }
 
 /**
@@ -838,89 +957,467 @@ function findCrossTeamPlayerConflicts(
   teamId: string,
   reportPlayers: ReportRosterPlayer[],
   localPlayers: TeamPlayerRecord[],
+  nhlPlayers: NhlPlayer[] = [],
 ): PlayerConflict[] {
   const rosteredJerseys = new Set(
     localPlayers.map((player) => player.jersey_number).filter((jersey): jersey is number => jersey != null),
   );
+  const rosteredLeaguePlayerNumbers = new Set(
+    localPlayers
+      .map((player) => player.league_player_number)
+      .filter((value): value is string => !!value),
+  );
+  const leaguePlayerNumberBySweater = new Map(
+    nhlPlayers.map((player) => [player.sweaterNumber, String(player.playerId)]),
+  );
   const missing = reportPlayers.filter(
-    (player) => Number.isFinite(player.sweaterNumber) && !rosteredJerseys.has(player.sweaterNumber),
+    (player) => {
+      if (!Number.isFinite(player.sweaterNumber)) return false;
+      const leaguePlayerNumber = leaguePlayerNumberBySweater.get(player.sweaterNumber);
+      if (leaguePlayerNumber) {
+        return !rosteredLeaguePlayerNumbers.has(leaguePlayerNumber);
+      }
+      return !rosteredJerseys.has(player.sweaterNumber);
+    },
   );
   if (missing.length === 0) return [];
 
   const byFullName = new Map<string, LeaguePlayer>();
   const byLastInitial = new Map<string, LeaguePlayer>();
+  const byLeaguePlayerNumber = new Map<string, LeaguePlayer>();
   for (const player of leaguePlayers) {
     if (!player.team_id || player.team_id === teamId) continue;
+    if (player.league_player_number) {
+      setLatestLeaguePlayerRow(byLeaguePlayerNumber, player.league_player_number, player);
+    }
     const fullKey = normalizeNameKey(`${player.first_name} ${player.last_name}`);
     const liKey = lastNameInitialKey(player.first_name, player.last_name);
-    if (!byFullName.has(fullKey)) byFullName.set(fullKey, player);
-    if (!byLastInitial.has(liKey)) byLastInitial.set(liKey, player);
+    setLatestLeaguePlayerRow(byFullName, fullKey, player);
+    setLatestLeaguePlayerRow(byLastInitial, liKey, player);
   }
-
   const conflicts: PlayerConflict[] = [];
   for (const reportPlayer of missing) {
     const { firstName, lastName } = splitReportName(reportPlayer.name);
+    const leaguePlayerNumber = leaguePlayerNumberBySweater.get(reportPlayer.sweaterNumber);
     const existing =
-      byFullName.get(normalizeNameKey(`${firstName} ${lastName}`)) ??
-      byLastInitial.get(lastNameInitialKey(firstName, lastName));
-    if (existing) conflicts.push({ reportPlayer, existing });
+      (leaguePlayerNumber ? byLeaguePlayerNumber.get(leaguePlayerNumber) : undefined) ??
+      // When GameCenter gives us the NHL player id, name fallback is unsafe:
+      // different real players can share a name, e.g. two NHL Matt Murray records.
+      (leaguePlayerNumber
+        ? undefined
+        : (
+            byFullName.get(normalizeNameKey(`${firstName} ${lastName}`)) ??
+            byLastInitial.get(lastNameInitialKey(firstName, lastName))
+          ));
+    if (existing) {
+      conflicts.push({
+        reportPlayer,
+        existing,
+        leaguePlayerNumber,
+        jerseyConflicts: findNhlJerseyConflicts(reportPlayer, leaguePlayerNumber, localPlayers),
+      });
+    }
   }
   return conflicts;
 }
 
+async function moveCrossTeamPlayerConflicts(
+  game: GameRecord,
+  conflicts: MovePlayerConflict[],
+  moveDate: string | null | undefined,
+  warnings: string[],
+) {
+  const normalizedMoveDate = moveDate?.slice(0, 10);
+  if (!normalizedMoveDate) {
+    throw new ManualPlayerMovementRequiredError(buildManualMoveReport(game, conflicts));
+  }
+
+  for (const conflict of conflicts) {
+    await apiPost<
+      unknown,
+      {
+        player_id: string;
+        season_id: string;
+        to_team_id: string;
+        trade_date: string;
+        jersey_number: number;
+        position: string;
+        acquisition_type: string | null;
+      }
+    >('/admin/player-teams/trade', {
+      player_id: conflict.existing.id,
+      season_id: game.season_id,
+      to_team_id: conflict.targetTeamId,
+      trade_date: normalizedMoveDate,
+      jersey_number: conflict.reportPlayer.sweaterNumber,
+      position: reportPositionToLocalPosition(conflict.reportPlayer.position),
+      acquisition_type: null,
+    });
+  }
+
+  warnings.push(
+    `Auto-recorded ${conflicts.length} NHL ${pluralize('player movement', conflicts.length)} from the roster report: ${conflicts
+      .map(
+        (conflict) =>
+          `${reportPlayerIdentifier(
+            conflict.reportPlayer,
+            conflict.leaguePlayerNumber,
+          )} to ${conflict.targetCode}`,
+      )
+      .join(', ')}.`,
+  );
+}
+
+function buildManualMoveReport(
+  game: GameRecord,
+  conflicts: MovePlayerConflict[],
+): GameAutofillManualMoveReport {
+  return {
+    leagueCode: 'NHL',
+    gameId: game.id,
+    gameLabel: gameLabel(game),
+    gameDate: (game.scheduled_at ?? '').slice(0, 10) || null,
+    moves: conflicts.map((conflict) => ({
+      playerName: reportPlayerDisplayName(conflict.reportPlayer),
+      localFirstName: conflict.existing.first_name,
+      localLastName: conflict.existing.last_name,
+      leaguePlayerNumber: conflict.leaguePlayerNumber ?? conflict.existing.league_player_number ?? null,
+      jerseyNumber: conflict.reportPlayer.sweaterNumber,
+      position: reportPositionToLocalPosition(conflict.reportPlayer.position),
+      fromTeamCode: conflict.existing.team_code,
+      fromTeamName: conflict.existing.team_name ?? null,
+      toTeamCode: conflict.targetCode,
+      toTeamName:
+        conflict.targetTeamId === game.away_team.id
+          ? game.away_team.name
+          : conflict.targetTeamId === game.home_team.id
+            ? game.home_team.name
+            : null,
+    })),
+    jerseyChanges: conflicts.flatMap((conflict) =>
+      buildNhlJerseyChangeRows(
+        conflict.targetCode,
+        conflict.targetTeamId === game.away_team.id
+          ? game.away_team.name
+          : conflict.targetTeamId === game.home_team.id
+            ? game.home_team.name
+            : null,
+        conflict.reportPlayer,
+        conflict.leaguePlayerNumber ?? conflict.existing.league_player_number ?? null,
+        conflict.jerseyConflicts ?? [],
+      ),
+    ),
+  };
+}
+
+function buildManualJerseyChangeReport(
+  game: GameRecord,
+  teamCode: string,
+  teamName: string | null | undefined,
+  conflicts: Array<{ candidate: RosterCandidate; local: TeamPlayerRecord }>,
+): GameAutofillManualMoveReport {
+  return {
+    leagueCode: 'NHL',
+    gameId: game.id,
+    gameLabel: gameLabel(game),
+    gameDate: (game.scheduled_at ?? '').slice(0, 10) || null,
+    moves: [],
+    jerseyChanges: conflicts.flatMap(({ candidate, local }) =>
+      buildNhlJerseyChangeRows(
+        teamCode,
+        teamName,
+        rosterCandidateReportPlayer(candidate),
+        candidate.leaguePlayerNumber,
+        [local],
+      ),
+    ),
+  };
+}
+
+function buildNhlJerseyChangeRows(
+  teamCode: string,
+  teamName: string | null | undefined,
+  conflictingPlayer: ReportRosterPlayer,
+  conflictingLeaguePlayerNumber: string | null | undefined,
+  localPlayers: TeamPlayerRecord[],
+) {
+  return localPlayers.map((local) => ({
+    playerName: `${local.first_name} ${local.last_name}`.trim(),
+    leaguePlayerNumber: local.league_player_number ?? null,
+    teamCode,
+    teamName: teamName ?? null,
+    currentJerseyNumber: local.jersey_number,
+    conflictingJerseyNumber: conflictingPlayer.sweaterNumber,
+    conflictingPlayerName: reportPlayerDisplayName(conflictingPlayer),
+    conflictingLeaguePlayerNumber: conflictingLeaguePlayerNumber ?? null,
+  }));
+}
+
 /**
- * Ensure every dressed player in the roster report exists on the local season
- * roster. Any player missing by jersey is created from the report's full name
- * and position, then added to the team's season roster — so autofill can match
- * recent call-ups/trades without a manual roster edit first. Returns the (possibly
- * augmented) local player list.
+ * Ensure every dressed NHL player exists on the local season roster. Roster
+ * report rows provide full names and positions when available; otherwise the
+ * GameCenter boxscore still provides a league player number and sweater.
+ * Returns the (possibly augmented) local player list.
  */
-async function ensureReportPlayersRostered(
+async function ensureNhlPlayersRostered(
   game: GameRecord,
   teamId: string,
   teamCode: string,
   reportPlayers: ReportRosterPlayer[],
+  nhlPlayers: NhlPlayer[],
   localPlayers: TeamPlayerRecord[],
+  leaguePlayers: LeaguePlayer[],
   gameDate: string | null | undefined,
   warnings: string[],
 ): Promise<TeamPlayerRecord[]> {
-  const rosteredJerseys = new Set(
-    localPlayers.map((player) => player.jersey_number).filter((jersey): jersey is number => jersey != null),
+  const localByLeagueNumber = localPlayersByLeaguePlayerNumber(localPlayers);
+  const localByJersey = localPlayersByJersey(localPlayers);
+  const candidates = buildRosterCandidates(reportPlayers, nhlPlayers);
+  const candidateSweaters = new Set(candidates.map((candidate) => candidate.sweaterNumber));
+
+  const missing = candidates.filter(
+    (candidate) => !hasLocalRosterCandidateMatch(candidate, localByLeagueNumber, localByJersey),
   );
-  const missing = reportPlayers.filter(
-    (player) => Number.isFinite(player.sweaterNumber) && !rosteredJerseys.has(player.sweaterNumber),
+  const jerseyConflicts = candidates.flatMap((candidate) => {
+    const matchedLocal = localByLeagueNumber.get(candidate.leaguePlayerNumber);
+    if (!matchedLocal) return [];
+    return findNhlJerseyConflicts(
+      rosterCandidateReportPlayer(candidate),
+      candidate.leaguePlayerNumber,
+      localPlayers,
+      matchedLocal,
+    )
+      .filter((local) => local.id !== matchedLocal.id)
+      .map((local) => ({ candidate, local }));
+  });
+  if (jerseyConflicts.length > 0) {
+    const teamName =
+      teamId === game.away_team.id
+        ? game.away_team.name
+        : teamId === game.home_team.id
+          ? game.home_team.name
+          : null;
+    throw new ManualPlayerMovementRequiredError(
+      buildManualJerseyChangeReport(game, teamCode, teamName, jerseyConflicts),
+    );
+  }
+  const missingWithoutLeaguePlayerNumber = reportPlayers.filter(
+    (player) =>
+      Number.isFinite(player.sweaterNumber) &&
+      !candidateSweaters.has(player.sweaterNumber) &&
+      !hasLocalRosterCandidateMatch(
+        {
+          sweaterNumber: player.sweaterNumber,
+          name: player.name,
+          nhlName: player.name,
+          position: reportPositionToLocalPosition(player.position),
+          leaguePlayerNumber: '',
+          reportPlayer: player,
+        },
+        localByLeagueNumber,
+        localByJersey,
+      ),
   );
+  if (missingWithoutLeaguePlayerNumber.length > 0) {
+    throw new Error(
+      `Auto-fill stopped because NHL player numbers were unavailable for ${teamCode}: ${missingWithoutLeaguePlayerNumber
+        .map((player) => `#${player.sweaterNumber} ${player.name}`)
+      .join(', ')}.`,
+    );
+  }
+
   if (missing.length === 0) return localPlayers;
 
-  const { created } = await apiPost<{ created: Array<{ id: string }> }, { players: Array<Record<string, unknown>> }>(
-    '/admin/players/bulk',
-    {
-      players: missing.map((player) => {
-        const { firstName, lastName } = splitReportName(player.name);
-        return { first_name: firstName, last_name: lastName, position: reportPositionToLocalPosition(player.position) };
-      }),
-    },
-  );
+  const leaguePlayerByNumber = new Map<string, LeaguePlayer>();
+  leaguePlayers
+    .filter((player) => !!player.league_player_number)
+    .forEach((player) =>
+      setLatestLeaguePlayerRow(leaguePlayerByNumber, player.league_player_number!, player),
+    );
 
-  await apiPost<unknown, { team_id: string; season_id: string; players: Array<{ player_id: string; jersey_number: number }> }>(
-    '/admin/player-teams/bulk',
-    {
+  const crossTeamConflicts = missing.flatMap((candidate): MovePlayerConflict[] => {
+    const existing = leaguePlayerByNumber.get(candidate.leaguePlayerNumber);
+    if (!existing?.team_id || existing.team_id === teamId) return [];
+    return [{
+      reportPlayer: rosterCandidateReportPlayer(candidate),
+      existing,
+      leaguePlayerNumber: candidate.leaguePlayerNumber,
+      targetCode: teamCode,
+      targetTeamId: teamId,
+    }];
+  });
+  if (crossTeamConflicts.length > 0) {
+    await moveCrossTeamPlayerConflicts(game, crossTeamConflicts, null, warnings);
+  }
+
+  const existingToRoster = missing
+    .map((candidate) => ({ candidate, existing: leaguePlayerByNumber.get(candidate.leaguePlayerNumber) }))
+    .filter(
+      (row): row is { candidate: RosterCandidate; existing: LeaguePlayer } =>
+        !!row.existing && (!row.existing.team_id || row.existing.team_id === teamId),
+    );
+  const existingNumbers = new Set(existingToRoster.map((row) => row.candidate.leaguePlayerNumber));
+  const toCreate = missing.filter((candidate) => !existingNumbers.has(candidate.leaguePlayerNumber));
+
+  let created: Array<{ id: string }> = [];
+  if (toCreate.length > 0) {
+    ({ created } = await apiPost<{ created: Array<{ id: string }> }, { players: Array<Record<string, unknown>> }>(
+      '/admin/players/bulk',
+      {
+        players: toCreate.map((candidate) => {
+          const { firstName, lastName } = splitReportName(candidate.name);
+          return {
+            first_name: firstName,
+            last_name: lastName,
+            league_player_number: candidate.leaguePlayerNumber,
+            position: candidate.position,
+          };
+        }),
+      },
+    ));
+  }
+
+  const playersToRoster = [
+    ...existingToRoster.map(({ candidate, existing }) => ({
+      player_id: existing.id,
+      jersey_number: candidate.sweaterNumber,
+    })),
+    ...created.map((player, index) => ({
+      player_id: player.id,
+      jersey_number: toCreate[index].sweaterNumber,
+    })),
+  ];
+  let rosterAddResult: PlayerTeamBulkResult | null = null;
+  if (playersToRoster.length > 0) {
+    rosterAddResult = await apiPost<
+      PlayerTeamBulkResult,
+      { team_id: string; season_id: string; players: Array<{ player_id: string; jersey_number: number }> }
+    >('/admin/player-teams/bulk', {
       team_id: teamId,
       season_id: game.season_id,
-      players: created.map((player, index) => ({
-        player_id: player.id,
-        jersey_number: missing[index].sweaterNumber,
-      })),
-    },
-  );
+      players: playersToRoster,
+    });
+  }
 
-  warnings.push(
-    `Auto-created ${missing.length} missing ${teamCode} ${pluralize('player', missing.length)} from the roster report: ${missing
-      .map((player) => `#${player.sweaterNumber} ${player.name}`)
-      .join(', ')}.`,
+  const refreshedPlayers = await fetchTeamPlayers(teamId, game.season_id, gameDate);
+  const refreshedByLeagueNumber = localPlayersByLeaguePlayerNumber(refreshedPlayers);
+  const refreshedByJersey = localPlayersByJersey(refreshedPlayers);
+  const unresolved = missing.filter(
+    (candidate) => !hasLocalRosterCandidateMatch(candidate, refreshedByLeagueNumber, refreshedByJersey),
   );
+  if (unresolved.length > 0) {
+    const gameDateLabel = gameDate?.slice(0, 10);
+    const skippedHint = rosterAddResult?.skipped
+      ? ` The roster API skipped ${rosterAddResult.skipped} requested ${pluralize(
+          'add',
+          rosterAddResult.skipped,
+        )}, usually because a player already has an active season roster row.`
+      : '';
+    throw new Error(
+      `Auto-fill could not add ${teamCode} season roster ${pluralize('player', unresolved.length)}: ${unresolved
+        .map(rosterCandidateIdentifier)
+        .join(', ')}.${skippedHint} Check the player's team/roster dates${
+        gameDateLabel ? ` for ${gameDateLabel}` : ''
+      }, then run auto-fill again.`,
+    );
+  }
 
-  return fetchTeamPlayers(teamId, game.season_id, gameDate);
+  if (toCreate.length > 0) {
+    warnings.push(
+      `Auto-created ${toCreate.length} missing ${teamCode} ${pluralize('player', toCreate.length)} from NHL data: ${toCreate
+        .map(rosterCandidateIdentifier)
+        .join(', ')}.`,
+    );
+  }
+  if (existingToRoster.length > 0) {
+    warnings.push(
+      `Auto-added ${existingToRoster.length} existing ${teamCode} ${pluralize('player', existingToRoster.length)} to the season roster from NHL data: ${existingToRoster
+        .map(({ candidate }) => rosterCandidateIdentifier(candidate))
+        .join(', ')}.`,
+    );
+  }
+
+  return refreshedPlayers;
+}
+
+function buildRosterCandidates(reportPlayers: ReportRosterPlayer[], nhlPlayers: NhlPlayer[]): RosterCandidate[] {
+  const reportBySweater = new Map(reportPlayers.map((player) => [player.sweaterNumber, player]));
+  return nhlPlayers.flatMap((nhlPlayer) => {
+    if (!Number.isFinite(nhlPlayer.playerId) || !Number.isFinite(nhlPlayer.sweaterNumber)) {
+      return [];
+    }
+    const reportPlayer = reportBySweater.get(nhlPlayer.sweaterNumber);
+    const name = reportPlayer?.name || nhlPlayer.name || `NHL Player ${nhlPlayer.playerId}`;
+    return [{
+      sweaterNumber: nhlPlayer.sweaterNumber,
+      name,
+      nhlName: nhlPlayer.name,
+      position: reportPlayer
+        ? reportPositionToLocalPosition(reportPlayer.position)
+        : nhlPlayerGroupToLocalPosition(nhlPlayer.group),
+      leaguePlayerNumber: String(nhlPlayer.playerId),
+      reportPlayer,
+    }];
+  });
+}
+
+function hasLocalRosterCandidateMatch(
+  candidate: RosterCandidate,
+  localByLeagueNumber: Map<string, TeamPlayerRecord>,
+  localByJersey: Map<number, TeamPlayerRecord[]>,
+) {
+  if (candidate.leaguePlayerNumber && localByLeagueNumber.has(candidate.leaguePlayerNumber)) {
+    return true;
+  }
+  const rows = localByJersey.get(candidate.sweaterNumber) ?? [];
+  return rows.some(
+    (player) =>
+      localPlayerMatchesName(player, candidate.name) ||
+      (!!candidate.nhlName && localPlayerMatchesName(player, candidate.nhlName)),
+  );
+}
+
+function findNhlJerseyConflicts(
+  reportPlayer: ReportRosterPlayer,
+  leaguePlayerNumber: string | null | undefined,
+  localPlayers: TeamPlayerRecord[],
+  reportLocalPlayer?: TeamPlayerRecord | null,
+) {
+  const reportPlayerRow =
+    reportLocalPlayer ??
+    (
+      leaguePlayerNumber
+        ? localPlayers.find((local) => local.league_player_number === leaguePlayerNumber)
+        : null
+    );
+
+  return localPlayers.filter(
+    (local) =>
+      local.jersey_number === reportPlayer.sweaterNumber &&
+      (!leaguePlayerNumber || local.league_player_number !== leaguePlayerNumber) &&
+      !local.is_prospect &&
+      !reportPlayerRow?.is_prospect &&
+      !localPlayerMatchesName(local, reportPlayer.name),
+  );
+}
+
+function rosterCandidateReportPlayer(candidate: RosterCandidate): ReportRosterPlayer {
+  return candidate.reportPlayer ?? {
+    sweaterNumber: candidate.sweaterNumber,
+    name: candidate.name,
+    position: candidate.position,
+    starter: false,
+  };
+}
+
+function rosterCandidateIdentifier(candidate: RosterCandidate) {
+  return reportPlayerIdentifier(rosterCandidateReportPlayer(candidate), candidate.leaguePlayerNumber);
+}
+
+function nhlPlayerGroupToLocalPosition(group: NhlPlayer['group']) {
+  if (group === 'defense') return 'D';
+  if (group === 'goalies') return 'G';
+  return 'F';
 }
 
 function assertGameMatches(game: GameRecord, boxscore: any) {
@@ -944,9 +1441,13 @@ function assertGameMatches(game: GameRecord, boxscore: any) {
 function nhlLocalDate(value: string | null | undefined) {
   if (!value) return null;
   const rawDate = value.slice(0, 10);
-  if (!value.includes('T')) return rawDate;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return rawDate;
 
-  const date = new Date(value);
+  const normalizedDateTime = value
+    .replace(/^(\d{4}-\d{2}-\d{2})\s+/, '$1T')
+    .replace(/([+-]\d{2})(\d{2})$/, '$1:$2')
+    .replace(/([+-]\d{2})$/, '$1:00');
+  const date = new Date(normalizedDateTime);
   if (Number.isNaN(date.getTime())) return rawDate;
 
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -1000,6 +1501,7 @@ function matchNhlPlayers(
   teamCode: string,
   reportPlayers: ReportRosterPlayer[] = [],
 ): MatchedPlayer[] {
+  const localByLeagueNumber = localPlayersByLeaguePlayerNumber(localPlayers);
   const localByJersey = new Map<number, TeamPlayerRecord[]>();
   localPlayers.forEach((player) => {
     if (player.jersey_number == null) return;
@@ -1015,14 +1517,26 @@ function matchNhlPlayers(
 
   const missing: string[] = [];
   const matched = nhlPlayers.flatMap((nhlPlayer) => {
+    const leaguePlayerNumber = String(nhlPlayer.playerId);
     const rows = localByJersey.get(nhlPlayer.sweaterNumber) ?? [];
-    const local = rows[0];
+    const exactLeagueNumberMatch = localByLeagueNumber.get(leaguePlayerNumber);
+    const fullName = reportNameByJersey.get(nhlPlayer.sweaterNumber) || nhlPlayer.name;
+    const nameConfirmedJerseyMatch = rows.find(
+      (player) =>
+        localPlayerMatchesName(player, fullName) ||
+        (!!nhlPlayer.name && localPlayerMatchesName(player, nhlPlayer.name)),
+    );
+    const local = exactLeagueNumberMatch ?? nameConfirmedJerseyMatch;
     if (!local) {
-      const fullName = reportNameByJersey.get(nhlPlayer.sweaterNumber) || nhlPlayer.name;
-      missing.push(`#${nhlPlayer.sweaterNumber} ${fullName || `NHL ${nhlPlayer.playerId}`}`);
+      missing.push(leaguePlayerNumberLabel(nhlPlayer.playerId) ?? `#${nhlPlayer.sweaterNumber} ${fullName}`);
       return [];
     }
-    return [{ ...nhlPlayer, localId: local.id }];
+    return [{
+      ...nhlPlayer,
+      localId: local.id,
+      localLeaguePlayerNumber: local.league_player_number ?? null,
+      canSyncLeaguePlayerNumber: !exactLeagueNumberMatch && nameConfirmedJerseyMatch?.id === local.id,
+    }];
   });
 
   if (missing.length > 0) {
@@ -1035,13 +1549,24 @@ function matchReportPlayers(
   reportPlayers: ReportRosterPlayer[],
   localPlayers: TeamPlayerRecord[],
   teamCode: string,
+  nhlPlayers: NhlPlayer[] = [],
 ): MatchedRosterPlayer[] {
+  const localByLeagueNumber = localPlayersByLeaguePlayerNumber(localPlayers);
+  const leaguePlayerNumberBySweater = new Map(
+    nhlPlayers.map((player) => [player.sweaterNumber, String(player.playerId)]),
+  );
   const localByJersey = localPlayersByJersey(localPlayers);
   const missing: string[] = [];
   const matched = reportPlayers.flatMap((reportPlayer) => {
-    const local = (localByJersey.get(reportPlayer.sweaterNumber) ?? [])[0];
+    const leaguePlayerNumber = leaguePlayerNumberBySweater.get(reportPlayer.sweaterNumber);
+    const nameConfirmedJerseyMatch = (localByJersey.get(reportPlayer.sweaterNumber) ?? []).find(
+      (player) => localPlayerMatchesName(player, reportPlayer.name),
+    );
+    const local =
+      (leaguePlayerNumber ? localByLeagueNumber.get(leaguePlayerNumber) : undefined) ??
+      nameConfirmedJerseyMatch;
     if (!local) {
-      missing.push(`#${reportPlayer.sweaterNumber} ${reportPlayer.name}`);
+      missing.push(reportPlayerIdentifier(reportPlayer, leaguePlayerNumber));
       return [];
     }
     return [{ ...reportPlayer, localId: local.id }];
@@ -1051,6 +1576,71 @@ function matchReportPlayers(
     throw new Error(`Missing ${teamCode} roster report player matches: ${missing.join(', ')}.`);
   }
   return matched;
+}
+
+async function syncLeaguePlayerNumbers(
+  matched: Record<TeamSide, MatchedPlayer[]>,
+  warnings: string[],
+) {
+  const players = [...matched.away, ...matched.home];
+  const conflicts = players.filter(
+    (player) =>
+      !!player.localLeaguePlayerNumber &&
+      player.localLeaguePlayerNumber !== String(player.playerId),
+  );
+  const unsafeConflicts = conflicts.filter(
+    (player) => !player.canSyncLeaguePlayerNumber,
+  );
+  if (unsafeConflicts.length > 0) {
+    throw new Error(
+      `League player number mismatch: ${unsafeConflicts
+        .map(
+          (player) =>
+            `${leaguePlayerNumberLabel(player.localLeaguePlayerNumber)} conflicts with ${leaguePlayerNumberLabel(
+              player.playerId,
+            )}`,
+        )
+        .join('; ')}.`,
+    );
+  }
+
+  const updates = Array.from(new Map(
+    players
+      .filter(
+        (player) =>
+          !player.localLeaguePlayerNumber ||
+          player.localLeaguePlayerNumber !== String(player.playerId),
+      )
+      .map((player) => [player.localId, player]),
+  ).values());
+  await Promise.all(
+    updates.map((player) =>
+      apiPatch(`/admin/players/${player.localId}`, {
+        league_player_number: String(player.playerId),
+      }),
+    ),
+  );
+
+  const corrected = updates.filter((player) => !!player.localLeaguePlayerNumber);
+  if (corrected.length > 0) {
+    warnings.push(
+      `Updated stale NHL player ${pluralize('number', corrected.length)}: ${corrected
+        .map(
+          (player) =>
+            `${leaguePlayerNumberLabel(player.localLeaguePlayerNumber)} -> ${leaguePlayerNumberLabel(player.playerId)}`,
+        )
+        .join('; ')}.`,
+    );
+  }
+}
+
+function localPlayersByLeaguePlayerNumber(localPlayers: TeamPlayerRecord[]) {
+  const localByLeagueNumber = new Map<string, TeamPlayerRecord>();
+  localPlayers.forEach((player) => {
+    if (!player.league_player_number) return;
+    localByLeagueNumber.set(player.league_player_number, player);
+  });
+  return localByLeagueNumber;
 }
 
 function localPlayersByJersey(localPlayers: TeamPlayerRecord[]) {
@@ -1602,17 +2192,17 @@ async function syncGameRoster(
   }
 }
 
-async function syncStartingLineups(
+async function syncStartingGoalies(
   game: GameRecord,
   matched: Record<TeamSide, MatchedRosterPlayer[]>,
   warnings: string[],
 ) {
   let saved = 0;
   for (const side of ['away', 'home'] as const) {
-    const slots = buildStartingLineupSlots(matched[side]);
+    const slots = buildStartingGoalieSlot(matched[side]);
     if (!slots) {
       const teamCode = side === 'away' ? game.away_team.code : game.home_team.code;
-      warnings.push(`Could not find a complete bold starting lineup for ${teamCode} in the NHL roster report.`);
+      warnings.push(`Could not find a bold starting goalie for ${teamCode} in the NHL roster report.`);
       continue;
     }
     await apiPut<unknown, { team_id: string; slots: Array<{ position_slot: LineupPositionSlot; player_id: string }> }>(
@@ -1627,35 +2217,12 @@ async function syncStartingLineups(
   return saved;
 }
 
-function isDefensePosition(position: string | null | undefined) {
-  return position === 'D' || position === 'LD' || position === 'RD';
-}
-
-function buildStartingLineupSlots(players: MatchedRosterPlayer[]) {
-  const starters = players.filter((player) => player.starter).sort(compareStartingLineupOrder);
+function buildStartingGoalieSlot(players: MatchedRosterPlayer[]) {
+  const starters = players.filter((player) => player.starter);
   const goalies = starters.filter((player) => player.position === 'G');
-  const defense = starters.filter((player) => isDefensePosition(player.position));
-  // Anything that isn't a goalie or defenseman is treated as a forward (C/L/R/F).
-  const forwards = starters.filter(
-    (player) => player.position !== 'G' && !isDefensePosition(player.position),
-  );
-  if (forwards.length !== 3 || defense.length !== 2 || goalies.length !== 1) return null;
+  if (goalies.length !== 1) return null;
 
-  return [
-    { position_slot: 'F1' as const, player_id: forwards[0].localId },
-    { position_slot: 'F2' as const, player_id: forwards[1].localId },
-    { position_slot: 'F3' as const, player_id: forwards[2].localId },
-    { position_slot: 'D1' as const, player_id: defense[0].localId },
-    { position_slot: 'D2' as const, player_id: defense[1].localId },
-    { position_slot: 'G' as const, player_id: goalies[0].localId },
-  ];
-}
-
-function compareStartingLineupOrder(a: MatchedRosterPlayer, b: MatchedRosterPlayer) {
-  const goalieOrder = Number(a.position === 'G') - Number(b.position === 'G');
-  if (goalieOrder !== 0) return goalieOrder;
-  if (a.sweaterNumber !== b.sweaterNumber) return a.sweaterNumber - b.sweaterNumber;
-  return a.name.localeCompare(b.name);
+  return [{ position_slot: 'G' as const, player_id: goalies[0].localId }];
 }
 
 function getNhlGoals(playByPlay: any, boxscore: any): NhlGoal[] {
@@ -1780,6 +2347,8 @@ function buildGoalieStintPayloads(
       seenGoalieStints.set(stint.goalieId, stintIndex + 1);
       const goalieStat = statsByGoalieId.get(matchedGoalie.localId);
       const useGoalieTotals = (stintCountByGoalieId.get(stint.goalieId) ?? 0) <= 1 || stintIndex === 0;
+      const stintCount = stintCountByGoalieId.get(stint.goalieId) ?? 0;
+      const timeOnIce = stintCount <= 1 ? parseNhlToiSeconds(stint.toi) : null;
 
       return {
         goalie_id: matchedGoalie.localId,
@@ -1790,6 +2359,7 @@ function buildGoalieStintPayloads(
         exited_time: normalizeGoalieStintTime(stint.exitedTime),
         shots_against: useGoalieTotals ? goalieStat?.shots_against ?? 0 : 0,
         goals_against: useGoalieTotals ? goalieStat?.goals_against ?? null : null,
+        ...(timeOnIce == null ? {} : { time_on_ice: timeOnIce }),
       } satisfies GoalieStintPayload;
     })
     .filter((stint): stint is GoalieStintPayload => !!stint);
@@ -1887,6 +2457,7 @@ function groupExistingGoalieStints(stats: GoalieStatRecord[]) {
         exited_time: stint.exited_time,
         shots_against: stint.shots_against,
         goals_against: stint.goals_against_override,
+        time_on_ice: stint.time_on_ice,
       });
       byTeam.set(stat.team_id, rows);
     }
@@ -1916,8 +2487,16 @@ function goalieStintNeedsUpdate(existing: ExistingGoalieStint, desired: GoalieSt
     nullish(existing.exited_period) !== nullish(desired.exited_period) ||
     nullish(existing.exited_time) !== nullish(desired.exited_time) ||
     Number(existing.shots_against ?? 0) !== Number(desired.shots_against ?? 0) ||
-    nullishNumber(existing.goals_against) !== nullishNumber(desired.goals_against)
+    nullishNumber(existing.goals_against) !== nullishNumber(desired.goals_against) ||
+    ('time_on_ice' in desired &&
+      nullishNumber(existing.time_on_ice) !== nullishNumber(desired.time_on_ice))
   );
+}
+
+function parseNhlToiSeconds(value: string | null | undefined) {
+  const match = String(value ?? '').trim().match(/^(\d{1,3}):([0-5]\d)$/);
+  if (!match) return null;
+  return Number(match[1]) * 60 + Number(match[2]);
 }
 
 function normalizeGoalieStintPeriod(period: string | null | undefined) {
@@ -2160,6 +2739,46 @@ function validIsoOrUndefined(value: string | null | undefined) {
   if (!value) return undefined;
   const time = Date.parse(value);
   return Number.isFinite(time) ? new Date(time).toISOString() : undefined;
+}
+
+function extractLeagueGameNumber(gamecenterId: string) {
+  return gamecenterId.match(/(\d{4})$/)?.[1] ?? gamecenterId;
+}
+
+function nhlOfficialGameMeta(gamecenterId: string): AutofillOfficialGameMeta {
+  const gameType = NHL_GAME_TYPE_BY_CODE[gamecenterId.slice(4, 6)] ?? null;
+  const suffix = gamecenterId.slice(6);
+  const meta: AutofillOfficialGameMeta = {
+    leagueLabel: 'NHL',
+    gameType,
+  };
+
+  const gameNumber = positiveIntegerFromText(suffix);
+  if (gameType === 'playoff') {
+    const playoffNumber = parseNhlPlayoffGameNumber(suffix);
+    meta.playoffRound = playoffNumber?.round ?? null;
+    meta.playoffGameNumberInSeries = playoffNumber?.gameNumber ?? gameNumber;
+  } else {
+    meta.regularGameNumber = gameNumber;
+  }
+
+  return meta;
+}
+
+function parseNhlPlayoffGameNumber(value: string) {
+  const match = value.match(/^0([1-9])(\d)([1-9])$/);
+  if (!match) return null;
+  return {
+    round: Number(match[1]),
+    gameNumber: Number(match[3]),
+  };
+}
+
+function positiveIntegerFromText(value: string | number | null | undefined) {
+  const text = String(value ?? '').trim();
+  if (!/^\d+$/.test(text)) return null;
+  const number = Number(text);
+  return Number.isInteger(number) && number > 0 ? number : null;
 }
 
 const REPORT_TIMEZONE_OFFSETS: Record<string, string> = {

@@ -1,0 +1,262 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+// The root element is the shared Card component (border variant), which supplies
+// the radius, padding and outline. GameCard only layers a subtle translucent
+// white fill plus its own layout, state and hover treatments on top.
+.card {
+  --game-card-bg: #222d3f;
+  --game-card-hover-bg: rgba(37, 99, 235, 0.06);
+  --game-card-hover-border: rgba(37, 99, 235, 0.6);
+  --game-card-actions-bg: rgba(15, 23, 42, 0.9);
+  --game-card-divider: var(--app-border, #{$border});
+  --game-card-league-bg-base: #{$bg-card};
+  --game-card-league-border-base: #{$border};
+  --game-card-league-meta-base: #{$text-bright};
+  --game-card-league-text-base: #{$text-body};
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  min-height: 176px;
+  overflow: hidden;
+  background: var(--game-card-bg);
+  color: var(--app-text, #{$text-body});
+  transition:
+    border-color $transition-fast,
+    background $transition-fast;
+
+  &:hover,
+  &:focus-within {
+    border-color: var(--game-card-hover-border);
+    background: var(--game-card-hover-bg);
+
+    .gameActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+.leagueColors {
+  border-color: color-mix(
+    in srgb,
+    var(--game-league-primary, #334155) 44%,
+    var(--game-card-league-border-base)
+  );
+  background: color-mix(
+    in srgb,
+    var(--game-league-primary, #334155) 16%,
+    var(--game-card-league-bg-base)
+  );
+
+  &:hover,
+  &:focus-within {
+    border-color: color-mix(
+      in srgb,
+      var(--game-league-primary, #334155) 68%,
+      var(--game-card-league-border-base)
+    );
+    background: color-mix(
+      in srgb,
+      var(--game-league-primary, #334155) 22%,
+      var(--game-card-league-bg-base)
+    );
+  }
+
+  .gameMeta,
+  .gameFooter {
+    color: color-mix(
+      in srgb,
+      var(--game-league-primary, #334155) 74%,
+      var(--game-card-league-meta-base)
+    );
+  }
+
+  &.clickable:focus-visible {
+    outline-color: var(--game-league-primary, #334155);
+  }
+
+  .bottomLabel {
+    border-top-color: color-mix(
+      in srgb,
+      var(--game-league-primary, #334155) 18%,
+      var(--game-card-league-border-base)
+    );
+    color: color-mix(
+      in srgb,
+      var(--game-league-primary, #334155) 76%,
+      var(--game-card-league-text-base)
+    );
+  }
+}
+
+:global(:root[data-theme='light']) .card {
+  --game-card-bg: var(--app-surface, #fff);
+  --game-card-hover-bg: color-mix(
+    in srgb,
+    var(--app-accent-light, #2563eb) 8%,
+    var(--app-surface, #fff)
+  );
+  --game-card-hover-border: color-mix(
+    in srgb,
+    var(--app-accent-light, #2563eb) 46%,
+    var(--app-border, #cbd5e1)
+  );
+  --game-card-actions-bg: color-mix(in srgb, var(--app-surface, #f8fafc) 94%, transparent);
+  --game-card-league-bg-base: var(--app-surface, #fff);
+  --game-card-league-border-base: var(--app-border, #cbd5e1);
+  --game-card-league-meta-base: var(--app-text-strong, #0f172a);
+  --game-card-league-text-base: var(--app-text, #1f2937);
+}
+
+// ── Game type — full-height left accent bar ──────────────────────────────────
+// A pseudo-element bar flush against the left edge. The card's overflow:hidden
+// + border-radius clips the bar's left corners to match the card, leaving a
+// straight right edge. Survives the hover/live/league border-color changes.
+
+.typePreseason::before,
+.typeRegular::before,
+.typePlayoff::before,
+.skipped::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 1;
+  width: 6px;
+}
+
+.typePreseason::before {
+  background: $text-dim; // slate — exhibition/lower stakes
+}
+
+.typeRegular::before {
+  background: $accent-light; // blue — standard season play
+}
+
+.typePlayoff::before {
+  background: $warning-light; // amber/gold — high stakes
+}
+
+.live {
+  border-color: rgba($success, 0.65);
+  background: rgba($success, 0.08);
+}
+
+.skipped {
+  border-style: dashed;
+  border-color: rgba($danger, 0.68);
+  background: rgba($danger, 0.07);
+
+  &::before {
+    background: rgba($danger, 0.75);
+  }
+
+  &:hover,
+  &:focus-within {
+    border-color: rgba($danger, 0.86);
+    background: rgba($danger, 0.11);
+  }
+}
+
+.clickable {
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 2px;
+  }
+}
+
+.watchedRibbon {
+  position: absolute;
+  top: 0;
+  right: $space-lg;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 26px;
+  height: 38px;
+  padding: 7px 6px 0;
+  border-radius: 0 0 4px 4px;
+  background: var(--game-league-primary, #334155);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 8px), 0 100%);
+  color: var(--game-league-text, #ffffff);
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.16));
+  pointer-events: none;
+}
+
+.gameActions {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: $space-xs;
+  border-radius: inherit;
+  background: var(--game-card-actions-bg);
+  box-shadow: inset 0 0 0 1px var(--app-border, #{$border});
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
+}
+
+.gameMeta,
+.gameFooter {
+  display: flex;
+  justify-content: space-between;
+  gap: $space-sm;
+  font-size: $font-sm;
+  color: var(--app-text-muted, #{$text-dim});
+}
+
+.gameFooter {
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.team {
+  &Line {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    font-weight: 700;
+  }
+
+  &LineDim {
+    .teamScore {
+      color: var(--app-text-muted, #{$text-dim});
+      opacity: 0.68;
+    }
+  }
+
+  &Code {
+    min-width: 0;
+    color: var(--app-text, #{$text-body});
+    @include truncate;
+  }
+
+  &Score {
+    margin-left: auto;
+    min-width: 30px;
+    text-align: right;
+    font-size: $font-2xl;
+    color: var(--app-text-strong, #{$text-bright});
+  }
+}
+
+.bottomLabel {
+  align-self: stretch;
+  padding-top: $space-sm;
+  border-top: 1px solid var(--game-card-divider);
+  font-size: $font-base;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--app-text, #{$text-body});
+}

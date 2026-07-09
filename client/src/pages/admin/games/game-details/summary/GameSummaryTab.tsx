@@ -1,20 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type SyntheticEvent,
+} from 'react';
 import useGameGoals from '@/hooks/useGameGoals';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import { useNavigate } from 'react-router-dom';
-import Button from '@/components/Button/Button';
-import Section from '@/components/Section/Section';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
-import StartGameModal from '../StartGameModal';
-import NhlGameAutofillModal from '../NhlGameAutofillModal';
-import ThreeStarsModal from '../ThreeStarsModal';
-import ScoreGoalModal from '../ScoreGoalModal';
-import ShootoutAttemptModal from '../ShootoutAttemptModal';
+import Button from '@jerecocc/tracker-ui/Button';
+import Section from '@jerecocc/tracker-ui/Section';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import GoalieStatsCard from './GoalieStatsCard';
-import ShotsEditModal from '../ShotsEditModal';
-import RecordShotsModal, { type ShotsNextAction } from '../RecordShotsModal';
-import ScoreImageModal from '../ScoreImageModal';
+import type { ShotsNextAction } from '../RecordShotsModal';
 import ScoringCard from '../ScoringCard';
 import ThreeStarsCard from './ThreeStarsCard';
 import type { GameRecord, CurrentPeriod, GameStatus, UpdateGameInfoData } from '@/hooks/useGames';
@@ -38,7 +41,18 @@ import { formatPlayerName } from '../formatUtils';
 import { sumVisiblePeriodShots } from '../shotPeriods';
 import { buildSeasonDetailsPath } from '@/lib/routeSlugs';
 import GoalieSwitchReportCard from './GoalieSwitchReportCard';
-import type { NhlAutofillProgress } from '../nhlGameAutofill';
+import type { GameAutofillManualMoveReport, GameAutofillProgress } from '../gameAutofillTypes';
+import GameAutofillManualMoveReportModal from '../GameAutofillManualMoveReportModal';
+
+const NhlGameAutofillModal = lazy(() => import('../NhlGameAutofillModal'));
+const PwhlGameAutofillModal = lazy(() => import('../PwhlGameAutofillModal'));
+const RecordShotsModal = lazy(() => import('../RecordShotsModal'));
+const ScoreGoalModal = lazy(() => import('../ScoreGoalModal'));
+const ScoreImageModal = lazy(() => import('../ScoreImageModal'));
+const ShootoutAttemptModal = lazy(() => import('../ShootoutAttemptModal'));
+const ShotsEditModal = lazy(() => import('../ShotsEditModal'));
+const StartGameModal = lazy(() => import('../StartGameModal'));
+const ThreeStarsModal = lazy(() => import('../ThreeStarsModal'));
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -62,6 +76,7 @@ interface Props {
     playerId: string,
     firstName: string | null | undefined,
     lastName: string | null | undefined,
+    jerseyNumber?: number | null,
   ) => string;
   linescorePeriods: { id: string; label: string; shortLabel: string }[];
   goalieStats: GoalieStatRecord[];
@@ -70,7 +85,7 @@ interface Props {
   roster: GameRosterEntry[];
   lineup: LineupEntry[];
   rosterReady: boolean;
-  lineupsReady: boolean;
+  startingGoaliesReady: boolean;
   // Write callbacks
   upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<GoalieStatRecord | null>;
   switchGoalie: (data: GoalieSwitchData) => Promise<GoalieStatRecord[] | null>;
@@ -90,7 +105,8 @@ interface Props {
   updateGameInfo: (data: UpdateGameInfoData) => Promise<boolean>;
   updatePeriodShots: (period: string, home_shots: number, away_shots: number) => Promise<boolean>;
   deleteGame: () => Promise<boolean>;
-  onGameAutofillChange?: (progress: NhlAutofillProgress | null) => void;
+  onGameAutofillChange?: (progress: GameAutofillProgress | null) => void;
+  onGoalScoringChange?: (active: boolean) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -118,7 +134,7 @@ const GameSummaryTab = ({
   roster,
   lineup,
   rosterReady,
-  lineupsReady,
+  startingGoaliesReady,
   upsertGoalieStat,
   switchGoalie,
   removeGoalieStat,
@@ -135,6 +151,7 @@ const GameSummaryTab = ({
   updatePeriodShots,
   deleteGame,
   onGameAutofillChange,
+  onGoalScoringChange,
 }: Props) => {
   const navigate = useNavigate();
 
@@ -295,6 +312,12 @@ const GameSummaryTab = ({
   }, [goals]);
   const lockGoalTimingFields =
     !!editGoal && (editGoal.id !== lastRecordedGoalId || attempts.length > 0);
+  const isGoalScoring = editable && goalPeriod !== null && !isFinal;
+
+  useEffect(() => {
+    onGoalScoringChange?.(isGoalScoring);
+    return () => onGoalScoringChange?.(false);
+  }, [isGoalScoring, onGoalScoringChange]);
 
   // ── Shootout Attempt modal state ─────────────────────────────────────────
   const [attemptModalMode, setAttemptModalMode] = useState<null | 'add' | string>(null);
@@ -350,6 +373,12 @@ const GameSummaryTab = ({
   // ── Start Game modal ─────────────────────────────────────────────────────
   const [startGameModalOpen, setStartGameModalOpen] = useState(false);
   const [nhlAutofillModalOpen, setNhlAutofillModalOpen] = useState(false);
+  const [pwhlAutofillModalOpen, setPwhlAutofillModalOpen] = useState(false);
+  const [manualMoveReports, setManualMoveReports] = useState<GameAutofillManualMoveReport[]>([]);
+  const autofillGame = useMemo<GameRecord>(
+    () => (game.league_id || !leagueId ? game : { ...game, league_id: leagueId }),
+    [game, leagueId],
+  );
   const openStartGameModal = () => setStartGameModalOpen(true);
   const handleStartGame = async (isoTime: string) => {
     const started = await startGame(isoTime);
@@ -501,9 +530,22 @@ const GameSummaryTab = ({
   }, [busy, focusCurrentPeriodAction]);
 
   const hasStars = isFinal && !!(game.star_1_id && game.star_2_id && game.star_3_id);
-  const showNhlAdminTools = editable && game.league_code?.toUpperCase() === 'NHL';
+  const leagueCode = game.league_code?.toUpperCase();
+  const showNhlAdminTools = editable && leagueCode === 'NHL';
+  const showPwhlAdminTools = editable && leagueCode === 'PWHL';
   const showGoalieSwitchReport = showNhlAdminTools;
   const canAutofillNhlGame = showNhlAdminTools && game.status !== 'final';
+  const canAutofillPwhlGame = showPwhlAdminTools && game.status !== 'final';
+  const canAutofillGame = canAutofillNhlGame || canAutofillPwhlGame;
+  const openAutofillGame = () => {
+    if (canAutofillNhlGame) {
+      setNhlAutofillModalOpen(true);
+      return;
+    }
+    if (canAutofillPwhlGame) {
+      setPwhlAutofillModalOpen(true);
+    }
+  };
 
   // For edit-mode revert: use current_period if set (retained after endGame), else
   // fall back to the highest period that has a score recorded.
@@ -518,10 +560,32 @@ const GameSummaryTab = ({
     (game.current_period as CurrentPeriod | null) ??
     PERIOD_PRIORITY.find((p) => game.period_scores.some((ps) => ps.period === p)) ??
     '3';
+  const summaryContentClassName = [
+    styles.tabContent,
+    isGoalScoring ? styles.gameAutofillLockedRegion : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const stopLockedInteraction = (event: SyntheticEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  const stopLockedKeyInteraction = (event: KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      stopLockedInteraction(event);
+    }
+  };
 
   return (
     <>
-      <div className={styles.tabContent}>
+      <div
+        className={summaryContentClassName}
+        aria-disabled={isGoalScoring || undefined}
+        data-goal-scoring-locked={isGoalScoring || undefined}
+        inert={isGoalScoring ? '' : undefined}
+        onClickCapture={isGoalScoring ? stopLockedInteraction : undefined}
+        onKeyDownCapture={isGoalScoring ? stopLockedKeyInteraction : undefined}
+      >
         <div className={styles.summaryGrid}>
           {/* ── Left column: Three Stars + Scoring + Goalie Stats + Previous Meetings + Last 5 ── */}
           <div className={styles.summaryLeft}>
@@ -534,8 +598,8 @@ const GameSummaryTab = ({
                 showPlayerDataStatus={showPlayerDataStatus}
                 getPlayerHref={
                   playerHrefBuilder
-                    ? (teamId, playerId, firstName, lastName) =>
-                        playerHrefBuilder(teamId, playerId, firstName, lastName)
+                    ? (teamId, playerId, firstName, lastName, jerseyNumber) =>
+                        playerHrefBuilder(teamId, playerId, firstName, lastName, jerseyNumber)
                     : undefined
                 }
                 onEdit={
@@ -584,7 +648,13 @@ const GameSummaryTab = ({
                       const teamId = playerTeamMap.get(playerId);
                       const entry = roster.find((player) => player.player_id === playerId);
                       return teamId && entry
-                        ? playerHrefBuilder(teamId, playerId, entry.first_name, entry.last_name)
+                        ? playerHrefBuilder(
+                            teamId,
+                            playerId,
+                            entry.first_name,
+                            entry.last_name,
+                            entry.jersey_number,
+                          )
                         : '#';
                     }
                   : undefined
@@ -602,8 +672,8 @@ const GameSummaryTab = ({
                 goals={goals}
                 getPlayerHref={
                   playerHrefBuilder
-                    ? (teamId, playerId, firstName, lastName) =>
-                        playerHrefBuilder(teamId, playerId, firstName, lastName)
+                    ? (teamId, playerId, firstName, lastName, jerseyNumber) =>
+                        playerHrefBuilder(teamId, playerId, firstName, lastName, jerseyNumber)
                     : undefined
                 }
                 isFinal={editable && isFinal && isEditMode}
@@ -642,7 +712,7 @@ const GameSummaryTab = ({
               linescorePeriods={linescorePeriods}
               attempts={attempts}
               rosterReady={rosterReady}
-              lineupsReady={lineupsReady}
+              startingGoaliesReady={startingGoaliesReady}
               canEndGame={
                 editable &&
                 isInProgress &&
@@ -655,9 +725,7 @@ const GameSummaryTab = ({
                 (game.current_period !== PERIOD.THIRD || liveAwayScore !== liveHomeScore)
               }
               onStartGame={editable ? openStartGameModal : undefined}
-              onAutofillGame={
-                canAutofillNhlGame ? () => setNhlAutofillModalOpen(true) : undefined
-              }
+              onAutofillGame={canAutofillGame ? openAutofillGame : undefined}
               onReschedule={editable ? () => updateStatus('postponed') : undefined}
               onDelete={editable ? () => setConfirmDeleteOpen(true) : undefined}
               onEndGame={
@@ -689,7 +757,7 @@ const GameSummaryTab = ({
                       variant="outlined"
                       intent="neutral"
                       icon="edit"
-                      size="sm"
+                      size="medium"
                       tooltip="Edit shots"
                       onClick={() => setShotsEditModalOpen(true)}
                     />
@@ -776,15 +844,14 @@ const GameSummaryTab = ({
               </Section>
             )}
 
-            {showGoalieSwitchReport && (
-              <GoalieSwitchReportCard game={game} />
-            )}
+            {showGoalieSwitchReport && <GoalieSwitchReportCard game={game} />}
 
             {/* ── Game Info card ── */}
             <GameInfoCard
               game={game}
               busy={busy}
               useLocalTimezone={useLocalTimezone}
+              showScheduledWatchDate={!editable}
               updateGameInfo={
                 editable && (isEditMode || game.status === 'scheduled') ? updateGameInfo : undefined
               }
@@ -794,161 +861,179 @@ const GameSummaryTab = ({
       </div>
 
       {/* ── Score Goal Form ── */}
-      {editable && goalPeriod !== null && (
-        <ScoreGoalModal
-          open={goalPeriod !== null}
-          period={goalPeriod}
-          editGoal={editGoal}
-          game={game}
-          goals={goals}
-          awayRoster={awayRoster}
-          homeRoster={homeRoster}
-          busy={!!busy || !!goalSavingPeriod}
-          lockTimingFields={lockGoalTimingFields}
-          onClose={closeGoalModal}
-          onAdd={handleAddGoal}
-          onUpdate={handleUpdateGoal}
-        />
-      )}
+      <Suspense fallback={null}>
+        {editable && goalPeriod !== null && (
+          <ScoreGoalModal
+            open={goalPeriod !== null}
+            period={goalPeriod}
+            editGoal={editGoal}
+            game={game}
+            goals={goals}
+            awayRoster={awayRoster}
+            homeRoster={homeRoster}
+            busy={!!busy || !!goalSavingPeriod}
+            lockTimingFields={lockGoalTimingFields}
+            onClose={closeGoalModal}
+            onAdd={handleAddGoal}
+            onUpdate={handleUpdateGoal}
+          />
+        )}
 
-      {/* ── Add / Edit Shootout Attempt ── */}
-      {editable && (
-        <ShootoutAttemptModal
-          mode={attemptModalMode}
-          initialTeam={attemptInitialTeam}
-          initialShooterId={attemptInitialShooterId}
-          initialScored={attemptInitialScored}
-          game={game}
-          awayRoster={awayRoster}
-          homeRoster={homeRoster}
-          busy={!!busy}
-          onClose={closeAttemptModal}
-          onAdd={addAttempt}
-          onUpdate={updateAttempt}
-        />
-      )}
+        {/* ── Add / Edit Shootout Attempt ── */}
+        {editable && attemptModalMode !== null && (
+          <ShootoutAttemptModal
+            mode={attemptModalMode}
+            initialTeam={attemptInitialTeam}
+            initialShooterId={attemptInitialShooterId}
+            initialScored={attemptInitialScored}
+            game={game}
+            awayRoster={awayRoster}
+            homeRoster={homeRoster}
+            busy={!!busy}
+            onClose={closeAttemptModal}
+            onAdd={addAttempt}
+            onUpdate={updateAttempt}
+          />
+        )}
 
-      {/* ── Start Game modal ── */}
-      {editable && (
-        <StartGameModal
-          open={startGameModalOpen}
-          scheduledAt={game.scheduled_at}
-          isStarting={busy === 'in_progress'}
-          disabled={!!busy}
-          onClose={() => setStartGameModalOpen(false)}
-          onStart={handleStartGame}
-        />
-      )}
+        {/* ── Start Game modal ── */}
+        {editable && startGameModalOpen && (
+          <StartGameModal
+            open={startGameModalOpen}
+            scheduledAt={game.scheduled_at}
+            isStarting={busy === 'in_progress'}
+            disabled={!!busy}
+            onClose={() => setStartGameModalOpen(false)}
+            onStart={handleStartGame}
+          />
+        )}
 
-      {canAutofillNhlGame && (
-        <NhlGameAutofillModal
-          open={nhlAutofillModalOpen}
-          game={game}
-          onClose={() => setNhlAutofillModalOpen(false)}
-          onAutofillChange={onGameAutofillChange}
-        />
-      )}
+        {canAutofillNhlGame && nhlAutofillModalOpen && (
+          <NhlGameAutofillModal
+            open={nhlAutofillModalOpen}
+            game={autofillGame}
+            onClose={() => setNhlAutofillModalOpen(false)}
+            onAutofillChange={onGameAutofillChange}
+            onManualMoveReport={(report) => setManualMoveReports([report])}
+          />
+        )}
 
-      {/* ── 3 Stars modal ── */}
-      {editable && (
-        <ThreeStarsModal
-          open={starsModalOpen}
-          editMode={starsEditMode}
-          roster={roster}
-          busy={!!busy}
-          awayTeam={{
-            id: game.away_team.id,
-            code: game.away_team.code,
-            logo: game.away_team.logo,
-            logoDark: game.away_team.logo_dark,
-            logoLight: game.away_team.logo_light,
-            primaryColor: game.away_team.primary_color,
-            textColor: game.away_team.text_color,
-          }}
-          homeTeam={{
-            id: game.home_team.id,
-            code: game.home_team.code,
-            logo: game.home_team.logo,
-            logoDark: game.home_team.logo_dark,
-            logoLight: game.home_team.logo_light,
-            primaryColor: game.home_team.primary_color,
-            textColor: game.home_team.text_color,
-          }}
-          initialStars={
-            starsEditMode && game
-              ? {
-                  star1: game.star_1_id ?? '',
-                  star2: game.star_2_id ?? '',
-                  star3: game.star_3_id ?? '',
-                }
-              : undefined
-          }
-          onClose={() => setStarsModalOpen(false)}
-          onSave={updateStars}
-          onEndGame={async (payload) => {
-            const ok = await endGame(payload);
-            if (ok) {
-              setEndGameReadyForStars(false);
+        {canAutofillPwhlGame && pwhlAutofillModalOpen && (
+          <PwhlGameAutofillModal
+            open={pwhlAutofillModalOpen}
+            game={autofillGame}
+            onClose={() => setPwhlAutofillModalOpen(false)}
+            onAutofillChange={onGameAutofillChange}
+            onManualMoveReport={(report) => setManualMoveReports([report])}
+          />
+        )}
+
+        {editable && starsModalOpen && (
+          <ThreeStarsModal
+            open={starsModalOpen}
+            editMode={starsEditMode}
+            roster={roster}
+            busy={!!busy}
+            awayTeam={{
+              id: game.away_team.id,
+              code: game.away_team.code,
+              logo: game.away_team.logo,
+              logoDark: game.away_team.logo_dark,
+              logoLight: game.away_team.logo_light,
+              primaryColor: game.away_team.primary_color,
+              textColor: game.away_team.text_color,
+            }}
+            homeTeam={{
+              id: game.home_team.id,
+              code: game.home_team.code,
+              logo: game.home_team.logo,
+              logoDark: game.home_team.logo_dark,
+              logoLight: game.home_team.logo_light,
+              primaryColor: game.home_team.primary_color,
+              textColor: game.home_team.text_color,
+            }}
+            initialStars={
+              starsEditMode && game
+                ? {
+                    star1: game.star_1_id ?? '',
+                    star2: game.star_2_id ?? '',
+                    star3: game.star_3_id ?? '',
+                  }
+                : undefined
             }
-            return ok;
-          }}
-        />
-      )}
+            onClose={() => setStarsModalOpen(false)}
+            onSave={updateStars}
+            onEndGame={async (payload) => {
+              const ok = await endGame(payload);
+              if (ok) {
+                setEndGameReadyForStars(false);
+              }
+              return ok;
+            }}
+          />
+        )}
 
-      {/* ── Record Shots modal ── */}
-      {editable && shotsPeriod !== null && shotsNextAction && (
-        <RecordShotsModal
-          open={shotsPeriod !== null}
-          period={shotsPeriod}
-          nextAction={shotsNextAction}
-          showShootsFirst={shotsShowShootsFirst}
-          game={game}
-          goalieStats={goalieStats}
-          onClose={() => setShotsPeriod(null)}
-          updatePeriodShots={updatePeriodShots}
-          updateGameInfo={updateGameInfo}
-          updateGoalieStint={updateGoalieStint}
-          onAdvancePeriod={advancePeriod}
-          onNextOTPeriod={() => advanceOTPeriod(game.overtime_periods ?? 1)}
-          onEndGameReady={() => {
-            setEndGameReadyForStars(true);
-            setStarsEditMode(false);
-            setStarsModalOpen(true);
-          }}
-        />
-      )}
+        {/* ── Record Shots modal ── */}
+        {editable && shotsPeriod !== null && shotsNextAction && (
+          <RecordShotsModal
+            open={shotsPeriod !== null}
+            period={shotsPeriod}
+            nextAction={shotsNextAction}
+            showShootsFirst={shotsShowShootsFirst}
+            game={game}
+            goalieStats={goalieStats}
+            onClose={() => setShotsPeriod(null)}
+            updatePeriodShots={updatePeriodShots}
+            updateGameInfo={updateGameInfo}
+            updateGoalieStint={updateGoalieStint}
+            onAdvancePeriod={advancePeriod}
+            onNextOTPeriod={() => advanceOTPeriod(game.overtime_periods ?? 1)}
+            onEndGameReady={() => {
+              setEndGameReadyForStars(true);
+              setStarsEditMode(false);
+              setStarsModalOpen(true);
+            }}
+          />
+        )}
 
-      {/* ── Shots edit modal (all periods) ── */}
-      {editable && shotsEditModalOpen && (
-        <ShotsEditModal
-          open={shotsEditModalOpen}
-          game={game}
-          periods={shotsPeriods}
-          awayRoster={awayRoster}
-          homeRoster={homeRoster}
-          goalieStats={goalieStats}
-          goals={goals}
-          lineup={lineup}
-          onClose={() => setShotsEditModalOpen(false)}
-          updatePeriodShots={updatePeriodShots}
-          upsertGoalieStat={async (data) => {
-            await upsertGoalieStat(data);
-          }}
-        />
-      )}
+        {/* ── Shots edit modal (all periods) ── */}
+        {editable && shotsEditModalOpen && (
+          <ShotsEditModal
+            open={shotsEditModalOpen}
+            game={game}
+            periods={shotsPeriods}
+            awayRoster={awayRoster}
+            homeRoster={homeRoster}
+            goalieStats={goalieStats}
+            goals={goals}
+            lineup={lineup}
+            onClose={() => setShotsEditModalOpen(false)}
+            updatePeriodShots={updatePeriodShots}
+            upsertGoalieStat={async (data) => {
+              await upsertGoalieStat(data);
+            }}
+          />
+        )}
 
-      {/* ── Score image modal ── */}
-      {scoreImageOpen && (
-        <ScoreImageModal
-          open={scoreImageOpen}
-          game={game}
-          liveAwayScore={liveAwayScore}
-          liveHomeScore={liveHomeScore}
-          overtimeSuffix={overtimeSuffix}
-          allowPreview
-          onClose={() => setScoreImageOpen(false)}
-        />
-      )}
+        {/* ── Score image modal ── */}
+        {scoreImageOpen && (
+          <ScoreImageModal
+            open={scoreImageOpen}
+            game={game}
+            liveAwayScore={liveAwayScore}
+            liveHomeScore={liveHomeScore}
+            overtimeSuffix={overtimeSuffix}
+            allowPreview
+            onClose={() => setScoreImageOpen(false)}
+          />
+        )}
+      </Suspense>
+
+      <GameAutofillManualMoveReportModal
+        open={manualMoveReports.length > 0}
+        reports={manualMoveReports}
+        onClose={() => setManualMoveReports([])}
+      />
 
       {/* ── Delete Game confirm ── */}
       {editable && (
@@ -985,7 +1070,9 @@ const GameSummaryTab = ({
           open={!!confirmDeleteGoal}
           title="Delete Goal"
           body={`Delete the ${
-            confirmDeleteGoal.team_id === game.away_team.id ? game.away_team.code : game.home_team.code
+            confirmDeleteGoal.team_id === game.away_team.id
+              ? game.away_team.code
+              : game.home_team.code
           } goal by ${formatPlayerName(
             confirmDeleteGoal.scorer_first_name,
             confirmDeleteGoal.scorer_last_name,

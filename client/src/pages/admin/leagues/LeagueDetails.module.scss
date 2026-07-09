@@ -102,6 +102,10 @@ $league-tab-list-gap: $space-md;
   gap: $space-2xl;
 }
 
+.infoCardGrid {
+  margin-top: $space-2xl;
+}
+
 .breadcrumbSkeleton {
   width: 72px;
   height: 16px;
@@ -112,9 +116,7 @@ $league-tab-list-gap: $space-md;
     display: flex;
     align-items: center;
     gap: $space-xl;
-    margin-bottom: $space-2xl;
     padding-bottom: $space-2xl;
-    border-bottom: 1px solid $border;
 
     @media (max-width: 720px) {
       align-items: flex-start;
@@ -821,6 +823,19 @@ $league-tab-list-gap: $space-md;
     }
   }
 
+  &EditActionRow {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: $space-sm;
+
+    @media (max-width: 640px) {
+      align-items: stretch;
+      flex-direction: column;
+    }
+  }
+
   &EditLabel {
     display: flex;
     flex-direction: column;
@@ -1259,7 +1274,37 @@ $league-tab-list-gap: $space-md;
   }
 
   &Item {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+    min-width: 0;
+    padding: $space-md;
+  }
+
+  &SortableItem {
+    min-width: 0;
+    list-style: none;
+  }
+
+  &Reorderable {
+    width: 100%;
+
+    .awardDefinitionItem,
+    .awardDefinitionItem > div {
+      height: auto;
+      min-height: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+    }
+  }
+
+  &Header {
+    display: flex;
     align-items: flex-start;
+    justify-content: space-between;
+    gap: $space-md;
+    min-width: 0;
   }
 
   &Details {
@@ -1279,6 +1324,7 @@ $league-tab-list-gap: $space-md;
     flex-direction: column;
     gap: $space-xs;
     min-width: 0;
+    flex: 1;
   }
 
   &Name {
@@ -1300,10 +1346,17 @@ $league-tab-list-gap: $space-md;
     line-height: 1.45;
   }
 
+  &Actions {
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    flex-shrink: 0;
+  }
+
   &Form {
     display: flex;
     flex-direction: column;
-    gap: $space-md;
+    gap: $space-lg;
   }
 
   &FormGrid {
@@ -1324,5 +1377,21 @@ $league-tab-list-gap: $space-md;
     @media (max-width: 640px) {
       grid-template-columns: 1fr;
     }
+  }
+
+  &GroupFields {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &Segmented {
+    width: 100%;
+  }
+
+  &Eligibility {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
   }
 }

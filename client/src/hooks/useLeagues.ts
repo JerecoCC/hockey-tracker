@@ -33,6 +33,8 @@ export interface LeagueRecord {
   best_of_shootout: number;
   /** Point system used for standings: '3-2-1-0' (win/OTW/OTL/loss) or '2-1-0' (win/OTL/loss). */
   scoring_system: '3-2-1-0' | '2-1-0';
+  /** Default regular-season goalie leaderboard eligibility in minutes. */
+  goalie_min_regular_minutes: number;
   /** Ordered list of qualification rules. Null means no programmatic format is set. */
   playoff_format: PlayoffFormatRule[] | null;
   /** Current league phase derived from the current season. */
@@ -50,6 +52,7 @@ export interface CreateLeagueData {
   best_of_playoff?: number;
   best_of_shootout?: number;
   scoring_system?: '3-2-1-0' | '2-1-0';
+  goalie_min_regular_minutes?: number;
   playoff_format?: PlayoffFormatRule[] | null;
 }
 
@@ -61,15 +64,19 @@ const authHeaders = () => {
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-const useLeagues = () => {
+type LeagueDataMode = 'admin' | 'user';
+
+const useLeagues = (options: { mode?: LeagueDataMode } = {}) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const mode = options.mode ?? 'admin';
+  const basePath = mode === 'user' ? 'user' : 'admin';
 
   const { data: leagues = [], isLoading: loading } = useQuery({
-    queryKey: ['leagues'],
+    queryKey: [mode === 'user' ? 'user-leagues' : 'leagues'],
     queryFn: async () => {
       try {
-        const { data } = await axios.get<LeagueRecord[]>(`${API}/admin/leagues`, {
+        const { data } = await axios.get<LeagueRecord[]>(`${API}/${basePath}/leagues`, {
           headers: authHeaders(),
         });
         return data;

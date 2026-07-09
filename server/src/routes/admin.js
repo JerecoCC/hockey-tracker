@@ -143,7 +143,6 @@ router.get('/game-data-storage', async (_req, res) => {
           ('goals',                'Goals',                'events',        false),
           ('shootout_attempts',    'Shootout Attempts',    'events',        false),
           ('game_rosters',         'Game Rosters',         'participation', false),
-          ('game_starting_lineup', 'Starting Lineups',     'participation', false),
           ('game_goalie_stints',   'Goalie Stints',        'goalies',       false),
           ('user_watched_games',   'User Watched Games',   'user',          false)
       ),

@@ -2,9 +2,352 @@ const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
 const { sql } = require('../db');
 const { normalizeSeasonBracketSlotKeys } = require('../lib/playoffBracketSlots');
+const {
+  playerMatchesAwardEligibility,
+  teamMatchesAwardEligibility,
+} = require('../lib/awardEligibility');
 
 // All season routes require the admin role
 router.use(requireAdmin);
+
+const fetchAwardPlayerEligibilityRow = async (seasonId, playerId) => {
+  const rows = await sql`
+    SELECT
+      p.id,
+      COALESCE(ptr.position, p.position) AS position,
+      p.rookie_season_id::text AS rookie_season_id
+    FROM players p
+    LEFT JOIN LATERAL (
+      SELECT position
+      FROM player_teams
+      WHERE player_id = p.id AND season_id = ${seasonId}
+      ORDER BY end_date DESC NULLS FIRST, start_date DESC NULLS LAST, created_at DESC
+      LIMIT 1
+    ) ptr ON true
+    WHERE p.id = ${playerId}
+  `;
+  return rows[0] ?? null;
+};
+
+const validateAwardPlayerEligibility = async (seasonId, playerId, playerEligibility) => {
+  const player = await fetchAwardPlayerEligibilityRow(seasonId, playerId);
+  if (!player) return { ok: false, error: 'Invalid player, team, or award' };
+  return playerMatchesAwardEligibility(player, playerEligibility, seasonId)
+    ? { ok: true }
+    : { ok: false, error: 'Player is not eligible for this award' };
+};
+
+const fetchAwardTeamEligibilityRow = async (seasonId, teamId) => {
+  const rows = await sql`
+    WITH RECURSIVE season_info AS (
+      SELECT id, league_id, group_alignment_set_id
+      FROM seasons
+      WHERE id = ${seasonId}
+    ),
+    prev_season AS (
+      SELECT id
+      FROM seasons
+      WHERE league_id = (SELECT league_id FROM season_info)
+        AND id <> ${seasonId}
+      ORDER BY start_date DESC NULLS LAST, created_at DESC
+      LIMIT 1
+    ),
+    alignment_group_overrides AS (
+      SELECT DISTINCT alignment_group_id
+      FROM season_alignment_group_teams
+      WHERE season_id = ${seasonId}
+    ),
+    legacy_auto_group AS (
+      SELECT id
+      FROM groups
+      WHERE season_id = ${seasonId} AND is_auto = true
+      LIMIT 1
+    ),
+    legacy_prev_auto_group AS (
+      SELECT id
+      FROM groups
+      WHERE season_id = (SELECT id FROM prev_season) AND is_auto = true
+      LIMIT 1
+    ),
+    legacy_group_overrides AS (
+      SELECT DISTINCT group_id
+      FROM season_group_teams
+      WHERE season_id = ${seasonId}
+    ),
+    legacy_prev_group_overrides AS (
+      SELECT DISTINCT group_id
+      FROM season_group_teams
+      WHERE season_id = (SELECT id FROM prev_season)
+        AND group_id NOT IN (SELECT group_id FROM legacy_group_overrides)
+    ),
+    all_groups AS (
+      SELECT
+        ag.id,
+        ag.parent_id,
+        ag.name,
+        ag.stable_key,
+        ag.role
+      FROM group_alignment_groups ag
+      WHERE ag.alignment_set_id = (SELECT group_alignment_set_id FROM season_info)
+        AND (SELECT group_alignment_set_id FROM season_info) IS NOT NULL
+
+      UNION ALL
+
+      SELECT
+        g.id,
+        g.parent_id,
+        g.name,
+        NULL::text AS stable_key,
+        g.role
+      FROM groups g
+      WHERE (SELECT group_alignment_set_id FROM season_info) IS NULL
+        AND (
+          (
+            g.league_id = (SELECT league_id FROM season_info)
+            AND g.season_id IS NULL
+          )
+          OR g.id IN (SELECT id FROM legacy_auto_group)
+          OR (
+            g.id IN (SELECT id FROM legacy_prev_auto_group)
+            AND NOT EXISTS (SELECT 1 FROM legacy_auto_group)
+          )
+        )
+    ),
+    memberships AS (
+      SELECT sagt.alignment_group_id AS group_id, sagt.team_id
+      FROM season_alignment_group_teams sagt
+      JOIN group_alignment_groups ag ON ag.id = sagt.alignment_group_id
+      WHERE sagt.season_id = ${seasonId}
+        AND ag.alignment_set_id = (SELECT group_alignment_set_id FROM season_info)
+        AND (SELECT group_alignment_set_id FROM season_info) IS NOT NULL
+
+      UNION ALL
+
+      SELECT gat.alignment_group_id AS group_id, gat.team_id
+      FROM group_alignment_teams gat
+      JOIN group_alignment_groups ag ON ag.id = gat.alignment_group_id
+      WHERE ag.alignment_set_id = (SELECT group_alignment_set_id FROM season_info)
+        AND (SELECT group_alignment_set_id FROM season_info) IS NOT NULL
+        AND gat.alignment_group_id NOT IN (
+          SELECT alignment_group_id FROM alignment_group_overrides
+        )
+
+      UNION ALL
+
+      SELECT sgt.group_id, sgt.team_id
+      FROM season_group_teams sgt
+      WHERE sgt.season_id = ${seasonId}
+        AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+
+      UNION ALL
+
+      SELECT sgt.group_id, sgt.team_id
+      FROM season_group_teams sgt
+      WHERE sgt.season_id = (SELECT id FROM prev_season)
+        AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+        AND sgt.group_id NOT IN (
+          SELECT group_id FROM legacy_group_overrides
+        )
+
+      UNION ALL
+
+      SELECT gt.group_id, gt.team_id
+      FROM group_teams gt
+      WHERE (SELECT group_alignment_set_id FROM season_info) IS NULL
+        AND gt.group_id NOT IN (
+          SELECT group_id FROM legacy_group_overrides
+        )
+        AND gt.group_id NOT IN (
+          SELECT group_id FROM legacy_prev_group_overrides
+        )
+        AND gt.group_id NOT IN (SELECT id FROM legacy_auto_group)
+        AND gt.group_id NOT IN (SELECT id FROM legacy_prev_auto_group)
+
+      UNION ALL
+
+      SELECT gt.group_id, gt.team_id
+      FROM group_teams gt
+      WHERE (SELECT group_alignment_set_id FROM season_info) IS NULL
+        AND gt.group_id IN (SELECT id FROM legacy_auto_group)
+
+      UNION ALL
+
+      SELECT gt.group_id, gt.team_id
+      FROM group_teams gt
+      WHERE (SELECT group_alignment_set_id FROM season_info) IS NULL
+        AND gt.group_id IN (SELECT id FROM legacy_prev_auto_group)
+        AND NOT EXISTS (SELECT 1 FROM legacy_auto_group)
+    ),
+    group_ancestors AS (
+      SELECT
+        m.team_id,
+        g.id,
+        g.parent_id,
+        g.name,
+        g.stable_key,
+        g.role
+      FROM memberships m
+      JOIN all_groups g ON g.id = m.group_id
+
+      UNION ALL
+
+      SELECT
+        ga.team_id,
+        parent.id,
+        parent.parent_id,
+        parent.name,
+        parent.stable_key,
+        parent.role
+      FROM group_ancestors ga
+      JOIN all_groups parent ON parent.id = ga.parent_id
+    ),
+    conference_memberships AS (
+      SELECT DISTINCT
+        team_id,
+        name,
+        stable_key
+      FROM group_ancestors
+      WHERE role = 'conference'
+    )
+    SELECT
+      t.id,
+      COALESCE(
+        json_agg(DISTINCT cm.name) FILTER (WHERE cm.name IS NOT NULL),
+        '[]'::json
+      ) AS conference_names,
+      COALESCE(
+        json_agg(DISTINCT cm.stable_key) FILTER (WHERE cm.stable_key IS NOT NULL),
+        '[]'::json
+      ) AS conference_keys
+    FROM teams t
+    LEFT JOIN conference_memberships cm ON cm.team_id = t.id
+    WHERE t.id = ${teamId}
+    GROUP BY t.id
+  `;
+  return rows[0] ?? null;
+};
+
+const validateAwardTeamEligibility = async (seasonId, teamId, teamEligibility) => {
+  const team = await fetchAwardTeamEligibilityRow(seasonId, teamId);
+  if (!team) return { ok: false, error: 'Invalid player, team, or award' };
+  return teamMatchesAwardEligibility(team, teamEligibility)
+    ? { ok: true }
+    : { ok: false, error: 'Team is not eligible for this award' };
+};
+
+const fetchRegularSeasonTeamCompletion = async (seasonId) => {
+  const rows = await sql`
+    WITH season_info AS (
+      SELECT
+        s.id,
+        s.league_id,
+        s.games_per_season,
+        s.group_alignment_set_id,
+        gas.structure_type AS alignment_structure_type
+      FROM seasons s
+      LEFT JOIN group_alignment_sets gas ON gas.id = s.group_alignment_set_id
+      WHERE s.id = ${seasonId}
+    ),
+    alignment_group_overrides AS (
+      SELECT DISTINCT alignment_group_id
+      FROM season_alignment_group_teams
+      WHERE season_id = ${seasonId}
+    ),
+    participant_teams AS (
+      SELECT team_id
+      FROM group_alignment_set_teams
+      WHERE alignment_set_id = (SELECT group_alignment_set_id FROM season_info)
+        AND (SELECT alignment_structure_type FROM season_info) = 'league'
+
+      UNION
+
+      SELECT sagt.team_id
+      FROM season_alignment_group_teams sagt
+      JOIN group_alignment_groups ag ON ag.id = sagt.alignment_group_id
+      WHERE sagt.season_id = ${seasonId}
+        AND ag.alignment_set_id = (SELECT group_alignment_set_id FROM season_info)
+        AND (SELECT alignment_structure_type FROM season_info) = 'groups'
+
+      UNION
+
+      SELECT gat.team_id
+      FROM group_alignment_teams gat
+      JOIN group_alignment_groups ag ON ag.id = gat.alignment_group_id
+      WHERE ag.alignment_set_id = (SELECT group_alignment_set_id FROM season_info)
+        AND (SELECT alignment_structure_type FROM season_info) = 'groups'
+        AND gat.alignment_group_id NOT IN (
+          SELECT alignment_group_id FROM alignment_group_overrides
+        )
+
+      UNION
+
+      SELECT team_id
+      FROM season_teams
+      WHERE season_id = ${seasonId}
+        AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+
+      UNION
+
+      SELECT team_id
+      FROM season_group_teams
+      WHERE season_id = ${seasonId}
+        AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+
+      UNION
+
+      SELECT gt.team_id
+      FROM group_teams gt
+      JOIN groups gr ON gr.id = gt.group_id
+      WHERE (SELECT group_alignment_set_id FROM season_info) IS NULL
+        AND (
+          gr.season_id = ${seasonId}
+          OR (
+              gr.league_id = (SELECT league_id FROM season_info)
+          AND gr.season_id IS NULL
+          AND COALESCE(gr.is_auto, false) = false
+          )
+         )
+
+      UNION
+
+      SELECT home_team_id
+      FROM games
+      WHERE season_id = ${seasonId}
+        AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+
+      UNION
+
+      SELECT away_team_id
+      FROM games
+      WHERE season_id = ${seasonId}
+        AND (SELECT group_alignment_set_id FROM season_info) IS NULL
+    ),
+    aggregated AS (
+      SELECT
+        gts.team_id,
+        COUNT(*)::int AS gp
+      FROM game_team_stats gts
+      WHERE gts.season_id = ${seasonId}
+        AND gts.game_type = 'regular'
+        AND gts.team_id IN (SELECT team_id FROM participant_teams)
+        AND gts.opponent_team_id IN (SELECT team_id FROM participant_teams)
+        AND (gts.won OR gts.lost)
+      GROUP BY gts.team_id
+    )
+    SELECT EXISTS (
+      SELECT 1
+      FROM participant_teams pt
+      CROSS JOIN season_info si
+      LEFT JOIN aggregated a ON a.team_id = pt.team_id
+      WHERE COALESCE(si.games_per_season, 0) > 0
+        AND COALESCE(a.gp, 0) < si.games_per_season
+    ) AS has_incomplete_regular_team_games
+  `;
+
+  return {
+    has_incomplete_regular_team_games: Boolean(rows[0]?.has_incomplete_regular_team_games),
+  };
+};
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/seasons  – list all seasons (with league info)
@@ -19,6 +362,7 @@ router.get('/', async (req, res) => {
                  s.is_ended, s.playoffs_started,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
+                 s.goalie_min_regular_minutes,
                  COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
                  s.group_alignment_set_id,
                  EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id) AS has_scheduled_games,
@@ -29,7 +373,8 @@ router.get('/', async (req, res) => {
                      AND g.status IN ('scheduled', 'in_progress')
                  ) AS has_unfinished_regular_games,
                  s.created_at,
-                 l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+                 l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+                 l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
           FROM seasons s
           JOIN leagues l ON l.id = s.league_id
           LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
@@ -42,6 +387,7 @@ router.get('/', async (req, res) => {
                  s.is_ended, s.playoffs_started,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
+                 s.goalie_min_regular_minutes,
                  COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
                  s.group_alignment_set_id,
                  EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id) AS has_scheduled_games,
@@ -52,7 +398,8 @@ router.get('/', async (req, res) => {
                      AND g.status IN ('scheduled', 'in_progress')
                  ) AS has_unfinished_regular_games,
                  s.created_at,
-                 l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+                 l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+                 l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
           FROM seasons s
           JOIN leagues l ON l.id = s.league_id
           LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
@@ -83,6 +430,7 @@ router.get('/:id', async (req, res) => {
              s.best_of_playoff,
              s.best_of_shootout,
              s.scoring_system,
+             s.goalie_min_regular_minutes,
              s.bracket_rule_set_id,
              s.group_alignment_set_id,
              EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id) AS has_scheduled_games,
@@ -96,7 +444,8 @@ router.get('/:id', async (req, res) => {
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
              l.scoring_system    AS league_scoring_system,
              l.best_of_playoff   AS league_best_of_playoff,
-             l.best_of_shootout  AS league_best_of_shootout
+             l.best_of_shootout  AS league_best_of_shootout,
+             l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
@@ -105,7 +454,8 @@ router.get('/:id', async (req, res) => {
       WHERE s.id = ${id}
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Season not found' });
-    return res.json(rows[0]);
+    const completion = await fetchRegularSeasonTeamCompletion(id);
+    return res.json({ ...rows[0], ...completion });
   } catch (err) {
     console.error('seasons get error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -122,12 +472,23 @@ router.post('/', async (req, res) => {
     start_date,
     end_date,
     games_per_season,
+    goalie_min_regular_minutes,
     playoff_qualification_format_id,
     group_alignment_set_id,
   } = req.body;
 
   if (!league_id) return res.status(400).json({ error: 'league_id is required' });
   if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });
+  if (
+    goalie_min_regular_minutes !== undefined &&
+    goalie_min_regular_minutes !== null &&
+    (!Number.isInteger(Number(goalie_min_regular_minutes)) ||
+      Number(goalie_min_regular_minutes) < 0)
+  ) {
+    return res
+      .status(400)
+      .json({ error: 'goalie_min_regular_minutes must be a non-negative integer' });
+  }
 
   try {
     const leagueRows = await sql`SELECT id FROM leagues WHERE id = ${league_id}`;
@@ -160,6 +521,7 @@ router.post('/', async (req, res) => {
     const rows = await sql`
       INSERT INTO seasons (
         name, league_id, start_date, end_date, games_per_season,
+        goalie_min_regular_minutes,
         playoff_qualification_format_id, group_alignment_set_id
       )
       VALUES (
@@ -168,14 +530,17 @@ router.post('/', async (req, res) => {
         ${start_date ?? null},
         ${end_date ?? null},
         ${games_per_season ?? null},
+        ${goalie_min_regular_minutes ?? null},
         ${playoff_qualification_format_id || null},
         ${group_alignment_set_id || null}
       )
       RETURNING id, name, league_id, FALSE AS is_current,
                 start_date::text AS start_date, end_date::text AS end_date,
-                games_per_season, playoff_qualification_format_id, group_alignment_set_id,
+                games_per_season, goalie_min_regular_minutes,
+                playoff_qualification_format_id, group_alignment_set_id,
                 FALSE AS has_scheduled_games,
                 FALSE AS has_unfinished_regular_games,
+                FALSE AS has_incomplete_regular_team_games,
                 created_at
     `;
     return res.status(201).json(rows[0]);
@@ -204,6 +569,7 @@ router.patch('/:id', async (req, res) => {
     best_of_playoff,
     best_of_shootout,
     scoring_system,
+    goalie_min_regular_minutes,
     bracket_rule_set_id,
     group_alignment_set_id,
   } = req.body;
@@ -216,7 +582,7 @@ router.patch('/:id', async (req, res) => {
              playoffs_started,
              games_per_season, playoff_format,
              playoff_qualification_format_id,
-             best_of_playoff, best_of_shootout, scoring_system,
+             best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes,
              bracket_rule_set_id, group_alignment_set_id,
              EXISTS (SELECT 1 FROM games g WHERE g.season_id = seasons.id) AS has_scheduled_games
       FROM seasons WHERE id = ${id}
@@ -254,6 +620,12 @@ router.patch('/:id', async (req, res) => {
       best_of_shootout !== undefined ? best_of_shootout || null : cur.best_of_shootout;
     const mergedScoringSystem =
       scoring_system !== undefined ? scoring_system || null : cur.scoring_system;
+    const mergedGoalieMinRegularMinutes =
+      goalie_min_regular_minutes !== undefined
+        ? goalie_min_regular_minutes === null || goalie_min_regular_minutes === ''
+          ? null
+          : Number(goalie_min_regular_minutes)
+        : (cur.goalie_min_regular_minutes ?? null);
     const mergedBracketRuleSetId =
       bracket_rule_set_id !== undefined ? bracket_rule_set_id || null : cur.bracket_rule_set_id;
     const mergedGroupAlignmentSetId =
@@ -264,6 +636,15 @@ router.patch('/:id', async (req, res) => {
     const mergedIsEnded = mergedEndDate ? true : cur.is_ended;
 
     if (!mergedName) return res.status(400).json({ error: 'name is required' });
+    if (
+      mergedGoalieMinRegularMinutes != null &&
+      (!Number.isInteger(Number(mergedGoalieMinRegularMinutes)) ||
+        Number(mergedGoalieMinRegularMinutes) < 0)
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'goalie_min_regular_minutes must be a non-negative integer' });
+    }
 
     if (mergedLeagueId !== cur.league_id) {
       const leagueRows = await sql`SELECT id FROM leagues WHERE id = ${mergedLeagueId}`;
@@ -331,6 +712,7 @@ router.patch('/:id', async (req, res) => {
         best_of_playoff      = ${mergedBestOfPlayoff},
         best_of_shootout     = ${mergedBestOfShootout},
         scoring_system       = ${mergedScoringSystem},
+        goalie_min_regular_minutes = ${mergedGoalieMinRegularMinutes},
         bracket_rule_set_id  = ${mergedBracketRuleSetId},
         group_alignment_set_id = ${mergedGroupAlignmentSetId}
       WHERE id = ${id}
@@ -351,6 +733,7 @@ router.patch('/:id', async (req, res) => {
              s.is_ended, s.playoffs_started,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
+             s.goalie_min_regular_minutes,
              COALESCE(pqf.rules, s.playoff_format, l.playoff_format) AS playoff_format,
              COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
              pqf.name AS playoff_qualification_format_name,
@@ -364,7 +747,8 @@ router.patch('/:id', async (req, res) => {
                  AND g.status IN ('scheduled', 'in_progress')
              ) AS has_unfinished_regular_games,
              s.created_at,
-             l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+             l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+             l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
@@ -425,6 +809,7 @@ router.patch('/:id/current', async (req, res) => {
              (l.current_season_id = s.id) AS is_current,
              s.is_ended,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.goalie_min_regular_minutes,
              EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id) AS has_scheduled_games,
              EXISTS (
                SELECT 1 FROM games g
@@ -433,7 +818,8 @@ router.patch('/:id/current', async (req, res) => {
                  AND g.status IN ('scheduled', 'in_progress')
              ) AS has_unfinished_regular_games,
              s.created_at,
-             l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+             l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+             l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
       WHERE s.id = ${id}
@@ -454,8 +840,31 @@ router.patch('/:id/playoffs', async (req, res) => {
   const { id } = req.params;
 
   try {
-    const existing = await sql`SELECT id FROM seasons WHERE id = ${id}`;
+    const existing = await sql`
+      SELECT
+        id,
+        EXISTS (
+          SELECT 1 FROM games g
+          WHERE g.season_id = seasons.id
+            AND g.game_type = 'regular'
+            AND g.status IN ('scheduled', 'in_progress')
+        ) AS has_unfinished_regular_games
+      FROM seasons
+      WHERE id = ${id}
+    `;
     if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
+    if (existing[0].has_unfinished_regular_games) {
+      return res.status(409).json({
+        error: 'Regular season cannot end while regular-season games are scheduled or in progress',
+      });
+    }
+
+    const completion = await fetchRegularSeasonTeamCompletion(id);
+    if (completion.has_incomplete_regular_team_games) {
+      return res.status(409).json({
+        error: 'Regular season cannot end until every team has reached games_per_season',
+      });
+    }
 
     await sql`
       UPDATE seasons SET playoffs_started = TRUE WHERE id = ${id}
@@ -467,6 +876,7 @@ router.patch('/:id/playoffs', async (req, res) => {
              s.is_ended, s.playoffs_started,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
+             s.goalie_min_regular_minutes,
              COALESCE(pqf.rules, s.playoff_format, l.playoff_format) AS playoff_format,
              COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
              pqf.name AS playoff_qualification_format_name,
@@ -484,7 +894,8 @@ router.patch('/:id/playoffs', async (req, res) => {
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
              l.scoring_system   AS league_scoring_system,
              l.best_of_playoff  AS league_best_of_playoff,
-             l.best_of_shootout AS league_best_of_shootout
+             l.best_of_shootout AS league_best_of_shootout,
+             l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
@@ -492,7 +903,7 @@ router.patch('/:id/playoffs', async (req, res) => {
         ON pqf.id = COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id)
       WHERE s.id = ${id}
     `;
-    return res.json(rows[0]);
+    return res.json({ ...rows[0], ...completion });
   } catch (err) {
     console.error('seasons start-playoffs error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -1671,7 +2082,15 @@ router.get('/:id/stats', async (req, res) => {
 
     if (group === 'goalies') {
       const rows = await sql`
-        WITH player_team AS (
+        WITH season_info AS (
+          SELECT
+            s.goalie_min_regular_minutes,
+            l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
+          FROM seasons s
+          JOIN leagues l ON l.id = s.league_id
+          WHERE s.id = ${id}
+        ),
+        player_team AS (
           SELECT DISTINCT ON (pt.player_id)
             pt.player_id, pt.team_id, pt.jersey_number, pt.photo
           FROM player_teams pt
@@ -1717,6 +2136,7 @@ router.get('/:id/stats', async (req, res) => {
             agg.shots_against,
             agg.saves,
             agg.goals_against,
+            agg.toi                                                AS time_on_ice,
             CASE WHEN agg.shots_against > 0
               THEN ROUND(agg.saves::numeric / agg.shots_against, 3)
               ELSE NULL END                                        AS save_pct,
@@ -1737,7 +2157,15 @@ router.get('/:id/stats', async (req, res) => {
         )
         SELECT stats.*, COUNT(*) OVER()::int AS total
         FROM stats
-        WHERE gp >= 25
+        WHERE ${gameType} != 'regular'
+           OR COALESCE(
+                (SELECT goalie_min_regular_minutes FROM season_info),
+                (SELECT league_goalie_min_regular_minutes FROM season_info)
+              ) <= 0
+           OR time_on_ice >= COALESCE(
+                (SELECT goalie_min_regular_minutes FROM season_info),
+                (SELECT league_goalie_min_regular_minutes FROM season_info)
+              ) * 60
         ORDER BY
           CASE WHEN ${sortKey} = 'last_name' AND ${sortDir} = 'asc' THEN last_name END ASC NULLS LAST,
           CASE WHEN ${sortKey} = 'last_name' AND ${sortDir} = 'desc' THEN last_name END DESC NULLS LAST,
@@ -1749,6 +2177,8 @@ router.get('/:id/stats', async (req, res) => {
           CASE WHEN ${sortKey} = 'saves' AND ${sortDir} = 'desc' THEN saves END DESC NULLS LAST,
           CASE WHEN ${sortKey} = 'goals_against' AND ${sortDir} = 'asc' THEN goals_against END ASC NULLS LAST,
           CASE WHEN ${sortKey} = 'goals_against' AND ${sortDir} = 'desc' THEN goals_against END DESC NULLS LAST,
+          CASE WHEN ${sortKey} = 'time_on_ice' AND ${sortDir} = 'asc' THEN time_on_ice END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'time_on_ice' AND ${sortDir} = 'desc' THEN time_on_ice END DESC NULLS LAST,
           CASE WHEN ${sortKey} = 'save_pct' AND ${sortDir} = 'asc' THEN save_pct END ASC NULLS LAST,
           CASE WHEN ${sortKey} = 'save_pct' AND ${sortDir} = 'desc' THEN save_pct END DESC NULLS LAST,
           CASE WHEN ${sortKey} = 'gaa' AND ${sortDir} = 'asc' THEN gaa END ASC NULLS LAST,
@@ -1825,6 +2255,14 @@ router.get('/:id/stats', async (req, res) => {
     const goalies = await sql`
       WITH period_vals (p, v) AS (
         VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
+      ),
+      season_info AS (
+        SELECT
+          s.goalie_min_regular_minutes,
+          l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
+        FROM seasons s
+        JOIN leagues l ON l.id = s.league_id
+        WHERE s.id = ${id}
       ),
       player_team AS (
         SELECT DISTINCT ON (pt.player_id)
@@ -1993,6 +2431,7 @@ router.get('/:id/stats', async (req, res) => {
         agg.shots_against,
         agg.saves,
         agg.goals_against,
+        agg.toi                                                 AS time_on_ice,
         CASE WHEN agg.shots_against > 0
           THEN ROUND(agg.saves::numeric / agg.shots_against, 3)
           ELSE NULL END                                        AS save_pct,
@@ -2010,6 +2449,15 @@ router.get('/:id/stats', async (req, res) => {
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ti ON true
+      WHERE ${gameType} != 'regular'
+         OR COALESCE(
+              (SELECT goalie_min_regular_minutes FROM season_info),
+              (SELECT league_goalie_min_regular_minutes FROM season_info)
+            ) <= 0
+         OR agg.toi >= COALESCE(
+              (SELECT goalie_min_regular_minutes FROM season_info),
+              (SELECT league_goalie_min_regular_minutes FROM season_info)
+            ) * 60
       ORDER BY save_pct DESC NULLS LAST, agg.saves DESC
     `;
 
@@ -2035,11 +2483,14 @@ router.get('/:id/awards', async (req, res) => {
         la.description,
         la.recipient_type,
         la.selection_method,
+        la.competition_scope,
         la.stat_key,
         la.awarded_after_playoffs,
         la.uses_nominees,
         la.allow_multiple_winners,
         la.uses_team_selection,
+        la.player_eligibility,
+        la.team_eligibility,
         la.sort_order,
         sa.id AS season_award_id,
         sa.awarded_at::text AS awarded_at,
@@ -2281,7 +2732,7 @@ router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
     }
 
     const awards = await sql`
-      SELECT sa.id, la.recipient_type
+      SELECT sa.id, la.recipient_type, la.player_eligibility, la.team_eligibility
       FROM season_awards sa
       JOIN league_awards la ON la.id = sa.award_id
       WHERE sa.id = ${seasonAwardId} AND sa.season_id = ${id}
@@ -2289,6 +2740,25 @@ router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
     if (awards.length === 0) return res.status(404).json({ error: 'Award not found' });
     if (awards[0].recipient_type !== recipient_type) {
       return res.status(400).json({ error: 'recipient_type does not match award' });
+    }
+    if (recipient_type === 'player') {
+      const eligibility = await validateAwardPlayerEligibility(
+        id,
+        player_id,
+        awards[0].player_eligibility,
+      );
+      if (!eligibility.ok) {
+        return res.status(400).json({ error: eligibility.error });
+      }
+    } else {
+      const eligibility = await validateAwardTeamEligibility(
+        id,
+        team_id,
+        awards[0].team_eligibility,
+      );
+      if (!eligibility.ok) {
+        return res.status(400).json({ error: eligibility.error });
+      }
     }
 
     const rows = await sql`
@@ -2313,6 +2783,124 @@ router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
     if (err.code === '23503')
       return res.status(400).json({ error: 'Invalid player, team, or award' });
     console.error('season award recipient create error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.put('/:id/awards/:seasonAwardId/nominees', async (req, res) => {
+  const { id, seasonAwardId } = req.params;
+  const { nominees } = req.body;
+
+  if (!Array.isArray(nominees)) {
+    return res.status(400).json({ error: 'nominees must be an array' });
+  }
+
+  try {
+    const awards = await sql`
+      SELECT sa.id, la.recipient_type, la.player_eligibility, la.team_eligibility
+      FROM season_awards sa
+      JOIN league_awards la ON la.id = sa.award_id
+      WHERE sa.id = ${seasonAwardId} AND sa.season_id = ${id}
+    `;
+    if (awards.length === 0) return res.status(404).json({ error: 'Award not found' });
+
+    const recipientType = awards[0].recipient_type;
+    const normalized = [];
+    const seenRecipientIds = new Set();
+
+    for (let index = 0; index < nominees.length; index += 1) {
+      const nominee = nominees[index] ?? {};
+      const payloadType = nominee.recipient_type ?? recipientType;
+
+      if (payloadType !== recipientType) {
+        return res.status(400).json({ error: 'recipient_type does not match award' });
+      }
+
+      const recipientId = recipientType === 'player' ? nominee.player_id : nominee.team_id;
+      if (!recipientId) {
+        return res.status(400).json({
+          error: recipientType === 'player' ? 'player_id is required' : 'team_id is required',
+        });
+      }
+      if (seenRecipientIds.has(recipientId)) {
+        return res.status(400).json({ error: 'nominees must be unique' });
+      }
+      seenRecipientIds.add(recipientId);
+
+      const votePointsValue =
+        nominee.vote_points === undefined || nominee.vote_points === null || nominee.vote_points === ''
+          ? null
+          : Number(nominee.vote_points);
+      if (votePointsValue !== null && !Number.isFinite(votePointsValue)) {
+        return res.status(400).json({ error: 'vote_points must be a number' });
+      }
+
+      normalized.push({
+        player_id: recipientType === 'player' ? nominee.player_id : null,
+        team_id: recipientType === 'team' ? nominee.team_id : null,
+        rank: index + 1,
+        vote_points: votePointsValue,
+        stat_value: nominee.stat_value ?? null,
+        notes: typeof nominee.notes === 'string' ? nominee.notes.trim() || null : null,
+      });
+    }
+
+    for (const nominee of normalized) {
+      if (recipientType === 'player') {
+        const eligibility = await validateAwardPlayerEligibility(
+          id,
+          nominee.player_id,
+          awards[0].player_eligibility,
+        );
+        if (!eligibility.ok) {
+          return res.status(400).json({ error: eligibility.error });
+        }
+        continue;
+      }
+
+      const eligibility = await validateAwardTeamEligibility(
+        id,
+        nominee.team_id,
+        awards[0].team_eligibility,
+      );
+      if (!eligibility.ok) {
+        return res.status(400).json({ error: eligibility.error });
+      }
+    }
+
+    await sql`
+      DELETE FROM season_award_recipients sar
+      USING season_awards sa
+      WHERE sar.season_award_id = ${seasonAwardId}
+        AND sar.role = 'nominee'
+        AND sa.id = sar.season_award_id
+        AND sa.season_id = ${id}
+    `;
+
+    for (const nominee of normalized) {
+      await sql`
+        INSERT INTO season_award_recipients (
+          season_award_id, recipient_type, player_id, team_id, role, rank, vote_points, stat_value, notes
+        )
+        VALUES (
+          ${seasonAwardId},
+          ${recipientType},
+          ${nominee.player_id},
+          ${nominee.team_id},
+          'nominee',
+          ${nominee.rank},
+          ${nominee.vote_points},
+          ${nominee.stat_value},
+          ${nominee.notes}
+        )
+      `;
+    }
+
+    return res.json({ count: normalized.length });
+  } catch (err) {
+    if (err.code === '23503')
+      return res.status(400).json({ error: 'Invalid player, team, or award' });
+    console.error('season award nominees replace error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
-import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
-import Button from '@/components/Button/Button';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import ActionOverlay from '@jerecocc/tracker-ui/ActionOverlay';
+import PlayerAvatar from '@jerecocc/tracker-ui/PlayerAvatar';
+import Accordion, { type AccordionAction } from '@jerecocc/tracker-ui/Accordion';
+import Button from '@jerecocc/tracker-ui/Button';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GoalRecord } from '@/hooks/useGameGoals';
 import { type ShootoutAttempt } from '@/hooks/useShootoutAttempts';
@@ -12,6 +12,9 @@ import styles from './ShootoutAccordion.module.scss';
 import scoringStyles from './ScoringCard.module.scss';
 import { playerDataComplete } from './gameUtils';
 import { PERIOD } from './constants';
+
+const playerInitials = (firstName?: string | null, lastName?: string | null) =>
+  `${firstName?.trim().charAt(0) ?? ''}${lastName?.trim().charAt(0) ?? ''}`.trim() || '?';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -223,7 +226,7 @@ const ShootoutAccordion = ({
     const photo = (
       <PlayerAvatar
         photo={attempt.shooter_photo}
-        initials={attempt.shooter_last_name?.charAt(0) ?? '?'}
+        initials={playerInitials(attempt.shooter_first_name, attempt.shooter_last_name)}
         primaryColor={teamInfo.primary}
         textColor={teamInfo.text}
         size={48}
@@ -291,7 +294,7 @@ const ShootoutAccordion = ({
                 variant="ghost"
                 intent="neutral"
                 icon="edit"
-                size="sm"
+                size="medium"
                 tooltip="Edit attempt"
                 disabled={deletingAttemptId === attempt.id}
                 onClick={() => onEditAttempt(attempt)}
@@ -300,7 +303,7 @@ const ShootoutAccordion = ({
                 variant="ghost"
                 intent="danger"
                 icon={deletingAttemptId === attempt.id ? 'hourglass_empty' : 'delete'}
-                size="sm"
+                size="medium"
                 tooltip={deletingAttemptId === attempt.id ? 'Deleting…' : 'Delete attempt'}
                 disabled={deletingAttemptId === attempt.id}
                 onClick={() => onDeleteAttempt(attempt.id)}
@@ -381,10 +384,10 @@ const ShootoutAccordion = ({
           />
           <PlayerAvatar
             photo={shootoutWinnerAttempt.shooter_photo}
-            initials={
-              `${shootoutWinnerAttempt.shooter_first_name?.charAt(0) ?? ''}${shootoutWinnerAttempt.shooter_last_name?.charAt(0) ?? ''}`.trim() ||
-              '?'
-            }
+            initials={playerInitials(
+              shootoutWinnerAttempt.shooter_first_name,
+              shootoutWinnerAttempt.shooter_last_name,
+            )}
             primaryColor={team.primary_color}
             textColor={team.text_color}
             size={48}
@@ -450,6 +453,7 @@ const ShootoutAccordion = ({
   return (
     <Accordion
       variant="static"
+      headerType="light"
       className={className}
       label={
         <span className={labelClassName}>

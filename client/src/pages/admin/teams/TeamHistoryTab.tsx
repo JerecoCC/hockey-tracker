@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import Button from '@/components/Button/Button';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import Field from '@/components/Field/Field';
-import LogoUpload from '@/components/LogoUpload/LogoUpload';
-import Modal from '@/components/Modal/Modal';
-import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
-import Section from '@/components/Section/Section';
+import Button from '@jerecocc/tracker-ui/Button';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import Field from '@jerecocc/tracker-ui/Field';
+import LogoUpload from '@jerecocc/tracker-ui/LogoUpload';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/ListItem';
+import Section from '@jerecocc/tracker-ui/Section';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
 import useTeamHistory, { type TeamIteration } from '@/hooks/useTeamHistory';
 import styles from './TeamDetails.module.scss';
+
+const HISTORY_SKELETON_ROW_COUNT = 3;
 
 interface Props {
   teamId: string;
@@ -58,6 +61,22 @@ const resolveUploadedAsset = async (
   return typeof value === 'string' ? value : null;
 };
 
+const renderHistorySkeletons = () => (
+  <ul
+    className={[styles.historyList, styles.listSkeletonList].join(' ')}
+    aria-label="Team history loading"
+  >
+    {Array.from({ length: HISTORY_SKELETON_ROW_COUNT }, (_, index) => (
+      <Skeleton
+        as="li"
+        key={`team-history-skeleton-${index}`}
+        type="card"
+        className={styles.listSkeletonRow}
+      />
+    ))}
+  </ul>
+);
+
 const TeamHistoryTab = ({
   teamId,
   teamName,
@@ -78,7 +97,6 @@ const TeamHistoryTab = ({
   const [deleteTarget, setDeleteTarget] = useState<TeamIteration | null>(null);
 
   const isEditing = editTarget !== null;
-
 
   const {
     control,
@@ -193,7 +211,7 @@ const TeamHistoryTab = ({
         action={
           <Button
             icon="history"
-            size="sm"
+            size="medium"
             onClick={openAdd}
           >
             Record Version
@@ -201,7 +219,7 @@ const TeamHistoryTab = ({
         }
       >
         {isLoading ? (
-          <p className={styles.tabPlaceholder}>Loading…</p>
+          renderHistorySkeletons()
         ) : iterations.length === 0 ? (
           <p className={styles.tabPlaceholder}>
             No versions recorded yet. Use &ldquo;Record Version&rdquo; to snapshot the team&apos;s

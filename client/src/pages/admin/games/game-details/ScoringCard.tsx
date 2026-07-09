@@ -1,14 +1,15 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
-import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import Tag from '@/components/Tag/Tag';
-import Tooltip from '@/components/Tooltip/Tooltip';
-import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
-import Button from '@/components/Button/Button';
-import Section from '@/components/Section/Section';
-import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import ActionOverlay from '@jerecocc/tracker-ui/ActionOverlay';
+import PlayerAvatar from '@jerecocc/tracker-ui/PlayerAvatar';
+import Tag from '@jerecocc/tracker-ui/Tag';
+import Tooltip from '@jerecocc/tracker-ui/Tooltip';
+import Accordion, { type AccordionAction } from '@jerecocc/tracker-ui/Accordion';
+import Button from '@jerecocc/tracker-ui/Button';
+import Divider from '@jerecocc/tracker-ui/Divider';
+import Section from '@jerecocc/tracker-ui/Section';
+import LoadingSpinner from '@jerecocc/tracker-ui/LoadingSpinner';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import type { GameRecord, CurrentPeriod } from '@/hooks/useGames';
 import type { GoalRecord } from '@/hooks/useGameGoals';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
@@ -177,7 +178,13 @@ const ScoringCard = ({
               key={goal.id}
               className={styles.goalItem}
             >
-              <span className={styles.goalTime}>{goal.period_time ?? '—'}</span>
+              <span className={styles.goalTimeGroup}>
+                <span className={styles.goalTime}>{goal.period_time ?? '—'}</span>
+                <Divider
+                  variant="vertical"
+                  className={styles.goalTimeDivider}
+                />
+              </span>
               <TeamLogo
                 logo={goal.team_logo}
                 logoDark={scoringTeam?.logo_dark}
@@ -272,7 +279,7 @@ const ScoringCard = ({
                     variant="ghost"
                     intent="neutral"
                     icon="edit"
-                    size="sm"
+                    size="medium"
                     tooltip="Edit goal"
                     onClick={() => onEditGoal(goal)}
                   />
@@ -281,7 +288,7 @@ const ScoringCard = ({
                       variant="ghost"
                       intent="danger"
                       icon="delete"
-                      size="sm"
+                      size="medium"
                       tooltip="Delete goal"
                       onClick={() => onDeleteGoal(goal.id)}
                     />
@@ -320,6 +327,7 @@ const ScoringCard = ({
               key={num}
               ref={setAccordionRef ? setAccordionRef(periodId) : undefined}
               variant="static"
+              headerType="light"
               className={isActive ? styles.periodItemActive : undefined}
               label={<span className={styles.periodLabel}>{label}</span>}
               hoverActions={
@@ -434,6 +442,7 @@ const ScoringCard = ({
                     key={otPeriodId(otNum)}
                     ref={isLast && setAccordionRef ? setAccordionRef(PERIOD.OVERTIME) : undefined}
                     variant="static"
+                    headerType="light"
                     className={isThisActive ? styles.periodItemActive : undefined}
                     label={<span className={styles.periodLabel}>Overtime {otNum}</span>}
                     hoverActions={
@@ -510,6 +519,7 @@ const ScoringCard = ({
               <Accordion
                 ref={setAccordionRef ? setAccordionRef(PERIOD.OVERTIME) : undefined}
                 variant="static"
+                headerType="light"
                 className={isOTActive ? styles.periodItemActive : undefined}
                 label={<span className={styles.periodLabel}>Overtime</span>}
                 hoverActions={

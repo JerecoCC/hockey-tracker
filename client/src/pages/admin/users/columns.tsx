@@ -1,7 +1,7 @@
-import { Column } from '@/components/Table/Table';
-import Button from '@/components/Button/Button';
-import Icon from '@/components/Icon/Icon';
-import Tag from '@/components/Tag/Tag';
+import { Column } from '@jerecocc/tracker-ui/Table';
+import Button from '@jerecocc/tracker-ui/Button';
+import Icon from '@jerecocc/tracker-ui/Icon';
+import Tag from '@jerecocc/tracker-ui/Tag';
 import styles from './Users.module.scss';
 
 export interface UserRecord {
@@ -78,7 +78,6 @@ export const getUserColumns = (deps: ColumnDeps): Column<UserRecord>[] => {
                 variant="outlined"
                 intent="accent"
                 icon="manage_accounts"
-                size="sm"
                 disabled={isBusy}
                 tooltip="Make Admin"
                 onClick={() => confirmRole(u, 'admin')}
@@ -89,7 +88,6 @@ export const getUserColumns = (deps: ColumnDeps): Column<UserRecord>[] => {
                 variant="outlined"
                 intent="info"
                 icon="person_remove"
-                size="sm"
                 disabled={isBusy}
                 tooltip="Remove Admin"
                 onClick={() => confirmRole(u, 'user')}
@@ -100,7 +98,6 @@ export const getUserColumns = (deps: ColumnDeps): Column<UserRecord>[] => {
                 variant="outlined"
                 intent="danger"
                 icon="delete"
-                size="sm"
                 disabled={isBusy}
                 tooltip="Delete"
                 onClick={() => confirmDelete(u)}

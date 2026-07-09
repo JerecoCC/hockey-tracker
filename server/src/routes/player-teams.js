@@ -10,6 +10,8 @@ const ACQUISITION_TYPES = new Set([
   'free_agency',
   'waivers',
   'signing',
+  'foundational_signing',
+  'expansion_signing',
   'expansion_draft',
   'team_transfer',
   'loan',
@@ -17,6 +19,15 @@ const ACQUISITION_TYPES = new Set([
 ]);
 const normalizeAcquisitionType = (value) => (value === '' || value == null ? null : value);
 const isValidAcquisitionType = (value) => value == null || ACQUISITION_TYPES.has(value);
+const isValidDateOnly = (value) => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+};
+const isValidJerseyNumber = (value) => {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 0 && number <= 99;
+};
 
 const upsertCareerStint = async ({
   player_id,
@@ -72,6 +83,106 @@ const closeActiveCareerStints = (player_id, end_date) => sql`
   RETURNING id, team_id
 `;
 
+const resolveTradeRosterSeason = async ({
+  sourceSeasonId,
+  tradeDate,
+  requestedSeasonId = null,
+}) => {
+  const rows = (await sql`
+    WITH source_season AS (
+      SELECT id, league_id, start_date, end_date
+      FROM seasons
+      WHERE id = ${sourceSeasonId}
+    ),
+    requested_season AS (
+      SELECT id, league_id
+      FROM seasons
+      WHERE id = ${requestedSeasonId}::uuid
+    ),
+    next_season AS (
+      SELECT s.id
+      FROM seasons s
+      JOIN source_season source ON source.league_id = s.league_id
+      WHERE s.id <> source.id
+        AND (
+          (source.start_date IS NOT NULL AND s.start_date > source.start_date)
+          OR (source.start_date IS NULL AND source.end_date IS NOT NULL AND s.start_date > source.end_date)
+          OR (source.start_date IS NULL AND source.end_date IS NULL)
+        )
+      ORDER BY s.start_date ASC NULLS LAST, s.created_at ASC
+      LIMIT 1
+    )
+    SELECT
+      source.id AS source_season_id,
+      source.league_id AS source_league_id,
+      source.start_date::text AS source_start_date,
+      source.end_date::text AS source_end_date,
+      requested.id AS requested_season_id,
+      requested.league_id AS requested_league_id,
+      (source.end_date IS NOT NULL AND ${tradeDate}::date > source.end_date) AS is_after_source_end,
+      CASE
+        WHEN ${requestedSeasonId}::uuid IS NOT NULL
+          AND requested.id IS NOT NULL
+          AND requested.league_id = source.league_id
+        THEN requested.id
+        WHEN source.end_date IS NOT NULL AND ${tradeDate}::date > source.end_date
+        THEN next_season.id
+        ELSE source.id
+      END AS roster_season_id
+    FROM source_season source
+    LEFT JOIN requested_season requested ON TRUE
+    LEFT JOIN next_season ON TRUE
+  `) ?? [];
+
+  if (rows.length === 0) {
+    return { error: { status: 404, message: 'Season not found' } };
+  }
+
+  const row = rows[0];
+  if (requestedSeasonId && !row.requested_season_id) {
+    return { error: { status: 404, message: 'Roster season not found' } };
+  }
+  if (requestedSeasonId && row.requested_league_id !== row.source_league_id) {
+    return {
+      error: { status: 400, message: 'Roster season must belong to the same league' },
+    };
+  }
+  if (!requestedSeasonId && row.is_after_source_end && !row.roster_season_id) {
+    return {
+      error: {
+        status: 400,
+        message: 'No later season found for this move. Choose a roster season first.',
+      },
+    };
+  }
+
+  return {
+    rosterSeasonId: row.roster_season_id,
+    isAfterSourceEnd: !!row.is_after_source_end,
+  };
+};
+
+const playerHasStatsForTeam = async (playerId, teamId) => {
+  const rows = (await sql`
+    SELECT
+      EXISTS (
+        SELECT 1
+        FROM game_player_stats
+        WHERE player_id = ${playerId}
+          AND team_id = ${teamId}
+        LIMIT 1
+      ) AS has_player_stats,
+      EXISTS (
+        SELECT 1
+        FROM game_goalie_stints
+        WHERE goalie_id = ${playerId}
+          AND team_id = ${teamId}
+        LIMIT 1
+      ) AS has_goalie_stats
+  `) ?? [];
+  return Boolean(rows[0]?.has_player_stats || rows[0]?.has_goalie_stats);
+};
+
 const mapHistoryRow = (row) => ({
   id: row.id,
   player_id: row.player_id,
@@ -86,6 +197,8 @@ const mapHistoryRow = (row) => ({
   start_date: row.start_date,
   end_date: row.end_date,
   created_at: row.created_at,
+  has_stats: Boolean(row.has_player_stats || row.has_goalie_stats),
+  can_delete: !Boolean(row.has_player_stats || row.has_goalie_stats),
   team: {
     id: row.team_id,
     name: row.team_name,
@@ -216,35 +329,39 @@ router.patch('/', async (req, res) => {
   const positionInBody = 'position' in req.body;
   const prospectInBody = 'is_prospect' in req.body;
 
+  if (jerseyInBody && jersey_number != null && !effective_date) {
+    return res.status(400).json({ error: 'effective_date is required when changing jersey number' });
+  }
+
   try {
     // If jersey_number is changing, record history before the update.
     if (jerseyInBody && jersey_number != null) {
       const [current] = await sql`
-        SELECT id, jersey_number,
-               COALESCE(start_date, created_at::date) AS effective_start
-        FROM player_teams
-        WHERE player_id = ${player_id}
-          AND team_id   = ${team_id}
-          AND season_id = ${season_id}
-          AND end_date IS NULL
+        SELECT
+          pt.id,
+          pt.jersey_number,
+          COALESCE(pt.start_date, s.start_date, pt.created_at::date)::text AS effective_start,
+          s.start_date::text AS season_start
+        FROM player_teams pt
+        LEFT JOIN seasons s ON s.id = pt.season_id
+        WHERE pt.player_id = ${player_id}
+          AND pt.team_id   = ${team_id}
+          AND pt.season_id = ${season_id}
+          AND pt.end_date IS NULL
       `;
       if (current && current.jersey_number !== jersey_number) {
-        const changeDate = effective_date ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+        const changeDate = effective_date;
         // Seed initial history if none exists for this stint yet.
         const existingHistory = await sql`
           SELECT 1 FROM jersey_number_history WHERE player_teams_id = ${current.id} LIMIT 1
         `;
         if (existingHistory.length === 0 && current.jersey_number != null) {
-          // If the effective_date is backdated before the stint's natural start, use the
-          // season start date so the old jersey's entry always sorts before the new one.
+          // Prefer the roster/season start for the old number. If the change
+          // predates that, fall back to season start so the old entry can sort
+          // before the new one.
           let seedDate = current.effective_start;
           if (seedDate >= changeDate) {
-            const [season] = await sql`
-              SELECT start_date::text AS start_date FROM seasons
-              JOIN player_teams ON player_teams.season_id = seasons.id
-              WHERE player_teams.id = ${current.id}
-            `;
-            seedDate = season?.start_date ?? changeDate;
+            seedDate = current.season_start ?? changeDate;
           }
           await sql`
             INSERT INTO jersey_number_history (player_teams_id, jersey_number, effective_from)
@@ -350,7 +467,21 @@ router.get('/history/:playerId', async (req, res) => {
         ti.logo_dark AS team_logo_dark,
         ti.logo_light AS team_logo_light,
         t.primary_color,
-        t.text_color
+        t.text_color,
+        EXISTS (
+          SELECT 1
+          FROM game_player_stats gps
+          WHERE gps.player_id = pts.player_id
+            AND gps.team_id = pts.team_id
+          LIMIT 1
+        ) AS has_player_stats,
+        EXISTS (
+          SELECT 1
+          FROM game_goalie_stints ggs
+          WHERE ggs.goalie_id = pts.player_id
+            AND ggs.team_id = pts.team_id
+          LIMIT 1
+        ) AS has_goalie_stats
       FROM player_team_stints pts
       JOIN teams t ON t.id = pts.team_id
       LEFT JOIN LATERAL (
@@ -362,7 +493,8 @@ router.get('/history/:playerId', async (req, res) => {
           AND (${season_id ?? null}::uuid IS NULL OR pt.season_id = ${season_id ?? null}::uuid)
         ORDER BY
           CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
-          COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC,
+          COALESCE(pt.end_date, pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
+          COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
           pt.created_at DESC
         LIMIT 1
       ) roster ON TRUE
@@ -393,8 +525,9 @@ router.get('/history/:playerId', async (req, res) => {
           OR roster.id IS NOT NULL
         )
       ORDER BY
-        pts.end_date DESC NULLS FIRST,
-        COALESCE(pts.start_date, pts.created_at::date) DESC,
+        CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
+        COALESCE(pts.end_date, pts.start_date, pts.created_at::date) DESC NULLS LAST,
+        COALESCE(pts.start_date, pts.created_at::date) DESC NULLS LAST,
         pts.created_at DESC
     `;
     return res.json(rows.map(mapHistoryRow));
@@ -432,27 +565,154 @@ router.get('/history/:playerId/jerseys', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// PATCH /api/admin/player-teams/history/jerseys/:id
+// Updates a stored jersey_number_history row and syncs the active player_teams
+// jersey to the latest dated history entry for that stint.
+// ---------------------------------------------------------------------------
+router.patch('/history/jerseys/:id', async (req, res) => {
+  const { id } = req.params;
+  const { jersey_number, effective_from } = req.body;
+  if (!isValidJerseyNumber(jersey_number)) {
+    return res.status(400).json({ error: 'jersey_number must be an integer between 0 and 99' });
+  }
+  if (!isValidDateOnly(effective_from)) {
+    return res.status(400).json({ error: 'effective_from must be a YYYY-MM-DD date' });
+  }
+
+  try {
+    const rows = await sql`
+      UPDATE jersey_number_history
+      SET
+        jersey_number = ${Number(jersey_number)},
+        effective_from = ${effective_from}::date
+      WHERE id = ${id}
+      RETURNING id, player_teams_id, jersey_number, effective_from::text AS effective_from
+    `;
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Jersey history row not found' });
+    }
+
+    await sql`
+      WITH latest AS (
+        SELECT player_teams_id, jersey_number
+        FROM jersey_number_history
+        WHERE player_teams_id = ${rows[0].player_teams_id}
+        ORDER BY effective_from DESC, created_at DESC, id DESC
+        LIMIT 1
+      )
+      UPDATE player_teams pt
+      SET jersey_number = latest.jersey_number
+      FROM latest
+      WHERE pt.id = latest.player_teams_id
+    `;
+
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('jersey history update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/player-teams/history/jerseys/:id
+// Deletes a stored jersey_number_history row and syncs the active player_teams
+// jersey to the remaining latest dated history entry for that stint.
+// ---------------------------------------------------------------------------
+router.delete('/history/jerseys/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const rows = await sql`
+      WITH deleted AS (
+        DELETE FROM jersey_number_history
+        WHERE id = ${id}
+        RETURNING id, player_teams_id, jersey_number, effective_from::text AS effective_from
+      ),
+      latest AS (
+        SELECT
+          deleted.player_teams_id,
+          latest_history.jersey_number
+        FROM deleted
+        LEFT JOIN LATERAL (
+          SELECT jersey_number
+          FROM jersey_number_history
+          WHERE player_teams_id = deleted.player_teams_id
+          ORDER BY effective_from DESC, created_at DESC, id DESC
+          LIMIT 1
+        ) latest_history ON TRUE
+      ),
+      synced AS (
+        UPDATE player_teams pt
+        SET jersey_number = latest.jersey_number
+        FROM latest
+        WHERE pt.id = latest.player_teams_id
+        RETURNING pt.id
+      )
+      SELECT * FROM deleted
+    `;
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Jersey history row not found' });
+    }
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('jersey history delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/player-teams/history/:playerId/photos
-// Returns player photo rows, independent from player_teams stints.
+// Returns one photo row per season/team membership, with saved photos when
+// present and provider-generated season URLs as display fallbacks.
 // ---------------------------------------------------------------------------
 router.get('/history/:playerId/photos', async (req, res) => {
   const { playerId } = req.params;
   try {
     const rows = await sql`
+      WITH season_membership AS (
+        SELECT DISTINCT ON (pt.player_id, pt.team_id, pt.season_id)
+          pt.player_id,
+          pt.team_id,
+          pt.season_id,
+          pt.start_date,
+          pt.end_date,
+          pt.created_at
+        FROM player_teams pt
+        WHERE pt.player_id = ${playerId}
+        ORDER BY
+          pt.player_id,
+          pt.team_id,
+          pt.season_id,
+          CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+          COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+          COALESCE(pt.start_date, pt.created_at::date) DESC NULLS LAST,
+          pt.created_at DESC
+      )
       SELECT
         pp.id,
-        pp.player_id,
-        pp.team_id,
-        pp.season_id,
-        pp.photo,
+        sm.player_id,
+        sm.team_id,
+        sm.season_id,
+        COALESCE(pp.photo, player_provider_photo(sm.player_id, sm.season_id, sm.team_id)) AS photo,
         pp.created_at,
         s.name AS season_name,
-        ti.name AS team_name
-      FROM player_photos pp
-      JOIN seasons s ON s.id = pp.season_id
+        ti.name AS team_name,
+        (pp.id IS NOT NULL) AS has_saved_photo
+      FROM season_membership sm
+      JOIN seasons s ON s.id = sm.season_id
+      LEFT JOIN LATERAL (
+        SELECT id, NULLIF(photo, '') AS photo, created_at
+        FROM player_photos
+        WHERE player_id = sm.player_id
+          AND team_id = sm.team_id
+          AND season_id = sm.season_id
+          AND NULLIF(photo, '') IS NOT NULL
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) pp ON true
       LEFT JOIN LATERAL (
         SELECT name FROM team_iterations
-        WHERE team_id = pp.team_id
+        WHERE team_id = sm.team_id
         ORDER BY
           CASE
             WHEN (start_date IS NULL OR start_date <= COALESCE(s.end_date, CURRENT_DATE))
@@ -465,8 +725,11 @@ router.get('/history/:playerId/photos', async (req, res) => {
           recorded_at DESC
         LIMIT 1
       ) ti ON true
-      WHERE pp.player_id = ${playerId}
-      ORDER BY s.start_date DESC NULLS LAST, pp.created_at DESC
+      ORDER BY
+        s.start_date DESC NULLS LAST,
+        s.created_at DESC,
+        COALESCE(sm.start_date, sm.created_at::date) DESC NULLS LAST,
+        pp.created_at DESC NULLS LAST
     `;
     return res.json(rows);
   } catch (err) {
@@ -504,6 +767,29 @@ router.post('/history/:playerId/photos', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// DELETE /api/admin/player-teams/history/photos/:id
+// Deletes one saved player photo record.
+// ---------------------------------------------------------------------------
+router.delete('/history/photos/:id', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const rows = await sql`
+      DELETE FROM player_photos
+      WHERE id = ${id}
+      RETURNING id, player_id, team_id, season_id, photo, created_at
+    `;
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Player photo row not found' });
+    }
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('player photo delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // PATCH /api/admin/player-teams/:id
 // Body: { team_id?, season_id?, jersey_number?, photo?, position?, acquisition_type?, start_date?, end_date? }
 // Updates editable fields on a specific stint row by its UUID.
@@ -522,6 +808,7 @@ router.patch('/:id', async (req, res) => {
   const acquisitionInBody = 'acquisition_type' in req.body;
   const startDateInBody = 'start_date'    in req.body;
   const endDateInBody   = 'end_date'      in req.body;
+  const rosterSeasonId = seasonInBody ? season_id : null;
   if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
 
   try {
@@ -547,6 +834,7 @@ router.patch('/:id', async (req, res) => {
         FROM player_teams
         WHERE player_id = ${stintRows[0].player_id}
           AND team_id = ${stintRows[0].team_id}
+          AND (${rosterSeasonId}::uuid IS NULL OR season_id = ${rosterSeasonId}::uuid)
         ORDER BY end_date DESC NULLS FIRST, created_at DESC
         LIMIT 1
       `) ?? [];
@@ -582,8 +870,8 @@ router.patch('/:id', async (req, res) => {
         ...stintRows[0],
         season_id: roster?.season_id ?? (seasonInBody ? season_id : null),
         roster_player_team_id: roster?.id ?? null,
-        jersey_number: roster?.jersey_number ?? (jerseyInBody ? jersey_number ?? null : null),
-        is_prospect: roster?.is_prospect ?? (prospectInBody ? !!req.body.is_prospect : false),
+        jersey_number: roster?.jersey_number ?? null,
+        is_prospect: roster?.is_prospect ?? false,
         photo: photoInBody ? (photo ?? null) : null,
       });
     }
@@ -640,20 +928,53 @@ router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const stintRows = (await sql`
-      DELETE FROM player_team_stints
+      SELECT id, player_id, team_id
+      FROM player_team_stints
       WHERE id = ${id}
-      RETURNING id
     `) ?? [];
     if (stintRows.length > 0) {
+      const hasStats = await playerHasStatsForTeam(stintRows[0].player_id, stintRows[0].team_id);
+      if (hasStats) {
+        return res.status(409).json({
+          error: 'Cannot delete team stint while player has stats for this team.',
+        });
+      }
+      // Career stints are not FK-linked to season roster rows, so remove any
+      // roster remnants for the same player/team once the no-stats guard passes.
+      await sql`
+        WITH target AS (
+          SELECT ${stintRows[0].player_id}::uuid AS player_id, ${stintRows[0].team_id}::uuid AS team_id
+        ),
+        deleted_roster_rows AS (
+          DELETE FROM player_teams pt
+          USING target
+          WHERE pt.player_id = target.player_id
+            AND pt.team_id = target.team_id
+          RETURNING pt.id
+        )
+        DELETE FROM player_team_stints
+        WHERE id = ${id}
+      `;
       return res.json({ message: 'Stint deleted' });
     }
 
     const rows = await sql`
-      DELETE FROM player_teams
+      SELECT id, player_id, team_id
+      FROM player_teams
       WHERE id = ${id}
-      RETURNING id
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Stint not found' });
+
+    const hasStats = await playerHasStatsForTeam(rows[0].player_id, rows[0].team_id);
+    if (hasStats) {
+      return res.status(409).json({
+        error: 'Cannot delete team stint while player has stats for this team.',
+      });
+    }
+    await sql`
+      DELETE FROM player_teams
+      WHERE id = ${id}
+    `;
     return res.json({ message: 'Player removed from team' });
   } catch (err) {
     console.error('player-teams delete/:id error:', err);
@@ -669,16 +990,31 @@ router.delete('/:id', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/bulk-trade', async (req, res) => {
   const { players, season_id, to_team_id, trade_date } = req.body;
-  const acquisition_type = normalizeAcquisitionType(req.body.acquisition_type) ?? 'trade';
+  const requestedRosterSeasonId = req.body.target_season_id ?? req.body.roster_season_id ?? null;
+  const acquisition_type =
+    'acquisition_type' in req.body ? normalizeAcquisitionType(req.body.acquisition_type) : 'trade';
 
   if (!Array.isArray(players) || players.length === 0)
     return res.status(400).json({ error: 'players must be a non-empty array' });
   if (!season_id)  return res.status(400).json({ error: 'season_id is required' });
   if (!to_team_id) return res.status(400).json({ error: 'to_team_id is required' });
   if (!trade_date) return res.status(400).json({ error: 'trade_date is required' });
+  if (!isValidDateOnly(trade_date)) return res.status(400).json({ error: 'trade_date must be YYYY-MM-DD' });
   if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
 
   try {
+    const seasonResolution = await resolveTradeRosterSeason({
+      sourceSeasonId: season_id,
+      tradeDate: trade_date,
+      requestedSeasonId: requestedRosterSeasonId,
+    });
+    if (seasonResolution.error) {
+      return res
+        .status(seasonResolution.error.status)
+        .json({ error: seasonResolution.error.message });
+    }
+
+    const rosterSeasonId = seasonResolution.rosterSeasonId;
     const traded = [];
     const failed = [];
 
@@ -703,7 +1039,7 @@ router.post('/bulk-trade', async (req, res) => {
       // Open new stint on the destination team
       const created = await sql`
         INSERT INTO player_teams (player_id, team_id, season_id, start_date, jersey_number, position, acquisition_type)
-        VALUES (${player_id}, ${to_team_id}, ${season_id}, ${trade_date}, ${jersey_number}, ${position}, ${acquisition_type})
+        VALUES (${player_id}, ${to_team_id}, ${rosterSeasonId}, ${trade_date}, ${jersey_number}, ${position}, ${acquisition_type})
         RETURNING id, player_id, team_id, season_id, jersey_number, position, acquisition_type,
                   start_date::text AS start_date, end_date::text AS end_date
       `;
@@ -719,6 +1055,11 @@ router.post('/bulk-trade', async (req, res) => {
 
     return res.status(201).json({ traded, failed });
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({
+        error: 'Player already has an active roster row in the target season.',
+      });
+    }
     console.error('player-teams bulk-trade error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -732,14 +1073,29 @@ router.post('/bulk-trade', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/trade', async (req, res) => {
   const { player_id, season_id, to_team_id, trade_date, jersey_number = null, position = null } = req.body;
-  const acquisition_type = normalizeAcquisitionType(req.body.acquisition_type) ?? 'trade';
+  const requestedRosterSeasonId = req.body.target_season_id ?? req.body.roster_season_id ?? null;
+  const acquisition_type =
+    'acquisition_type' in req.body ? normalizeAcquisitionType(req.body.acquisition_type) : 'trade';
   if (!player_id)  return res.status(400).json({ error: 'player_id is required' });
   if (!season_id)  return res.status(400).json({ error: 'season_id is required' });
   if (!to_team_id) return res.status(400).json({ error: 'to_team_id is required' });
   if (!trade_date) return res.status(400).json({ error: 'trade_date is required' });
+  if (!isValidDateOnly(trade_date)) return res.status(400).json({ error: 'trade_date must be YYYY-MM-DD' });
   if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
 
   try {
+    const seasonResolution = await resolveTradeRosterSeason({
+      sourceSeasonId: season_id,
+      tradeDate: trade_date,
+      requestedSeasonId: requestedRosterSeasonId,
+    });
+    if (seasonResolution.error) {
+      return res
+        .status(seasonResolution.error.status)
+        .json({ error: seasonResolution.error.message });
+    }
+
+    const rosterSeasonId = seasonResolution.rosterSeasonId;
     // 1. Find and close the current active stint
     const closed = await sql`
       UPDATE player_teams
@@ -758,7 +1114,7 @@ router.post('/trade', async (req, res) => {
     // 2. Open new stint on the destination team
     const created = await sql`
       INSERT INTO player_teams (player_id, team_id, season_id, start_date, jersey_number, position, acquisition_type)
-      VALUES (${player_id}, ${to_team_id}, ${season_id}, ${trade_date}, ${jersey_number}, ${position}, ${acquisition_type})
+      VALUES (${player_id}, ${to_team_id}, ${rosterSeasonId}, ${trade_date}, ${jersey_number}, ${position}, ${acquisition_type})
       RETURNING id, player_id, team_id, season_id, jersey_number, position, acquisition_type,
                 start_date::text AS start_date, end_date::text AS end_date
     `;
@@ -774,6 +1130,11 @@ router.post('/trade', async (req, res) => {
       new_stint: created[0],
     });
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({
+        error: 'Player already has an active roster row in the target season.',
+      });
+    }
     console.error('player-teams trade error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

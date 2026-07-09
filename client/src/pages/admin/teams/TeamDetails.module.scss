@@ -49,21 +49,23 @@
 
 // ── Info grid ──────────────────────────────────────────────────────────
 .infoGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: $space-xl;
+
+  > * {
+    flex: 1 1 auto;
+    min-width: min(100%, 200px);
+    max-width: 100%;
+  }
 }
 
-// Full-width flex row inside the grid — for badge groups (League, Group, Active Seasons)
+// Full-width row for rich text inside the wrapping info layout.
 .info {
-  &BadgeRow {
-    grid-column: 1 / -1;
-    display: flex;
-    gap: $space-xl;
-
-    > * {
-      flex: 1;
-    }
+  &FullRow {
+    flex-basis: 100%;
+    min-width: 100%;
   }
 
   &Value {
@@ -94,6 +96,79 @@
   margin: 0;
   padding: $space-lg 0;
   text-align: center;
+}
+
+.listSkeletonList {
+  pointer-events: none;
+}
+
+.listSkeletonRow {
+  min-height: 74px;
+  border-radius: $radius-md;
+}
+
+.award {
+  &Groups,
+  &TeamList,
+  &BannerRack {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &Groups {
+    gap: $space-md;
+  }
+
+  &Group {
+    min-width: 0;
+  }
+
+  &AccordionBody {
+    padding: 0;
+  }
+
+  &GroupLabel {
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    gap: $space-xs;
+  }
+
+  &InfoTooltip {
+    display: block;
+    max-width: 18rem;
+    line-height: 1.4;
+  }
+
+  &TeamList {
+    gap: $space-sm;
+    list-style: none;
+  }
+
+  &HeaderRight {
+    margin-left: auto;
+  }
+
+  &ViewControl {
+    min-width: 190px;
+  }
+
+  &ViewOption {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-xs;
+  }
+
+  &BannerRack {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: $space-lg;
+    align-items: start;
+  }
+
 }
 
 // ── Team history tab ───────────────────────────────────────────────────
@@ -198,6 +273,7 @@
     display: flex;
     align-items: center;
     gap: $space-sm;
+    flex: 0 0 auto;
   }
 
   &Empty {
@@ -221,13 +297,6 @@
     align-items: center;
     gap: $space-md;
     min-width: 0;
-  }
-
-  &HeaderDivider {
-    width: 1px;
-    height: 32px;
-    background: $border;
-    flex-shrink: 0;
   }
 
   &SeasonSelect {
@@ -283,6 +352,11 @@
   .playerViewSegmentedControl.playerViewSegmentedControl {
     width: 100%;
     flex-basis: 100%;
+  }
+
+  .rosterActions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .playerHeaderSeasonGroup {

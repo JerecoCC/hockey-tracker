@@ -1,7 +1,7 @@
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import BreadcrumbTitleRow from '@/components/Breadcrumbs/BreadcrumbTitleRow';
+import BreadcrumbTitleRow from '@jerecocc/tracker-ui/BreadcrumbTitleRow';
 import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
@@ -66,6 +66,7 @@ jest.mock('../../../hooks/useLeagueAwards', () => ({
     loading: false,
     createAward: jest.fn(async () => true),
     updateAward: jest.fn(async () => true),
+    reorderAwards: jest.fn(async () => true),
     deleteAward: jest.fn(async () => true),
   })),
 }));
@@ -102,7 +103,7 @@ jest.mock('./BulkAddPlayersModal', () => () => null);
 
 // ── Heavy / portal-incompatible child components ───────────────────────
 jest.mock(
-  '../../../components/RichTextEditor/RichTextEditor',
+  '@jerecocc/tracker-ui/RichTextEditor',
   () =>
     function MockRichTextEditor() {
       return <div data-testid="rte" />;
@@ -169,6 +170,7 @@ const baseAwardsHook = {
   loading: false,
   createAward: jest.fn(async () => true),
   updateAward: jest.fn(async () => true),
+  reorderAwards: jest.fn(async () => true),
   deleteAward: jest.fn(async () => true),
 };
 
@@ -201,8 +203,14 @@ const mockLeague = {
   name: 'Test League',
   code: 'TL',
   logo: '',
+  icon: null,
   primary_color: '#0000ff',
   text_color: '#ffffff',
+  best_of_playoff: 7,
+  best_of_shootout: 3,
+  scoring_system: '2-1-0',
+  goalie_min_regular_minutes: 1500,
+  playoff_format: null,
   season_phase: 'regular',
   location: 'Test City',
   description: null,
@@ -312,7 +320,7 @@ describe('LeagueDetailsPage – loading', () => {
   });
 
   it('renders fifteen player row skeletons while loading the Players tab', () => {
-    sessionStorage.setItem('tab:league-details', '4');
+    sessionStorage.setItem('tab:league-details', '3');
     const { container } = setup({ loading: true });
 
     expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'true');
@@ -322,7 +330,7 @@ describe('LeagueDetailsPage – loading', () => {
   });
 
   it('keeps the static Alignments header visible while loading', () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const { container } = setup({ loading: true });
 
     expect(screen.getByRole('tab', { name: 'Alignments' })).toHaveAttribute(
@@ -370,11 +378,13 @@ describe('LeagueDetailsPage – loading', () => {
       description: 'Top player',
       recipient_type: 'player',
       selection_method: 'manual',
+      competition_scope: 'full_season',
       stat_key: null,
       awarded_after_playoffs: true,
       uses_nominees: false,
       allow_multiple_winners: false,
       uses_team_selection: false,
+      player_eligibility: null,
       sort_order: 0,
       active: true,
       created_at: '2024-01-01T00:00:00Z',
@@ -400,7 +410,7 @@ describe('LeagueDetailsPage – loading', () => {
     expect(deleteAward).not.toHaveBeenCalled();
   });
 
-  it('does not label award definitions as regular season just because they are not playoff-gated', () => {
+  it('labels award definitions by competition scope separately from recording timing', () => {
     sessionStorage.setItem('tab:league-details', '6');
     const awards = [
       {
@@ -410,11 +420,13 @@ describe('LeagueDetailsPage – loading', () => {
         description: null,
         recipient_type: 'player',
         selection_method: 'automatic',
+        competition_scope: 'regular_season',
         stat_key: 'points',
         awarded_after_playoffs: false,
         uses_nominees: false,
         allow_multiple_winners: false,
         uses_team_selection: false,
+        player_eligibility: { position_groups: ['forward', 'defender'], rookies_only: false },
         sort_order: 0,
         active: true,
         created_at: '2024-01-01T00:00:00Z',
@@ -425,12 +437,14 @@ describe('LeagueDetailsPage – loading', () => {
         name: 'Conn Smythe Trophy',
         description: null,
         recipient_type: 'player',
-        selection_method: 'playoff',
+        selection_method: 'manual',
+        competition_scope: 'playoffs',
         stat_key: null,
         awarded_after_playoffs: true,
         uses_nominees: false,
         allow_multiple_winners: false,
         uses_team_selection: false,
+        player_eligibility: null,
         sort_order: 1,
         active: true,
         created_at: '2024-01-01T00:00:00Z',
@@ -440,9 +454,144 @@ describe('LeagueDetailsPage – loading', () => {
 
     expect(screen.getByText('Automatic')).toBeInTheDocument();
     expect(screen.getByText('Player Points')).toBeInTheDocument();
-    expect(screen.getByText('Playoff award')).toBeInTheDocument();
+    expect(screen.getByText('Forwards, Defenders')).toBeInTheDocument();
+    const awardDefinitions = within(screen.getByRole('list', { name: 'Award definitions' }));
+    expect(awardDefinitions.getByText('Regular season')).toBeInTheDocument();
+    expect(awardDefinitions.getByText('Playoffs')).toBeInTheDocument();
+    expect(awardDefinitions.getByText('After playoffs start')).toBeInTheDocument();
     expect(container.querySelector('.awardDefinitionDivider.divider.horizontal')).toBeInTheDocument();
-    expect(screen.queryByText('Regular season')).not.toBeInTheDocument();
+  });
+
+  it('reorders award definitions from the movable list controls', async () => {
+    sessionStorage.setItem('tab:league-details', '6');
+    const reorderAwards = jest.fn(async () => true);
+    const awards = [
+      {
+        id: 'award-1',
+        league_id: 'lg1',
+        name: 'Art Ross Trophy',
+        description: null,
+        recipient_type: 'player',
+        selection_method: 'automatic',
+        competition_scope: 'regular_season',
+        stat_key: 'points',
+        awarded_after_playoffs: false,
+        uses_nominees: false,
+        allow_multiple_winners: false,
+        uses_team_selection: false,
+        player_eligibility: { position_groups: ['forward', 'defender'], rookies_only: false },
+        sort_order: 0,
+        active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: 'award-2',
+        league_id: 'lg1',
+        name: 'Vezina Trophy',
+        description: null,
+        recipient_type: 'player',
+        selection_method: 'automatic',
+        competition_scope: 'regular_season',
+        stat_key: 'save_pct',
+        awarded_after_playoffs: false,
+        uses_nominees: false,
+        allow_multiple_winners: false,
+        uses_team_selection: false,
+        player_eligibility: { position_groups: ['goalie'], rookies_only: false },
+        sort_order: 1,
+        active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+    ];
+
+    setup({ league: mockLeague }, {}, null, {}, {}, { awards, reorderAwards });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move Art Ross Trophy down' }));
+
+    await waitFor(() => expect(reorderAwards).toHaveBeenCalledWith(['award-2', 'award-1']));
+  });
+
+  it('creates player award definitions with explicit eligibility criteria', async () => {
+    sessionStorage.setItem('tab:league-details', '6');
+    const createAward = jest.fn(async () => true);
+    setup({ league: mockLeague }, {}, null, {}, {}, { createAward });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create Award' }));
+    expect(screen.queryByLabelText('Sort Order')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Award Name/), {
+      target: { value: 'Goalie Rookie of the Year' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Automatic' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Goalies' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Rookies Only' }));
+
+    const createButtons = screen.getAllByRole('button', { name: 'Create Award' });
+    fireEvent.click(createButtons[createButtons.length - 1]);
+
+    await waitFor(() =>
+      expect(createAward).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Goalie Rookie of the Year',
+          selection_method: 'automatic',
+          player_eligibility: {
+            position_groups: ['goalie'],
+            rookies_only: true,
+          },
+        }),
+      ),
+    );
+  });
+
+  it('creates team award definitions with conference eligibility criteria', async () => {
+    sessionStorage.setItem('tab:league-details', '6');
+    const createAward = jest.fn(async () => true);
+    setup(
+      { league: mockLeague },
+      {
+        groups: [
+          {
+            id: 'conference-east',
+            league_id: 'lg1',
+            season_id: null,
+            parent_id: null,
+            name: 'Eastern Conference',
+            role: 'conference',
+            sort_order: 0,
+            created_at: '2024-01-01T00:00:00Z',
+            is_auto: false,
+            teams: [],
+          },
+        ],
+      },
+      null,
+      {},
+      {},
+      { createAward },
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create Award' }));
+    fireEvent.change(screen.getByLabelText(/Award Name/), {
+      target: { value: 'Eastern Conference Champion' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Team' }));
+    fireEvent.click(screen.getByText('All conferences'));
+    fireEvent.click(screen.getByRole('button', { name: 'Eastern Conference' }));
+
+    const createButtons = screen.getAllByRole('button', { name: 'Create Award' });
+    fireEvent.click(createButtons[createButtons.length - 1]);
+
+    await waitFor(() =>
+      expect(createAward).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Eastern Conference Champion',
+          recipient_type: 'team',
+          player_eligibility: null,
+          team_eligibility: {
+            conference_names: ['Eastern Conference'],
+          },
+        }),
+      ),
+    );
   });
 
   it('does not show the league name while loading', () => {
@@ -514,6 +663,22 @@ describe('LeagueDetailsPage – main render', () => {
     expect(screen.getByText('No description')).toBeInTheDocument();
   });
 
+  it('uses the default divider component between league header and info grid', () => {
+    const { container } = setup({ league: mockLeague });
+    const infoGrid = container.querySelector('.infoCardGrid');
+    expect(infoGrid?.previousElementSibling).toHaveClass('divider', 'horizontal');
+    expect(infoGrid?.previousElementSibling?.className).toBe('divider horizontal');
+  });
+
+  it('renders the league edit action as an icon button', () => {
+    setup({ league: mockLeague });
+    const editButton = screen.getByRole('button', { name: 'Edit' });
+    expect(editButton).not.toHaveTextContent('Edit');
+    expect(editButton).toHaveClass('large');
+    expect(editButton).toHaveClass('iconOnlyButton');
+    expect(editButton).not.toHaveClass('iconOnly');
+  });
+
   it('shows the description placeholder when description is empty', () => {
     setup({ league: { ...mockLeague, description: '' } });
     // empty string is falsy → renders the same "No description" muted placeholder
@@ -523,12 +688,18 @@ describe('LeagueDetailsPage – main render', () => {
 
 // ── Tabs ───────────────────────────────────────────────────────────────
 describe('LeagueDetailsPage – tabs', () => {
-  it('renders Info, Seasons, Teams, and Players tabs', () => {
+  it('renders the league detail tabs in the expected order', () => {
     setup({ league: mockLeague });
-    expect(screen.getByRole('tab', { name: 'Info' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Seasons' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Teams' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Players' })).toBeInTheDocument();
+
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Info',
+      'Seasons',
+      'Teams',
+      'Players',
+      'Alignments',
+      'Playoffs',
+      'Awards',
+    ]);
   });
 
   it('Info tab is active by default', () => {
@@ -559,15 +730,15 @@ describe('LeagueDetailsPage – tabs', () => {
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('opens on the Players tab when navigated with activeTab 4', () => {
-    sessionStorage.setItem('tab:league-details', '4');
+  it('opens on the Players tab when navigated with activeTab 3', () => {
+    sessionStorage.setItem('tab:league-details', '3');
     setup({ league: mockLeague });
     expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
   });
 
   it('renders the Alignments card title with an info tooltip', async () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const { container } = setup({ league: mockLeague });
 
     await waitFor(() => {
@@ -582,7 +753,7 @@ describe('LeagueDetailsPage – tabs', () => {
   });
 
   it('opens alignment editing in a modal instead of expanding the list row', async () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const alignmentSet = {
       id: 'align-1',
       league_id: 'lg1',
@@ -640,7 +811,7 @@ describe('LeagueDetailsPage – tabs', () => {
   });
 
   it('uses the alignment editor field layout for the create alignment modal', async () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const { container } = setup({ league: mockLeague });
 
     await waitFor(() =>
@@ -687,7 +858,7 @@ describe('LeagueDetailsPage – tabs', () => {
   });
 
   it('lets create alignment update teams before saving the new alignment', async () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const teams = [
       {
         id: 'team-1',
@@ -730,7 +901,7 @@ describe('LeagueDetailsPage – tabs', () => {
   });
 
   it('renders league alignment teams as a single-column list item stack', async () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const teams = [
       {
         id: 'team-1',
@@ -797,7 +968,7 @@ describe('LeagueDetailsPage – tabs', () => {
   });
 
   it('renders group alignment parents as label rows with grouped child fields', async () => {
-    sessionStorage.setItem('tab:league-details', '3');
+    sessionStorage.setItem('tab:league-details', '4');
     const teams = [
       {
         id: 'team-1',
@@ -1124,10 +1295,10 @@ describe('LeagueDetailsPage – players tab', () => {
   it('shows empty state when no players are assigned', () => {
     setup({ league: mockLeague });
     clickPlayersTab();
-    expect(screen.getByText(/no active players in this league yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no players from the last five seasons yet/i)).toBeInTheDocument();
   });
 
-  it('passes rookie and retired player filters to the players query', async () => {
+  it('loads recent five-season players without season or status filter controls', async () => {
     const seasons = [
       {
         id: 'season-1',
@@ -1144,53 +1315,50 @@ describe('LeagueDetailsPage – players tab', () => {
     const { container } = setup({ league: mockLeague, seasons });
     clickPlayersTab();
 
-    expect(container.querySelector('.playerHeaderSeasonGroup .divider.vertical')).toBeInTheDocument();
+    expect(container.querySelector('.playerHeaderSeasonGroup')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Rookies only' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Inactive only' })).not.toBeInTheDocument();
 
     await waitFor(() =>
       expect(useLeaguePlayers).toHaveBeenLastCalledWith(
         undefined,
-        'season-1',
+        undefined,
         expect.objectContaining({
           page: 1,
           pageSize: 15,
           search: '',
-          rookiesOnly: false,
-          includeRetired: false,
+          includeInactive: true,
           includeProspects: true,
+          recentSeasons: 5,
         }),
       ),
     );
+  });
 
-    const rookiesSwitch = screen.getByRole('switch', { name: 'Rookies only' });
-    const retiredSwitch = screen.getByRole('switch', { name: 'Show retired players' });
+  it('toggles the players list to warnings only', async () => {
+    setup({ league: mockLeague });
+    clickPlayersTab();
 
-    expect(rookiesSwitch).toHaveAttribute('aria-checked', 'false');
-    expect(retiredSwitch).toHaveAttribute('aria-checked', 'false');
+    const warningsToggle = screen.getByRole('switch', { name: /warnings only/i });
+    expect(warningsToggle).toHaveAttribute('aria-checked', 'false');
+    expect(warningsToggle.querySelector('svg[data-icon="triangle-exclamation"]')).toBeInTheDocument();
 
-    fireEvent.click(rookiesSwitch);
+    fireEvent.click(warningsToggle);
+
     await waitFor(() =>
       expect(useLeaguePlayers).toHaveBeenLastCalledWith(
         undefined,
-        'season-1',
+        undefined,
         expect.objectContaining({
-          rookiesOnly: true,
-          includeRetired: false,
-          includeProspects: true,
+          page: 1,
+          warningsOnly: true,
         }),
       ),
     );
-
-    fireEvent.click(retiredSwitch);
-    await waitFor(() =>
-      expect(useLeaguePlayers).toHaveBeenLastCalledWith(
-        undefined,
-        'season-1',
-        expect.objectContaining({
-          rookiesOnly: true,
-          includeRetired: true,
-          includeProspects: true,
-        }),
-      ),
+    expect(screen.getByRole('switch', { name: /warnings only/i })).toHaveAttribute(
+      'aria-checked',
+      'true',
     );
   });
 
@@ -1244,19 +1412,8 @@ describe('LeagueDetailsPage – players tab', () => {
     }
   });
 
-  it('shows player row skeletons while filters are fetching', async () => {
-    const seasons = [
-      {
-        id: 'season-1',
-        name: 'Spring 2024',
-        league_id: 'lg1',
-        start_date: '2024-01-01',
-        end_date: '2024-03-31',
-        is_current: true,
-        is_ended: false,
-        created_at: '',
-      },
-    ];
+  it('shows player row skeletons while search is fetching', async () => {
+    jest.useFakeTimers();
     const players = [
       {
         id: 'player-1',
@@ -1279,26 +1436,28 @@ describe('LeagueDetailsPage – players tab', () => {
       },
     ];
 
-    const { container } = setup({ league: mockLeague, seasons }, {}, null, {
-      players,
-      total: 1,
-      fetching: true,
-    });
-    clickPlayersTab();
+    try {
+      const { container } = setup({ league: mockLeague }, {}, null, {
+        players,
+        total: 1,
+        fetching: true,
+      });
+      clickPlayersTab();
 
-    await waitFor(() =>
-      expect(useLeaguePlayers).toHaveBeenLastCalledWith(
-        undefined,
-        'season-1',
-        expect.objectContaining({ rookiesOnly: false }),
-      ),
-    );
-    expect(container.querySelector('.loadingList')).not.toBeInTheDocument();
+      expect(container.querySelector('.loadingList')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('switch', { name: 'Rookies only' }));
+      fireEvent.change(screen.getByPlaceholderText(/search players/i), {
+        target: { value: 'wayne' },
+      });
+      await act(async () => {
+        jest.advanceTimersByTime(350);
+      });
 
-    expect(container.querySelector('.loadingList')).toBeInTheDocument();
-    expect(container.querySelectorAll('.loadingRow')).toHaveLength(15);
+      expect(container.querySelector('.loadingList')).toBeInTheDocument();
+      expect(container.querySelectorAll('.loadingRow')).toHaveLength(15);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('renders player rows as links to player details', () => {
@@ -1306,6 +1465,7 @@ describe('LeagueDetailsPage – players tab', () => {
       players: [
         {
           id: 'player-1',
+          league_player_number: '1001',
           first_name: 'John',
           last_name: 'Smith',
           photo: null,
@@ -1320,17 +1480,20 @@ describe('LeagueDetailsPage – players tab', () => {
           created_at: '2024-01-01T00:00:00Z',
           team_id: null,
           team_code: null,
+          last_season_id: 'season-1',
+          last_season_name: 'Spring 2024',
         },
       ],
       total: 1,
     });
     clickPlayersTab();
 
-    const row = screen.getByText('John Smith').closest('li');
-    expect(row?.querySelector('a')).toHaveAttribute('href', '/admin/leagues/tl/players/john-smith');
+    const row = screen.getByText(/^John Smith/).closest('li');
+    expect(row?.querySelector('a')).toHaveAttribute('href', '/admin/leagues/tl/players/1001');
+    expect(screen.getByText('Center | Last played: Spring 2024')).toBeInTheDocument();
   });
 
-  it('shows only rookie and retired player row tags', async () => {
+  it('shows rookie and player status row tags', async () => {
     const seasons = [
       {
         id: 'season-1',
@@ -1363,6 +1526,8 @@ describe('LeagueDetailsPage – players tab', () => {
           created_at: '2024-01-01T00:00:00Z',
           team_id: null,
           team_code: null,
+          last_season_id: 'season-1',
+          last_season_name: 'Spring 2024',
         },
         {
           id: 'player-2',
@@ -1377,17 +1542,38 @@ describe('LeagueDetailsPage – players tab', () => {
           position: 'D',
           shoots: 'R',
           rookie_season_id: null,
+          status: 'inactive',
+          is_active: false,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+        },
+        {
+          id: 'player-3',
+          first_name: 'Jack',
+          last_name: 'Retired',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'G',
+          shoots: 'L',
+          rookie_season_id: null,
+          status: 'retired',
           is_active: false,
           created_at: '2024-01-01T00:00:00Z',
           team_id: null,
           team_code: null,
         },
       ],
-      total: 2,
+      total: 3,
     });
     clickPlayersTab();
 
     await waitFor(() => expect(screen.getByText('Rookie')).toBeInTheDocument());
+    expect(screen.getByText('Inactive')).toBeInTheDocument();
     expect(screen.getByText('Retired')).toBeInTheDocument();
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
@@ -1418,79 +1604,19 @@ describe('LeagueDetailsPage – players tab', () => {
     });
     clickPlayersTab();
 
-    expect(screen.getByText('John Smith')).toBeInTheDocument();
+    expect(screen.getByText(/^John Smith/)).toBeInTheDocument();
     expect(container.querySelectorAll('.loadingRow')).toHaveLength(0);
 
     const nextTooltip = screen.getByRole('tooltip', { name: /next page/i });
     fireEvent.click(nextTooltip.previousElementSibling as HTMLElement);
 
-    expect(screen.queryByText('John Smith')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^John Smith/)).not.toBeInTheDocument();
     expect(container.querySelectorAll('.loadingRow')).toHaveLength(15);
     expect(screen.getByText('16-21 of 21')).toBeInTheDocument();
     expect(screen.queryByLabelText('Loading players')).not.toBeInTheDocument();
   });
 
-  it('shows player list skeleton rows after changing the season while fetching', async () => {
-    const seasons = [
-      {
-        id: 'season-1',
-        name: 'Spring 2024',
-        league_id: 'lg1',
-        start_date: '2024-01-01',
-        end_date: '2024-03-31',
-        is_current: true,
-        is_ended: false,
-        created_at: '',
-      },
-      {
-        id: 'season-2',
-        name: 'Winter 2025',
-        league_id: 'lg1',
-        start_date: '2025-01-01',
-        end_date: '2025-03-31',
-        is_current: false,
-        is_ended: false,
-        created_at: '',
-      },
-    ];
-    const { container } = setup({ league: mockLeague, seasons }, {}, null, {
-      players: [
-        {
-          id: 'player-1',
-          first_name: 'John',
-          last_name: 'Smith',
-          photo: null,
-          date_of_birth: null,
-          birth_city: null,
-          birth_country: null,
-          height_cm: null,
-          weight_lbs: null,
-          position: 'C',
-          shoots: 'L',
-          is_active: true,
-          created_at: '2024-01-01T00:00:00Z',
-          team_id: null,
-          team_code: null,
-        },
-      ],
-      total: 1,
-      fetching: true,
-    });
-    clickPlayersTab();
-
-    expect(screen.getByText('John Smith')).toBeInTheDocument();
-    expect(container.querySelectorAll('.loadingRow')).toHaveLength(0);
-
-    await waitFor(() => expect(screen.getByRole('combobox')).toHaveTextContent('Spring 2024'));
-    fireEvent.click(screen.getByRole('combobox'));
-    fireEvent.click(screen.getByRole('button', { name: 'Winter 2025' }));
-
-    expect(screen.queryByText('John Smith')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.loadingRow')).toHaveLength(15);
-    expect(screen.queryByLabelText('Loading players')).not.toBeInTheDocument();
-  });
-
-  it('shows missing data indicators only for players with one season point', () => {
+  it('shows missing data indicators only after players meet position game minimums', () => {
     setup({ league: mockLeague }, {}, null, {
       players: [
         {
@@ -1512,6 +1638,7 @@ describe('LeagueDetailsPage – players tab', () => {
           acquisition_type: null,
           start_date: null,
           has_games: true,
+          games_played: 41,
           season_points: 1,
         },
         {
@@ -1533,6 +1660,7 @@ describe('LeagueDetailsPage – players tab', () => {
           acquisition_type: null,
           start_date: null,
           has_games: true,
+          games_played: 40,
           season_points: 2,
         },
         {
@@ -1554,10 +1682,77 @@ describe('LeagueDetailsPage – players tab', () => {
           acquisition_type: 'draft',
           start_date: '2024-10-01',
           has_games: true,
+          games_played: 41,
           season_points: 1,
         },
+        {
+          id: 'player-4',
+          first_name: 'Sam',
+          last_name: 'Short',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'RW',
+          shoots: 'R',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+          acquisition_type: null,
+          start_date: null,
+          has_games: true,
+          games_played: 14,
+          season_points: 3,
+        },
+        {
+          id: 'player-5',
+          first_name: 'Glen',
+          last_name: 'Goalie',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'G',
+          shoots: 'L',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+          acquisition_type: null,
+          start_date: null,
+          has_games: true,
+          games_played: 14,
+          season_points: 0,
+        },
+        {
+          id: 'player-6',
+          first_name: 'Grace',
+          last_name: 'Goalie',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'G',
+          shoots: 'L',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+          acquisition_type: null,
+          start_date: null,
+          has_games: true,
+          games_played: 15,
+          season_points: 0,
+        },
       ],
-      total: 3,
+      total: 6,
     });
     clickPlayersTab();
 
@@ -1567,5 +1762,10 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.queryByText('Jane Doe \u26A0\uFE0F')).not.toBeInTheDocument();
     expect(screen.getByText('Pat Ready')).toBeInTheDocument();
     expect(screen.queryByText('Pat Ready \u26A0\uFE0F')).not.toBeInTheDocument();
+    expect(screen.getByText('Sam Short')).toBeInTheDocument();
+    expect(screen.queryByText('Sam Short \u26A0\uFE0F')).not.toBeInTheDocument();
+    expect(screen.getByText('Glen Goalie')).toBeInTheDocument();
+    expect(screen.queryByText('Glen Goalie \u26A0\uFE0F')).not.toBeInTheDocument();
+    expect(screen.getByText('Grace Goalie \u26A0\uFE0F')).toBeInTheDocument();
   });
 });

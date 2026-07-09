@@ -1,15 +1,12 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import Field from '@/components/Field/Field';
-import Modal from '@/components/Modal/Modal';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import { useForm } from 'react-hook-form';
+import Field from '@jerecocc/tracker-ui/Field';
+import Modal from '@jerecocc/tracker-ui/Modal';
 import {
   type PlayerStintRecord,
   type UpdateStintData,
   type CreateStintData,
 } from '@/hooks/useTeamPlayers';
-import { formatPlayerPosition } from '@/lib/playerPosition';
 import { type TeamRecord } from '@/hooks/useTeams';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import styles from '../teams/MovePlayerModal.module.scss';
@@ -30,7 +27,8 @@ export const ACQUISITION_TYPE_OPTIONS = [
   { value: 'trade', label: 'Trade' },
   { value: 'free_agency', label: 'Free Agency' },
   { value: 'waivers', label: 'Waivers' },
-  { value: 'signing', label: 'Signing' },
+  { value: 'foundational_signing', label: 'Foundational Signing' },
+  { value: 'expansion_signing', label: 'Expansion Signing' },
   { value: 'expansion_draft', label: 'Expansion Draft' },
   { value: 'team_transfer', label: 'Team Transfer' },
   { value: 'loan', label: 'Loan' },
@@ -45,7 +43,6 @@ interface FormValues {
   team_id: string;
   jersey_number: string;
   position: string;
-  roster_status: 'roster' | 'prospect';
   acquisition_type: string;
   start_date: string;
   end_date: string;
@@ -57,7 +54,6 @@ interface Props {
   stint: PlayerStintRecord | null;
   teams: TeamRecord[];
   seasons: SeasonRecord[];
-  history?: PlayerStintRecord[];
   leagueId?: string | null;
   currentTeamId?: string | null;
   onClose: () => void;
@@ -65,21 +61,11 @@ interface Props {
   updateStint: (stintId: string, data: UpdateStintData) => Promise<boolean>;
 }
 
-const formatDate = (d: string | null) => {
-  if (!d) return '-';
-  return new Date(d + 'T00:00:00').toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
-
 const StintEditModal = ({
   open,
   stint,
   teams,
   seasons,
-  history = [],
   leagueId,
   currentTeamId,
   onClose,
@@ -87,6 +73,7 @@ const StintEditModal = ({
   updateStint,
 }: Props) => {
   const mode = stint ? 'edit' : 'create';
+  const canEditJerseyNumber = mode === 'create' || !!stint?.roster_player_team_id;
   const formValues = useMemo<FormValues>(
     () =>
       stint
@@ -94,7 +81,6 @@ const StintEditModal = ({
             team_id: stint.team_id,
             jersey_number: stint.jersey_number == null ? '' : String(stint.jersey_number),
             position: stint.position ?? '',
-            roster_status: stint.is_prospect ? 'prospect' : 'roster',
             acquisition_type: stint.acquisition_type ?? '',
             start_date: stint.start_date?.slice(0, 10) ?? '',
             end_date: stint.end_date?.slice(0, 10) ?? '',
@@ -103,8 +89,7 @@ const StintEditModal = ({
             team_id: '',
             jersey_number: '',
             position: '',
-            roster_status: 'roster',
-            acquisition_type: 'signing',
+            acquisition_type: 'free_agency',
             start_date: '',
             end_date: '',
           },
@@ -175,9 +160,9 @@ const StintEditModal = ({
         team_id: data.team_id,
         season_id: seasonId,
         jersey_number: jerseyNumber,
-        is_prospect: data.roster_status === 'prospect',
+        is_prospect: false,
         position: data.position || null,
-        acquisition_type: data.acquisition_type || 'signing',
+        acquisition_type: data.acquisition_type || 'free_agency',
         start_date: data.start_date || null,
         end_date: data.end_date || null,
       });
@@ -188,8 +173,7 @@ const StintEditModal = ({
       const ok = await updateStint(stint.id, {
         team_id: data.team_id,
         ...(seasonId ? { season_id: seasonId } : {}),
-        jersey_number: jerseyNumber,
-        is_prospect: data.roster_status === 'prospect',
+        ...(canEditJerseyNumber ? { jersey_number: jerseyNumber } : {}),
         position: data.position || null,
         acquisition_type: data.acquisition_type || null,
         start_date: data.start_date || null,
@@ -253,7 +237,7 @@ const StintEditModal = ({
               placeholder="e.g. 97"
               min={0}
               max={99}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !canEditJerseyNumber}
             />
           </div>
           <Field
@@ -284,70 +268,7 @@ const StintEditModal = ({
               disabled={isSubmitting}
             />
           </div>
-          <div className={styles.segmentedField}>
-            <span className={styles.segmentedLabel}>Roster Status</span>
-            <Controller
-              control={control}
-              name="roster_status"
-              render={({ field }) => (
-                <SegmentedControl
-                  value={field.value}
-                  onChange={field.onChange}
-                  variant="field"
-                  options={[
-                    { value: 'roster', label: 'Roster' },
-                    { value: 'prospect', label: 'Prospect' },
-                  ]}
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-          </div>
         </form>
-
-        {history.length > 0 && (
-          <div className={styles.history}>
-            <h4 className={styles.historyTitle}>Team History</h4>
-            <ul className={styles.stintList}>
-              {history.map((s) => (
-                <li
-                  key={s.id}
-                  className={styles.stintItem}
-                >
-                  <TeamLogo
-                    logo={s.team.logo}
-                    logoDark={s.team.logo_dark}
-                    logoLight={s.team.logo_light}
-                    code={s.team.code ?? '?'}
-                    alt={s.team.name ?? ''}
-                    primaryColor={s.team.primary_color}
-                    textColor={s.team.text_color}
-                    size={32}
-                    shape="square"
-                    className={styles.stintLogo}
-                  />
-                  <div className={styles.stintInfo}>
-                    <span className={styles.stintTeam}>{s.team.name ?? 'Unknown Team'}</span>
-                    {s.jersey_number != null && (
-                      <span className={styles.stintJersey}>#{s.jersey_number}</span>
-                    )}
-                    {s.position && (
-                      <span className={styles.stintJersey}>{formatPlayerPosition(s.position)}</span>
-                    )}
-                    {s.acquisition_type && (
-                      <span className={styles.stintJersey}>
-                        {ACQUISITION_TYPE_LABELS[s.acquisition_type] ?? s.acquisition_type}
-                      </span>
-                    )}
-                  </div>
-                  <span className={styles.stintDates}>
-                    {formatDate(s.start_date)} - {s.end_date ? formatDate(s.end_date) : 'Present'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
     </Modal>
   );

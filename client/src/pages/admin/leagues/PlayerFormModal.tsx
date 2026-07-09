@@ -1,13 +1,14 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@/components/Field/Field';
-import Modal from '@/components/Modal/Modal';
+import Field from '@jerecocc/tracker-ui/Field';
+import Modal from '@jerecocc/tracker-ui/Modal';
 import {
   type CreatePlayerData,
   type PlayerRecord,
   type PlayerPosition,
   type PlayerShoots,
 } from '@/hooks/useLeaguePlayers';
+import { getPlayerStatus, type PlayerStatus } from '@/lib/playerStatus';
 import styles from './PlayerFormModal.module.scss';
 
 const POSITION_OPTIONS = [
@@ -26,6 +27,12 @@ const SHOOTS_OPTIONS = [
   { value: 'R', label: 'Right' },
 ];
 
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'retired', label: 'Retired' },
+];
+
 const NO_ROOKIE_SEASON = 'none';
 
 interface FormValues {
@@ -33,6 +40,7 @@ interface FormValues {
   last_name: string;
   position: PlayerPosition | null;
   shoots: PlayerShoots | null;
+  status: PlayerStatus;
   rookie_season_id: string;
   jersey_number: string;
 }
@@ -69,6 +77,7 @@ const PlayerFormModal = ({
       last_name: editTarget?.last_name ?? '',
       position: editTarget?.position ?? null,
       shoots: editTarget?.shoots ?? null,
+      status: editTarget ? getPlayerStatus(editTarget) : 'active',
       rookie_season_id: editTarget?.rookie_season_id ?? NO_ROOKIE_SEASON,
       jersey_number: editTarget?.jersey_number != null ? String(editTarget.jersey_number) : '',
     };
@@ -108,6 +117,7 @@ const PlayerFormModal = ({
       last_name: data.last_name,
       position: data.position || null,
       shoots: data.shoots || null,
+      status: data.status,
       ...(seasons.length > 0
         ? {
             rookie_season_id:
@@ -129,6 +139,19 @@ const PlayerFormModal = ({
 
     handleClose();
   });
+
+  const statusField = (
+    <Field
+      type="select"
+      label="Status"
+      required
+      control={control}
+      name="status"
+      options={STATUS_OPTIONS}
+      rules={{ required: true }}
+      disabled={isSubmitting}
+    />
+  );
 
   return (
     <Modal
@@ -204,8 +227,8 @@ const PlayerFormModal = ({
             disabled={isSubmitting}
           />
         </div>
-        {seasons.length > 0 && (
-          <div className={styles.fullRow}>
+        <div className={seasons.length > 0 ? styles.playerInfoIdentityRow : styles.fullRow}>
+          {seasons.length > 0 && (
             <Field
               type="select"
               label="Rookie Season"
@@ -215,8 +238,9 @@ const PlayerFormModal = ({
               placeholder="Select rookie season"
               disabled={isSubmitting}
             />
-          </div>
-        )}
+          )}
+          {statusField}
+        </div>
       </form>
     </Modal>
   );

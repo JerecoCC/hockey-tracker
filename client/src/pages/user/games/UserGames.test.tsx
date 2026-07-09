@@ -3,9 +3,9 @@ import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
-import calendarItemStyles from '@/components/CalendarGameListItem/CalendarGameListItem.module.scss';
-import gameCardStyles from '@/components/GameCard/GameCard.module.scss';
-import scheduleLayoutStyles from '@/components/ScheduleGamesLayout/ScheduleGamesLayout.module.scss';
+import calendarItemStyles from '@/shared/CalendarGameListItem/CalendarGameListItem.module.scss';
+import gameCardStyles from '@/shared/GameCard/GameCard.module.scss';
+import scheduleLayoutStyles from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout.module.scss';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import UserGames from './UserGames';
 import styles from './UserGames.module.scss';
@@ -37,7 +37,7 @@ jest.mock('react-toastify', () => ({
   },
 }));
 jest.mock(
-  '@/components/Modal/Modal',
+  '@jerecocc/tracker-ui/Modal',
   () =>
     ({
       open,
@@ -66,7 +66,7 @@ jest.mock(
         </div>
       ) : null,
 );
-jest.mock('@/components/Section/Section', () => {
+jest.mock('@jerecocc/tracker-ui/Section', () => {
   const React = require('react');
   return React.forwardRef(({ title, action, children, className }: any, ref: any) => (
     <section
@@ -79,8 +79,105 @@ jest.mock('@/components/Section/Section', () => {
     </section>
   ));
 });
+jest.mock('@jerecocc/tracker-ui/Card', () => {
+  const React = require('react');
+  return React.forwardRef(({ children, className, style, ...props }: any, ref: any) => (
+    <div
+      ref={ref}
+      className={className}
+      style={style}
+      {...props}
+    >
+      {children}
+    </div>
+  ));
+});
+jest.mock('@jerecocc/tracker-ui/Badge', () => ({
+  __esModule: true,
+  default: ({ value, label, 'aria-label': ariaLabel, className }: any) => (
+    <span
+      className={className}
+      aria-label={ariaLabel}
+    >
+      <span>{value}</span>
+      {label ? <span>{label}</span> : null}
+    </span>
+  ),
+}));
+jest.mock('@jerecocc/tracker-ui/Divider', () => ({
+  __esModule: true,
+  default: ({ className }: any) => <hr className={className} />,
+}));
+jest.mock('@jerecocc/tracker-ui/Skeleton', () => ({
+  __esModule: true,
+  default: ({ className }: any) => (
+    <div
+      className={className}
+      aria-label="Loading skeleton"
+    />
+  ),
+}));
+jest.mock('@jerecocc/tracker-ui/MonthCalendar', () => {
+  const React = require('react');
+  const dateKey = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+  return {
+    __esModule: true,
+    default: React.forwardRef(
+      (
+        {
+          month,
+          loading,
+          loadingSkeletonClassName,
+          getDayHeaderRight,
+          getDayProps,
+          getDayClassName,
+          renderDayContent,
+        }: any,
+        ref: any,
+      ) => {
+        const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+        if (loading) {
+          return (
+            <div ref={ref}>
+              {Array.from({ length: 7 }).map((_, index) => (
+                <div
+                  key={index}
+                  className={loadingSkeletonClassName}
+                  aria-label="Loading calendar slot"
+                />
+              ))}
+            </div>
+          );
+        }
+
+        return (
+          <div ref={ref}>
+            {Array.from({ length: daysInMonth }).map((_, index) => {
+              const date = new Date(month.getFullYear(), month.getMonth(), index + 1);
+              const key = dateKey(date);
+              const dayProps = getDayProps?.({ date, dateKey: key }) ?? {};
+              return (
+                <div
+                  key={key}
+                  aria-label={`Calendar day ${key}`}
+                  className={getDayClassName?.({ date, dateKey: key })}
+                  {...dayProps}
+                >
+                  {getDayHeaderRight?.({ date, dateKey: key })}
+                  {renderDayContent?.({ date, dateKey: key })}
+                </div>
+              );
+            })}
+          </div>
+        );
+      },
+    ),
+  };
+});
 jest.mock(
-  '@/components/DatePicker/DatePicker',
+  '@jerecocc/tracker-ui/DatePicker',
   () => (props: any) =>
     props.triggerLabel ? (
       <button
@@ -97,9 +194,77 @@ jest.mock(
       />
     ),
 );
-jest.mock('@/components/Icon/Icon', () => ({ name }: any) => <span>{name}</span>);
+jest.mock('@jerecocc/tracker-ui/Icon', () => ({ name }: any) => <span>{name}</span>);
+jest.mock('@jerecocc/tracker-ui/SegmentedControl', () => ({
+  __esModule: true,
+  default: ({ options, onChange }: any) => (
+    <div>
+      {options.map((option: any) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-label={option.ariaLabel ?? option.tooltip ?? option.value}
+          onClick={() => onChange(option.value)}
+        >
+          {option.ariaLabel ?? option.tooltip ?? option.value}
+        </button>
+      ))}
+    </div>
+  ),
+}));
+jest.mock('@jerecocc/tracker-ui/ToggleButton', () => ({
+  __esModule: true,
+  default: ({
+    active,
+    onClick,
+    activeTooltip,
+    inactiveTooltip,
+    variant,
+    'aria-label': ariaLabel,
+  }: any) => (
+    <button
+      type="button"
+      role={variant === 'switch' ? 'switch' : undefined}
+      aria-checked={variant === 'switch' ? active : undefined}
+      aria-label={ariaLabel ?? (active ? activeTooltip : inactiveTooltip)}
+      onClick={onClick}
+    >
+      {ariaLabel ?? (active ? activeTooltip : inactiveTooltip)}
+    </button>
+  ),
+}));
+jest.mock('@jerecocc/tracker-ui/PeriodPicker', () => ({
+  __esModule: true,
+  default: ({ kind, label, onPrevious, onNext }: any) => {
+    const period = kind === 'month' ? 'month' : 'week';
+    return (
+      <div>
+        <button
+          type="button"
+          aria-label={`Previous ${period}`}
+          onClick={onPrevious}
+        >
+          Previous {period}
+        </button>
+        <button
+          type="button"
+          aria-label={`Select ${period}: ${label}`}
+        >
+          {label}
+        </button>
+        <button
+          type="button"
+          aria-label={`Next ${period}`}
+          onClick={onNext}
+        >
+          Next {period}
+        </button>
+      </div>
+    );
+  },
+}));
 jest.mock(
-  '@/components/Button/Button',
+  '@jerecocc/tracker-ui/Button',
   () =>
     ({ children, tooltip, icon, onClick, disabled, 'aria-label': ariaLabel }: any) => (
       <button
@@ -112,10 +277,22 @@ jest.mock(
       </button>
     ),
 );
-jest.mock('@/components/TeamLogo/TeamLogo', () => ({ code }: any) => <span>{code || 'LOGO'}</span>);
+jest.mock('@jerecocc/tracker-ui/TeamLogo', () => ({ code }: any) => <span>{code || 'LOGO'}</span>);
+jest.mock('@jerecocc/tracker-ui/Tooltip', () => ({
+  __esModule: true,
+  default: ({ children, text }: any) => <span title={text}>{children}</span>,
+}));
 jest.mock('@/pages/admin/games/game-details/ScoreImageModal', () => ({
   __esModule: true,
-  default: ({ open, game, liveAwayScore, liveHomeScore, overtimeSuffix, showForm, onClose }: any) =>
+  default: ({
+    open,
+    game,
+    liveAwayScore,
+    liveHomeScore,
+    overtimeSuffix,
+    showForm,
+    onClose,
+  }: any) =>
     open ? (
       <div>
         <div>Generate Score Card</div>
@@ -127,7 +304,7 @@ jest.mock('@/pages/admin/games/game-details/ScoreImageModal', () => ({
       </div>
     ) : null,
 }));
-jest.mock('@/components/Select/Select', () => ({
+jest.mock('@jerecocc/tracker-ui/Select', () => ({
   __esModule: true,
   default: ({ value, options, onChange, disabled }: any) => (
     <select
@@ -146,7 +323,7 @@ jest.mock('@/components/Select/Select', () => ({
     </select>
   ),
 }));
-jest.mock('@/components/MultiSelect/MultiSelect', () => ({
+jest.mock('@jerecocc/tracker-ui/MultiSelect', () => ({
   __esModule: true,
   default: ({ value, options, onChange, onExit, placeholder }: any) => (
     <div
@@ -182,8 +359,9 @@ jest.mock('@/components/MultiSelect/MultiSelect', () => ({
 const mockUseQuery = useQuery as jest.Mock;
 const mockUseQueryClient = useQueryClient as jest.Mock;
 const mockAxios = axios as jest.Mocked<typeof axios>;
-const mockDownloadMonthScheduleImage =
-  downloadMonthScheduleImage as jest.MockedFunction<typeof downloadMonthScheduleImage>;
+const mockDownloadMonthScheduleImage = downloadMonthScheduleImage as jest.MockedFunction<
+  typeof downloadMonthScheduleImage
+>;
 
 const currentDate = new Date(2026, 4, 15, 12, 0, 0);
 const dateOffset = (days: number) => new Date(currentDate.getTime() + days * 86_400_000);
@@ -253,7 +431,10 @@ const localDateKeyForEtDateTime = (dateKey: string, scheduledTime: string | null
   const instant = new Date(`${dateKey}T${scheduledTime}:00${zoneOffset}`);
   return `${instant.getFullYear()}-${String(instant.getMonth() + 1).padStart(2, '0')}-${String(instant.getDate()).padStart(2, '0')}`;
 };
-const localDateKeyForGame = (game: { scheduled_at: string | null; scheduled_time: string | null }) => {
+const localDateKeyForGame = (game: {
+  scheduled_at: string | null;
+  scheduled_time: string | null;
+}) => {
   if (!game.scheduled_at) return null;
   if (/^\d{4}-\d{2}-\d{2}$/.test(game.scheduled_at)) {
     return localDateKeyForEtDateTime(game.scheduled_at, game.scheduled_time);
@@ -263,7 +444,7 @@ const localDateKeyForGame = (game: { scheduled_at: string | null; scheduled_time
     !!game.scheduled_time &&
     game.scheduled_time !== '00:00' &&
     !!rawDateKey &&
-    /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/.test(game.scheduled_at);
+    /[T ]00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}(?::?[0-9]{2})?)?$/.test(game.scheduled_at);
   if (isMidnightPlaceholder) {
     return localDateKeyForEtDateTime(rawDateKey, game.scheduled_time);
   }
@@ -485,9 +666,9 @@ describe('UserGames schedule views', () => {
     await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     expect(document.querySelector(`.${scheduleLayoutStyles.calendarCard}`)).toBeInTheDocument();
-    expect(
-      screen.getAllByLabelText(/^Loading (calendar slot|games for)/).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText(/^Loading (calendar slot|games for)/).length).toBeGreaterThan(
+      0,
+    );
   });
   it('shows team filtering with favorite teams first and uses dashboard cards in Week view', async () => {
     const user = userEvent.setup();
@@ -495,10 +676,16 @@ describe('UserGames schedule views', () => {
 
     const teamFilter = screen.getByRole('combobox', { name: 'Teams' });
     expect(teamFilter).toBeInTheDocument();
-    expect(within(teamFilter).getByRole('button', { name: 'Toggle Home Team' })).toBeInTheDocument();
+    expect(
+      within(teamFilter).getByRole('button', { name: 'Toggle Home Team' }),
+    ).toBeInTheDocument();
     expect(within(teamFilter).getByRole('button', { name: 'Toggle Opponent' })).toBeInTheDocument();
-    expect(within(teamFilter).getByRole('button', { name: 'Toggle Away Team' })).toBeInTheDocument();
-    expect(within(teamFilter).getByRole('button', { name: 'Toggle Idle Team' })).toBeInTheDocument();
+    expect(
+      within(teamFilter).getByRole('button', { name: 'Toggle Away Team' }),
+    ).toBeInTheDocument();
+    expect(
+      within(teamFilter).getByRole('button', { name: 'Toggle Idle Team' }),
+    ).toBeInTheDocument();
     expect(
       within(teamFilter)
         .getAllByRole('button', { name: /^Toggle/ })
@@ -532,9 +719,8 @@ describe('UserGames schedule views', () => {
     expect(within(scheduledDayCard as HTMLElement).getAllByText('AWY').length).toBeGreaterThan(0);
     expect(
       within(
-        screen.getByText(
-          formatHeading(localDateKeyForGame(games[0]) ?? scheduledWatchDate),
-        ).parentElement as HTMLElement,
+        screen.getByText(formatHeading(localDateKeyForGame(games[0]) ?? scheduledWatchDate))
+          .parentElement as HTMLElement,
       ).queryByText('AWY'),
     ).not.toBeInTheDocument();
 
@@ -559,6 +745,54 @@ describe('UserGames schedule views', () => {
     expect(calendarGameItem).toHaveClass(styles.calendarGameLeagueTint);
     expect(calendarGameItem).toHaveStyle('--game-league-primary: #0a4fa3');
   });
+
+  it('renders ISO watch dates inside the literal first day in Week view', () => {
+    const isoScheduledGame = {
+      ...games[0],
+      id: 'game-week-iso-watch-date',
+      scheduled_at: currentMonthIso(-1),
+      scheduled_for: `${scheduledWatchDate}T00:00:00+14:00`,
+    };
+
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-away'] };
+      if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+      if (queryKey[0] === 'user-games') return { data: [isoScheduledGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    const firstDayCard = screen.getByText(formatHeading(scheduledWatchDate)).parentElement;
+    expect(within(firstDayCard as HTMLElement).getAllByText('AWY').length).toBeGreaterThan(0);
+  });
+
+  it('renders midnight-placeholder games inside the literal first day in Week view', () => {
+    const midnightGame = {
+      ...games[0],
+      id: 'game-week-midnight',
+      scheduled_at: `${scheduledWatchDate}T00:00:00+14:00`,
+      scheduled_time: null,
+      scheduled_for: null,
+    };
+
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-away'] };
+      if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+      if (queryKey[0] === 'user-games') return { data: [midnightGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    const firstDayCard = screen.getByText(formatHeading(scheduledWatchDate)).parentElement;
+    expect(within(firstDayCard as HTMLElement).getAllByText('AWY').length).toBeGreaterThan(0);
+  });
+
   it('shows skipped games when the filter switch is enabled', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
@@ -604,6 +838,37 @@ describe('UserGames schedule views', () => {
       }),
     );
   });
+
+  it('hides the watch action for non-final user games', () => {
+    const scheduledGame = {
+      ...games[0],
+      status: 'scheduled',
+      scheduled_for: null,
+    };
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+      if (queryKey[0] === 'user-games') return { data: [scheduledGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    const gameCard = screen.getAllByText('AWY')[0].closest(`.${gameCardStyles.card}`);
+    expect(gameCard).not.toBeNull();
+    expect(
+      within(gameCard as HTMLElement).queryByRole('button', { name: 'Mark as watched' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(gameCard as HTMLElement).getByRole('button', { name: 'Schedule watch' }),
+    ).toBeInTheDocument();
+    expect(
+      within(gameCard as HTMLElement).getByRole('button', { name: 'Skip game' }),
+    ).toBeInTheDocument();
+  });
+
   it('shows a scheduled watch game original date in the user timezone', async () => {
     const user = userEvent.setup();
     const originalEtDate = localDateString(1);
@@ -687,7 +952,8 @@ describe('UserGames schedule views', () => {
       if (queryKey[0] === 'user-leagues')
         return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
       if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
-      if (queryKey[0] === 'user-games') return { data: [watchedMissingScoreGame], isLoading: false };
+      if (queryKey[0] === 'user-games')
+        return { data: [watchedMissingScoreGame], isLoading: false };
       return { data: [], isLoading: false };
     });
 
@@ -993,15 +1259,7 @@ describe('UserGames schedule views', () => {
 
     expect(selectedTeamQuery).toEqual(
       expect.objectContaining({
-        queryKey: [
-          'user-games',
-          'all',
-          'all',
-          'team-opp',
-          false,
-          localDateString(0),
-          '',
-        ],
+        queryKey: ['user-games', 'all', 'all', 'team-opp', false, localDateString(0), ''],
       }),
     );
 
@@ -1014,6 +1272,76 @@ describe('UserGames schedule views', () => {
         params: expect.objectContaining({ team_ids: 'team-opp' }),
       }),
     );
+  });
+
+  it('reselects favorite teams from every league when returning to All Leagues', async () => {
+    const user = userEvent.setup();
+    const multiLeagueTeams = [
+      {
+        id: 'team-home',
+        name: 'Home Team',
+        code: 'HOM',
+        logo: null,
+        league_id: 'league-nhl',
+      },
+      {
+        id: 'team-pwhl',
+        name: 'PWHL Team',
+        code: 'PWH',
+        logo: null,
+        league_id: 'league-pwhl',
+      },
+      {
+        id: 'team-away',
+        name: 'Away Team',
+        code: 'AWY',
+        logo: null,
+        league_id: 'league-nhl',
+      },
+    ];
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return {
+          data: [
+            { id: 'league-nhl', name: 'NHL', code: 'NHL', logo: null },
+            { id: 'league-pwhl', name: 'PWHL', code: 'PWHL', logo: null },
+          ],
+        };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-pwhl'] };
+      if (queryKey[0] === 'user-teams') return { data: multiLeagueTeams, isLoading: false };
+      if (queryKey[0] === 'user-games') return { data: [], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    const latestUserGamesQuery = () => {
+      const userGamesQueries = mockUseQuery.mock.calls
+        .map(([options]) => options)
+        .filter((options) => options.queryKey?.[0] === 'user-games');
+      return userGamesQueries[userGamesQueries.length - 1];
+    };
+
+    await waitFor(() => {
+      expect(latestUserGamesQuery().queryKey[3]).toBe('team-home,team-pwhl');
+    });
+
+    const leagueSelect = screen.getAllByRole('combobox')[0];
+    await user.selectOptions(leagueSelect, 'league-nhl');
+
+    await waitFor(() => {
+      const query = latestUserGamesQuery();
+      expect(query.queryKey[2]).toBe('league-nhl');
+      expect(query.queryKey[3]).toBe('team-home');
+    });
+
+    await user.selectOptions(leagueSelect, 'all');
+
+    await waitFor(() => {
+      const query = latestUserGamesQuery();
+      expect(query.queryKey[2]).toBe('all');
+      expect(query.queryKey[3]).toBe('team-home,team-pwhl');
+    });
   });
 
   it('lets watched non-favorite teams be selected from the team filter', async () => {
@@ -1107,10 +1435,9 @@ describe('UserGames schedule views', () => {
 
     fireEvent.dragStart(sourceCard as HTMLElement, { dataTransfer });
     fireEvent.dragOver(targetCell as Element, { dataTransfer });
-    expect(targetCell).not.toHaveClass(styles.calendarDayDropTarget);
-    expect(targetCell?.querySelector(`.${styles.calendarDayDropTarget}`)).not.toBeNull();
+    expect(targetCell).toHaveClass(styles.calendarDayDropTarget);
     fireEvent.drop(targetCell as Element, { dataTransfer });
-    expect(targetCell?.querySelector(`.${styles.calendarDayDropTarget}`)).toBeNull();
+    expect(targetCell).not.toHaveClass(styles.calendarDayDropTarget);
     fireEvent.dragEnd(sourceCard as HTMLElement, { dataTransfer });
 
     await waitFor(() =>
@@ -1135,6 +1462,48 @@ describe('UserGames schedule views', () => {
     );
     expect(toast.success).toHaveBeenCalledWith('AWY @ HOM scheduled for May 18, 2026');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
+  });
+
+  it('does not allow dropping a calendar game before its scheduled date', async () => {
+    const user = userEvent.setup();
+    render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+
+    const validTargetDate = localDateString(3);
+    const invalidTargetDate = localDateString(-1);
+    const sourceCard = screen.getByText('AWY').closest('[draggable="true"]');
+    const validTargetCell = document.querySelector(`[data-date-key="${validTargetDate}"]`);
+    const invalidTargetCell = document.querySelector(`[data-date-key="${invalidTargetDate}"]`);
+    const dataTransfer = {
+      store: {} as Record<string, string>,
+      effectAllowed: 'all',
+      dropEffect: 'move',
+      setData(type: string, value: string) {
+        this.store[type] = value;
+      },
+      getData(type: string) {
+        return this.store[type] ?? '';
+      },
+    };
+
+    expect(sourceCard).not.toBeNull();
+    expect(validTargetCell).not.toBeNull();
+    expect(invalidTargetCell).not.toBeNull();
+
+    fireEvent.dragStart(sourceCard as HTMLElement, { dataTransfer });
+    fireEvent.dragOver(validTargetCell as Element, { dataTransfer });
+    expect(validTargetCell).toHaveClass(styles.calendarDayDropTarget);
+
+    fireEvent.dragOver(invalidTargetCell as Element, { dataTransfer });
+    expect(dataTransfer.dropEffect).toBe('none');
+    expect(validTargetCell).not.toHaveClass(styles.calendarDayDropTarget);
+    expect(invalidTargetCell).not.toHaveClass(styles.calendarDayDropTarget);
+
+    fireEvent.drop(invalidTargetCell as Element, { dataTransfer });
+    fireEvent.dragEnd(sourceCard as HTMLElement, { dataTransfer });
+
+    expect(mockAxios.put).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('clears the schedule when dragging a game back to its original date', async () => {
@@ -1376,6 +1745,58 @@ describe('UserGames schedule views', () => {
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
+  it('keeps adjacent-edge games in cached month queries', async () => {
+    const user = userEvent.setup();
+    const targetDate = localDateString(-15);
+    const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    const currentMonthKey = [
+      'user-games',
+      'all',
+      'all',
+      'team-home,team-opp',
+      false,
+      '',
+      currentMonth,
+    ];
+    const edgeGame = {
+      ...games[0],
+      id: 'game-edge-cache',
+      scheduled_at: currentMonthIso(-20),
+      scheduled_for: scheduledWatchDate,
+    };
+
+    mockFindAllQueries.mockReturnValue([{ queryKey: currentMonthKey }]);
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+      if (queryKey[0] === 'user-games') return { data: [edgeGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit watch schedule' }));
+    const input = screen.getByLabelText('Watch date');
+    await user.clear(input);
+    await user.type(input, targetDate);
+    await user.click(screen.getByRole('button', { name: 'Save Schedule' }));
+
+    const monthUpdater = mockSetQueryData.mock.calls.find(
+      ([queryKey]) => JSON.stringify(queryKey) === JSON.stringify(currentMonthKey),
+    )?.[1];
+
+    expect(monthUpdater([])).toEqual([
+      expect.objectContaining({
+        id: 'game-edge-cache',
+        scheduled_for: targetDate,
+        skipped_by_user: false,
+      }),
+    ]);
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
+  });
+
   it('prevents scheduling a watch on or before the local game date', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
@@ -1489,15 +1910,117 @@ describe('UserGames schedule views', () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByText(
-        formatNumericDate(localDateKeyForGame(games[0]) ?? scheduledWatchDate),
-      ).length,
+      screen.getAllByText(formatNumericDate(localDateKeyForGame(games[0]) ?? scheduledWatchDate))
+        .length,
     ).toBeGreaterThan(0);
+    expect(within(screen.getAllByLabelText('1 game')[0]).getByText('game')).toBeInTheDocument();
+    const unwatchedCalendarGame = screen
+      .getAllByText('AWY')[0]
+      .closest(`.${calendarItemStyles.item}`);
+    const watchedCalendarGame = screen
+      .getAllByText('OPP')[0]
+      .closest(`.${calendarItemStyles.item}`);
+    expect(unwatchedCalendarGame).toHaveClass(styles.calendarGameUnwatched);
+    expect(watchedCalendarGame).not.toHaveClass(styles.calendarGameUnwatched);
     expect(screen.getAllByRole('button', { name: 'View game details' })).toHaveLength(1);
 
     await user.click(screen.getAllByRole('button', { name: 'View game details' })[0]);
 
     expect(mockNavigate).toHaveBeenCalledWith('/games/05-15-2026/opp-vs-hom');
+  });
+
+  it('renders games inside the first day of the selected month', async () => {
+    const user = userEvent.setup();
+    const firstDayKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
+    const firstDayGame = {
+      ...games[0],
+      id: 'game-first-day',
+      away_team: {
+        ...games[0].away_team,
+        id: 'team-first-day',
+        name: 'First Day Team',
+        code: 'FDY',
+      },
+      scheduled_for: `${firstDayKey}T00:00:00+14:00`,
+    };
+
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-first-day'] };
+      if (queryKey[0] === 'user-teams')
+        return {
+          data: [
+            ...allTeams,
+            {
+              id: 'team-first-day',
+              name: 'First Day Team',
+              code: 'FDY',
+              logo: null,
+              league_id: 'league-1',
+            },
+          ],
+          isLoading: false,
+        };
+      if (queryKey[0] === 'user-games') return { data: [firstDayGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+
+    const firstDay = screen.getByLabelText(`Calendar day ${firstDayKey}`);
+    expect(within(firstDay).getByText('FDY')).toBeInTheDocument();
+    expect(within(firstDay).getByLabelText('1 game')).toBeInTheDocument();
+  });
+
+  it('renders midnight-placeholder games inside the first day of the selected month', async () => {
+    const user = userEvent.setup();
+    const firstDayKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
+    const firstDayGame = {
+      ...games[0],
+      id: 'game-first-day-midnight',
+      away_team: {
+        ...games[0].away_team,
+        id: 'team-midnight',
+        name: 'Midnight Team',
+        code: 'MID',
+      },
+      scheduled_at: `${firstDayKey}T00:00:00+14:00`,
+      scheduled_time: null,
+      scheduled_for: null,
+    };
+
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-midnight'] };
+      if (queryKey[0] === 'user-teams')
+        return {
+          data: [
+            ...allTeams,
+            {
+              id: 'team-midnight',
+              name: 'Midnight Team',
+              code: 'MID',
+              logo: null,
+              league_id: 'league-1',
+            },
+          ],
+          isLoading: false,
+        };
+      if (queryKey[0] === 'user-games') return { data: [firstDayGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+
+    const firstDay = screen.getByLabelText(`Calendar day ${firstDayKey}`);
+    expect(within(firstDay).getByText('MID')).toBeInTheDocument();
+    expect(within(firstDay).getByLabelText('1 game')).toBeInTheDocument();
   });
 
   it('uses local date placement for timezone-sensitive games', async () => {

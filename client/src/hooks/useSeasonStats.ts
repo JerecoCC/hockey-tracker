@@ -48,6 +48,7 @@ export interface GoalieStatRecord {
   shots_against: number;
   saves: number;
   goals_against: number;
+  time_on_ice: number;
   save_pct: number | null;
   shutouts: number;
   gaa: number | null;

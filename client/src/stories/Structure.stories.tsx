@@ -1,13 +1,13 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import Accordion from '@/components/Accordion/Accordion';
-import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
-import AddRowBar from '@/components/AddRowBar/AddRowBar';
-import Button from '@/components/Button/Button';
-import Pagination, { PaginatedTable } from '@/components/Pagination/Pagination';
-import Section from '@/components/Section/Section';
-import Table, { type Column } from '@/components/Table/Table';
-import Tabs from '@/components/Tabs/Tabs';
-import Tag from '@/components/Tag/Tag';
+import Accordion from '@jerecocc/tracker-ui/Accordion';
+import ActionOverlay from '@jerecocc/tracker-ui/ActionOverlay';
+import AddRowBar from '@jerecocc/tracker-ui/AddRowBar';
+import Button from '@jerecocc/tracker-ui/Button';
+import Pagination, { PaginatedTable } from '@jerecocc/tracker-ui/Pagination';
+import Section from '@jerecocc/tracker-ui/Section';
+import Table, { type Column } from '@jerecocc/tracker-ui/Table';
+import Tabs from '@jerecocc/tracker-ui/Tabs';
+import Tag from '@jerecocc/tracker-ui/Tag';
 import { noop, Stateful, StoryGrid, StoryPage, StoryPanel, StorySection } from './storyData';
 
 const meta = {
@@ -65,7 +65,7 @@ export const Surfaces = {
             title="Filled Card"
             action={
               <Button
-                size="sm"
+                size="medium"
                 icon="add"
                 onClick={noop}
               >
@@ -191,14 +191,14 @@ export const RowHelpers = {
           Hover target
           <ActionOverlay className="storybook-overlay-visible">
             <Button
-              size="sm"
+              size="medium"
               variant="outlined"
               intent="neutral"
               icon="edit"
               onClick={noop}
             />
             <Button
-              size="sm"
+              size="medium"
               variant="outlined"
               intent="danger"
               icon="delete"

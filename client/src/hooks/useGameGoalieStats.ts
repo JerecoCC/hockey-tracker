@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
+import { invalidateGameStatDependents } from './gameStatCache';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -13,6 +14,18 @@ const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
 const goalieStintsPath = (gameId: string) => `${API}/admin/games/${gameId}/goalie-stints`;
+
+const setGoalieStatsAndRefreshDependents = async (
+  queryClient: ReturnType<typeof useQueryClient>,
+  gameId: string,
+  queryKey: readonly unknown[],
+  rows: GoalieStatRecord[],
+) => {
+  queryClient.setQueryData<GoalieStatRecord[]>(queryKey, rows);
+  await invalidateGameStatDependents(queryClient, gameId, {
+    includeGameGoalieStats: false,
+  });
+};
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -160,7 +173,7 @@ const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boo
           },
           { headers: authHeaders() },
         );
-      queryClient.setQueryData<GoalieStatRecord[]>(queryKey, rows);
+      await setGoalieStatsAndRefreshDependents(queryClient, gameId, queryKey, rows);
       const row = rows.find((stat) => stat.goalie_id === data.goalie_id) ?? null;
       return row;
     } catch (err) {
@@ -181,7 +194,7 @@ const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boo
         data,
         { headers: authHeaders() },
       );
-      queryClient.setQueryData<GoalieStatRecord[]>(queryKey, rows);
+      await setGoalieStatsAndRefreshDependents(queryClient, gameId, queryKey, rows);
       return rows;
     } catch (err) {
       toast.error(apiError(err, 'Failed to record goalie switch'));
@@ -203,7 +216,7 @@ const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boo
         data,
         { headers: authHeaders() },
       );
-      queryClient.setQueryData<GoalieStatRecord[]>(queryKey, rows);
+      await setGoalieStatsAndRefreshDependents(queryClient, gameId, queryKey, rows);
       return rows;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update goalie stint'));
@@ -221,7 +234,7 @@ const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boo
         `${API}/admin/games/${gameId}/goalie-stints/${stintId}`,
         { headers: authHeaders() },
       );
-      queryClient.setQueryData<GoalieStatRecord[]>(queryKey, rows);
+      await setGoalieStatsAndRefreshDependents(queryClient, gameId, queryKey, rows);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to remove goalie stint'));
@@ -247,7 +260,9 @@ const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boo
         rows = response.data;
       }
 
-      queryClient.setQueryData<GoalieStatRecord[]>(
+      await setGoalieStatsAndRefreshDependents(
+        queryClient,
+        gameId,
         queryKey,
         rows ?? currentStats.filter((row) => row.goalie_id !== goalieId),
       );

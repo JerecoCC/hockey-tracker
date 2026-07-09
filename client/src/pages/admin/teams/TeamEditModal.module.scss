@@ -1,19 +1,10 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 .form {
   display: flex;
   flex-direction: column;
   gap: $space-md;
-}
-
-.assetRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  column-gap: $space-md;
-  row-gap: $space-lg;
 }
 
 .identityRow {
@@ -26,7 +17,6 @@
   }
 }
 
-.colorRow,
 .locationRow {
   display: flex;
   gap: $space-md;
@@ -34,5 +24,15 @@
   > * {
     flex: 1;
     min-width: 0;
+  }
+}
+
+.colorGroup {
+  --grouped-fields-grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: $bp-tablet) {
+  .colorGroup {
+    --grouped-fields-grid-template-columns: minmax(0, 1fr);
   }
 }

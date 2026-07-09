@@ -1,6 +1,11 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+.rosterBody {
+  overflow-y: hidden;
+  padding-bottom: 0;
+}
+
 .content {
   display: flex;
   flex-direction: column;
@@ -38,10 +43,10 @@
 
 .controls {
   flex-shrink: 0;
-  margin-bottom: $space-md;
   display: flex;
   flex-direction: column;
-  gap: $space-sm;
+  gap: $space-md;
+  margin-bottom: 0;
 }
 
 .quickAdd {
@@ -55,17 +60,6 @@
       margin-bottom: 0;
     }
   }
-
-  &Field {
-    min-height: 36px;
-    padding-top: $space-sm;
-    padding-bottom: $space-sm;
-  }
-}
-
-.controlsDivider {
-  height: 1px;
-  background: $border;
 }
 
 .notice {
@@ -74,34 +68,54 @@
   font-size: $font-sm;
 }
 
-.search {
-  &Row {
-    display: flex;
-    align-items: center;
-    gap: $space-sm;
+.searchWrap {
+  flex: 0 0 auto;
+  width: 100%;
+  height: 42px;
+  min-height: 42px;
+}
 
-    > label {
-      flex: 1;
-      margin-bottom: 0;
-    }
-  }
+.searchDivider {
+  --divider-color: var(--app-border, #{$border});
 
-  &Field {
-    min-height: 42px;
-  }
+  margin-top: $space-lg;
+  flex-shrink: 0;
 }
 
 .list {
-  list-style: none;
-  margin: 0;
-  margin-bottom: -$space-xl;
-  padding: 0;
-  flex: 1;
-  min-height: 0;
+  --selectable-list-item-image-size: 48px;
+  --selectable-list-item-image-font-size: #{$font-base};
+
+  margin-bottom: $space-lg;
+  max-height: min(70vh, 680px);
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex: 1 1 auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-border, #{$border}) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--app-border, #{$border});
+    border-radius: $radius-md;
+    min-height: 1.5rem;
+  }
+}
+
+.modalFooter {
+  border-top: 1px solid var(--app-border, #{$border});
+  padding-top: $space-xl;
+}
+
+.modalFooterDivider {
+  display: none;
 }
 
 .empty {

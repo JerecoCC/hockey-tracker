@@ -1,7 +1,8 @@
-import Card from '@/components/Card/Card';
-import EntityHeader from '@/components/EntityHeader/EntityHeader';
-import InfoItem from '@/components/InfoItem/InfoItem';
-import Skeleton from '@/components/Skeleton/Skeleton';
+import Card from '@jerecocc/tracker-ui/Card';
+import Divider from '@jerecocc/tracker-ui/Divider';
+import EntityHeader from '@jerecocc/tracker-ui/EntityHeader';
+import InfoItem from '@jerecocc/tracker-ui/InfoItem';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
 import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
 import styles from './LeagueDetails.module.scss';
 
@@ -14,6 +15,8 @@ interface Props {
 interface SkeletonProps {
   className?: string;
 }
+
+const cx = (...classes: Array<string | undefined>) => classes.filter(Boolean).join(' ');
 
 export const LeagueInfoCardSkeleton = ({ className }: SkeletonProps) => (
   <Card
@@ -54,8 +57,10 @@ export const LeagueInfoCardSkeleton = ({ className }: SkeletonProps) => (
       </div>
     </div>
 
-    <div className={styles.infoGrid}>
-      {['playoff-format', 'shootout-rounds', 'scoring-system'].map((item) => (
+    <Divider />
+
+    <div className={cx(styles.infoGrid, styles.infoCardGrid)}>
+      {['playoff-format', 'shootout-rounds', 'goalie-minimum', 'scoring-system'].map((item) => (
         <div
           key={item}
           className={styles.infoSkeletonItem}
@@ -103,9 +108,13 @@ const LeagueInfoCard = ({ league, onEdit, className }: Props) => (
         { label: 'Primary', color: league.primary_color },
         { label: 'Text', color: league.text_color },
       ]}
+      editIconOnly
+      showDivider={false}
     />
 
-    <div className={styles.infoGrid}>
+    <Divider />
+
+    <div className={cx(styles.infoGrid, styles.infoCardGrid)}>
       <InfoItem
         label="Playoff Series Format"
         data={`Best of ${league.best_of_playoff}`}
@@ -113,6 +122,10 @@ const LeagueInfoCard = ({ league, onEdit, className }: Props) => (
       <InfoItem
         label="Shootout Rounds"
         data={`${league.best_of_shootout} rounds`}
+      />
+      <InfoItem
+        label="Goalie Min TOI"
+        data={`${league.goalie_min_regular_minutes} min`}
       />
       <InfoItem
         label="Scoring System"

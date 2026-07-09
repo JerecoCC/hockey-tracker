@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
+import { invalidateGameStatDependents } from './gameStatCache';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -61,6 +62,7 @@ const useGameRoster = (gameId: string | undefined) => {
         ...current.filter((entry) => entry.team_id !== teamId),
         ...teamRows,
       ]);
+      await invalidateGameStatDependents(queryClient, gameId);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to add players to lineup'));
@@ -85,6 +87,7 @@ const useGameRoster = (gameId: string | undefined) => {
           current.filter((entry) => entry.player_id !== removed.player_id),
         );
       }
+      await invalidateGameStatDependents(queryClient, gameId);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to remove player from lineup'));

@@ -24,6 +24,30 @@ const TEAM = {
   start_season_start_date: null, latest_season_end_date: null,
 };
 
+const TEAM_AWARD = {
+  id: 'recipient-1',
+  award_id: 'award-1',
+  season_award_id: 'season-award-1',
+  award_name: 'Walter Cup Winner',
+  award_description: 'Awarded to the playoff champion.',
+  competition_scope: 'playoffs',
+  stat_key: 'playoff_champion',
+  season_id: 'season-1',
+  season_name: '2025-26',
+  awarded_at: '2026-05-20',
+  team_id: 'team-1',
+  team_name: 'Leafs',
+  team_place_name: 'Toronto',
+  team_team_name: 'Maple Leafs',
+  team_code: 'TOR',
+  team_logo: 'leafs.png',
+  team_logo_dark: 'leafs-dark.png',
+  team_logo_light: 'leafs-light.png',
+  team_primary_color: '#003e7e',
+  team_secondary_color: '#b9975b',
+  team_text_color: '#ffffff',
+};
+
 const ITER = {
   id: 'iter-1', team_id: 'team-1',
   name: 'Leafs', code: 'TOR', logo: null, note: null,
@@ -91,6 +115,43 @@ describe('GET /api/admin/teams/:id', () => {
     sql.mockResolvedValueOnce([]);
     const res = await request(app).get('/api/admin/teams/nope');
     expect(res.status).toBe(404);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/teams/:id/awards
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/teams/:id/awards', () => {
+  it('returns team winner awards with award metadata and season identity', async () => {
+    sql.mockResolvedValueOnce([TEAM_AWARD]);
+
+    const res = await request(app).get('/api/admin/teams/team-1/awards');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([TEAM_AWARD]);
+    expect(sql).toHaveBeenCalledTimes(1);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain("sar.recipient_type = 'team'");
+    expect(queryText).toContain("sar.role = 'winner'");
+    expect(queryText).toContain('sar.team_id');
+    expect(queryText).toContain('la.description AS award_description');
+    expect(queryText).toContain('la.competition_scope');
+    expect(queryText).toContain('la.stat_key');
+    expect(queryText).toContain('ti.place_name AS team_place_name');
+    expect(queryText).toContain('ti.team_name AS team_team_name');
+    expect(queryText).toContain('t.secondary_color AS team_secondary_color');
+    expect(queryText).toContain('team_iterations');
+    const finalOrderBy = queryText.slice(queryText.lastIndexOf('ORDER BY'));
+    expect(finalOrderBy).toContain('s.start_date DESC NULLS LAST');
+    expect(finalOrderBy).toContain('la.sort_order ASC');
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+
+    const res = await request(app).get('/api/admin/teams/team-1/awards');
+
+    expect(res.status).toBe(500);
   });
 });
 

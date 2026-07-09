@@ -22,16 +22,37 @@ const awayTeam = alias(teams, 't_away');
 
 const resultRows = (result) => (Array.isArray(result) ? result : result?.rows ?? []);
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const LOCAL_DATE_TIME_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?$/;
+const EXPLICIT_TIME_ZONE_RE = /(?:Z|[+-]\d{2}:?\d{2})$/i;
 const refreshGameStatSnapshots = (gameId) => rebuildGameStats(sql, gameId);
+const scheduleDateKey = (scheduledAt) => ormSql`
+  CASE
+    WHEN ${scheduledAt} IS NULL THEN NULL
+    WHEN (${scheduledAt} AT TIME ZONE 'UTC')::time = TIME '00:00:00'
+      THEN (${scheduledAt} AT TIME ZONE 'UTC')::date
+    ELSE (${scheduledAt} AT TIME ZONE 'America/New_York')::date
+  END
+`;
 
-const normalizeAdminScheduledAt = (value) => {
-  if (typeof value !== 'string') return value ?? null;
+const normalizeGameEasternTimestamp = (value) => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (typeof value !== 'string') return value;
   const trimmed = value.trim();
-  if (!DATE_ONLY_RE.test(trimmed)) return trimmed || null;
+  if (!trimmed) return null;
 
-  // Admin-entered game dates are ET calendar dates. Store a stable midday
-  // timestamp so ET formatting always lands on the selected date.
-  return `${trimmed}T12:00:00Z`;
+  if (DATE_ONLY_RE.test(trimmed)) return `${trimmed} 00:00:00`;
+  if (!EXPLICIT_TIME_ZONE_RE.test(trimmed) && LOCAL_DATE_TIME_RE.test(trimmed)) {
+    return trimmed.replace('T', ' ');
+  }
+
+  return trimmed;
+};
+
+const normalizeLeagueNumber = (value) => {
+  if (value === undefined || value === null) return null;
+  const trimmed = String(value).trim();
+  return trimmed || null;
 };
 
 // Regular-season standings order (best team first) for a season, derived from
@@ -269,279 +290,98 @@ const validateGoalParticipants = (scorerId, assist1Id, assist2Id) => {
   return null;
 };
 
-const LINEUP_SLOTS = Object.freeze([
-  { slot: 'F1', column: 'forward_1_id' },
-  { slot: 'F2', column: 'forward_2_id' },
-  { slot: 'F3', column: 'forward_3_id' },
-  { slot: 'D1', column: 'defense_1_id' },
-  { slot: 'D2', column: 'defense_2_id' },
-  { slot: 'G', column: 'goalie_id' },
-]);
-
-const LINEUP_SLOT_COLUMN = Object.freeze(
-  Object.fromEntries(LINEUP_SLOTS.map(({ slot, column }) => [slot, column])),
-);
-
-const normalizeLineupSlot = (slot) =>
-  ({
-    C: 'F1',
-    LW: 'F2',
-    RW: 'F3',
-  })[slot] ?? slot;
-
-const validateLineupPlayers = (slotMap) => {
-  const seen = new Map();
-  for (const { slot, column } of LINEUP_SLOTS) {
-    const playerId = slotMap[slot];
-    if (!playerId) continue;
-    if (seen.has(playerId)) {
-      return `${seen.get(playerId)} and ${column} must be different`;
-    }
-    seen.set(playerId, column);
-  }
-  return null;
-};
-
-const lineupColumnValues = (slotMap) => ({
-  forward1Id: slotMap.F1 ?? null,
-  forward2Id: slotMap.F2 ?? null,
-  forward3Id: slotMap.F3 ?? null,
-  defense1Id: slotMap.D1 ?? null,
-  defense2Id: slotMap.D2 ?? null,
-  goalieId: slotMap.G ?? null,
-});
-
-const sortIds = (ids) => ids.filter(Boolean).sort();
-
-const canonicalLineup = (lineup) => ({
-  forwards: sortIds([lineup.forward1Id, lineup.forward2Id, lineup.forward3Id]),
-  defense: sortIds([lineup.defense1Id, lineup.defense2Id]),
-  goalie: lineup.goalieId ?? null,
-});
-
-const canonicalSavedLineup = (lineup) => ({
-  forward1Id: lineup?.forward_1_id ?? null,
-  forward2Id: lineup?.forward_2_id ?? null,
-  forward3Id: lineup?.forward_3_id ?? null,
-  defense1Id: lineup?.defense_1_id ?? null,
-  defense2Id: lineup?.defense_2_id ?? null,
-  goalieId: lineup?.goalie_id ?? null,
-});
-
-const sameIds = (left, right) =>
-  left.length === right.length && left.every((value, index) => value === right[index]);
-
-const lineupsEquivalent = (left, right) => {
-  if (!right) return false;
-  const a = canonicalLineup(left);
-  const b = canonicalLineup(canonicalSavedLineup(right));
-  return sameIds(a.forwards, b.forwards) && sameIds(a.defense, b.defense) && a.goalie === b.goalie;
-};
-
-const selectPreviousSavedLineupRow = (gameId, teamId) => sql`
-  SELECT
-    sl.forward_1_id,
-    sl.forward_2_id,
-    sl.forward_3_id,
-    sl.defense_1_id,
-    sl.defense_2_id,
-    sl.goalie_id
-  FROM games target
-  JOIN games g
-    ON (g.home_team_id = ${teamId} OR g.away_team_id = ${teamId})
-  JOIN game_starting_lineup sl
-    ON sl.game_id = g.id
-    AND sl.team_id = ${teamId}
-  WHERE target.id = ${gameId}
-    AND g.status = 'final'
-    AND g.id <> ${gameId}
-    AND (
-      target.scheduled_at IS NULL
-      OR g.scheduled_at IS NULL
-      OR g.scheduled_at < target.scheduled_at
-      OR (g.scheduled_at = target.scheduled_at AND g.created_at < target.created_at)
-    )
-  ORDER BY g.scheduled_at DESC NULLS LAST, g.created_at DESC
-  LIMIT 1
-`;
-
-const selectSavedLineupRows = (gameId, hasAcquisitionType, teamId = null) => {
-  if (teamId) {
-    return sql`
-      SELECT
-        sl.id::text || '-' || slot.position_slot AS id,
-        sl.game_id,
-        sl.team_id,
-        slot.player_id,
-        slot.position_slot,
-        p.first_name  AS player_first_name,
-        p.last_name   AS player_last_name,
-        p.date_of_birth,
-        COALESCE(pts.start_date, pt.start_date) AS start_date,
-        COALESCE(pts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'pt')}) AS acquisition_type,
-        COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, sl.team_id), NULLIF(p.photo, '')) AS player_photo,
-        COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
-        false AS inherited
-      FROM game_starting_lineup sl
-      JOIN games g ON g.id = sl.game_id
-      CROSS JOIN LATERAL (VALUES
-        (1, 'F1', sl.forward_1_id),
-        (2, 'F2', sl.forward_2_id),
-        (3, 'F3', sl.forward_3_id),
-        (4, 'D1', sl.defense_1_id),
-        (5, 'D2', sl.defense_2_id),
-        (6, 'G',  sl.goalie_id)
-      ) AS slot(sort_order, position_slot, player_id)
-      JOIN players p ON p.id = slot.player_id
-      LEFT JOIN player_teams pt
-        ON pt.player_id = slot.player_id
-        AND pt.team_id  = sl.team_id
-        AND pt.season_id = g.season_id
-        AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-        AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-      LEFT JOIN LATERAL (
-        SELECT start_date, acquisition_type
-        FROM player_team_stints pts
-        WHERE pts.player_id = slot.player_id
-          AND pts.team_id = sl.team_id
-          AND (pts.start_date IS NULL OR pts.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-          AND (pts.end_date IS NULL OR pts.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-        ORDER BY CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
-          pts.start_date DESC NULLS LAST,
-          pts.created_at DESC
-        LIMIT 1
-      ) pts ON true
-      LEFT JOIN LATERAL (
-        SELECT jersey_number FROM jersey_number_history
-        WHERE player_teams_id = pt.id
-          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
-        ORDER BY effective_from DESC LIMIT 1
-      ) pt_jnh ON true
-      WHERE sl.game_id = ${gameId}
-        AND sl.team_id = ${teamId}
-        AND slot.player_id IS NOT NULL
-      ORDER BY slot.sort_order
-    `;
-  }
-
-  return sql`
-    SELECT
-      sl.id::text || '-' || slot.position_slot AS id,
-      sl.game_id,
-      sl.team_id,
-      slot.player_id,
-      slot.position_slot,
-      p.first_name  AS player_first_name,
-      p.last_name   AS player_last_name,
-      p.date_of_birth,
-      COALESCE(pts.start_date, pt.start_date) AS start_date,
-      COALESCE(pts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'pt')}) AS acquisition_type,
-      COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, sl.team_id), NULLIF(p.photo, '')) AS player_photo,
-      COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
-      false AS inherited
-    FROM game_starting_lineup sl
-    JOIN games g ON g.id = sl.game_id
-    CROSS JOIN LATERAL (VALUES
-      (1, 'F1', sl.forward_1_id),
-      (2, 'F2', sl.forward_2_id),
-      (3, 'F3', sl.forward_3_id),
-      (4, 'D1', sl.defense_1_id),
-      (5, 'D2', sl.defense_2_id),
-      (6, 'G',  sl.goalie_id)
-    ) AS slot(sort_order, position_slot, player_id)
-    JOIN players p ON p.id = slot.player_id
-    LEFT JOIN player_teams pt
-      ON pt.player_id = slot.player_id
-      AND pt.team_id  = sl.team_id
-      AND pt.season_id = g.season_id
-      AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-      AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-    LEFT JOIN LATERAL (
-      SELECT start_date, acquisition_type
-      FROM player_team_stints pts
-      WHERE pts.player_id = slot.player_id
-        AND pts.team_id = sl.team_id
-        AND (pts.start_date IS NULL OR pts.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-        AND (pts.end_date IS NULL OR pts.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-      ORDER BY CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
-        pts.start_date DESC NULLS LAST,
-        pts.created_at DESC
-      LIMIT 1
-    ) pts ON true
-    LEFT JOIN LATERAL (
-      SELECT jersey_number FROM jersey_number_history
-      WHERE player_teams_id = pt.id
-        AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
-      ORDER BY effective_from DESC LIMIT 1
-    ) pt_jnh ON true
-    WHERE sl.game_id = ${gameId}
-      AND slot.player_id IS NOT NULL
-    ORDER BY sl.team_id, slot.sort_order
+const syncFinalStartingGoalieStint = async (gameId, teamId, goalieId) => {
+  if (!goalieId) return;
+  await sql`
+    UPDATE game_goalie_stints st
+    SET goalie_id = ${goalieId}
+    FROM games g
+    WHERE g.id = st.game_id
+      AND g.id = ${gameId}
+      AND g.status = 'final'
+      AND st.team_id = ${teamId}
+      AND st.stint_ord = 1
+      AND st.entered_period = '1'
+      AND (st.entered_time IS NULL OR st.entered_time = '00:00')
+      AND st.goalie_id <> ${goalieId}
   `;
 };
 
-const selectInheritedLineupRows = (gameId, teamId, hasAcquisitionType) => sql`
+const extractStartingGoalieId = (slots) => {
+  let goalieId = null;
+  let seenGoalieSlot = false;
+
+  for (const { position_slot, player_id } of slots) {
+    if (position_slot !== 'G') {
+      return { error: 'Only the G starting goalie slot is supported' };
+    }
+    if (seenGoalieSlot) {
+      return { error: 'Only one G starting goalie slot is allowed' };
+    }
+    seenGoalieSlot = true;
+    goalieId = player_id || null;
+  }
+
+  if (!seenGoalieSlot) {
+    return { error: 'A G starting goalie slot is required' };
+  }
+
+  return { goalieId };
+};
+
+const selectStartingGoalieRows = (gameId, hasAcquisitionType, teamId = null) => sql`
   WITH target_game AS (
-    SELECT id, scheduled_at, created_at
+    SELECT *
     FROM games
     WHERE id = ${gameId}
   ),
-  source_lineup AS (
-    SELECT sl.*
-    FROM target_game target
-    JOIN games g
-      ON (g.home_team_id = ${teamId} OR g.away_team_id = ${teamId})
-    JOIN game_starting_lineup sl
-      ON sl.game_id = g.id
-      AND sl.team_id = ${teamId}
-    WHERE (g.home_team_id = ${teamId} OR g.away_team_id = ${teamId})
-      AND g.status = 'final'
-      AND g.id <> ${gameId}
-      AND (
-        target.scheduled_at IS NULL
-        OR g.scheduled_at IS NULL
-        OR g.scheduled_at < target.scheduled_at
-        OR (g.scheduled_at = target.scheduled_at AND g.created_at < target.created_at)
-      )
-    ORDER BY g.scheduled_at DESC NULLS LAST, g.created_at DESC
-    LIMIT 1
+  goalie_slots AS (
+    SELECT
+      g.id AS game_id,
+      g.season_id,
+      g.home_team_id AS team_id,
+      g.home_starting_goalie_id AS player_id,
+      'G'::text AS position_slot,
+      1 AS sort_order
+    FROM target_game g
+    UNION ALL
+    SELECT
+      g.id AS game_id,
+      g.season_id,
+      g.away_team_id AS team_id,
+      g.away_starting_goalie_id AS player_id,
+      'G'::text AS position_slot,
+      2 AS sort_order
+    FROM target_game g
   )
   SELECT
-    sl.id::text || '-' || slot.position_slot AS id,
-    ${gameId}::uuid AS game_id,
-    sl.team_id,
+    slot.game_id::text || '-' || slot.team_id::text || '-G' AS id,
+    slot.game_id,
+    slot.team_id,
     slot.player_id,
     slot.position_slot,
-    p.first_name  AS player_first_name,
-    p.last_name   AS player_last_name,
+    p.first_name AS player_first_name,
+    p.last_name AS player_last_name,
     p.date_of_birth,
     COALESCE(pts.start_date, pt.start_date) AS start_date,
     COALESCE(pts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'pt')}) AS acquisition_type,
-    COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, sl.team_id), NULLIF(p.photo, '')) AS player_photo,
+    COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, slot.season_id, slot.team_id), NULLIF(p.photo, '')) AS player_photo,
     COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
-    true AS inherited
-  FROM source_lineup sl
-  JOIN games g ON g.id = sl.game_id
-  CROSS JOIN LATERAL (VALUES
-    (1, 'F1', sl.forward_1_id),
-    (2, 'F2', sl.forward_2_id),
-    (3, 'F3', sl.forward_3_id),
-    (4, 'D1', sl.defense_1_id),
-    (5, 'D2', sl.defense_2_id),
-    (6, 'G',  sl.goalie_id)
-  ) AS slot(sort_order, position_slot, player_id)
+    false AS inherited
+  FROM goalie_slots slot
+  JOIN games g ON g.id = slot.game_id
   JOIN players p ON p.id = slot.player_id
   LEFT JOIN player_teams pt
     ON pt.player_id = slot.player_id
-    AND pt.team_id  = sl.team_id
-    AND pt.season_id = g.season_id
+    AND pt.team_id = slot.team_id
+    AND pt.season_id = slot.season_id
     AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-    AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+    AND (pt.end_date IS NULL OR pt.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
   LEFT JOIN LATERAL (
     SELECT start_date, acquisition_type
     FROM player_team_stints pts
     WHERE pts.player_id = slot.player_id
-      AND pts.team_id = sl.team_id
+      AND pts.team_id = slot.team_id
       AND (pts.start_date IS NULL OR pts.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       AND (pts.end_date IS NULL OR pts.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
     ORDER BY CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
@@ -556,7 +396,8 @@ const selectInheritedLineupRows = (gameId, teamId, hasAcquisitionType) => sql`
     ORDER BY effective_from DESC LIMIT 1
   ) pt_jnh ON true
   WHERE slot.player_id IS NOT NULL
-  ORDER BY slot.sort_order
+    AND (${teamId}::uuid IS NULL OR slot.team_id = ${teamId})
+  ORDER BY slot.team_id, slot.sort_order
 `;
 
 // ---------------------------------------------------------------------------
@@ -583,15 +424,17 @@ router.get('/', async (req, res) => {
     if (game_type) where.push(eq(gamesTable.gameType, game_type));
     if (status) where.push(eq(gamesTable.status, status));
     if (week) {
+      const gameDateKey = scheduleDateKey(gamesTable.scheduledAt);
       where.push(ormSql`
-        ${gamesTable.scheduledAt} >= ${week}::date
-        AND ${gamesTable.scheduledAt} < (${week}::date + INTERVAL '7 days')
+        ${gameDateKey} >= ${week}::date
+        AND ${gameDateKey} < (${week}::date + INTERVAL '7 days')
       `);
     }
     if (month) {
+      const gameDateKey = scheduleDateKey(gamesTable.scheduledAt);
       where.push(ormSql`
-        ${gamesTable.scheduledAt} >= (${month} || '-01')::date
-        AND ${gamesTable.scheduledAt} < ((${month} || '-01')::date + INTERVAL '1 month')
+        ${gameDateKey} >= (${month} || '-01')::date
+        AND ${gameDateKey} < ((${month} || '-01')::date + INTERVAL '1 month')
       `);
     }
 
@@ -614,6 +457,7 @@ router.get('/', async (req, res) => {
         playoff_series_id: gamesTable.playoffSeriesId,
         game_number_in_series: gamesTable.gameNumberInSeries,
         game_number: gamesTable.gameNumber,
+        league_game_number: gamesTable.leagueGameNumber,
         notes: gamesTable.notes,
         current_period: gamesTable.currentPeriod,
         created_at: gamesTable.createdAt,
@@ -621,7 +465,9 @@ router.get('/', async (req, res) => {
         star_2_id: gamesTable.star2Id,
         star_3_id: gamesTable.star3Id,
         playoff_round: playoffSeries.round,
+        bracket_slot_key: playoffSeries.bracketSlotKey,
         playoff_round_names: bracketRuleSets.roundNames,
+        playoff_matchup_names: bracketRuleSets.matchupNames,
         period_scores: periodScoresJson(
           gamesTable.id,
           gamesTable.homeTeamId,
@@ -658,28 +504,36 @@ router.get('/', async (req, res) => {
 
 
 
-router.get("/nhl-api", async (req, res) => {
+const parseExternalJsonPayload = (text) => {
+  const trimmed = text.trim();
+  const jsonpMatch = trimmed.match(/^[\w$.]+\(([\s\S]*)\);?$/);
+  if (jsonpMatch) return JSON.parse(jsonpMatch[1]);
+  if (trimmed.startsWith('(') && trimmed.endsWith(')')) {
+    return JSON.parse(trimmed.slice(1, -1));
+  }
+  return JSON.parse(trimmed);
+};
+
+const proxyExternalGameApi = (label, allowedHosts) => async (req, res) => {
   try {
     const { url } = req.query;
 
     if (!url || typeof url !== "string") {
-      return res.status(400).json({ error: "Missing NHL API URL." });
+      return res.status(400).json({ error: `Missing ${label} API URL.` });
     }
 
     const parsedUrl = new URL(url);
 
-    if (!["api-web.nhle.com", "api.nhle.com", "www.nhl.com"].includes(parsedUrl.hostname)) {
-      return res.status(400).json({ error: "Invalid NHL API host." });
+    if (!allowedHosts.includes(parsedUrl.hostname)) {
+      return res.status(400).json({ error: `Invalid ${label} API host.` });
     }
 
     const response = await fetch(parsedUrl.toString());
-
-
     const text = await response.text();
 
     if (!response.ok) {
       return res.status(response.status).json({
-        error: `NHL API returned ${response.status}.`,
+        error: `${label} API returned ${response.status}.`,
         body: text.slice(0, 500),
       });
     }
@@ -690,15 +544,18 @@ router.get("/nhl-api", async (req, res) => {
       return res.send(text);
     }
 
-    return res.json(JSON.parse(text));
+    return res.json(parseExternalJsonPayload(text));
   } catch (error) {
-    console.error("NHL proxy error:", error);
+    console.error(`${label} proxy error:`, error);
 
     return res.status(500).json({
       error: error instanceof Error ? error.message : String(error),
     });
   }
-});
+};
+
+router.get("/nhl-api", proxyExternalGameApi("NHL", ["api-web.nhle.com", "api.nhle.com", "www.nhl.com"]));
+router.get("/pwhl-api", proxyExternalGameApi("PWHL", ["lscluster.hockeytech.com"]));
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/games/playoff-series  – list series (filter by season_id)
@@ -713,12 +570,19 @@ router.get('/playoff-series', async (req, res) => {
         ps.games_to_win, ps.home_wins, ps.away_wins,
         ps.status, ps.winner_team_id, ps.bracket_slot_key, ps.created_at,
         brs.round_names AS playoff_round_names,
-        ht.name AS home_team_name, ht.code AS home_team_code,
+        brs.matchup_names AS playoff_matchup_names,
+        ht.name AS home_team_name,
+        ht.place_name AS home_team_place_name,
+        ht.team_name AS home_team_team_name,
+        ht.code AS home_team_code,
         ht.logo AS home_team_logo, ht.logo_dark AS home_team_logo_dark, ht.logo_light AS home_team_logo_light,
         th.primary_color AS home_team_primary_color,
         th.secondary_color AS home_team_secondary_color,
         th.text_color AS home_team_text_color,
-        at.name AS away_team_name, at.code AS away_team_code,
+        at.name AS away_team_name,
+        at.place_name AS away_team_place_name,
+        at.team_name AS away_team_team_name,
+        at.code AS away_team_code,
         at.logo AS away_team_logo, at.logo_dark AS away_team_logo_dark, at.logo_light AS away_team_logo_light,
         ta.primary_color AS away_team_primary_color,
         ta.secondary_color AS away_team_secondary_color,
@@ -732,6 +596,8 @@ router.get('/playoff-series', async (req, res) => {
       LEFT JOIN LATERAL (
         (SELECT
             ti.name,
+            ti.place_name,
+            ti.team_name,
             ti.code,
             team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
             team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
@@ -747,6 +613,8 @@ router.get('/playoff-series', async (req, res) => {
         UNION ALL
         (SELECT
             ti.name,
+            ti.place_name,
+            ti.team_name,
             ti.code,
             team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
             team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
@@ -760,6 +628,8 @@ router.get('/playoff-series', async (req, res) => {
       LEFT JOIN LATERAL (
         (SELECT
             ti.name,
+            ti.place_name,
+            ti.team_name,
             ti.code,
             team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
             team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
@@ -775,6 +645,8 @@ router.get('/playoff-series', async (req, res) => {
         UNION ALL
         (SELECT
             ti.name,
+            ti.place_name,
+            ti.team_name,
             ti.code,
             team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
             team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
@@ -1120,13 +992,8 @@ router.get('/route-lookup', async (req, res) => {
       ) home_identity ON true
       WHERE g.season_id = ${season_id}::uuid
         AND (
-          CASE
-            WHEN lower(l.code) = 'nhl' THEN (
-              (g.scheduled_at AT TIME ZONE 'America/New_York')::date = ${gameDate}::date
-              OR (g.scheduled_at AT TIME ZONE 'UTC')::date = ${gameDate}::date
-            )
-            ELSE (g.scheduled_at AT TIME ZONE 'UTC')::date = ${gameDate}::date
-          END
+          (g.scheduled_at AT TIME ZONE 'America/New_York')::date = ${gameDate}::date
+          OR (g.scheduled_at AT TIME ZONE 'UTC')::date = ${gameDate}::date
         )
         AND CONCAT(
           regexp_replace(
@@ -1170,7 +1037,7 @@ router.get('/:id', async (req, res) => {
         score.winner_team_id,
         score.home_score,
         score.away_score,
-        g.playoff_series_id, g.game_number_in_series, g.game_number,
+        g.playoff_series_id, g.game_number_in_series, g.game_number, g.league_game_number,
         g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         ps2.round         AS playoff_round,
@@ -1179,7 +1046,9 @@ router.get('/:id', async (req, res) => {
         ps2.home_wins     AS series_home_wins,
         ps2.away_wins     AS series_away_wins,
         ps2.games_to_win  AS series_games_to_win,
+        ps2.bracket_slot_key AS bracket_slot_key,
         brs.round_names   AS playoff_round_names,
+        brs.matchup_names AS playoff_matchup_names,
         gs.period_scores,
         g.period_shots,
         json_build_object(
@@ -1540,7 +1409,7 @@ router.post('/', async (req, res) => {
     scheduled_at = null, scheduled_time = null, venue = null,
     game_type = 'regular', status = 'scheduled',
     overtime_periods = null, shootout = false,
-    playoff_series_id = null, notes = null,
+    playoff_series_id = null, league_game_number = null, notes = null,
   } = req.body;
 
   if (!season_id || !home_team_id || !away_team_id) {
@@ -1550,7 +1419,8 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'home_team_id and away_team_id must be different' });
   }
 
-  const normalizedScheduledAt = normalizeAdminScheduledAt(scheduled_at);
+  const normalizedScheduledAt = normalizeGameEasternTimestamp(scheduled_at);
+  const normalizedLeagueGameNumber = normalizeLeagueNumber(league_game_number);
 
   // Reject a duplicate matchup on the same calendar date. Games with a null date
   // are exempt (the date is nullable, so they can't be reliably de-duplicated).
@@ -1561,7 +1431,8 @@ router.post('/', async (req, res) => {
         AND home_team_id = ${home_team_id}
         AND away_team_id = ${away_team_id}
         AND scheduled_at IS NOT NULL
-        AND scheduled_at::date = ${normalizedScheduledAt}::date
+        AND (scheduled_at AT TIME ZONE 'America/New_York')::date =
+          (${normalizedScheduledAt}::timestamptz AT TIME ZONE 'America/New_York')::date
       LIMIT 1
     `;
     if (dup.length > 0) {
@@ -1577,12 +1448,12 @@ router.post('/', async (req, res) => {
         season_id, home_team_id, away_team_id,
         scheduled_at, scheduled_time, venue, game_type, status,
         overtime_periods, shootout,
-        playoff_series_id, notes
+        playoff_series_id, league_game_number, notes
       ) VALUES (
         ${season_id}, ${home_team_id}, ${away_team_id},
         ${normalizedScheduledAt}, ${scheduled_time}, ${venue}, ${game_type}, ${status},
         ${overtime_periods}, ${shootout},
-        ${playoff_series_id}, ${notes}
+        ${playoff_series_id}, ${normalizedLeagueGameNumber}, ${notes}
       )
       RETURNING id
     `;
@@ -1596,7 +1467,7 @@ router.post('/', async (req, res) => {
         score.winner_team_id,
         score.home_score,
         score.away_score,
-        g.playoff_series_id, g.notes, g.current_period, g.created_at,
+        g.playoff_series_id, g.league_game_number, g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
         json_build_object(
@@ -1736,7 +1607,7 @@ router.patch('/:id', async (req, res) => {
     scheduled_at, scheduled_time, venue, game_type, status,
     time_start, time_end,
     overtime_periods, shootout,
-    playoff_series_id, playoff_round, game_number_in_series, notes,
+    playoff_series_id, playoff_round, game_number_in_series, league_game_number, notes,
     current_period,
     star_1_id, star_2_id, star_3_id,
     shootout_first_team_id,
@@ -1748,14 +1619,45 @@ router.patch('/:id', async (req, res) => {
     : (current_period ?? null);
   const normalizedScheduledAt = scheduled_at === undefined
     ? undefined
-    : normalizeAdminScheduledAt(scheduled_at);
+    : normalizeGameEasternTimestamp(scheduled_at);
+  const normalizedTimeStart = time_start === undefined
+    ? undefined
+    : normalizeGameEasternTimestamp(time_start);
+  const normalizedTimeEnd = time_end === undefined
+    ? undefined
+    : normalizeGameEasternTimestamp(time_end);
+  const leagueGameNumberInBody = 'league_game_number' in req.body;
+  const normalizedLeagueGameNumber = normalizeLeagueNumber(league_game_number);
+  const hasStarId = (value) => value != null && String(value).trim() !== '';
 
   try {
     const existing = await sql`
-      SELECT id, season_id, home_team_id, away_team_id, scheduled_at, playoff_series_id
+      SELECT
+        id,
+        season_id,
+        home_team_id,
+        away_team_id,
+        scheduled_at,
+        playoff_series_id,
+        star_1_id,
+        star_2_id,
+        star_3_id
       FROM games WHERE id = ${id}
     `;
     if (existing.length === 0) return res.status(404).json({ error: 'Game not found' });
+
+    if (status === 'final') {
+      const finalStarIds = [
+        star_1_id ?? existing[0].star_1_id,
+        star_2_id ?? existing[0].star_2_id,
+        star_3_id ?? existing[0].star_3_id,
+      ];
+      if (!finalStarIds.every(hasStarId)) {
+        return res.status(400).json({
+          error: 'All three stars are required before a game can be finalized.',
+        });
+      }
+    }
 
     // Reject editing a game into a duplicate matchup on the same calendar date.
     // Games with a null date are exempt (the date is nullable).
@@ -1771,7 +1673,8 @@ router.patch('/:id', async (req, res) => {
           AND home_team_id = ${finalHome}
           AND away_team_id = ${finalAway}
           AND scheduled_at IS NOT NULL
-          AND scheduled_at::date = ${finalScheduledAt}::date
+          AND (scheduled_at AT TIME ZONE 'America/New_York')::date =
+            (${finalScheduledAt}::timestamptz AT TIME ZONE 'America/New_York')::date
         LIMIT 1
       `;
       if (dup.length > 0) {
@@ -1807,13 +1710,14 @@ router.patch('/:id', async (req, res) => {
                                 END,
         playoff_series_id     = COALESCE(${playoff_series_id     ?? null}, playoff_series_id),
         game_number_in_series = COALESCE(${game_number_in_series ?? null}::smallint, game_number_in_series),
+        league_game_number    = CASE WHEN ${leagueGameNumberInBody} THEN ${normalizedLeagueGameNumber} ELSE league_game_number END,
         notes                 = COALESCE(${notes                 ?? null}, notes),
         current_period        = COALESCE(${effectivePeriod},             current_period),
         star_1_id             = COALESCE(${star_1_id             ?? null}, star_1_id),
         star_2_id             = COALESCE(${star_2_id             ?? null}, star_2_id),
         star_3_id                = COALESCE(${star_3_id                ?? null}, star_3_id),
-        time_start               = COALESCE(${time_start               ?? null}, time_start),
-        time_end                 = COALESCE(${time_end                 ?? null}, time_end),
+        time_start               = COALESCE(${normalizedTimeStart      ?? null}, time_start),
+        time_end                 = COALESCE(${normalizedTimeEnd        ?? null}, time_end),
         shootout_first_team_id   = COALESCE(${shootout_first_team_id   ?? null}, shootout_first_team_id)
       WHERE id = ${id}
     `;
@@ -2059,11 +1963,13 @@ router.patch('/:id', async (req, res) => {
         score.winner_team_id,
         score.home_score,
         score.away_score,
-        g.playoff_series_id, g.game_number_in_series, g.game_number,
+        g.playoff_series_id, g.game_number_in_series, g.game_number, g.league_game_number,
         g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         ps2.round AS playoff_round,
+        ps2.bracket_slot_key AS bracket_slot_key,
         brs.round_names AS playoff_round_names,
+        brs.matchup_names AS playoff_matchup_names,
         gs.period_scores,
         g.period_shots,
         json_build_object(
@@ -2211,49 +2117,17 @@ router.delete('/:id', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/admin/games/:id/lineup  – get starting lineup for both teams
-// Falls back to the most-recent finished game's lineup per team when the
-// current game has no lineup set yet, tagging those rows inherited:true.
-//
-// game_starting_lineup stores one row per team with a column per slot.
-// CROSS JOIN LATERAL unpivots those 6 columns into one row per filled slot,
-// preserving the LineupEntry shape the client expects.
+// GET /api/admin/games/:id/lineup  – get starting goalies for both teams.
 // ---------------------------------------------------------------------------
 router.get('/:id/lineup', async (req, res) => {
   const { id } = req.params;
   try {
     const hasAcquisitionType = await hasPlayerTeamsAcquisitionType();
-    // 1. Resolve the game's two team IDs.
-    const gameRows = await sql`SELECT home_team_id, away_team_id FROM games WHERE id = ${id}`;
+    const gameRows = await sql`SELECT id FROM games WHERE id = ${id}`;
     if (gameRows.length === 0) return res.status(404).json({ error: 'Game not found' });
-    const { home_team_id, away_team_id } = gameRows[0];
 
-    // 2a. Determine which teams already have a saved lineup row for this game.
-    //     Use row existence — not slot content — so a team whose saved lineup
-    //     had players deleted (ON DELETE SET NULL) is still treated as covered
-    //     and does not accidentally inherit from a previous game.
-    const coveredRows = await sql`
-      SELECT team_id FROM game_starting_lineup WHERE game_id = ${id}
-    `;
-    const teamsCovered = new Set(coveredRows.map((r) => r.team_id));
-    const teamsToInherit = [home_team_id, away_team_id].filter((t) => !teamsCovered.has(t));
-
-    // 2b. Fetch and unpivot the saved slots for covered teams.
-    const current = await selectSavedLineupRows(id, hasAcquisitionType);
-
-    // 4. For each uncovered team, inherit the lineup from their most-recent
-    //    finished game that has a saved starting lineup.  We skip games that
-    //    were played without ever setting a lineup (no row in
-    //    game_starting_lineup), so the chain correctly reaches the last game
-    //    where a lineup was actually recorded — even if several consecutive
-    //    games in between had no saved lineup.
-    const inheritedRows = [];
-    for (const teamId of teamsToInherit) {
-      const rows = await selectInheritedLineupRows(id, teamId, hasAcquisitionType);
-      inheritedRows.push(...rows);
-    }
-
-    return res.json([...current, ...inheritedRows]);
+    const rows = await selectStartingGoalieRows(id, hasAcquisitionType);
+    return res.json(rows);
   } catch (err) {
     console.error('lineup get error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -2261,9 +2135,8 @@ router.get('/:id/lineup', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// PUT /api/admin/games/:id/lineup  – upsert starting lineup for one team
+// PUT /api/admin/games/:id/lineup  – upsert starting goalie for one team
 // Body: { team_id, slots: [{ position_slot, player_id }] }
-// Writes a single row into game_starting_lineup (one row per team per game).
 // ---------------------------------------------------------------------------
 router.put('/:id/lineup', async (req, res) => {
   const { id } = req.params;
@@ -2272,65 +2145,31 @@ router.put('/:id/lineup', async (req, res) => {
   if (!Array.isArray(slots)) return res.status(400).json({ error: 'slots must be an array' });
 
   try {
-    // Build a map from position_slot → player_id (null = clear that slot).
-    const slotMap = {};
-    for (const { position_slot, player_id } of slots) {
-      const normalizedSlot = normalizeLineupSlot(position_slot);
-      if (LINEUP_SLOT_COLUMN[normalizedSlot]) {
-        slotMap[normalizedSlot] = player_id || null;
-      }
-    }
-
-    const lineupError = validateLineupPlayers(slotMap);
-    if (lineupError) return res.status(400).json({ error: lineupError });
+    const { goalieId, error } = extractStartingGoalieId(slots);
+    if (error) return res.status(400).json({ error });
     const hasAcquisitionType = await hasPlayerTeamsAcquisitionType();
-    const {
-      forward1Id,
-      forward2Id,
-      forward3Id,
-      defense1Id,
-      defense2Id,
-      goalieId,
-    } = lineupColumnValues(slotMap);
-    const incomingLineup = {
-      forward1Id,
-      forward2Id,
-      forward3Id,
-      defense1Id,
-      defense2Id,
-      goalieId,
-    };
-    const [previousLineup] = await selectPreviousSavedLineupRow(id, team_id);
 
-    if (lineupsEquivalent(incomingLineup, previousLineup)) {
-      await sql`
-        DELETE FROM game_starting_lineup
-        WHERE game_id = ${id}
-          AND team_id = ${team_id}
-      `;
-      await refreshGameStatSnapshots(id);
-      const rows = await selectInheritedLineupRows(id, team_id, hasAcquisitionType);
-      return res.json(rows);
-    }
-
-    // Single UPSERT — one row per (game, team).
-    await sql`
-      INSERT INTO game_starting_lineup
-        (game_id, team_id, forward_1_id, forward_2_id, forward_3_id, defense_1_id, defense_2_id, goalie_id)
-      VALUES
-        (${id}, ${team_id}, ${forward1Id}, ${forward2Id}, ${forward3Id}, ${defense1Id}, ${defense2Id}, ${goalieId})
-      ON CONFLICT (game_id, team_id) DO UPDATE SET
-        forward_1_id  = EXCLUDED.forward_1_id,
-        forward_2_id  = EXCLUDED.forward_2_id,
-        forward_3_id  = EXCLUDED.forward_3_id,
-        defense_1_id  = EXCLUDED.defense_1_id,
-        defense_2_id  = EXCLUDED.defense_2_id,
-        goalie_id     = EXCLUDED.goalie_id
+    const gameRows = await sql`
+      UPDATE games
+      SET
+        home_starting_goalie_id = CASE
+          WHEN home_team_id = ${team_id} THEN ${goalieId}
+          ELSE home_starting_goalie_id
+        END,
+        away_starting_goalie_id = CASE
+          WHEN away_team_id = ${team_id} THEN ${goalieId}
+          ELSE away_starting_goalie_id
+        END
+      WHERE id = ${id}
+        AND (home_team_id = ${team_id} OR away_team_id = ${team_id})
+      RETURNING id
     `;
+    if (gameRows.length === 0) return res.status(404).json({ error: 'Game or team not found' });
+
+    await syncFinalStartingGoalieStint(id, team_id, goalieId);
     await refreshGameStatSnapshots(id);
 
-    // Return the saved slots in unpivoted LineupEntry shape.
-    const rows = await selectSavedLineupRows(id, hasAcquisitionType, team_id);
+    const rows = await selectStartingGoalieRows(id, hasAcquisitionType, team_id);
     return res.json(rows);
   } catch (err) {
     console.error('lineup put error:', err);
@@ -2339,18 +2178,50 @@ router.put('/:id/lineup', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /api/admin/games/:id/lineup/:teamId  – clear a team's starting lineup
-// Removes the single game_starting_lineup row for this (game, team) pair.
+// DELETE /api/admin/games/:id/lineup/:teamId  – clear a team's starting goalie.
 // ---------------------------------------------------------------------------
 router.delete('/:id/lineup/:teamId', async (req, res) => {
   const { id, teamId } = req.params;
   try {
     const rows = await sql`
-      DELETE FROM game_starting_lineup
-      WHERE game_id = ${id} AND team_id = ${teamId}
-      RETURNING id
+      WITH target AS (
+        SELECT
+          id,
+          home_team_id,
+          away_team_id,
+          home_starting_goalie_id,
+          away_starting_goalie_id
+        FROM games
+        WHERE id = ${id}
+      ),
+      cleared_goalie AS (
+        UPDATE games g
+        SET
+          home_starting_goalie_id = CASE
+            WHEN g.home_team_id = ${teamId} THEN NULL
+            ELSE g.home_starting_goalie_id
+          END,
+          away_starting_goalie_id = CASE
+            WHEN g.away_team_id = ${teamId} THEN NULL
+            ELSE g.away_starting_goalie_id
+          END
+        FROM target
+        WHERE g.id = target.id
+          AND (g.home_team_id = ${teamId} OR g.away_team_id = ${teamId})
+        RETURNING g.id
+      )
+      SELECT
+        EXISTS(SELECT 1 FROM target) AS game_exists,
+        EXISTS(
+          SELECT 1
+          FROM target
+          WHERE (home_team_id = ${teamId} AND home_starting_goalie_id IS NOT NULL)
+             OR (away_team_id = ${teamId} AND away_starting_goalie_id IS NOT NULL)
+        ) AS changed
     `;
-    if (rows.length === 0) return res.status(404).json({ error: 'Lineup not found' });
+    if (!rows[0]?.game_exists || !rows[0]?.changed) {
+      return res.status(404).json({ error: 'Starting goalie not found' });
+    }
     await refreshGameStatSnapshots(id);
     return res.status(204).send();
   } catch (err) {
@@ -3649,7 +3520,7 @@ router.delete('/:id/goalie-stints/:stintId', async (req, res) => {
     // collisions: shift all rows by a large offset, then renumber sequentially.
     await sql`
       UPDATE game_goalie_stints
-      SET stint_ord = stint_ord + 1000000
+      SET stint_ord = stint_ord + 10000
       WHERE game_id = ${id} AND team_id = ${teamId}
     `;
     await sql`

@@ -1,8 +1,8 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@/components/Field/Field';
-import Modal from '@/components/Modal/Modal';
-import { type SelectOption } from '@/components/Select/Select';
+import Field from '@jerecocc/tracker-ui/Field';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import { type SelectOption } from '@jerecocc/tracker-ui/Select';
 import { type CreateSeasonData, type SeasonRecord } from '@/hooks/useSeasons';
 import styles from './SeasonFormModal.module.scss';
 
@@ -24,6 +24,7 @@ interface FormValues {
   games_per_season: string;
   best_of_shootout: string;
   scoring_system: string;
+  goalie_min_regular_minutes: string;
 }
 
 interface Props {
@@ -41,6 +42,7 @@ interface Props {
   showGamesPerSeason?: boolean;
   leagueBestOfShootout?: number;
   leagueScoringSystem?: '3-2-1-0' | '2-1-0';
+  leagueGoalieMinRegularMinutes?: number;
 }
 
 const SeasonFormModal = (props: Props) => {
@@ -56,6 +58,7 @@ const SeasonFormModal = (props: Props) => {
     showGamesPerSeason = false,
     leagueBestOfShootout,
     leagueScoringSystem,
+    leagueGoalieMinRegularMinutes,
   } = props;
   const formValues = useMemo<FormValues>(
     () => ({
@@ -72,6 +75,10 @@ const SeasonFormModal = (props: Props) => {
             ? String(leagueBestOfShootout)
             : '',
       scoring_system: editTarget?.scoring_system ?? leagueScoringSystem ?? '',
+      goalie_min_regular_minutes:
+        editTarget?.goalie_min_regular_minutes != null
+          ? String(editTarget.goalie_min_regular_minutes)
+          : '',
     }),
     [editTarget, lockedLeagueId, leagueBestOfShootout, leagueScoringSystem],
   );
@@ -111,6 +118,13 @@ const SeasonFormModal = (props: Props) => {
       payload.scoring_system =
         data.scoring_system && data.scoring_system !== leagueScoringSystem
           ? (data.scoring_system as '2-1-0' | '3-2-1-0')
+          : null;
+      const goalieMinValue = data.goalie_min_regular_minutes
+        ? parseInt(data.goalie_min_regular_minutes, 10)
+        : null;
+      payload.goalie_min_regular_minutes =
+        goalieMinValue != null && goalieMinValue !== leagueGoalieMinRegularMinutes
+          ? goalieMinValue
           : null;
     }
     const ok = editTarget ? await updateSeason(editTarget.id, payload) : await addSeason(payload);
@@ -223,6 +237,25 @@ const SeasonFormModal = (props: Props) => {
               options={SCORING_SYSTEM_OPTIONS}
               disabled={isSubmitting}
             />
+            <div className={styles.settingsGridCompact}>
+              <Field
+                label="Goalie Min TOI"
+                type="number"
+                control={control}
+                name="goalie_min_regular_minutes"
+                placeholder={
+                  leagueGoalieMinRegularMinutes != null
+                    ? String(leagueGoalieMinRegularMinutes)
+                    : 'e.g. 240'
+                }
+                suffix="min"
+                rules={{
+                  min: { value: 0, message: 'Must be 0 or higher' },
+                  max: { value: 9999, message: 'Too many minutes' },
+                }}
+                disabled={isSubmitting}
+              />
+            </div>
           </div>
         )}
       </form>

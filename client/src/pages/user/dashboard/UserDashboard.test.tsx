@@ -1,3 +1,4 @@
+/* eslint-disable react/display-name, @typescript-eslint/no-explicit-any */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -60,14 +61,14 @@ jest.mock('@/hooks/useFavoriteTeams', () => ({
   __esModule: true,
   default: () => ({ favorites: ['team-home', 'team-away'] }),
 }));
-jest.mock('@/components/Card/Card', () => ({ title, children }: any) => (
+jest.mock('@jerecocc/tracker-ui/Card', () => ({ title, children }: any) => (
   <section>
     {title && <h3>{title}</h3>}
     {children}
   </section>
 ));
 jest.mock(
-  '@/components/Button/Button',
+  '@jerecocc/tracker-ui/Button',
   () =>
     ({ children, tooltip, icon, onClick, disabled }: any) => (
       <button
@@ -80,9 +81,9 @@ jest.mock(
       </button>
     ),
 );
-jest.mock('@/components/TeamLogo/TeamLogo', () => ({ code }: any) => <span>{code}</span>);
+jest.mock('@jerecocc/tracker-ui/TeamLogo', () => ({ code }: any) => <span>{code}</span>);
 jest.mock(
-  '@/components/Modal/Modal',
+  '@jerecocc/tracker-ui/Modal',
   () =>
     ({
       open,
@@ -110,7 +111,7 @@ jest.mock(
       ) : null,
 );
 jest.mock(
-  '@/components/ConfirmModal/ConfirmModal',
+  '@jerecocc/tracker-ui/ConfirmModal',
   () =>
     ({ open, title, body, onConfirm, onCancel, confirmLabel }: any) =>
       open ? (
@@ -123,7 +124,7 @@ jest.mock(
       ) : null,
 );
 jest.mock(
-  '@/components/DatePicker/DatePicker',
+  '@jerecocc/tracker-ui/DatePicker',
   () => (props: any) =>
     props.triggerLabel ? (
       <button
@@ -355,6 +356,7 @@ describe('UserDashboard', () => {
 
   it('marks a dashboard game as watched', async () => {
     mockAxios.post.mockResolvedValueOnce({ data: {} });
+    mockDashboardQueries({ todayGames: [makeGame({ status: 'final' })] });
 
     render(<UserDashboard />);
     fireEvent.click(screen.getByLabelText('Mark as watched'));
@@ -376,6 +378,16 @@ describe('UserDashboard', () => {
     });
   });
 
+  it('hides the watch action for non-final dashboard games', () => {
+    mockDashboardQueries({ todayGames: [makeGame({ status: 'scheduled' })] });
+
+    render(<UserDashboard />);
+
+    expect(screen.queryByLabelText('Mark as watched')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Schedule watch')).toBeInTheDocument();
+    expect(screen.getByLabelText('Skip game')).toBeInTheDocument();
+  });
+
   it('prevents scheduling a watch on or before the local game date', async () => {
     render(<UserDashboard />);
 
@@ -385,7 +397,7 @@ describe('UserDashboard', () => {
       target: { value: toLocalDateKey(new Date('2026-06-21T19:00:00-04:00')) },
     });
 
-    expect(screen.getByText(/after the game's scheduled date/i)).toBeInTheDocument();
+    expect(screen.getByText(/after the scheduled game date/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save Schedule' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Save Schedule' }));
     expect(mockAxios.put).not.toHaveBeenCalled();
@@ -427,7 +439,7 @@ describe('UserDashboard', () => {
     expect(screen.queryByText('2025-26')).not.toBeInTheDocument();
   });
 
-  it('opens watched-game hover actions for details and score image', () => {
+  it('opens watched-game hover actions for details and score image', async () => {
     mockDashboardQueries({
       todayGames: [
         makeGame({ status: 'final', watched_by_user: true, home_score: 4, away_score: 2 }),
@@ -439,7 +451,7 @@ describe('UserDashboard', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/games/game-1');
 
     fireEvent.click(screen.getByLabelText('Download score card'));
-    expect(screen.getByText('Score Image')).toBeInTheDocument();
+    expect(await screen.findByText('Score Image')).toBeInTheDocument();
     expect(screen.getByText('BOS @ TOR')).toBeInTheDocument();
   });
 });

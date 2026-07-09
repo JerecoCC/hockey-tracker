@@ -1,28 +1,46 @@
-import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
-import { type ReactNode } from 'react';
+import { createBrowserRouter, RouterProvider, Navigate, useParams } from 'react-router-dom';
+import { Suspense, lazy, type ReactNode } from 'react';
 import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { useTheme } from './context/ThemeContext';
 import { ThemeProvider } from './context/ThemeProvider';
-import LoginPage from './pages/login/Login';
-import SignupPage from './pages/signup/Signup';
-import AdminLayout from './components/AdminLayout/AdminLayout';
-import UserLayout from './components/UserLayout/UserLayout';
-import UserDashboard from './pages/user/dashboard/UserDashboard';
-import UserGames from './pages/user/games/UserGames';
-import UserGamesWatched from './pages/user/games-watched/UserGamesWatched';
-import UserGamesWatchedTeam from './pages/user/games-watched/UserGamesWatchedTeam';
-import UserGameDetailsPage from './pages/user/games/game-details/UserGameDetailsPage';
-import UserSettings from './pages/user/settings/UserSettings';
-import LeaguesPage from './pages/admin/leagues/Leagues';
-import LeagueDetailsPage from './pages/admin/leagues/LeagueDetails';
-import UsersPage from './pages/admin/users/Users';
-import TeamDetailsPage from './pages/admin/teams/TeamDetails';
-import SeasonDetailsPage from './pages/admin/seasons/SeasonDetails';
-import PlayoffSeriesDetailsPage from './pages/admin/seasons/PlayoffSeriesDetailsPage';
-import GameDetailsPage from './pages/admin/games/game-details/GameDetailsPage';
-import PlayerDetailsPage from './pages/admin/players/PlayerDetails';
-import AuthCallbackPage from './pages/auth/callback/AuthCallback';
+import LoadingSpinner from '@jerecocc/tracker-ui/LoadingSpinner';
+import { gameDateRouteSlugToDateKey } from './lib/routeSlugs';
+
+const LoginPage = lazy(() => import('./pages/login/Login'));
+const SignupPage = lazy(() => import('./pages/signup/Signup'));
+const AuthCallbackPage = lazy(() => import('./pages/auth/callback/AuthCallback'));
+
+const AdminLayout = lazy(() => import('@/shared/AdminLayout/AdminLayout'));
+const UserLayout = lazy(() => import('@/shared/UserLayout/UserLayout'));
+
+const UserDashboard = lazy(() => import('./pages/user/dashboard/UserDashboard'));
+const UserGames = lazy(() => import('./pages/user/games/UserGames'));
+const UserGamesWatched = lazy(() => import('./pages/user/games-watched/UserGamesWatched'));
+const UserGamesWatchedTeam = lazy(() => import('./pages/user/games-watched/UserGamesWatchedTeam'));
+const UserGameDetailsPage = lazy(
+  () => import('./pages/user/games/game-details/UserGameDetailsPage'),
+);
+const UserTeamDetailsPage = lazy(() => import('./pages/user/teams/UserTeamDetailsPage'));
+const UserPlayerDetailsPage = lazy(() => import('./pages/user/players/UserPlayerDetailsPage'));
+const UserSettings = lazy(() => import('./pages/user/settings/UserSettings'));
+
+const LeaguesPage = lazy(() => import('./pages/admin/leagues/Leagues'));
+const LeagueDetailsPage = lazy(() => import('./pages/admin/leagues/LeagueDetails'));
+const UsersPage = lazy(() => import('./pages/admin/users/Users'));
+const TeamDetailsPage = lazy(() => import('./pages/admin/teams/TeamDetails'));
+const SeasonDetailsPage = lazy(() => import('./pages/admin/seasons/SeasonDetails'));
+const SeasonDayGamesPage = lazy(() => import('./pages/admin/seasons/SeasonDayGamesPage'));
+const PlayoffSeriesDetailsPage = lazy(
+  () => import('./pages/admin/seasons/PlayoffSeriesDetailsPage'),
+);
+const GameDetailsPage = lazy(() => import('./pages/admin/games/game-details/GameDetailsPage'));
+const PlayerDetailsPage = lazy(() => import('./pages/admin/players/PlayerDetails'));
+
+const AdminSeasonSingleGameRoute = () => {
+  const { gameSlug = '' } = useParams<{ gameSlug?: string }>();
+  return gameDateRouteSlugToDateKey(gameSlug) ? <SeasonDayGamesPage /> : <GameDetailsPage />;
+};
 
 const PrivateRoute = (props: { children: ReactNode }) => {
   const { children } = props;
@@ -122,6 +140,15 @@ const router = createBrowserRouter([
       },
       { path: '/games/:gameDateSlug/:gameSlug', element: <UserGameDetailsPage /> },
       { path: '/games/:id', element: <UserGameDetailsPage /> },
+      {
+        path: '/leagues/:leagueCode/teams/:teamCode/players/:playerSlug',
+        element: <UserPlayerDetailsPage />,
+      },
+      {
+        path: '/leagues/:leagueCode/players/:playerSlug',
+        element: <UserPlayerDetailsPage />,
+      },
+      { path: '/leagues/:leagueSlug/teams/:teamSlug', element: <UserTeamDetailsPage /> },
       { path: '/settings', element: <UserSettings /> },
     ],
   },
@@ -147,6 +174,10 @@ const router = createBrowserRouter([
       { path: '/admin/leagues/:leagueSlug/teams/:teamSlug', element: <TeamDetailsPage /> },
       { path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug', element: <SeasonDetailsPage /> },
       {
+        path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug/days/:dateSlug',
+        element: <SeasonDayGamesPage />,
+      },
+      {
         path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug/playoffs/:seriesSlug',
         element: <PlayoffSeriesDetailsPage />,
       },
@@ -156,7 +187,7 @@ const router = createBrowserRouter([
       },
       {
         path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug/games/:gameSlug',
-        element: <GameDetailsPage />,
+        element: <AdminSeasonSingleGameRoute />,
       },
       {
         path: '/admin/leagues/:leagueCode/teams/:teamCode/players/:playerSlug',
@@ -190,7 +221,16 @@ const AppShell = () => {
         hideProgressBar
         theme={theme}
       />
-      <RouterProvider router={router} />
+      <Suspense
+        fallback={
+          <LoadingSpinner
+            layout="page"
+            size="lg"
+          />
+        }
+      >
+        <RouterProvider router={router} />
+      </Suspense>
     </AuthProvider>
   );
 };

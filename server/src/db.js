@@ -582,11 +582,14 @@ async function initSchema() {
       description             TEXT,
       recipient_type          TEXT NOT NULL DEFAULT 'player',
       selection_method        TEXT NOT NULL DEFAULT 'manual',
+      competition_scope       TEXT NOT NULL DEFAULT 'full_season',
       stat_key                TEXT,
       awarded_after_playoffs  BOOLEAN NOT NULL DEFAULT true,
       uses_nominees           BOOLEAN NOT NULL DEFAULT false,
       allow_multiple_winners  BOOLEAN NOT NULL DEFAULT false,
       uses_team_selection     BOOLEAN NOT NULL DEFAULT false,
+      player_eligibility      JSONB NOT NULL DEFAULT '{}'::jsonb,
+      team_eligibility        JSONB NOT NULL DEFAULT '{}'::jsonb,
       active                  BOOLEAN NOT NULL DEFAULT true,
       sort_order              INT NOT NULL DEFAULT 0,
       created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -596,16 +599,86 @@ async function initSchema() {
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS description TEXT`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS recipient_type TEXT NOT NULL DEFAULT 'player'`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS selection_method TEXT NOT NULL DEFAULT 'manual'`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS competition_scope TEXT NOT NULL DEFAULT 'full_season'`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS stat_key TEXT`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS awarded_after_playoffs BOOLEAN NOT NULL DEFAULT true`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS uses_nominees BOOLEAN NOT NULL DEFAULT false`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS allow_multiple_winners BOOLEAN NOT NULL DEFAULT false`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS uses_team_selection BOOLEAN NOT NULL DEFAULT false`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS player_eligibility JSONB NOT NULL DEFAULT '{}'::jsonb`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS team_eligibility JSONB NOT NULL DEFAULT '{}'::jsonb`;
   await sql`
     CREATE TABLE IF NOT EXISTS _migrations (
       name       TEXT PRIMARY KEY,
       applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations WHERE name = 'backfill_league_award_competition_scope_v1'
+      ) THEN
+        UPDATE league_awards
+        SET competition_scope = CASE
+              WHEN selection_method = 'playoff' OR stat_key = 'playoff_champion' THEN 'playoffs'
+              WHEN stat_key IN (
+                'points',
+                'goals',
+                'assists',
+                'save_pct',
+                'gaa',
+                'shutouts',
+                'standings_points',
+                'wins'
+              ) THEN 'regular_season'
+              ELSE competition_scope
+            END,
+            selection_method = CASE
+              WHEN selection_method = 'playoff' THEN 'manual'
+              ELSE selection_method
+            END;
+
+        INSERT INTO _migrations (name) VALUES ('backfill_league_award_competition_scope_v1');
+      END IF;
+    END $$
+  `;
+  // Keep legacy award rows normalized even if they were inserted after the one-time migration.
+  await sql`
+    UPDATE league_awards
+    SET competition_scope = CASE
+          WHEN selection_method = 'playoff' OR stat_key = 'playoff_champion' THEN 'playoffs'
+          WHEN stat_key IN (
+            'points',
+            'goals',
+            'assists',
+            'save_pct',
+            'gaa',
+            'shutouts',
+            'standings_points',
+            'wins'
+          ) THEN 'regular_season'
+          ELSE competition_scope
+        END,
+        selection_method = CASE
+          WHEN selection_method = 'playoff' THEN 'manual'
+          ELSE selection_method
+        END
+    WHERE selection_method = 'playoff'
+       OR stat_key = 'playoff_champion'
+       OR (
+        stat_key IN (
+          'points',
+          'goals',
+          'assists',
+          'save_pct',
+          'gaa',
+          'shutouts',
+          'standings_points',
+          'wins'
+        )
+        AND competition_scope <> 'regular_season'
+       )
   `;
   await sql`
     DO $$
@@ -639,6 +712,29 @@ async function initSchema() {
   `;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0`;
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations WHERE name = 'backfill_league_award_player_eligibility_v1'
+      ) THEN
+        UPDATE league_awards
+        SET player_eligibility = COALESCE(player_eligibility, '{}'::jsonb)
+          || CASE
+              WHEN stat_key IN ('save_pct', 'gaa', 'shutouts') THEN '{"position_groups":["goalie"]}'::jsonb
+              WHEN stat_key IN ('points', 'goals', 'assists') THEN '{"position_groups":["forward","defender"]}'::jsonb
+              ELSE '{}'::jsonb
+            END
+          || CASE
+              WHEN lower(name) LIKE '%rookie%' THEN '{"rookies_only":true}'::jsonb
+              ELSE '{}'::jsonb
+            END
+        WHERE recipient_type = 'player';
+
+        INSERT INTO _migrations (name) VALUES ('backfill_league_award_player_eligibility_v1');
+      END IF;
+    END $$
+  `;
 
   await sql`
     CREATE TABLE IF NOT EXISTS season_awards (
@@ -943,6 +1039,7 @@ async function initSchema() {
   await sql`
     CREATE TABLE IF NOT EXISTS players (
       id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      league_player_number TEXT,
       first_name     TEXT NOT NULL,
       last_name      TEXT NOT NULL,
       -- Generic headshot (no team branding). Team/season photos live on player_photos.
@@ -955,13 +1052,44 @@ async function initSchema() {
       position       TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G')),
       shoots         TEXT CHECK (shoots IN ('L', 'R')),
       rookie_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL,
+      status         TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'retired')),
       is_active      BOOLEAN NOT NULL DEFAULT TRUE,
       created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
 
   // Migrations for columns added after the table was first created
+  await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS league_player_number TEXT`;
+  await sql`CREATE INDEX IF NOT EXISTS players_league_player_number_idx ON players (league_player_number) WHERE league_player_number IS NOT NULL`;
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS players_league_player_number_unique_idx
+      ON players (league_player_number)
+      WHERE league_player_number IS NOT NULL
+  `;
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
+  await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS status TEXT`;
+  await sql`
+    UPDATE players
+    SET status = CASE WHEN is_active THEN 'active' ELSE 'retired' END
+    WHERE status IS NULL
+  `;
+  await sql`ALTER TABLE players ALTER COLUMN status SET DEFAULT 'active'`;
+  await sql`ALTER TABLE players ALTER COLUMN status SET NOT NULL`;
+  await sql`ALTER TABLE players DROP CONSTRAINT IF EXISTS players_status_check`;
+  await sql`
+    ALTER TABLE players ADD CONSTRAINT players_status_check
+    CHECK (status IN ('active', 'inactive', 'retired'))
+  `;
+  await sql`
+    UPDATE players
+    SET is_active = (status = 'active')
+    WHERE is_active IS DISTINCT FROM (status = 'active')
+  `;
+  await sql`ALTER TABLE players DROP CONSTRAINT IF EXISTS players_status_active_check`;
+  await sql`
+    ALTER TABLE players ADD CONSTRAINT players_status_active_check
+    CHECK (is_active = (status = 'active'))
+  `;
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS rookie_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL`;
   await sql`ALTER TABLE players DROP COLUMN IF EXISTS nationality`;
 
@@ -990,6 +1118,27 @@ async function initSchema() {
   await sql`ALTER TABLE season_award_recipients ADD COLUMN IF NOT EXISTS vote_points INT`;
   await sql`ALTER TABLE season_award_recipients ADD COLUMN IF NOT EXISTS stat_value TEXT`;
   await sql`ALTER TABLE season_award_recipients ADD COLUMN IF NOT EXISTS notes TEXT`;
+  await sql`
+    WITH ordered_nominees AS (
+      SELECT
+        id,
+        ROW_NUMBER() OVER (
+          PARTITION BY season_award_id
+          ORDER BY
+            rank ASC NULLS LAST,
+            vote_points DESC NULLS LAST,
+            created_at ASC,
+            id ASC
+        )::smallint AS position
+      FROM season_award_recipients
+      WHERE role = 'nominee'
+    )
+    UPDATE season_award_recipients sar
+    SET rank = ordered_nominees.position
+    FROM ordered_nominees
+    WHERE sar.id = ordered_nominees.id
+      AND sar.rank IS NULL
+  `;
 
   // Player roster stints: one row per player-team-season stint.
   // A mid-season trade is recorded by setting end_date on the current row
@@ -1025,7 +1174,7 @@ async function initSchema() {
   await sql`ALTER TABLE player_teams DROP CONSTRAINT IF EXISTS player_teams_check`;
   await sql`
     ALTER TABLE player_teams ADD CONSTRAINT player_teams_acquisition_type_check
-    CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'expansion_draft', 'team_transfer', 'loan', 'other'))
+    CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'foundational_signing', 'expansion_signing', 'expansion_draft', 'team_transfer', 'loan', 'other'))
   `;
 
   // Player photos are one per player/team/season. They are intentionally
@@ -1113,7 +1262,7 @@ async function initSchema() {
       player_id        UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
       team_id          UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
       position         TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G')),
-      acquisition_type TEXT CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'expansion_draft', 'team_transfer', 'loan', 'other')),
+      acquisition_type TEXT CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'foundational_signing', 'expansion_signing', 'expansion_draft', 'team_transfer', 'loan', 'other')),
       start_date       DATE,
       end_date         DATE,
       created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -1131,7 +1280,7 @@ async function initSchema() {
   await sql`ALTER TABLE player_team_stints DROP CONSTRAINT IF EXISTS player_team_stints_acquisition_type_check`;
   await sql`
     ALTER TABLE player_team_stints ADD CONSTRAINT player_team_stints_acquisition_type_check
-    CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'expansion_draft', 'team_transfer', 'loan', 'other'))
+    CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'foundational_signing', 'expansion_signing', 'expansion_draft', 'team_transfer', 'loan', 'other'))
   `;
   await sql`
     CREATE INDEX IF NOT EXISTS player_team_stints_player_dates
@@ -1311,6 +1460,25 @@ async function initSchema() {
         CHECK (scoring_system IN ('3-2-1-0', '2-1-0'))
   `;
 
+  // goalie_min_regular_minutes: league default for regular-season goalie leader eligibility.
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'leagues' AND column_name = 'goalie_min_regular_minutes'
+      ) THEN
+        ALTER TABLE leagues
+          ADD COLUMN goalie_min_regular_minutes SMALLINT NOT NULL DEFAULT 1500
+            CHECK (goalie_min_regular_minutes >= 0);
+
+        UPDATE leagues
+        SET goalie_min_regular_minutes = 240
+        WHERE UPPER(code) = 'PWHL';
+      END IF;
+    END $$
+  `;
+
   // ── Playoff series ────────────────────────────────────────────────────────
   // One row per best-of-N playoff matchup. Games reference this via FK.
   // round: 1=First Round / Wild Card, 2=Second Round, 3=Conference Finals, 4=Stanley Cup Final
@@ -1342,12 +1510,15 @@ async function initSchema() {
   // home/away_score_reg: score at end of regulation (for OT/SO detection).
   // game_number: sequential number within the regular season.
   // game_number_in_series: which game within a playoff series (1–7).
+  // league_game_number: external league-provided game number, separate from series numbering.
   await sql`
     CREATE TABLE IF NOT EXISTS games (
       id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       season_id             UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
       home_team_id          UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
       away_team_id          UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      home_starting_goalie_id UUID REFERENCES players(id) ON DELETE SET NULL,
+      away_starting_goalie_id UUID REFERENCES players(id) ON DELETE SET NULL,
       scheduled_at          TIMESTAMPTZ,
       venue                 TEXT,
       game_type             TEXT NOT NULL DEFAULT 'regular'
@@ -1363,11 +1534,15 @@ async function initSchema() {
       playoff_series_id     UUID REFERENCES playoff_series(id) ON DELETE SET NULL,
       game_number_in_series SMALLINT,
       game_number           SMALLINT,
+      league_game_number    TEXT,
       notes                 TEXT,
       created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       CONSTRAINT games_different_teams CHECK (home_team_id != away_team_id)
     )
   `;
+
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS league_game_number TEXT`;
+  await sql`CREATE INDEX IF NOT EXISTS games_season_type_league_game_number_idx ON games (season_id, game_type, league_game_number) WHERE league_game_number IS NOT NULL`;
 
   // Migration: track which period is actively being played
   await sql`
@@ -1387,6 +1562,8 @@ async function initSchema() {
   // Migration: actual game start / end timestamps (distinct from the pre-game scheduled_at)
   await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS time_start TIMESTAMPTZ`;
   await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS time_end   TIMESTAMPTZ`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS home_starting_goalie_id UUID REFERENCES players(id) ON DELETE SET NULL`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS away_starting_goalie_id UUID REFERENCES players(id) ON DELETE SET NULL`;
 
   // Migration: drop stored score columns — scores are always derived from the goals table at query time.
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS home_score`;
@@ -1468,95 +1645,104 @@ async function initSchema() {
     WHERE goal_type = 'penalty-shot'
   `;
 
-  // ── Game starting lineup ───────────────────────────────────────────────────
-  // One row per team per game. Each starting-line slot is a nullable FK to players.
-  // Replaces game_lineups (6 rows per team) with a single compact row per team.
-  // Slots: forward_1, forward_2, forward_3, defense_1, defense_2, goalie.
-  await sql`
-    CREATE TABLE IF NOT EXISTS game_starting_lineup (
-      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      game_id       UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
-      team_id       UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
-      forward_1_id  UUID REFERENCES players(id) ON DELETE SET NULL,
-      forward_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
-      forward_3_id  UUID REFERENCES players(id) ON DELETE SET NULL,
-      defense_1_id  UUID REFERENCES players(id) ON DELETE SET NULL,
-      defense_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
-      goalie_id     UUID REFERENCES players(id) ON DELETE SET NULL,
-      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      UNIQUE (game_id, team_id)
-    )
-  `;
-
-  // Existing databases may have the old center/wing columns. Add the generic
-  // forward columns and copy old slot values forward without dropping anything.
+  // ── Legacy starting lineup cleanup ─────────────────────────────────────────
+  // Starting goalies now live directly on games. Preserve legacy goalie slots,
+  // then remove the old six-player lineup tables entirely.
   await sql`
     DO $$
     BEGIN
       IF EXISTS (
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'game_starting_lineup'
+      ) AND EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'goalie_id'
       ) THEN
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns
-          WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'forward_1_id'
-        ) THEN
-          ALTER TABLE game_starting_lineup ADD COLUMN forward_1_id UUID REFERENCES players(id) ON DELETE SET NULL;
-        END IF;
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns
-          WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'forward_2_id'
-        ) THEN
-          ALTER TABLE game_starting_lineup ADD COLUMN forward_2_id UUID REFERENCES players(id) ON DELETE SET NULL;
-        END IF;
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns
-          WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'forward_3_id'
-        ) THEN
-          ALTER TABLE game_starting_lineup ADD COLUMN forward_3_id UUID REFERENCES players(id) ON DELETE SET NULL;
-        END IF;
+        UPDATE games g
+        SET home_starting_goalie_id = (
+          SELECT sl.goalie_id
+          FROM game_starting_lineup sl
+          WHERE sl.game_id = g.id
+            AND sl.team_id = g.home_team_id
+            AND sl.goalie_id IS NOT NULL
+          LIMIT 1
+        )
+        WHERE g.home_starting_goalie_id IS NULL
+          AND EXISTS (
+            SELECT 1
+            FROM game_starting_lineup sl
+            WHERE sl.game_id = g.id
+              AND sl.team_id = g.home_team_id
+              AND sl.goalie_id IS NOT NULL
+          );
 
-        IF EXISTS (
-          SELECT 1 FROM information_schema.columns
-          WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'center_id'
-        ) THEN
-          EXECUTE 'UPDATE game_starting_lineup
-            SET forward_1_id = COALESCE(forward_1_id, center_id),
-                forward_2_id = COALESCE(forward_2_id, left_wing_id),
-                forward_3_id = COALESCE(forward_3_id, right_wing_id)';
-        END IF;
+        UPDATE games g
+        SET away_starting_goalie_id = (
+          SELECT sl.goalie_id
+          FROM game_starting_lineup sl
+          WHERE sl.game_id = g.id
+            AND sl.team_id = g.away_team_id
+            AND sl.goalie_id IS NOT NULL
+          LIMIT 1
+        )
+        WHERE g.away_starting_goalie_id IS NULL
+          AND EXISTS (
+            SELECT 1
+            FROM game_starting_lineup sl
+            WHERE sl.game_id = g.id
+              AND sl.team_id = g.away_team_id
+              AND sl.goalie_id IS NOT NULL
+          );
       END IF;
-    END $$
-  `;
 
-  // One-time data migration: pivot game_lineups rows (one per slot) into
-  // game_starting_lineup rows (one per team per game), then drop the old table.
-  await sql`
-    DO $$
-    BEGIN
       IF EXISTS (
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'public' AND table_name = 'game_lineups'
       ) THEN
-        INSERT INTO game_starting_lineup
-          (game_id, team_id, forward_1_id, forward_2_id, forward_3_id, defense_1_id, defense_2_id, goalie_id)
-        SELECT
-          game_id,
-          team_id,
-          MAX(CASE WHEN position_slot IN ('F1', 'C')  THEN player_id::text END)::uuid,
-          MAX(CASE WHEN position_slot IN ('F2', 'LW') THEN player_id::text END)::uuid,
-          MAX(CASE WHEN position_slot IN ('F3', 'RW') THEN player_id::text END)::uuid,
-          MAX(CASE WHEN position_slot = 'D1' THEN player_id::text END)::uuid,
-          MAX(CASE WHEN position_slot = 'D2' THEN player_id::text END)::uuid,
-          MAX(CASE WHEN position_slot = 'G'  THEN player_id::text END)::uuid
-        FROM game_lineups
-        GROUP BY game_id, team_id
-        ON CONFLICT (game_id, team_id) DO NOTHING;
+        UPDATE games g
+        SET home_starting_goalie_id = (
+          SELECT gl.player_id
+          FROM game_lineups gl
+          WHERE gl.game_id = g.id
+            AND gl.team_id = g.home_team_id
+            AND gl.position_slot = 'G'
+            AND gl.player_id IS NOT NULL
+          LIMIT 1
+        )
+        WHERE g.home_starting_goalie_id IS NULL
+          AND EXISTS (
+            SELECT 1
+            FROM game_lineups gl
+            WHERE gl.game_id = g.id
+              AND gl.team_id = g.home_team_id
+              AND gl.position_slot = 'G'
+              AND gl.player_id IS NOT NULL
+          );
+
+        UPDATE games g
+        SET away_starting_goalie_id = (
+          SELECT gl.player_id
+          FROM game_lineups gl
+          WHERE gl.game_id = g.id
+            AND gl.team_id = g.away_team_id
+            AND gl.position_slot = 'G'
+            AND gl.player_id IS NOT NULL
+          LIMIT 1
+        )
+        WHERE g.away_starting_goalie_id IS NULL
+          AND EXISTS (
+            SELECT 1
+            FROM game_lineups gl
+            WHERE gl.game_id = g.id
+              AND gl.team_id = g.away_team_id
+              AND gl.position_slot = 'G'
+              AND gl.player_id IS NOT NULL
+          );
       END IF;
     END $$
   `;
-
   await sql`DROP TABLE IF EXISTS game_lineups`;
+  await sql`DROP TABLE IF EXISTS game_starting_lineup`;
 
   // ── Game rosters ───────────────────────────────────────────────────────────
   // Game-day squad: which players are participating in a specific game.
@@ -1838,10 +2024,6 @@ async function initSchema() {
       ON game_rosters(player_id, game_id)
   `;
   await sql`
-    CREATE INDEX IF NOT EXISTS game_starting_lineup_team_game_idx
-      ON game_starting_lineup(team_id, game_id)
-  `;
-  await sql`
     CREATE INDEX IF NOT EXISTS shootout_attempts_game_order_idx
       ON shootout_attempts(game_id, attempt_order)
   `;
@@ -1970,11 +2152,90 @@ async function initSchema() {
     WHERE watched_on IS NULL AND watched_at IS NOT NULL
   `;
 
-  // ── Helper function: best available photo for a player ───────────────────
-  // Returns the best team/season photo. Exact team-season photo wins; otherwise
-  // inherit the latest photo from the same season, then the latest overall.
-  // across roster, lineup, goalie, and shootout queries so the logic lives
-  // in one place rather than being repeated as a LEFT JOIN LATERAL everywhere.
+  // ── Helper functions: displayable player avatars ─────────────────────────
+  // The provider helper intentionally returns only public league-sourced URLs
+  // so season/team photo history can show generated rows without treating them
+  // as saved DB photos.
+  await sql`DROP FUNCTION IF EXISTS player_provider_photo(uuid, uuid, uuid)`;
+  await sql`
+    CREATE OR REPLACE FUNCTION player_provider_photo(pid uuid, sid uuid DEFAULT NULL, tid uuid DEFAULT NULL)
+    RETURNS text
+    LANGUAGE sql
+    STABLE
+    AS $$
+      WITH avatar_context AS (
+        SELECT
+          NULLIF(TRIM(p.league_player_number), '') AS league_player_number,
+          UPPER(NULLIF(TRIM(l.code), '')) AS league_code,
+          s.start_date,
+          s.end_date,
+          UPPER(NULLIF(TRIM(ti.code), '')) AS team_code
+        FROM players p
+        LEFT JOIN seasons s ON s.id = sid
+        LEFT JOIN teams t ON t.id = tid
+        LEFT JOIN leagues l ON l.id = COALESCE(s.league_id, t.league_id)
+        LEFT JOIN LATERAL (
+          SELECT code
+          FROM team_iterations
+          WHERE team_id = tid
+            AND NULLIF(TRIM(code), '') IS NOT NULL
+          ORDER BY
+            CASE
+              WHEN sid IS NOT NULL AND season_id = sid THEN 0
+              WHEN s.start_date IS NOT NULL
+                AND (start_date IS NULL OR start_date <= COALESCE(s.end_date, s.start_date))
+                AND (end_date IS NULL OR end_date >= s.start_date)
+              THEN 1
+              WHEN end_date IS NULL THEN 2
+              ELSE 3
+            END,
+            start_date DESC NULLS LAST,
+            recorded_at DESC
+          LIMIT 1
+        ) ti ON true
+        WHERE p.id = pid
+      )
+      SELECT
+        CASE
+          WHEN avatar_context.league_code = 'NHL'
+            AND avatar_context.league_player_number IS NOT NULL
+          THEN
+            CASE
+              WHEN sid IS NOT NULL
+                AND tid IS NOT NULL
+                AND avatar_context.start_date IS NOT NULL
+                AND avatar_context.team_code IS NOT NULL
+              THEN
+                'https://assets.nhle.com/mugs/nhl/'
+                || EXTRACT(YEAR FROM avatar_context.start_date)::int::text
+                || (
+                  CASE
+                    WHEN avatar_context.end_date IS NOT NULL
+                      AND EXTRACT(YEAR FROM avatar_context.end_date)::int
+                        > EXTRACT(YEAR FROM avatar_context.start_date)::int
+                    THEN EXTRACT(YEAR FROM avatar_context.end_date)::int
+                    ELSE EXTRACT(YEAR FROM avatar_context.start_date)::int + 1
+                  END
+                )::text
+                || '/'
+                || avatar_context.team_code
+                || '/'
+                || avatar_context.league_player_number
+                || '.png'
+              ELSE
+                'https://assets.nhle.com/mugs/nhl/latest/'
+                || avatar_context.league_player_number
+                || '.png'
+            END
+          ELSE NULL
+        END
+      FROM avatar_context
+    $$
+  `;
+
+  // Stored DB photos win first: exact team-season photo, latest same-season
+  // photo, latest overall photo, then the generic player photo. If no stored
+  // image exists, league-specific public avatar providers can fill the gap.
   await sql`DROP FUNCTION IF EXISTS best_player_photo(uuid)`;
   await sql`DROP FUNCTION IF EXISTS best_player_photo(uuid, uuid, uuid)`;
   await sql`
@@ -1983,22 +2244,35 @@ async function initSchema() {
     LANGUAGE sql
     STABLE
     AS $$
-      SELECT NULLIF(photo, '')
-      FROM   player_photos
-      WHERE  player_id = pid
-        AND  NULLIF(photo, '') IS NOT NULL
-        AND  (sid IS NULL OR season_id = sid OR NOT EXISTS (
-          SELECT 1 FROM player_photos pp_same
-          WHERE pp_same.player_id = pid AND pp_same.season_id = sid
-        ))
-      ORDER  BY
-        CASE
-          WHEN sid IS NOT NULL AND tid IS NOT NULL AND season_id = sid AND team_id = tid THEN 0
-          WHEN sid IS NOT NULL AND season_id = sid THEN 1
-          ELSE 2
-        END,
-        created_at DESC
-      LIMIT  1
+      WITH stored_photo AS (
+        SELECT NULLIF(photo, '') AS photo
+        FROM   player_photos
+        WHERE  player_id = pid
+          AND  NULLIF(photo, '') IS NOT NULL
+          AND  (sid IS NULL OR season_id = sid OR NOT EXISTS (
+            SELECT 1 FROM player_photos pp_same
+            WHERE pp_same.player_id = pid AND pp_same.season_id = sid
+          ))
+        ORDER  BY
+          CASE
+            WHEN sid IS NOT NULL AND tid IS NOT NULL AND season_id = sid AND team_id = tid THEN 0
+            WHEN sid IS NOT NULL AND season_id = sid THEN 1
+            ELSE 2
+          END,
+          created_at DESC
+        LIMIT  1
+      ),
+      generic_photo AS (
+        SELECT
+          NULLIF(p.photo, '') AS photo
+        FROM players p
+        WHERE p.id = pid
+      )
+      SELECT COALESCE(
+        (SELECT photo FROM stored_photo),
+        (SELECT photo FROM generic_photo),
+        player_provider_photo(pid, sid, tid)
+      )
     $$
   `;
 
@@ -2264,6 +2538,13 @@ async function initSchema() {
     ALTER TABLE seasons
       ADD COLUMN IF NOT EXISTS scoring_system TEXT
         CHECK (scoring_system IN ('2-1-0', '3-2-1-0'))
+  `;
+  // goalie_min_regular_minutes: regular-season goalie leaderboard eligibility.
+  // NULL falls back to a league-aware default; 0 disables the minimum.
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS goalie_min_regular_minutes SMALLINT
+        CHECK (goalie_min_regular_minutes >= 0)
   `;
 
   // playoffs_started: true once the admin has formally ended the regular season

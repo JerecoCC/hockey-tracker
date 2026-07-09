@@ -1,18 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import Button from '@/components/Button/Button';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import Divider from '@/components/Divider/Divider';
-import Field from '@/components/Field/Field';
-import GroupedFields from '@/components/GroupedFields/GroupedFields';
-import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
-import ListItem from '@/components/ListItem/ListItem';
-import Modal from '@/components/Modal/Modal';
-import SearchField from '@/components/SearchField/SearchField';
-import Section from '@/components/Section/Section';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
-import Skeleton from '@/components/Skeleton/Skeleton';
+import Button from '@jerecocc/tracker-ui/Button';
+import Checklist from '@jerecocc/tracker-ui/Checklist';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import Divider from '@jerecocc/tracker-ui/Divider';
+import Field from '@jerecocc/tracker-ui/Field';
+import GroupedFields from '@jerecocc/tracker-ui/GroupedFields';
+import InfoTooltip from '@jerecocc/tracker-ui/InfoTooltip';
+import ListItem from '@jerecocc/tracker-ui/ListItem';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import Section from '@jerecocc/tracker-ui/Section';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import useGroupAlignmentSets, {
   type AlignmentGroupRecord,
@@ -245,19 +244,7 @@ const TeamSelectionModal = ({
     setQuery('');
   }, [open, selectedIds]);
 
-  const selectedSet = new Set(draftIds);
   const sortedTeams = [...teams].sort((a, b) => a.name.localeCompare(b.name));
-  const filteredTeams = query.trim()
-    ? sortedTeams.filter((team) => {
-        const q = query.trim().toLowerCase();
-        return (
-          team.name.toLowerCase().includes(q) ||
-          (team.team_name ?? '').toLowerCase().includes(q) ||
-          (team.place_name ?? '').toLowerCase().includes(q) ||
-          team.code.toLowerCase().includes(q)
-        );
-      })
-    : sortedTeams;
 
   const toggleTeam = (teamId: string) => {
     setDraftIds((current) =>
@@ -289,41 +276,39 @@ const TeamSelectionModal = ({
         </span>
       }
     >
-      <div className={styles.alignmentTeamModalControls}>
-        <SearchField
-          className={styles.alignmentTeamModalSearch}
-          placeholder="Search teams..."
-          value={query}
-          onChange={setQuery}
-          autoFocus
-        />
-      </div>
-      {filteredTeams.length === 0 ? (
-        <p className={styles.alignmentTeamModalEmpty}>
-          {teams.length === 0 ? 'No teams are available.' : `No teams match "${query}".`}
-        </p>
-      ) : (
-        <ul className={styles.alignmentTeamModalList}>
-          {filteredTeams.map((team) => (
-            <SelectableListItem
-              key={team.id}
-              checked={selectedSet.has(team.id)}
-              disabled={disabled}
-              onToggle={() => toggleTeam(team.id)}
-              image={team.logo}
-              imageDark={team.logo_dark}
-              imageLight={team.logo_light}
-              imageBackground={false}
-              imagePlaceholder={team.code.slice(0, 3)}
-              imagePrimaryColor={team.primary_color}
-              imageTextColor={team.text_color}
-              name={team.team_name || team.name}
-              eyebrow={team.place_name || undefined}
-              rightContent={<span className={styles.alignmentTeamModalCode}>{team.code}</span>}
-            />
-          ))}
-        </ul>
-      )}
+      <Checklist
+        options={sortedTeams.map((team) => ({
+          id: team.id,
+          searchText: [team.name, team.team_name, team.place_name, team.code]
+            .filter(Boolean)
+            .join(' '),
+          image: team.logo,
+          imageDark: team.logo_dark,
+          imageLight: team.logo_light,
+          imageBackground: false,
+          imagePlaceholder: team.code.slice(0, 3),
+          imagePrimaryColor: team.primary_color,
+          imageTextColor: team.text_color,
+          name: team.team_name || team.name,
+          eyebrow: team.place_name || undefined,
+          rightContent: <span className={styles.alignmentTeamModalCode}>{team.code}</span>,
+        }))}
+        selectedIds={draftIds}
+        onToggle={(option) => toggleTeam(option.id)}
+        searchable
+        query={query}
+        onQueryChange={setQuery}
+        placeholder="Search teams..."
+        autoFocus
+        searchDisabled={disabled}
+        toolbarClassName={styles.alignmentTeamModalControls}
+        searchClassName={styles.alignmentTeamModalSearch}
+        listClassName={styles.alignmentTeamModalList}
+        emptyClassName={styles.alignmentTeamModalEmpty}
+        emptyMessage="No teams are available."
+        noResultsMessage={(searchQuery) => `No teams match "${searchQuery}".`}
+        disabled={disabled}
+      />
     </Modal>
   );
 };
@@ -529,7 +514,7 @@ const AlignmentGroupNode = ({
         type="button"
         variant="outlined"
         intent="neutral"
-        size="sm"
+        size="small"
         icon="edit"
         tooltip="Edit group"
         disabled={busy === group.id}
@@ -540,7 +525,7 @@ const AlignmentGroupNode = ({
           type="button"
           variant="outlined"
           intent="accent"
-          size="sm"
+          size="small"
           icon="add"
           tooltip="Create subgroup"
           disabled={busy === group.id}
@@ -552,7 +537,7 @@ const AlignmentGroupNode = ({
           type="button"
           variant="outlined"
           intent="accent"
-          size="sm"
+          size="small"
           icon="group_add"
           tooltip="Edit teams"
           disabled={busy === group.id}
@@ -563,7 +548,7 @@ const AlignmentGroupNode = ({
         type="button"
         variant="outlined"
         intent="danger"
-        size="sm"
+        size="small"
         icon="delete"
         tooltip="Delete group"
         disabled={busy === group.id}
@@ -984,9 +969,10 @@ const AlignmentPanel = ({
             disabled={busy === alignmentSet.id || detailsLoading}
             onChange={handleStructureTypeChange}
           />
+        </div>
+        <div className={styles.alignmentEditActionRow}>
           <Button
             type="button"
-            size="sm"
             variant="outlined"
             intent="accent"
             icon={alignmentActionIcon}
@@ -998,7 +984,7 @@ const AlignmentPanel = ({
         </div>
         <Button
           type="submit"
-          size="sm"
+          size="small"
           icon="save"
           className={styles.srOnly}
           disabled={busy === alignmentSet.id || !isValid || detailsLoading || !hasChanges}
@@ -1382,10 +1368,11 @@ const CreateAlignmentModal = ({
                 required
                 onChange={handleStructureTypeChange}
               />
-              {selectedStructure && (
+            </div>
+            {selectedStructure && (
+              <div className={styles.alignmentEditActionRow}>
                 <Button
                   type="button"
-                  size="sm"
                   variant="outlined"
                   intent="accent"
                   icon={alignmentActionIcon}
@@ -1394,11 +1381,11 @@ const CreateAlignmentModal = ({
                 >
                   {alignmentActionLabel}
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
             <Button
               type="submit"
-              size="sm"
+              size="small"
               icon="save"
               className={styles.srOnly}
               disabled={isSubmitting || busy || !isValid || !selectedStructure}
@@ -1569,7 +1556,7 @@ const LeagueAlignmentsTab = (props: Props) => {
             action={
               <Button
                 icon="add"
-                size="sm"
+                size="medium"
                 onClick={() => setCreateModalOpen(true)}
               >
                 Create Alignment

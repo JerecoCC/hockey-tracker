@@ -28,6 +28,17 @@
 }
 
 .playerInfo {
+  &IdentityRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 0.75rem;
+    row-gap: $space-md;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
   &VitalsRow {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -189,67 +200,3 @@
   row-gap: $space-md;
 }
 
-// Jersey number history list shown inside ChangeJerseyModal
-.history {
-  &Section {
-    display: flex;
-    flex-direction: column;
-    gap: $space-sm;
-  }
-
-  &Label {
-    font-size: $font-sm;
-    font-weight: 600;
-    color: var(--app-text-muted, #{$text-dim});
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  &List {
-    display: flex;
-    flex-direction: column;
-    gap: $space-xs;
-  }
-
-  &Entry {
-    display: flex;
-    align-items: center;
-    gap: $space-sm;
-    font-size: $font-sm;
-    color: var(--app-text-muted, #{$text-dim});
-    padding: $space-xs $space-sm;
-    background: var(--app-surface-muted, rgba(255, 255, 255, 0.02));
-    border: 1px solid var(--app-border, #{$border});
-    border-radius: $radius-sm;
-  }
-
-  &EntryNumber {
-    font-weight: 700;
-    color: var(--app-text, #{$text-body});
-    min-width: 2.5rem;
-  }
-
-  &EntryDates {
-    flex: 1;
-  }
-}
-
-.photoInheritance {
-  &Notice {
-    display: flex;
-    flex-direction: column;
-    gap: $space-xs;
-    padding: $space-sm $space-md;
-    border: 1px solid var(--app-border, #{$border});
-    border-radius: $radius-sm;
-    background: var(--app-surface-muted, rgba(255, 255, 255, 0.02));
-    color: var(--app-text-muted, #{$text-dim});
-    font-size: $font-sm;
-    line-height: 1.4;
-  }
-
-  &Label {
-    color: var(--app-text, #{$text-body});
-    font-weight: 700;
-  }
-}

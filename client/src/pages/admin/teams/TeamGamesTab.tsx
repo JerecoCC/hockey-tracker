@@ -1,15 +1,16 @@
 import { useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import Button from '@/components/Button/Button';
-import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
-import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
-import Section from '@/components/Section/Section';
-import { ScheduleGamesTitle } from '@/components/ScheduleGamesLayout/ScheduleGamesLayout';
-import TeamCalendarGameCard from '@/components/TeamCalendarGameCard/TeamCalendarGameCard';
+import Button from '@jerecocc/tracker-ui/Button';
+import MonthCalendar from '@jerecocc/tracker-ui/MonthCalendar';
+import PeriodPicker from '@jerecocc/tracker-ui/PeriodPicker';
+import Section from '@jerecocc/tracker-ui/Section';
+import { ScheduleGamesTitle } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
+import TeamCalendarGameCard from '@/shared/TeamCalendarGameCard/TeamCalendarGameCard';
 import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
-import { buildGameDetailsPath } from '@/lib/routeSlugs';
+import { buildGameDetailsPath, buildUserGameDetailsPath } from '@/lib/routeSlugs';
+import { toEasternDateKey } from '@/pages/admin/seasons/seasonDateUtils';
 import styles from './TeamGamesTab.module.scss';
 
 const MONTH_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
@@ -45,6 +46,9 @@ const toLocalDateKey = (iso: string) => {
   const d = new Date(iso);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
+
+const toGameDateKey = (iso: string, mode: 'admin' | 'user') =>
+  mode === 'admin' ? toEasternDateKey(iso) : toLocalDateKey(iso);
 
 const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const addMonths = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, 1);
@@ -169,6 +173,7 @@ interface Props {
   leagueCode?: string | null;
   calendarMonth?: Date;
   onCalendarMonthChange?: (month: Date) => void;
+  mode?: 'admin' | 'user';
 }
 
 const TeamGamesTab = ({
@@ -178,6 +183,7 @@ const TeamGamesTab = ({
   leagueCode,
   calendarMonth: controlledCalendarMonth,
   onCalendarMonthChange,
+  mode = 'admin',
 }: Props) => {
   const navigate = useNavigate();
   const [exportingMonthImage, setExportingMonthImage] = useState(false);
@@ -200,37 +206,50 @@ const TeamGamesTab = ({
     }
   };
 
-  const { games, loading } = useGames({
-    teamId,
-    month: toMonthPickerValue(calendarMonth),
-  });
+  const { games, loading } = useGames(
+    {
+      teamId,
+      month: toMonthPickerValue(calendarMonth),
+    },
+    { mode },
+  );
 
   const scheduledGames = useMemo(() => games.filter((game) => !!game.scheduled_at), [games]);
 
   const gamesByDate = useMemo(() => {
     const map = new Map<string, GameRecord>();
     scheduledGames.forEach((game) => {
-      const key = toLocalDateKey(game.scheduled_at!);
+      const key = toGameDateKey(game.scheduled_at!, mode);
       if (!map.has(key)) {
         map.set(key, game);
       }
     });
     return map;
-  }, [scheduledGames]);
+  }, [mode, scheduledGames]);
 
-  const openGame = (game: GameRecord) =>
-    navigate(
-      buildGameDetailsPath({
-        leagueCode: game.league_code ?? leagueCode,
-        leagueId,
-        seasonName: game.season_name,
-        seasonId: game.season_id,
-        gameId: game.id,
-        awayTeamCode: game.away_team.code,
-        homeTeamCode: game.home_team.code,
-        scheduledAt: game.scheduled_at,
-      }),
-    );
+  const openGame = (game: GameRecord) => {
+    const path =
+      mode === 'user'
+        ? buildUserGameDetailsPath({
+            gameId: game.id,
+            awayTeamCode: game.away_team.code,
+            homeTeamCode: game.home_team.code,
+            scheduledAt: game.scheduled_at,
+            scheduledTime: game.scheduled_time,
+          })
+        : buildGameDetailsPath({
+            leagueCode: game.league_code ?? leagueCode,
+            leagueId,
+            seasonName: game.season_name,
+            seasonId: game.season_id,
+            gameId: game.id,
+            awayTeamCode: game.away_team.code,
+            homeTeamCode: game.home_team.code,
+            scheduledAt: game.scheduled_at,
+            scheduledTime: game.scheduled_time,
+          });
+    navigate(path);
+  };
   const changeCalendarMonth = (value: string) => {
     if (!value) return;
     setCalendarMonth(fromMonthPickerValue(value));
@@ -278,7 +297,7 @@ const TeamGamesTab = ({
           type="button"
           variant="outlined"
           intent="neutral"
-          size="sm"
+          size="medium"
           icon="download"
           iconHeight="field"
           aria-label="Download monthly schedule"

@@ -28,6 +28,8 @@ export interface SeasonRecord {
   league_best_of_playoff: number;
   /** League-level default shootout rounds (used when season override is null). */
   league_best_of_shootout: number;
+  /** League-level default goalie leaderboard eligibility in minutes. */
+  league_goalie_min_regular_minutes: number;
   /** Season-level playoff qualification rules (overrides any league-level format). */
   playoff_format: PlayoffFormatRule[] | null;
   /** ID of the reusable playoff qualification format assigned to this season. */
@@ -40,6 +42,8 @@ export interface SeasonRecord {
   best_of_shootout: number | null;
   /** Season-level scoring system override. Null falls back to league default. */
   scoring_system: '2-1-0' | '3-2-1-0' | null;
+  /** Regular-season goalie leaderboard eligibility in minutes. Null falls back to league default. */
+  goalie_min_regular_minutes: number | null;
   /** ID of the bracket rule set assigned to this season. Null if none is assigned. */
   bracket_rule_set_id: string | null;
   /** ID of the team alignment set assigned to this season. Null uses legacy group fallback. */
@@ -48,6 +52,8 @@ export interface SeasonRecord {
   has_scheduled_games: boolean;
   /** True while regular-season games are still scheduled or in progress. */
   has_unfinished_regular_games: boolean;
+  /** True when at least one season team has fewer final regular games than games_per_season. */
+  has_incomplete_regular_team_games?: boolean;
   created_at: string;
 }
 
@@ -62,6 +68,7 @@ export interface CreateSeasonData {
   best_of_playoff?: number | null;
   best_of_shootout?: number | null;
   scoring_system?: '2-1-0' | '3-2-1-0' | null;
+  goalie_min_regular_minutes?: number | null;
   bracket_rule_set_id?: string | null;
   group_alignment_set_id?: string | null;
 }
@@ -77,16 +84,23 @@ const authHeaders = () => {
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-const useSeasons = (leagueId?: string) => {
+type SeasonsMode = 'admin' | 'user';
+
+const useSeasons = (leagueId?: string, options: { mode?: SeasonsMode } = {}) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const mode = options.mode ?? 'admin';
+  const basePath = mode === 'user' ? 'user' : 'admin';
 
   const { data: seasons = [], isLoading: loading } = useQuery({
-    queryKey: leagueId ? ['seasons', { league_id: leagueId }] : ['seasons'],
+    queryKey: [
+      mode === 'user' ? 'user-seasons' : 'seasons',
+      ...(leagueId ? [{ league_id: leagueId }] : []),
+    ],
     queryFn: async () => {
       try {
         const params = leagueId ? { league_id: leagueId } : undefined;
-        const { data } = await axios.get<SeasonRecord[]>(`${API}/admin/seasons`, {
+        const { data } = await axios.get<SeasonRecord[]>(`${API}/${basePath}/seasons`, {
           headers: authHeaders(),
           params,
         });

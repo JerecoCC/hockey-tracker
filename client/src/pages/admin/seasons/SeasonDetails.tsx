@@ -1,20 +1,20 @@
 import { useEffect, useState, useMemo } from 'react';
-import InfoItem from '@/components/InfoItem/InfoItem';
-import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
+import InfoItem from '@jerecocc/tracker-ui/InfoItem';
+import InfoTooltip from '@jerecocc/tracker-ui/InfoTooltip';
 import { useNavigate, useParams } from 'react-router-dom';
-import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
-import Divider from '@/components/Divider/Divider';
-import Section from '@/components/Section/Section';
-import EntityHeader from '@/components/EntityHeader/EntityHeader';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import Tag from '@/components/Tag/Tag';
-import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
-import { PaginatedTable } from '@/components/Pagination/Pagination';
-import Table, { type Column } from '@/components/Table/Table';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import Skeleton from '@/components/Skeleton/Skeleton';
-import Tabs from '@/components/Tabs/Tabs';
+import Button from '@jerecocc/tracker-ui/Button';
+import Card from '@jerecocc/tracker-ui/Card';
+import Divider from '@jerecocc/tracker-ui/Divider';
+import Section from '@jerecocc/tracker-ui/Section';
+import EntityHeader from '@jerecocc/tracker-ui/EntityHeader';
+import ConfirmModal from '@jerecocc/tracker-ui/ConfirmModal';
+import Tag from '@jerecocc/tracker-ui/Tag';
+import MoreActionsMenu from '@jerecocc/tracker-ui/MoreActionsMenu';
+import { PaginatedTable } from '@jerecocc/tracker-ui/Pagination';
+import Table, { type Column } from '@jerecocc/tracker-ui/Table';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
+import Skeleton from '@jerecocc/tracker-ui/Skeleton';
+import Tabs from '@jerecocc/tracker-ui/Tabs';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
@@ -39,14 +39,15 @@ import useSeasonStats, {
   type GoalieStatRecord,
   type SeasonStatsCompetition,
 } from '@/hooks/useSeasonStats';
-import Select from '@/components/Select/Select';
+import Select from '@jerecocc/tracker-ui/Select';
 import useTabState from '@/hooks/useTabState';
-import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import PlayerAvatar from '@jerecocc/tracker-ui/PlayerAvatar';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
 import SeasonEndModal from './SeasonEndModal';
 import SeasonAwardsTab from './SeasonAwardsTab';
 import SeasonFormModal from './SeasonFormModal';
 import SeasonGamesTab from './SeasonGamesTab';
+import SeasonPlayersTab from './SeasonPlayersTab';
 import SeasonPlayoffsTab from './SeasonPlayoffsTab';
 import SeasonTeamsCard from './SeasonTeamsCard';
 import StatsLeaderCard, { StatsLeaderCardSkeleton } from './StatsLeaderCard';
@@ -78,9 +79,10 @@ type StandingDisplayRow = TeamStandingRecord & {
 };
 
 const PAGE_SIZE = 10;
-/** Goalie stats only include goalies who played at least this many games. */
-const GOALIE_MIN_GAMES = 25;
-const GOALIE_MIN_GAMES_TOOLTIP = 'Only show goalies who played for 25 or more games';
+const STATS_TABLE_TEAM_LOGO_SIZE = 28;
+const STATS_TABLE_PLAYER_AVATAR_SIZE = 32;
+const STANDINGS_TABLE_TEAM_LOGO_SIZE = 28;
+const DEFAULT_GOALIE_MIN_REGULAR_MINUTES = 1500;
 
 const STATS_VIEW_OPTIONS = [
   { value: 'Summary', label: 'Summary' },
@@ -95,11 +97,12 @@ const STATS_COMPETITION_OPTIONS = [
 const SEASON_TAB_INDEX = {
   INFO: 0,
   TEAMS: 1,
-  GAMES: 2,
-  STATS: 3,
-  STANDINGS: 4,
-  AWARDS: 5,
+  PLAYERS: 2,
+  GAMES: 3,
+  STATS: 4,
+  STANDINGS: 5,
   PLAYOFFS: 6,
+  AWARDS: 7,
 } as const;
 const DEFAULT_WILDCARD_FORMAT: PlayoffFormatRule[] = [
   { scope: 'division', method: 'top', count: 3 },
@@ -123,6 +126,17 @@ function getAllTeamIds(groupId: string, allGroups: SeasonGroupRecord[]): Set<str
   collect(groupId);
   return ids;
 }
+
+const standingsGroupTitle = (
+  group: Pick<SeasonGroupRecord, 'name' | 'role'>,
+): string => {
+  const roleLabel =
+    group.role === 'conference' ? 'Conference' : group.role === 'division' ? 'Division' : null;
+  if (!roleLabel || new RegExp(`\\b${roleLabel}\\b`, 'i').test(group.name)) {
+    return group.name;
+  }
+  return `${group.name} ${roleLabel}`;
+};
 
 const SeasonDetailsPage = () => {
   const {
@@ -243,6 +257,19 @@ const SeasonDetailsPage = () => {
   });
 
   const hasUnfinishedRegularGames = season?.has_unfinished_regular_games ?? false;
+  const hasIncompleteRegularTeamGames = season?.has_incomplete_regular_team_games ?? false;
+  const effectiveGoalieMinRegularMinutes =
+    season?.goalie_min_regular_minutes ??
+    season?.league_goalie_min_regular_minutes ??
+    DEFAULT_GOALIE_MIN_REGULAR_MINUTES;
+  const goalieMinRegularDisplay =
+    effectiveGoalieMinRegularMinutes > 0 ? `${effectiveGoalieMinRegularMinutes} min` : 'None';
+  const goalieEligibilityTooltip =
+    statsCompetition === 'regular'
+      ? effectiveGoalieMinRegularMinutes > 0
+        ? `Only show goalies with at least ${effectiveGoalieMinRegularMinutes} regular-season minutes`
+        : 'All regular-season goalies are shown'
+      : 'Regular-season goalie minimum does not apply to playoff stats';
 
   const clinchedIds = useMemo(
     () =>
@@ -584,7 +611,6 @@ const SeasonDetailsPage = () => {
   const summaryGoalies = useMemo(() => {
     const isAsc = summaryGoalieStat === 'gaa';
     return [...goalies]
-      .filter((g) => (g.gp ?? 0) >= GOALIE_MIN_GAMES)
       .sort((a, b) => {
         const av = (a[summaryGoalieStat] ?? (isAsc ? Infinity : -Infinity)) as number;
         const bv = (b[summaryGoalieStat] ?? (isAsc ? Infinity : -Infinity)) as number;
@@ -622,6 +648,12 @@ const SeasonDetailsPage = () => {
     if (stat === 'gaa') return g.gaa != null ? Number(g.gaa).toFixed(2) : '—';
     return String(g.shutouts ?? 0);
   };
+  const formatGoalieToi = (seconds: number | null | undefined): string => {
+    const safeSeconds = Math.max(0, Number(seconds ?? 0));
+    const minutes = Math.floor(safeSeconds / 60);
+    const remainingSeconds = safeSeconds % 60;
+    return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`;
+  };
 
   const STAT_OPTIONS: { value: SkaterStatType; label: string }[] = [
     { value: 'points', label: 'Points' },
@@ -648,7 +680,7 @@ const SeasonDetailsPage = () => {
         logoDark={row.team_logo_dark}
         logoLight={row.team_logo_light}
         code={row.team_code ?? '?'}
-        size={24}
+        size={STATS_TABLE_TEAM_LOGO_SIZE}
         shape="square"
       />
       <PlayerAvatar
@@ -656,7 +688,7 @@ const SeasonDetailsPage = () => {
         initials={`${row.first_name.charAt(0)}${row.last_name.charAt(0)}`}
         primaryColor={row.team_primary_color}
         textColor={row.team_text_color}
-        size={28}
+        size={STATS_TABLE_PLAYER_AVATAR_SIZE}
       />
       <span className={styles.statsPlayerName}>
         {row.last_name}, {row.first_name}
@@ -685,6 +717,14 @@ const SeasonDetailsPage = () => {
     { header: 'SA', key: 'shots_against', align: 'center', sortable: true },
     { header: 'SV', key: 'saves', align: 'center', sortable: true },
     { header: 'GA', key: 'goals_against', align: 'center', sortable: true },
+    {
+      type: 'custom',
+      header: 'TOI',
+      render: (row) => formatGoalieToi(row.time_on_ice),
+      sortable: true,
+      sortKey: 'time_on_ice',
+      align: 'center',
+    },
     {
       type: 'custom',
       header: 'SV%',
@@ -719,7 +759,7 @@ const SeasonDetailsPage = () => {
             alt={row.team_name ?? row.team_code ?? ''}
             primaryColor={row.team_primary_color}
             textColor={row.team_text_color}
-            size={24}
+            size={STANDINGS_TABLE_TEAM_LOGO_SIZE}
             shape="circle"
           />
           {row.team_name ?? row.team_code ?? '—'}
@@ -809,6 +849,7 @@ const SeasonDetailsPage = () => {
             teamCode: row.team_code,
             firstName: row.first_name,
             lastName: row.last_name,
+            jerseyNumber: row.jersey_number,
           })
         : leagueHref,
     );
@@ -837,6 +878,100 @@ const SeasonDetailsPage = () => {
     return <p style={{ color: 'var(--text-dim)' }}>Season not found.</p>;
   }
 
+  const regularSeasonEndBlocked = hasUnfinishedRegularGames || hasIncompleteRegularTeamGames;
+  const canStartPlayoffs = season.is_current && !season.playoffs_started;
+  const startPlayoffsDisabled = busy === 'start-playoffs' || regularSeasonEndBlocked;
+  const seasonMoreItems = [
+    ...(!season.is_current
+      ? [
+          {
+            label: 'Set as Current',
+            icon: 'stars',
+            disabled: busy === 'set-current',
+            onClick: () => setCurrentSeason(true),
+          },
+        ]
+      : []),
+    ...(canStartPlayoffs
+      ? [
+          {
+            label: 'Start Playoffs',
+            icon: 'emoji_events',
+            disabled: startPlayoffsDisabled,
+            onClick: () => setShowStartPlayoffsConfirm(true),
+          },
+        ]
+      : []),
+    ...(season.is_current
+      ? [
+          {
+            label: 'End Season',
+            icon: 'flag',
+            intent: 'danger' as const,
+            disabled: busy === 'end-season',
+            onClick: () => setShowEndModal(true),
+          },
+        ]
+      : []),
+  ];
+
+  const seasonHeader = (
+    <EntityHeader
+      className={styles.seasonInfoHeader}
+      actionsClassName={styles.seasonInfoActions}
+      logo={season.league_logo}
+      name={season.name}
+      code={season.league_code}
+      subtitle={formatDateRange(season.start_date, season.end_date, season.is_current)}
+      primaryColor="#334155"
+      textColor="#ffffff"
+      nameAccessory={
+        <>
+          {season.is_current && !season.playoffs_started && (
+            <Tag
+              label="Current"
+              intent="success"
+            />
+          )}
+          {season.is_current && season.playoffs_started && (
+            <Tag
+              label="Playoffs"
+              intent="accent"
+            />
+          )}
+          {season.is_ended && (
+            <Tag
+              label="Ended"
+              intent="neutral"
+            />
+          )}
+        </>
+      }
+      actions={
+        <>
+          <Button
+            type="button"
+            variant="outlined"
+            intent="neutral"
+            icon="edit"
+            size="large"
+            iconHeight="button"
+            tooltip="Edit season"
+            aria-label="Edit season"
+            onClick={() => setShowEditModal(true)}
+          />
+          {seasonMoreItems.length > 0 && (
+            <MoreActionsMenu
+              items={seasonMoreItems}
+              size="large"
+              iconHeight="button"
+            />
+          )}
+        </>
+      }
+    />
+  );
+
   return (
     <>
       <Tabs
@@ -848,93 +983,7 @@ const SeasonDetailsPage = () => {
             icon: 'info',
             content: (
               <Card>
-                <EntityHeader
-                  logo={season.league_logo}
-                  name={season.name}
-                  code={season.league_code}
-                  subtitle={formatDateRange(season.start_date, season.end_date, season.is_current)}
-                  primaryColor="#334155"
-                  textColor="#ffffff"
-                  nameAccessory={
-                    <>
-                      {season.is_current && !season.playoffs_started && (
-                        <Tag
-                          label="Current"
-                          intent="success"
-                        />
-                      )}
-                      {season.is_current && season.playoffs_started && (
-                        <Tag
-                          label="Playoffs"
-                          intent="accent"
-                        />
-                      )}
-                      {season.is_ended && (
-                        <Tag
-                          label="Ended"
-                          intent="neutral"
-                        />
-                      )}
-                    </>
-                  }
-                  actions={(() => {
-                    const moreItems = [
-                      ...(!season.is_current
-                        ? [
-                            {
-                              label: 'Set as Current',
-                              icon: 'stars',
-                              disabled: busy === 'set-current',
-                              onClick: () => setCurrentSeason(true),
-                            },
-                          ]
-                        : []),
-                      ...(season.is_current &&
-                      !season.playoffs_started &&
-                      !hasUnfinishedRegularGames
-                        ? [
-                            {
-                              label: 'End Regular Season',
-                              icon: 'emoji_events',
-                              disabled: busy === 'start-playoffs',
-                              onClick: () => setShowStartPlayoffsConfirm(true),
-                            },
-                          ]
-                        : []),
-                      ...(season.is_current
-                        ? [
-                            {
-                              label: 'End Season',
-                              icon: 'flag',
-                              intent: 'danger' as const,
-                              disabled: busy === 'end-season',
-                              onClick: () => setShowEndModal(true),
-                            },
-                          ]
-                        : []),
-                    ];
-                    return (
-                      <>
-                        <Button
-                          type="button"
-                          variant="outlined"
-                          intent="neutral"
-                          icon="edit"
-                          iconHeight="button"
-                          tooltip="Edit season"
-                          aria-label="Edit season"
-                          onClick={() => setShowEditModal(true)}
-                        />
-                        {moreItems.length > 0 && (
-                          <MoreActionsMenu
-                            variant="ghost"
-                            items={moreItems}
-                          />
-                        )}
-                      </>
-                    );
-                  })()}
-                />
+                {seasonHeader}
                 <div className={styles.infoGrid}>
                   <InfoItem
                     label="League"
@@ -960,6 +1009,14 @@ const SeasonDetailsPage = () => {
                       season.scoring_system ?? `${season.league_scoring_system} (league default)`
                     }
                   />
+                  <InfoItem
+                    label="Goalie Min TOI"
+                    data={
+                      season.goalie_min_regular_minutes != null
+                        ? goalieMinRegularDisplay
+                        : `${goalieMinRegularDisplay} (league default)`
+                    }
+                  />
                 </div>
               </Card>
             ),
@@ -983,6 +1040,18 @@ const SeasonDetailsPage = () => {
                 hasScheduledGames={season.has_scheduled_games}
                 groupAlignmentSetId={season.group_alignment_set_id}
                 updateSeason={updateSeason}
+              />
+            ),
+          },
+          {
+            label: 'Players',
+            icon: 'groups',
+            content: (
+              <SeasonPlayersTab
+                leagueId={season.league_id}
+                leagueCode={season.league_code}
+                seasonId={id!}
+                seasonName={season.name}
               />
             ),
           },
@@ -1056,7 +1125,7 @@ const SeasonDetailsPage = () => {
                             type="button"
                             variant="outlined"
                             intent="neutral"
-                            size="sm"
+                            size="medium"
                             icon="ranking_star"
                             iconHeight="button"
                             tooltip="All Leaders"
@@ -1106,7 +1175,7 @@ const SeasonDetailsPage = () => {
                             type="button"
                             variant="outlined"
                             intent="neutral"
-                            size="sm"
+                            size="medium"
                             icon="ranking_star"
                             iconHeight="button"
                             tooltip="All Leaders"
@@ -1144,7 +1213,7 @@ const SeasonDetailsPage = () => {
                         <>
                           Goalies
                           <InfoTooltip
-                            text={GOALIE_MIN_GAMES_TOOLTIP}
+                            text={goalieEligibilityTooltip}
                             size="0.9rem"
                           />
                         </>
@@ -1164,7 +1233,7 @@ const SeasonDetailsPage = () => {
                             type="button"
                             variant="outlined"
                             intent="neutral"
-                            size="sm"
+                            size="medium"
                             icon="ranking_star"
                             iconHeight="button"
                             tooltip="All Leaders"
@@ -1341,7 +1410,7 @@ const SeasonDetailsPage = () => {
                       return (
                         <Section
                           key={conf.id}
-                          title={conf.name}
+                          title={standingsGroupTitle(conf)}
                         >
                           {renderTable(rows, 'No standings data yet.')}
                         </Section>
@@ -1358,7 +1427,7 @@ const SeasonDetailsPage = () => {
                       return (
                         <Section
                           key={div.id}
-                          title={div.name}
+                          title={standingsGroupTitle(div)}
                         >
                           {renderTable(rows, 'No standings data yet.')}
                         </Section>
@@ -1377,7 +1446,7 @@ const SeasonDetailsPage = () => {
                       return (
                         <Section
                           key={conf.id}
-                          title={conf.name}
+                          title={standingsGroupTitle(conf)}
                         >
                           {renderTable(rows, 'No wildcard contenders yet.')}
                         </Section>
@@ -1387,29 +1456,12 @@ const SeasonDetailsPage = () => {
 
                   // ── League: all teams in one table (default) ─────────────────────
                   return (
-                    <Card>
+                    <Section title="League">
                       {renderTable(sortRows(withPlaces(standings)), 'No standings data yet.')}
-                    </Card>
+                    </Section>
                   );
                 })()}
               </div>
-            ),
-          },
-          {
-            label: 'Awards',
-            icon: 'emoji_events',
-            content: (
-              <SeasonAwardsTab
-                seasonId={id!}
-                leagueCode={season.league_code}
-                leagueId={season.league_id}
-                seasonName={season.name}
-                playoffsStarted={season.playoffs_started}
-                seasonTeams={effectiveSeasonTeams}
-                skaters={skaters}
-                goalies={goalies}
-                standings={standings}
-              />
             ),
           },
           {
@@ -1430,7 +1482,30 @@ const SeasonDetailsPage = () => {
                 leagueBestOfPlayoff={season.league_best_of_playoff}
                 standings={standings}
                 standingsLoading={standingsLoading}
+                canStartPlayoffs={canStartPlayoffs}
+                startPlayoffsDisabled={startPlayoffsDisabled}
+                startPlayoffsBusy={busy === 'start-playoffs'}
+                onStartPlayoffs={() => setShowStartPlayoffsConfirm(true)}
                 updateSeason={updateSeason}
+              />
+            ),
+          },
+          {
+            label: 'Awards',
+            icon: 'emoji_events',
+            content: (
+              <SeasonAwardsTab
+                seasonId={id!}
+                leagueCode={season.league_code}
+                leagueId={season.league_id}
+                seasonName={season.name}
+                playoffsStarted={season.playoffs_started}
+                isEnded={season.is_ended}
+                seasonTeams={effectiveSeasonTeams}
+                groups={groups}
+                skaters={skaters}
+                goalies={goalies}
+                standings={standings}
               />
             ),
           },
@@ -1439,7 +1514,7 @@ const SeasonDetailsPage = () => {
 
       <ConfirmModal
         open={showStartPlayoffsConfirm}
-        title="End Regular Season"
+        title="Start Playoffs"
         body={
           <>
             This will mark the regular season as complete and open the playoff matchup
@@ -1480,6 +1555,7 @@ const SeasonDetailsPage = () => {
         showRegularSeasonSettings
         leagueBestOfShootout={season.league_best_of_shootout}
         leagueScoringSystem={season.league_scoring_system}
+        leagueGoalieMinRegularMinutes={season.league_goalie_min_regular_minutes}
         onClose={() => setShowEditModal(false)}
       />
     </>

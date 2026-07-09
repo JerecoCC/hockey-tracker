@@ -11,7 +11,7 @@ export interface PlayerStintRecord {
   id: string;
   player_id: string;
   team_id: string;
-  season_id: string;
+  season_id: string | null;
   roster_player_team_id?: string | null;
   jersey_number: number | null;
   is_prospect: boolean;
@@ -21,6 +21,8 @@ export interface PlayerStintRecord {
   start_date: string | null;
   end_date: string | null;
   created_at: string;
+  has_stats?: boolean;
+  can_delete?: boolean;
   team: {
     id: string;
     name: string | null;
@@ -57,6 +59,11 @@ export interface CreateStintData {
   end_date?: string | null;
 }
 
+export interface UpdateJerseyHistoryEntryData {
+  jersey_number: number;
+  effective_from: string;
+}
+
 /** One row from jersey_number_history for a player's stint. */
 export interface JerseyHistoryEntry {
   id: string;
@@ -67,14 +74,15 @@ export interface JerseyHistoryEntry {
 }
 
 export interface PlayerPhotoEntry {
-  id: string;
+  id: string | null;
   player_id: string;
   team_id: string;
   season_id: string;
-  photo: string;
-  created_at: string;
+  photo: string | null;
+  created_at: string | null;
   season_name: string | null;
   team_name: string | null;
+  has_saved_photo?: boolean;
 }
 
 /**
@@ -202,15 +210,35 @@ export const useStintActions = (playerId: string | null) => {
     }
   };
 
+  const deleteStint = async (stintId: string): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await axios.delete(`${API}/admin/player-teams/${stintId}`, { headers: authHeaders() });
+      toast.success('Stint deleted!');
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['player', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete stint'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const uploadStintPhoto = async (file: File): Promise<string | null> => {
     const formData = new FormData();
     formData.append('photo', file);
     try {
-      const { data } = await axios.post<{ url: string }>(
-        `${API}/admin/players/upload`,
-        formData,
-        { headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' } },
-      );
+      const { data } = await axios.post<{ url: string }>(`${API}/admin/players/upload`, formData, {
+        headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' },
+      });
       return data.url;
     } catch (err) {
       toast.error(apiError(err, 'Failed to upload photo'));
@@ -223,6 +251,15 @@ export const useStintActions = (playerId: string | null) => {
     jerseyNumber: number,
     effectiveDate?: string | null,
   ): Promise<boolean> => {
+    if (!stint.season_id) {
+      toast.error('Add this player to a season roster before changing jersey number');
+      return false;
+    }
+    if (!effectiveDate) {
+      toast.error('Effective date is required to change a jersey number');
+      return false;
+    }
+
     setSaving(true);
     try {
       await axios.patch(
@@ -232,7 +269,7 @@ export const useStintActions = (playerId: string | null) => {
           team_id: stint.team_id,
           season_id: stint.season_id,
           jersey_number: jerseyNumber,
-          ...(effectiveDate ? { effective_date: effectiveDate } : {}),
+          effective_date: effectiveDate,
         },
         { headers: authHeaders() },
       );
@@ -245,6 +282,57 @@ export const useStintActions = (playerId: string | null) => {
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update jersey number'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateJerseyHistoryEntry = async (
+    entryId: string,
+    data: UpdateJerseyHistoryEntryData,
+  ): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await axios.patch(`${API}/admin/player-teams/history/jerseys/${entryId}`, data, {
+        headers: authHeaders(),
+      });
+      toast.success('Jersey history updated!');
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['jersey-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update jersey history'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteJerseyHistoryEntry = async (entryId: string): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await axios.delete(`${API}/admin/player-teams/history/jerseys/${entryId}`, {
+        headers: authHeaders(),
+      });
+      toast.success('Jersey history deleted!');
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['jersey-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete jersey history'));
       return false;
     } finally {
       setSaving(false);
@@ -285,7 +373,42 @@ export const useStintActions = (playerId: string | null) => {
     }
   };
 
-  return { createStint, updateStint, changeJerseyNumber, changePlayerPhoto, uploadStintPhoto, saving };
+  const deletePlayerPhoto = async (photoId: string): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await axios.delete(`${API}/admin/player-teams/history/photos/${photoId}`, {
+        headers: authHeaders(),
+      });
+      toast.success('Season photo deleted!');
+      await queryClient.invalidateQueries({ queryKey: ['player-photo-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete season photo'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return {
+    createStint,
+    updateStint,
+    deleteStint,
+    changeJerseyNumber,
+    updateJerseyHistoryEntry,
+    deleteJerseyHistoryEntry,
+    changePlayerPhoto,
+    deletePlayerPhoto,
+    uploadStintPhoto,
+    saving,
+  };
 };
 
 export interface PlayerRosterInput {
@@ -318,6 +441,7 @@ const apiError = (err: unknown, fallback: string): string =>
 interface UseTeamPlayersOptions {
   includeProspects?: boolean;
   prospectsOnly?: boolean;
+  mode?: 'admin' | 'user';
 }
 
 type PlayersCacheData =
@@ -392,20 +516,25 @@ const useTeamPlayers = (
 ) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const { mode = 'admin', ...playerFilters } = options;
+  const basePath = mode === 'user' ? 'user' : 'admin';
 
   const { data: players = [], isLoading: loading } = useQuery<TeamPlayerRecord[]>({
-    queryKey: ['players', { team_id: teamId, season_id: seasonId, ...options }],
+    queryKey: [
+      mode === 'user' ? 'user-team-players' : 'players',
+      { team_id: teamId, season_id: seasonId, ...playerFilters },
+    ],
     queryFn: async () => {
       try {
         const params: Record<string, string> = {};
         if (teamId) params.team_id = teamId;
         if (seasonId) params.season_id = seasonId;
-        if (options.includeProspects) params.include_prospects = 'true';
-        if (options.prospectsOnly) params.prospects_only = 'true';
-        const { data } = await axios.get<TeamPlayerRecord[]>(
-          `${API}/admin/players`,
-          { headers: authHeaders(), params },
-        );
+        if (playerFilters.includeProspects) params.include_prospects = 'true';
+        if (playerFilters.prospectsOnly) params.prospects_only = 'true';
+        const { data } = await axios.get<TeamPlayerRecord[]>(`${API}/${basePath}/players`, {
+          headers: authHeaders(),
+          params,
+        });
         return data;
       } catch (err) {
         toast.error(apiError(err, 'Failed to load roster'));
@@ -471,11 +600,9 @@ const useTeamPlayers = (
     const formData = new FormData();
     formData.append('photo', file);
     try {
-      const { data } = await axios.post<{ url: string }>(
-        `${API}/admin/players/upload`,
-        formData,
-        { headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' } },
-      );
+      const { data } = await axios.post<{ url: string }>(`${API}/admin/players/upload`, formData, {
+        headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' },
+      });
       return data.url;
     } catch (err) {
       toast.error(apiError(err, 'Failed to upload player photo'));
@@ -501,9 +628,7 @@ const useTeamPlayers = (
         { headers: authHeaders() },
       );
       updatePlayerCaches(queryClient, (player) =>
-        player.id === playerId && player.team_id === tId
-          ? { ...player, ...payload }
-          : player,
+        player.id === playerId && player.team_id === tId ? { ...player, ...payload } : player,
       );
       await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
@@ -593,9 +718,7 @@ const useTeamPlayers = (
       });
       toast.success('Player removed from team');
       updatePlayerCaches(queryClient, (cachedPlayer) =>
-        isSameRosterRecord(cachedPlayer, player)
-          ? null
-          : cachedPlayer,
+        isSameRosterRecord(cachedPlayer, player) ? null : cachedPlayer,
       );
       await queryClient.invalidateQueries({ queryKey: ['player-trade-history', player.id] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
@@ -646,7 +769,12 @@ const useTeamPlayers = (
   const createAndRosterPlayers = async (
     tId: string,
     sId: string,
-    players: Array<Omit<BulkPlayerInput, 'shoots'> & { shoots?: BulkPlayerInput['shoots']; jersey_number?: number | null }>,
+    players: Array<
+      Omit<BulkPlayerInput, 'shoots'> & {
+        shoots?: BulkPlayerInput['shoots'];
+        jersey_number?: number | null;
+      }
+    >,
   ): Promise<string[] | null> => {
     // Step 1: bulk-create the new players.
     // If this fails, nothing was written — return null so the modal stays open.
@@ -708,7 +836,10 @@ const useTeamPlayers = (
       const { data } = await axios.post(
         `${API}/admin/player-teams/bulk-trade`,
         {
-          players: playerRows.map((r) => ({ player_id: r.playerId, jersey_number: r.jerseyNumber })),
+          players: playerRows.map((r) => ({
+            player_id: r.playerId,
+            jersey_number: r.jerseyNumber,
+          })),
           season_id: sId,
           to_team_id: toTeamId,
           trade_date: tradeDate,

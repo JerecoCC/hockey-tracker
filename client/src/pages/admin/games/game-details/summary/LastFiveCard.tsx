@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Icon from '@/components/Icon/Icon';
-import Section from '@/components/Section/Section';
-import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
+import Icon from '@jerecocc/tracker-ui/Icon';
+import Section from '@jerecocc/tracker-ui/Section';
+import SegmentedControl from '@jerecocc/tracker-ui/SegmentedControl';
 import type { GameRecord } from '@/hooks/useGames';
 import LastTeamGamesAccordion from './LastTeamGamesAccordion';
 import styles from './LastFiveCard.module.scss';

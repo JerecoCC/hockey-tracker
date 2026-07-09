@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import Accordion from '@/components/Accordion/Accordion';
-import Button from '@/components/Button/Button';
-import Modal from '@/components/Modal/Modal';
-import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import Select from '@/components/Select/Select';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
-import TimePicker from '@/components/TimePicker/TimePicker';
-import Tooltip from '@/components/Tooltip/Tooltip';
+import Accordion from '@jerecocc/tracker-ui/Accordion';
+import Badge from '@jerecocc/tracker-ui/Badge';
+import Button from '@jerecocc/tracker-ui/Button';
+import Modal from '@jerecocc/tracker-ui/Modal';
+import PlayerAvatar from '@jerecocc/tracker-ui/PlayerAvatar';
+import Select from '@jerecocc/tracker-ui/Select';
+import TeamLogo from '@jerecocc/tracker-ui/TeamLogo';
+import TimePicker from '@jerecocc/tracker-ui/TimePicker';
+import Tooltip from '@jerecocc/tracker-ui/Tooltip';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import {
@@ -16,13 +17,12 @@ import {
   type GoalieStintRecord,
   type UpdateGoalieStintData,
 } from '@/hooks/useGameGoalieStats';
-import fieldStyles from '@/components/Field/Field.module.scss';
+import fieldStyles from '@/shared/trackerFieldStyles.module.scss';
 import styles from './GameDetailsPage.module.scss';
 import { PERIOD, PERIOD_ORDER } from './constants';
 import { compareGoalieStats } from './goalieStatsOrdering';
 
-const fmt = (first: string | null, last: string | null) =>
-  [first, last].filter(Boolean).join(' ');
+const fmt = (first: string | null, last: string | null) => [first, last].filter(Boolean).join(' ');
 
 const jerseyChipLabel = (jerseyNumber: number | null) =>
   jerseyNumber == null ? null : String(jerseyNumber).replace(/\D/g, '').slice(0, 2);
@@ -72,8 +72,7 @@ const addPeriodsThrough = (periods: Set<string>, period: string | null | undefin
   const normalized = normalizeGamePeriodForStints(period);
   const periodIndex = normalized ? PERIOD_ORDER_VALUES.indexOf(normalized) : -1;
   const thirdPeriodIndex = PERIOD_ORDER_VALUES.indexOf(PERIOD.THIRD);
-  const lastRegulationIndex =
-    periodIndex >= 0 ? Math.min(periodIndex, thirdPeriodIndex) : 0;
+  const lastRegulationIndex = periodIndex >= 0 ? Math.min(periodIndex, thirdPeriodIndex) : 0;
 
   for (let index = 0; index <= lastRegulationIndex; index += 1) {
     const periodId = PERIOD_ORDER_VALUES[index];
@@ -175,9 +174,7 @@ interface GoalieStatsFormValues {
 const lastStintForRow = (row: GoalieEditRow) => row.stints[row.stints.length - 1];
 
 const addStintBlockReason = (row: GoalieEditRow) => {
-  const incompleteExit = row.stints.find(
-    (stint) => !stint.exited_period || !stint.exited_time,
-  );
+  const incompleteExit = row.stints.find((stint) => !stint.exited_period || !stint.exited_time);
   if (!incompleteExit) return null;
   return incompleteExit.exited_period
     ? 'Set an exit time before adding another stint'
@@ -690,6 +687,7 @@ const GoalieStatsEditModal = ({
             <Accordion
               key={stat.goalie_id}
               variant="static"
+              headerType="light"
               hoverRevealActions
               className={
                 teamGoalieCount > 1 && goalieHasStarterStint
@@ -729,18 +727,18 @@ const GoalieStatsEditModal = ({
               }
               headerRight={
                 <div className={styles.goalieStatsEditorTotals}>
-                  <span className={styles.goalieStatsEditorTotalPill}>
-                    <b>{totals.shots}</b>
-                    SA
-                  </span>
-                  <span className={styles.goalieStatsEditorTotalPill}>
-                    <b>{totals.saves}</b>
-                    SV
-                  </span>
-                  <span className={styles.goalieStatsEditorTotalPill}>
-                    <b>{totals.goals}</b>
-                    GA
-                  </span>
+                  <Badge
+                    label="SA"
+                    value={totals.shots}
+                  />
+                  <Badge
+                    label="SV"
+                    value={totals.saves}
+                  />
+                  <Badge
+                    label="GA"
+                    value={totals.goals}
+                  />
                 </div>
               }
               hoverActions={[
@@ -788,8 +786,6 @@ const GoalieStatsEditModal = ({
                   const isStarter =
                     !!originalStint &&
                     isStartingWindow(stintRow.entered_period, stintRow.entered_time);
-                  const canRemoveStint =
-                    isPendingId(stintRow.id) || (row.stints.length > 1 && !isStarter);
 
                   return (
                     <div
@@ -881,19 +877,16 @@ const GoalieStatsEditModal = ({
                       <span className={styles.goalieStatsEditorValue}>
                         {stintSaves(stintRow, originalStint)}
                       </span>
-                      {canRemoveStint && (
-                        <Button
-                          variant="outlined"
-                          intent="danger"
-                          icon="delete"
-                          size="sm"
-                          tooltip={
-                            isPendingId(stintRow.id) ? 'Discard this stint' : 'Remove this stint'
-                          }
-                          disabled={busy}
-                          onClick={() => handleRemoveStint(goalieIdx, stintRow.id)}
-                        />
-                      )}
+                      <Button
+                        variant="outlined"
+                        intent="danger"
+                        icon="delete"
+                        tooltip={
+                          isPendingId(stintRow.id) ? 'Discard this stint' : 'Remove this stint'
+                        }
+                        disabled={busy}
+                        onClick={() => handleRemoveStint(goalieIdx, stintRow.id)}
+                      />
                     </div>
                   );
                 })}
@@ -936,7 +929,6 @@ const GoalieStatsEditModal = ({
                   variant="filled"
                   intent="accent"
                   icon="add"
-                  size="sm"
                   tooltip="Add goalie"
                   disabled={busy || !addDraft.goalie_id}
                   onClick={handleAddGoalie}
@@ -945,7 +937,6 @@ const GoalieStatsEditModal = ({
                   variant="ghost"
                   intent="neutral"
                   icon="close"
-                  size="sm"
                   tooltip="Cancel"
                   disabled={busy}
                   onClick={() => setAdding(false)}

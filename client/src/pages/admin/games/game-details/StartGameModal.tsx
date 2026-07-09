@@ -1,6 +1,6 @@
 import { useForm } from 'react-hook-form';
-import Field from '@/components/Field/Field';
-import Modal from '@/components/Modal/Modal';
+import Field from '@jerecocc/tracker-ui/Field';
+import Modal from '@jerecocc/tracker-ui/Modal';
 import styles from './GameDetailsPage.module.scss';
 import { etHHMMtoISO } from './formatUtils';
 

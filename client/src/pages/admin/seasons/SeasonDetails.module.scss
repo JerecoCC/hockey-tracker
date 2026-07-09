@@ -86,6 +86,14 @@
   }
 }
 
+.seasonInfoHeader {
+  align-items: flex-start;
+}
+
+.seasonInfoActions {
+  align-items: flex-start;
+}
+
 .leagueInfoValue {
   display: inline-block;
   max-width: 100%;
@@ -601,6 +609,12 @@
     --award-winner-card-height: 186px;
     --award-header-height: 52px;
     --award-player-row-height: 82px;
+    --award-recipient-stat-card-height: 80px;
+    --award-winner-stat-gap: #{$space-sm};
+    --award-winner-stat-player-height: calc(
+      var(--award-winner-card-height) - var(--award-recipient-stat-card-height) -
+        #{$space-sm * 2} - 1px
+    );
     --award-scrollbar-size: 8px;
     --award-divider-gap: #{$space-sm};
     --award-content-padding: #{$space-md};
@@ -724,6 +738,22 @@
       min-height: 100%;
       max-height: none;
     }
+
+    .awardWinnerStatStack {
+      height: 100%;
+      min-height: 100%;
+      max-height: none;
+
+      .awardWinnerCard {
+        --player-card-min-height: 0;
+        --player-card-max-height: none;
+
+        flex: 1 1 auto;
+        height: auto;
+        min-height: 0;
+        max-height: none;
+      }
+    }
   }
 
   &Recipients {
@@ -770,6 +800,56 @@
     min-width: 0;
     min-height: var(--player-card-min-height);
     max-height: var(--player-card-max-height);
+  }
+
+  &WinnerStatStack {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: var(--award-winner-stat-gap);
+    min-width: 0;
+    min-height: var(--award-winner-card-height);
+    max-height: var(--award-winner-card-height);
+    list-style: none;
+
+    .awardWinnerCard {
+      --player-card-min-height: var(--award-winner-stat-player-height);
+      --player-card-max-height: var(--award-winner-stat-player-height);
+
+      flex: 1 1 auto;
+      width: 100%;
+      min-height: var(--player-card-min-height);
+      max-height: var(--player-card-max-height);
+    }
+  }
+
+  &RecipientStatDivider {
+    width: 100%;
+  }
+
+  &RecipientStatCard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    width: 100%;
+    height: var(--award-recipient-stat-card-height);
+    min-height: var(--award-recipient-stat-card-height);
+    padding: $space-sm $space-md;
+    text-align: center;
+  }
+
+  &RecipientStat {
+    --stat-item-justify: center;
+    --stat-item-gap: 2px;
+    --stat-item-label-font-size: #{$font-xs};
+    --stat-item-label-font-weight: 700;
+    --stat-item-label-letter-spacing: 0;
+    --stat-item-label-line-height: 1.2;
+    --stat-item-value-font-size: 1.375rem;
+    --stat-item-value-font-weight: 900;
+    --stat-item-value-line-height: 1;
   }
 
   &WinnerCardsMultiple &WinnerCard {
@@ -892,7 +972,47 @@
     flex: 0 0 min(260px, 82vw);
   }
 
+  &PlayerListItemStack {
+    --player-card-list-min-height: var(--award-player-row-height);
+
+    display: flex;
+    align-items: stretch;
+    flex: 0 0 min(360px, 92vw);
+    gap: $space-sm;
+    min-width: 0;
+    min-height: var(--award-player-row-height);
+    list-style: none;
+
+    .awardPlayerListItem {
+      flex: 1 1 auto;
+      width: auto;
+      min-width: 0;
+    }
+
+    .awardRecipientStatCard {
+      flex: 0 0 112px;
+      width: 112px;
+      height: auto;
+      min-height: var(--player-card-list-min-height, 72px);
+      padding: $space-sm $space-md;
+    }
+
+    .awardRecipientStat {
+      --stat-item-label-font-size: 0.625rem;
+      --stat-item-value-font-size: #{$font-base};
+    }
+  }
+
+  &RecipientStatListDivider {
+    --divider-vertical-margin-block: #{$space-xs};
+  }
+
   &PlayerListScrollerColumn &PlayerListItem {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  &PlayerListScrollerColumn &PlayerListItemStack {
     flex: 0 0 auto;
     width: 100%;
   }
@@ -953,34 +1073,35 @@
     flex-direction: column;
   }
 
-  &PlayerChecklistControls {
-    display: flex;
-    gap: $space-md;
-    align-items: center;
-    margin-bottom: $space-lg;
-
-    @media (max-width: $bp-tablet) {
-      flex-direction: column;
-      align-items: stretch;
-    }
-  }
-
-  &PlayerChecklistSearch {
-    flex: 1;
-  }
-
   &PlayerChecklistList {
     --selectable-list-item-image-size: 48px;
     --selectable-list-item-image-font-size: #{$font-base};
 
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: $space-sm;
     max-height: min(70vh, 680px);
     margin: 0;
-    padding: 0;
+    padding: $space-sm 0;
     overflow-y: auto;
     list-style: none;
+  }
+
+  &PlayerChecklistFooter {
+    border-top: 1px solid var(--app-border, #{$border});
+    padding-top: $space-xl;
+  }
+
+  &PlayerChecklistFooterDivider {
+    display: none;
+  }
+
+  &PlayerRadioList {
+    --selectable-list-item-image-size: 48px;
+    --selectable-list-item-image-font-size: #{$font-base};
+
+    max-height: min(70vh, 680px);
+    overflow-y: auto;
   }
 
   &PlayerChecklistEmpty {
@@ -1005,32 +1126,32 @@
 
   &NomineeDraftRow {
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: $space-sm;
     align-items: center;
   }
 
-  &NomineeDraftCount {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    min-height: 42px;
-    color: var(--app-text-muted, #{$text-dim});
-    font-size: $font-xs;
-    font-weight: 700;
-    line-height: 1;
+  &NomineeDraftLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
   &NomineeAddRow {
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: $space-sm;
     align-items: center;
   }
 
   &NomineeAddButton {
-    grid-column: 2 / -1;
+    grid-column: 1 / -1;
     width: 100%;
   }
 

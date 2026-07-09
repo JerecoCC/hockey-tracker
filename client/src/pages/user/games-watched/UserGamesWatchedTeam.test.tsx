@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import BreadcrumbTitleRow from '@/components/Breadcrumbs/BreadcrumbTitleRow';
+import BreadcrumbTitleRow from '@jerecocc/tracker-ui/BreadcrumbTitleRow';
 import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
 import useTeams from '@/hooks/useTeams';
 import UserGamesWatchedTeam from './UserGamesWatchedTeam';
@@ -11,7 +11,7 @@ import UserGamesWatchedTeam from './UserGamesWatchedTeam';
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn() }));
 jest.mock('axios');
 jest.mock('@/hooks/useTeams');
-jest.mock('@/components/Select/Select', () => ({
+jest.mock('@jerecocc/tracker-ui/Select', () => ({
   __esModule: true,
   default: ({ value, options, onChange }: any) => (
     <select
@@ -30,7 +30,7 @@ jest.mock('@/components/Select/Select', () => ({
     </select>
   ),
 }));
-jest.mock('@/components/TeamLogo/TeamLogo', () => ({ code, alt }: any) => (
+jest.mock('@jerecocc/tracker-ui/TeamLogo', () => ({ code, alt }: any) => (
   <span aria-label={alt}>{code}</span>
 ));
 
@@ -199,6 +199,8 @@ describe('UserGamesWatchedTeam', () => {
     mockAxios.get.mockResolvedValueOnce({ data: [] });
 
     renderTeamPage();
+    expect(screen.getByLabelText('Loading watched games')).toBeInTheDocument();
+    expect(screen.queryByText('Loading watched games...')).not.toBeInTheDocument();
     await mockUseQuery.mock.calls[0][0].queryFn();
 
     expect(mockAxios.get).toHaveBeenCalledWith(
@@ -217,6 +219,7 @@ describe('UserGamesWatchedTeam', () => {
     expect(screen.getByTestId('team-hero-left-strip')).toBeInTheDocument();
     expect(screen.getByTestId('team-hero-right-strip')).toBeInTheDocument();
     expect(screen.getByTestId('team-hero-primary-fill')).toBeInTheDocument();
+    expect(screen.getByTestId('team-hero-right-primary-fill')).toBeInTheDocument();
     expect(screen.getByLabelText('Toronto Maple Leafs watched games summary')).toHaveTextContent(
       '2x',
     );
