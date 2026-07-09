@@ -1038,9 +1038,11 @@ const buildManualMovementReport = ({
         teamName: draftTeamName ?? draft.teamName ?? null,
       }
     : null;
-  const anchorIsDraftStint =
-    movementAnchor?.acquisitionType === MANUAL_MOVEMENT_ACQUISITION_TYPES.draft ||
-    teamsMatch(anchorTeamName, draftTeamName);
+  const anchorHasDraftAcquisition =
+    movementAnchor?.acquisitionType === MANUAL_MOVEMENT_ACQUISITION_TYPES.draft;
+  const anchorIsDraftStint = anchorHasDraftAcquisition || teamsMatch(anchorTeamName, draftTeamName);
+  const anchorDraftStartDate =
+    anchorHasDraftAcquisition ? anchorStintStartDate : null;
   const anchorIsTeamTransferStint =
     movementAnchor?.acquisitionType === MANUAL_MOVEMENT_ACQUISITION_TYPES.teamTransfer ||
     reportTeamsShareFranchiseTransfer(teamLookup, draftTeamName, anchorTeamName);
@@ -1179,7 +1181,13 @@ const buildManualMovementReport = ({
 
     if (anchorMovementIndex >= 0) {
       visibleMovements = movements.slice(anchorMovementIndex);
-      if (anchorIsDraftStint && visibleMovements[0]) {
+      const anchorMovementIsKnownDraftStart =
+        anchorHasDraftAcquisition &&
+        visibleMovements[0] &&
+        (!visibleMovements[0].startDate ||
+          (!!anchorDraftStartDate &&
+            movementDatesAreNear(visibleMovements[0].startDate, anchorDraftStartDate)));
+      if (anchorMovementIsKnownDraftStart && visibleMovements[0]) {
         visibleMovements = [
           {
             ...visibleMovements[0],
@@ -1193,7 +1201,7 @@ const buildManualMovementReport = ({
           ...visibleMovements.slice(1),
         ];
       }
-      reportStartDate = anchorIsDraftStint
+      reportStartDate = anchorMovementIsKnownDraftStart
         ? (anchorSeasonStartDate ?? reportStartDate)
         : (movements[anchorMovementIndex].startDate ?? reportStartDate);
     } else {

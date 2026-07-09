@@ -2718,6 +2718,147 @@ describe('PlayerDetails info tab', () => {
     expect(screen.queryByText('June 26, 2026')).not.toBeInTheDocument();
   });
 
+  it('keeps trades back to the draft team as trades in the manual movement report', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        isActive: true,
+        firstName: { default: 'J.T.' },
+        lastName: { default: 'Miller' },
+        birthDate: '1993-03-14',
+        birthCity: { default: 'East Palestine' },
+        birthStateProvince: { default: 'Ohio' },
+        birthCountry: 'USA',
+        currentTeamAbbrev: 'NYR',
+        sweaterNumber: 8,
+        position: 'C',
+        draftDetails: {
+          year: 2011,
+          teamAbbrev: 'NYR',
+          round: 1,
+          overallPick: 15,
+        },
+      },
+    });
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        league_player_number: '8476468',
+        first_name: 'J.T.',
+        last_name: 'Miller',
+        photo: null,
+        date_of_birth: '1993-03-14',
+        birth_city: 'East Palestine, Ohio',
+        birth_country: 'USA',
+        height_cm: 185,
+        weight_lbs: 218,
+        position: 'C',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-nyr', name: 'New York Rangers', code: 'NYR', league_id: 'league-1' },
+        { id: 'team-van', name: 'Vancouver Canucks', code: 'VAN', league_id: 'league-1' },
+        { id: 'team-tbl', name: 'Tampa Bay Lightning', code: 'TBL', league_id: 'league-1' },
+      ],
+    });
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-2025',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          end_date: '2026-06-30',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-nyr',
+          team_id: 'team-nyr',
+          season_id: 'season-2025',
+          team: {
+            id: 'team-nyr',
+            name: 'New York Rangers',
+            code: 'NYR',
+            logo: null,
+            primary_color: '#0038a8',
+            text_color: '#ffffff',
+          },
+          jersey_number: 8,
+          is_prospect: false,
+          position: 'C',
+          acquisition_type: 'trade',
+          start_date: '2025-01-31',
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Auto-fill Player Data' }));
+
+    expect(await screen.findByRole('dialog', { name: 'PuckPedia Source' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
+      target: {
+        value: `
+          Date	Type	Teams	Details
+          Jan 31, 2025	Trade
+
+          The New York Rangers acquired JT Miller, Erik Brannstrom, and Jackson Dorrington from the Vancouver Canucks for Filip Chytil, Victor Mancini, and a conditional 2025 1st round pick
+          Sep 2, 2022	Signing
+
+          J.T. Miller signs a 7-Year, $56,000,000 deal with the Canucks
+          Jun 22, 2019	Trade
+
+          The Vancouver Canucks acquired JT Miller from Tampa Bay Lightning for Conditional 2020 First Round Pick, 2019 third round pick and Marek Mazanec
+          Jun 26, 2018	Signing
+
+          J.T. Miller signs a 5-Year, $26,250,000 deal with the Lightning
+          Jul 13, 2016	Signing
+
+          J.T. Miller signs a 2-Year, $5,500,000 deal with the Rangers
+          Jul 15, 2015	Signing
+
+          J.T. Miller signs a 1-Year, $874,000 deal with the Rangers
+          Jul 28, 2011	Signing
+
+          J.T. Miller signs a 3-Year, $3,825,000 deal with the Rangers
+        `,
+      },
+    });
+    await user.click(screen.getByText('Build report'));
+
+    const reportSection = screen
+      .getByText('Manual Movement Report')
+      .closest('.stintHistorySection') as HTMLElement;
+    const report = within(reportSection);
+    const movementRows = report
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+
+    expect(report.getByText('Draft Year: 2011 | Round: 1')).toBeInTheDocument();
+    expect(movementRows).toEqual([
+      ['New York Rangers', 'Trade', 'January 31, 2025', 'Present'],
+    ]);
+  });
+
   it('auto-fills PWHL player details from HockeyTech profile data', async () => {
     const user = userEvent.setup();
     const updateStint = jest.fn().mockResolvedValue(true);
