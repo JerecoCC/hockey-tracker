@@ -345,6 +345,15 @@ const isDateKeyInWeek = (dateKey: string, weekStartKey: string) => {
   return date >= weekStart && date <= weekEnd;
 };
 
+const isDateKeyInMonthQueryWindow = (dateKey: string, monthKey: string) => {
+  if (!DATE_ONLY_RE.test(dateKey) || !MONTH_ONLY_RE.test(monthKey)) return false;
+  const month = fromMonthPickerValue(monthKey);
+  const start = addDays(month, -1);
+  const end = addDays(addMonths(month, 1), 1);
+  const date = dateKeyToDate(dateKey);
+  return date >= start && date < end;
+};
+
 const userGameMatchesCachedQuery = (
   game: GameRecord,
   query: UserGamesCacheQuery,
@@ -363,7 +372,7 @@ const userGameMatchesCachedQuery = (
 
   const dateKey = getEffectiveUserDateKey(game, tzPref);
   if (query.week) return !!dateKey && isDateKeyInWeek(dateKey, query.week);
-  if (query.month) return !!dateKey && dateKey.slice(0, 7) === query.month;
+  if (query.month) return !!dateKey && isDateKeyInMonthQueryWindow(dateKey, query.month);
   return true;
 };
 
@@ -802,7 +811,7 @@ const UserGames = () => {
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
   const [calendarDownloadBusy, setCalendarDownloadBusy] = useState(false);
-  const hasSeededTeamFilterRef = useRef(false);
+  const seededTeamFilterLeagueRef = useRef<string | null>(null);
   const calendarGridRef = useRef<HTMLDivElement>(null);
 
   const weekEnd = addDays(weekStart, 6);
@@ -914,11 +923,12 @@ const UserGames = () => {
 
     const availableIds = new Set(teamOptions.map((option) => option.value));
     const availableFavoriteIds = favoriteTeamIds.filter((teamId) => availableIds.has(teamId));
-    const shouldSeedFavorites =
-      !hasSeededTeamFilterRef.current &&
-      (!teamsLoading || teamOptions.length > 0 || favoriteTeamIds.length === 0);
+    const canSeedFavorites =
+      !teamsLoading || teamOptions.length > 0 || favoriteTeamIds.length === 0;
+    if (!canSeedFavorites) return;
 
-    if (shouldSeedFavorites) hasSeededTeamFilterRef.current = true;
+    const shouldSeedFavorites = seededTeamFilterLeagueRef.current !== leagueId;
+    seededTeamFilterLeagueRef.current = leagueId;
 
     const getNextTeamFilter = (current: string[]) =>
       shouldSeedFavorites
@@ -933,7 +943,7 @@ const UserGames = () => {
       const next = getNextTeamFilter(current);
       return stableStringArray(current, next);
     });
-  }, [favoriteTeamIds, favoriteTeamIdsData, teamOptions, teamsLoading]);
+  }, [favoriteTeamIds, favoriteTeamIdsData, leagueId, teamOptions, teamsLoading]);
 
   const applyTeamFilter = () => {
     setAppliedTeamFilter((current) => stableStringArray(current, teamFilter));
