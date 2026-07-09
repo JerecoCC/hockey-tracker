@@ -329,9 +329,13 @@ describe('GET /api/user/games', () => {
     expect(res.body[0].scheduled_for).toBe('2024-10-12');
     expect(queryText).toContain('ps.bracket_slot_key AS bracket_slot_key');
     expect(queryText).toContain('brs.matchup_names AS playoff_matchup_names');
+    expect(queryText).toContain('COALESCE(uwg.watched_on, uwg.watched_at::date)::text AS watched_on');
+    expect(queryText).toContain('uwg.scheduled_for::text AS scheduled_for');
     expect(res.body[0]).toMatchObject({ home_score: 0, away_score: 0, winner_team_id: null });
     expect(sql.mock.calls[0].slice(1)).toContain('user-1');
     expect(queryText).toContain('user_favorite_teams');
+    expect(queryText).toContain("AT TIME ZONE 'UTC'");
+    expect(queryText).toContain('user_game_dates.effective_user_date');
     expect(queryText).toContain('::uuid[] IS NULL');
     expect(queryText).toContain('uwg.skipped_at IS NULL');
   });
@@ -411,7 +415,7 @@ describe('GET /api/user/games', () => {
 
     expect(res.status).toBe(200);
     expect(sql.mock.calls[0].slice(1)).toContain('2024-10-07');
-    expect(queryText).toContain('uwg.scheduled_for');
+    expect(queryText).toContain('user_game_dates.effective_user_date');
     expect(queryText).toContain("INTERVAL '1 day'");
     expect(queryText).toContain("INTERVAL '8 days'");
   });
@@ -424,7 +428,7 @@ describe('GET /api/user/games', () => {
 
     expect(res.status).toBe(200);
     expect(sql.mock.calls[0].slice(1)).toContain('2024-10');
-    expect(queryText).toContain('uwg.scheduled_for');
+    expect(queryText).toContain('user_game_dates.effective_user_date');
     expect(queryText).toContain("INTERVAL '1 day'");
     expect(queryText).toContain("INTERVAL '1 month'");
   });
@@ -505,6 +509,8 @@ describe('GET /api/user/games/:id', () => {
     expect(queryText).toContain('prev.previous_meetings');
     expect(queryText).toContain('ps.bracket_slot_key AS bracket_slot_key');
     expect(queryText).toContain('brs.matchup_names AS playoff_matchup_names');
+    expect(queryText).toContain('COALESCE(uwg.watched_on, uwg.watched_at::date)::text AS watched_on');
+    expect(queryText).toContain('uwg.scheduled_for::text AS scheduled_for');
     expect(queryText).not.toContain('NULL::int AS series_home_wins_at_game');
     expect(queryText).not.toContain("'[]'::json AS home_last_five");
   });

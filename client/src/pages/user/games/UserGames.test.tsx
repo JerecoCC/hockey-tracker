@@ -745,6 +745,54 @@ describe('UserGames schedule views', () => {
     expect(calendarGameItem).toHaveClass(styles.calendarGameLeagueTint);
     expect(calendarGameItem).toHaveStyle('--game-league-primary: #0a4fa3');
   });
+
+  it('renders ISO watch dates inside the literal first day in Week view', () => {
+    const isoScheduledGame = {
+      ...games[0],
+      id: 'game-week-iso-watch-date',
+      scheduled_at: currentMonthIso(-1),
+      scheduled_for: `${scheduledWatchDate}T00:00:00+14:00`,
+    };
+
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-away'] };
+      if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+      if (queryKey[0] === 'user-games') return { data: [isoScheduledGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    const firstDayCard = screen.getByText(formatHeading(scheduledWatchDate)).parentElement;
+    expect(within(firstDayCard as HTMLElement).getAllByText('AWY').length).toBeGreaterThan(0);
+  });
+
+  it('renders midnight-placeholder games inside the literal first day in Week view', () => {
+    const midnightGame = {
+      ...games[0],
+      id: 'game-week-midnight',
+      scheduled_at: `${scheduledWatchDate}T00:00:00+14:00`,
+      scheduled_time: null,
+      scheduled_for: null,
+    };
+
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-away'] };
+      if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+      if (queryKey[0] === 'user-games') return { data: [midnightGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    const firstDayCard = screen.getByText(formatHeading(scheduledWatchDate)).parentElement;
+    expect(within(firstDayCard as HTMLElement).getAllByText('AWY').length).toBeGreaterThan(0);
+  });
+
   it('shows skipped games when the filter switch is enabled', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
@@ -1893,7 +1941,7 @@ describe('UserGames schedule views', () => {
         name: 'First Day Team',
         code: 'FDY',
       },
-      scheduled_for: firstDayKey,
+      scheduled_for: `${firstDayKey}T00:00:00+14:00`,
     };
 
     mockUseQuery.mockImplementation(({ queryKey }: any) => {
@@ -1924,6 +1972,54 @@ describe('UserGames schedule views', () => {
 
     const firstDay = screen.getByLabelText(`Calendar day ${firstDayKey}`);
     expect(within(firstDay).getByText('FDY')).toBeInTheDocument();
+    expect(within(firstDay).getByLabelText('1 game')).toBeInTheDocument();
+  });
+
+  it('renders midnight-placeholder games inside the first day of the selected month', async () => {
+    const user = userEvent.setup();
+    const firstDayKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
+    const firstDayGame = {
+      ...games[0],
+      id: 'game-first-day-midnight',
+      away_team: {
+        ...games[0].away_team,
+        id: 'team-midnight',
+        name: 'Midnight Team',
+        code: 'MID',
+      },
+      scheduled_at: `${firstDayKey}T00:00:00+14:00`,
+      scheduled_time: null,
+      scheduled_for: null,
+    };
+
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-midnight'] };
+      if (queryKey[0] === 'user-teams')
+        return {
+          data: [
+            ...allTeams,
+            {
+              id: 'team-midnight',
+              name: 'Midnight Team',
+              code: 'MID',
+              logo: null,
+              league_id: 'league-1',
+            },
+          ],
+          isLoading: false,
+        };
+      if (queryKey[0] === 'user-games') return { data: [firstDayGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+
+    const firstDay = screen.getByLabelText(`Calendar day ${firstDayKey}`);
+    expect(within(firstDay).getByText('MID')).toBeInTheDocument();
     expect(within(firstDay).getByLabelText('1 game')).toBeInTheDocument();
   });
 

@@ -118,13 +118,14 @@ const getScheduledInstant = (scheduledAt: string | null, scheduledTime: string |
 
 const getScheduledWatchDateKey = (value: string | null | undefined) => {
   if (!value) return null;
-  if (DATE_ONLY_RE.test(value)) return value;
-  return toLocalDateKey(value);
+  return getRawDateKey(value) ?? toLocalDateKey(value);
 };
 
 const getOriginalGameDateKey = (game: GameRecord, tzPref: TzPref) => {
-  if (game.scheduled_at && DATE_ONLY_RE.test(game.scheduled_at) && !game.scheduled_time) {
-    return game.scheduled_at;
+  if (game.scheduled_at && !game.scheduled_time) {
+    if (DATE_ONLY_RE.test(game.scheduled_at)) return game.scheduled_at;
+    const rawDateKey = getRawDateKey(game.scheduled_at);
+    if (rawDateKey && ISO_MIDNIGHT_RE.test(game.scheduled_at)) return rawDateKey;
   }
   const instant = getScheduledInstant(game.scheduled_at, game.scheduled_time);
   if (!instant) return null;

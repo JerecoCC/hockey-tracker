@@ -331,8 +331,8 @@ router.get('/games', async (req, res) => {
         l.name AS league_name,
         l.primary_color AS league_primary_color,
         l.text_color AS league_text_color,
-        COALESCE(uwg.watched_on, uwg.watched_at::date) AS watched_on,
-        uwg.scheduled_for,
+        COALESCE(uwg.watched_on, uwg.watched_at::date)::text AS watched_on,
+        uwg.scheduled_for::text AS scheduled_for,
         (uwg.skipped_at IS NOT NULL) AS skipped_by_user,
         (uwg.game_id IS NOT NULL AND (uwg.watched_on IS NOT NULL OR uwg.watched_at IS NOT NULL)) AS watched_by_user
       FROM games g
@@ -493,6 +493,16 @@ router.get('/games', async (req, res) => {
       LEFT JOIN user_watched_games uwg
         ON uwg.user_id = ${userId}
        AND uwg.game_id = g.id
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          uwg.scheduled_for,
+          CASE
+            WHEN (g.scheduled_at AT TIME ZONE 'UTC')::time = TIME '00:00:00'
+              THEN (g.scheduled_at AT TIME ZONE 'UTC')::date
+            ELSE (g.scheduled_at AT TIME ZONE 'America/New_York')::date
+          END
+        ) AS effective_user_date
+      ) user_game_dates ON true
       WHERE
         (
           (
@@ -527,38 +537,23 @@ router.get('/games', async (req, res) => {
         AND (${status ?? null}::text IS NULL OR g.status    = ${status ?? null})
         AND (
           ${dateFilter}::date IS NULL
-          OR COALESCE(
-               uwg.scheduled_for,
-               (g.scheduled_at AT TIME ZONE 'America/New_York')::date
-             ) = ${dateFilter}::date
+          OR user_game_dates.effective_user_date = ${dateFilter}::date
         )
         AND (
           ${weekFilter}::date IS NULL
-          OR COALESCE(
-               uwg.scheduled_for,
-               (g.scheduled_at AT TIME ZONE 'America/New_York')::date
-             ) >= (${weekFilter}::date - INTERVAL '1 day')
+          OR user_game_dates.effective_user_date >= (${weekFilter}::date - INTERVAL '1 day')
         )
         AND (
           ${weekFilter}::date IS NULL
-          OR COALESCE(
-               uwg.scheduled_for,
-               (g.scheduled_at AT TIME ZONE 'America/New_York')::date
-             ) < (${weekFilter}::date + INTERVAL '8 days')
+          OR user_game_dates.effective_user_date < (${weekFilter}::date + INTERVAL '8 days')
         )
         AND (
           ${monthFilter}::text IS NULL
-          OR COALESCE(
-               uwg.scheduled_for,
-               (g.scheduled_at AT TIME ZONE 'America/New_York')::date
-             ) >= ((${monthFilter} || '-01')::date - INTERVAL '1 day')
+          OR user_game_dates.effective_user_date >= ((${monthFilter} || '-01')::date - INTERVAL '1 day')
         )
         AND (
           ${monthFilter}::text IS NULL
-          OR COALESCE(
-               uwg.scheduled_for,
-               (g.scheduled_at AT TIME ZONE 'America/New_York')::date
-             ) < ((${monthFilter} || '-01')::date + INTERVAL '1 month' + INTERVAL '1 day')
+          OR user_game_dates.effective_user_date < ((${monthFilter} || '-01')::date + INTERVAL '1 month' + INTERVAL '1 day')
         )
       ORDER BY
         CASE g.status WHEN 'in_progress' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,
@@ -706,8 +701,8 @@ router.get('/games/:id', async (req, res) => {
         l.primary_color AS league_primary_color,
         l.text_color AS league_text_color,
         COALESCE(s.best_of_shootout, l.best_of_shootout) AS best_of_shootout,
-        COALESCE(uwg.watched_on, uwg.watched_at::date) AS watched_on,
-        uwg.scheduled_for,
+        COALESCE(uwg.watched_on, uwg.watched_at::date)::text AS watched_on,
+        uwg.scheduled_for::text AS scheduled_for,
         (uwg.skipped_at IS NOT NULL) AS skipped_by_user,
         (uwg.game_id IS NOT NULL AND (uwg.watched_on IS NOT NULL OR uwg.watched_at IS NOT NULL)) AS watched_by_user,
         home_l5.home_last_five,
