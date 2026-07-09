@@ -20,10 +20,8 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "tracker-ui": ["../../tracker-ui/src/index.ts"],
-      "tracker-ui/*": ["../../tracker-ui/src/*"],
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "../../tracker-ui/src"]
+  "include": ["src"]
 }

@@ -7,7 +7,6 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      'tracker-ui': path.resolve(__dirname, '../../tracker-ui/src'),
       '@': path.resolve(__dirname, './src'),
     },
   },
@@ -17,7 +16,6 @@ export default defineConfig({
         api: 'modern-compiler',
         loadPaths: [
           path.resolve(__dirname, './src'),
-          path.resolve(__dirname, '../../tracker-ui/src'),
         ],
       },
     },

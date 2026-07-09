@@ -29,7 +29,7 @@
     "react-hook-form": "^7.72.0",
     "react-router-dom": "^7.13.2",
     "react-toastify": "^11.0.5",
-    "tracker-ui": "file:../../tracker-ui"
+    "@jerecocc/tracker-ui": "^0.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",

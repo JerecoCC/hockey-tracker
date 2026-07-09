@@ -1,1 +1,1 @@
-export * from 'tracker-ui/components/Modal/backgroundScrollLock';
+export * from '@jerecocc/tracker-ui/components/Modal/backgroundScrollLock';

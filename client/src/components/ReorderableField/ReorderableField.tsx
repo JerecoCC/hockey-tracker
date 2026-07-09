@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/ReorderableField/ReorderableField';
-export * from 'tracker-ui/components/ReorderableField/ReorderableField';
+export { default } from '@jerecocc/tracker-ui/components/ReorderableField/ReorderableField';
+export * from '@jerecocc/tracker-ui/components/ReorderableField/ReorderableField';

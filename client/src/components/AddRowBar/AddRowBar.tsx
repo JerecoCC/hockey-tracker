@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/AddRowBar/AddRowBar';
-export * from 'tracker-ui/components/AddRowBar/AddRowBar';
+export { default } from '@jerecocc/tracker-ui/components/AddRowBar/AddRowBar';
+export * from '@jerecocc/tracker-ui/components/AddRowBar/AddRowBar';

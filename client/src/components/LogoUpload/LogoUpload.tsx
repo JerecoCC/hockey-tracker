@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/LogoUpload/LogoUpload';
-export * from 'tracker-ui/components/LogoUpload/LogoUpload';
+export { default } from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
+export * from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';

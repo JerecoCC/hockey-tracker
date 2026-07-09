@@ -1,1 +1,1 @@
-export * from 'tracker-ui/lib/descriptionHtml';
+export * from '@jerecocc/tracker-ui/lib/descriptionHtml';

@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/InfoTooltip/InfoTooltip';
-export * from 'tracker-ui/components/InfoTooltip/InfoTooltip';
+export { default } from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
+export * from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';

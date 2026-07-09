@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/Accordion/Accordion';
-export * from 'tracker-ui/components/Accordion/Accordion';
+export { default } from '@jerecocc/tracker-ui/components/Accordion/Accordion';
+export * from '@jerecocc/tracker-ui/components/Accordion/Accordion';

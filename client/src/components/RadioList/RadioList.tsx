@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/RadioList/RadioList';
-export * from 'tracker-ui/components/RadioList/RadioList';
+export { default } from '@jerecocc/tracker-ui/components/RadioList/RadioList';
+export * from '@jerecocc/tracker-ui/components/RadioList/RadioList';

@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/context/BreadcrumbContext';
-export * from 'tracker-ui/context/BreadcrumbContext';
+export { default } from '@jerecocc/tracker-ui/context/BreadcrumbContext';
+export * from '@jerecocc/tracker-ui/context/BreadcrumbContext';

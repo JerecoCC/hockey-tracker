@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/Modal/Modal';
-export * from 'tracker-ui/components/Modal/Modal';
+export { default } from '@jerecocc/tracker-ui/components/Modal/Modal';
+export * from '@jerecocc/tracker-ui/components/Modal/Modal';

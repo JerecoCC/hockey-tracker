@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/ColorSwatch/ColorSwatch';
-export * from 'tracker-ui/components/ColorSwatch/ColorSwatch';
+export { default } from '@jerecocc/tracker-ui/components/ColorSwatch/ColorSwatch';
+export * from '@jerecocc/tracker-ui/components/ColorSwatch/ColorSwatch';

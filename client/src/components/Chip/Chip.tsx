@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/Chip/Chip';
-export * from 'tracker-ui/components/Chip/Chip';
+export { default } from '@jerecocc/tracker-ui/components/Chip/Chip';
+export * from '@jerecocc/tracker-ui/components/Chip/Chip';

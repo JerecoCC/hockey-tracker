@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/TimePicker/TimePicker';
-export * from 'tracker-ui/components/TimePicker/TimePicker';
+export { default } from '@jerecocc/tracker-ui/components/TimePicker/TimePicker';
+export * from '@jerecocc/tracker-ui/components/TimePicker/TimePicker';

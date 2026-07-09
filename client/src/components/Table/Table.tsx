@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/Table/Table';
-export * from 'tracker-ui/components/Table/Table';
+export { default } from '@jerecocc/tracker-ui/components/Table/Table';
+export * from '@jerecocc/tracker-ui/components/Table/Table';

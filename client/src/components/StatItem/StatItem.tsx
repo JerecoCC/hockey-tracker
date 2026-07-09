@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/StatItem/StatItem';
-export * from 'tracker-ui/components/StatItem/StatItem';
+export { default } from '@jerecocc/tracker-ui/components/StatItem/StatItem';
+export * from '@jerecocc/tracker-ui/components/StatItem/StatItem';

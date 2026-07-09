@@ -1,6 +1,7 @@
 import type { Preview } from '@storybook/react-vite';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../src/context/AuthContext';
+import '@jerecocc/tracker-ui/style.css';
 import '../src/index.scss';
 import './storybook.scss';
 

@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/BorderedFieldset/BorderedFieldset';
-export * from 'tracker-ui/components/BorderedFieldset/BorderedFieldset';
+export { default } from '@jerecocc/tracker-ui/components/BorderedFieldset/BorderedFieldset';
+export * from '@jerecocc/tracker-ui/components/BorderedFieldset/BorderedFieldset';

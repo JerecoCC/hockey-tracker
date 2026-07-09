@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/ImagePreviewModal/ImagePreviewModal';
-export * from 'tracker-ui/components/ImagePreviewModal/ImagePreviewModal';
+export { default } from '@jerecocc/tracker-ui/components/ImagePreviewModal/ImagePreviewModal';
+export * from '@jerecocc/tracker-ui/components/ImagePreviewModal/ImagePreviewModal';

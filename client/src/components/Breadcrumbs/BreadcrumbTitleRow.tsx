@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/Breadcrumbs/BreadcrumbTitleRow';
-export * from 'tracker-ui/components/Breadcrumbs/BreadcrumbTitleRow';
+export { default } from '@jerecocc/tracker-ui/components/Breadcrumbs/BreadcrumbTitleRow';
+export * from '@jerecocc/tracker-ui/components/Breadcrumbs/BreadcrumbTitleRow';

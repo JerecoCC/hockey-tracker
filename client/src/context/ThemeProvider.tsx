@@ -1,1 +1,1 @@
-export * from 'tracker-ui/context/ThemeProvider';
+export * from '@jerecocc/tracker-ui/context/ThemeProvider';

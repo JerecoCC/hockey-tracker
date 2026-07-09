@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/SegmentedControl/SegmentedControl';
-export * from 'tracker-ui/components/SegmentedControl/SegmentedControl';
+export { default } from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
+export * from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';

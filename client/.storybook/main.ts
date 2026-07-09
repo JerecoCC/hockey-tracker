@@ -13,7 +13,6 @@ const config: StorybookConfig = {
       ...viteConfig.resolve,
       alias: {
         ...(viteConfig.resolve?.alias ?? {}),
-        'tracker-ui': path.resolve(__dirname, '../../../tracker-ui/src'),
         '@': path.resolve(__dirname, '../src'),
       },
     },
@@ -26,7 +25,6 @@ const config: StorybookConfig = {
           api: 'modern-compiler',
           loadPaths: [
             path.resolve(__dirname, '../src'),
-            path.resolve(__dirname, '../../../tracker-ui/src'),
           ],
         },
       },

@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/ToggleButton/ToggleButton';
-export * from 'tracker-ui/components/ToggleButton/ToggleButton';
+export { default } from '@jerecocc/tracker-ui/components/ToggleButton/ToggleButton';
+export * from '@jerecocc/tracker-ui/components/ToggleButton/ToggleButton';

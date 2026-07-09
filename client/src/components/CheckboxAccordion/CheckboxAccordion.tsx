@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/CheckboxAccordion/CheckboxAccordion';
-export * from 'tracker-ui/components/CheckboxAccordion/CheckboxAccordion';
+export { default } from '@jerecocc/tracker-ui/components/CheckboxAccordion/CheckboxAccordion';
+export * from '@jerecocc/tracker-ui/components/CheckboxAccordion/CheckboxAccordion';

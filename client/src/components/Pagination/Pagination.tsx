@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/Pagination/Pagination';
-export * from 'tracker-ui/components/Pagination/Pagination';
+export { default } from '@jerecocc/tracker-ui/components/Pagination/Pagination';
+export * from '@jerecocc/tracker-ui/components/Pagination/Pagination';

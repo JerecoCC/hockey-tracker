@@ -1,1 +1,1 @@
-export * from 'tracker-ui/lib/color';
+export * from '@jerecocc/tracker-ui/lib/color';

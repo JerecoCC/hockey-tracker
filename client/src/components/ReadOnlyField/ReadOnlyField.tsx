@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/ReadOnlyField/ReadOnlyField';
-export * from 'tracker-ui/components/ReadOnlyField/ReadOnlyField';
+export { default } from '@jerecocc/tracker-ui/components/ReadOnlyField/ReadOnlyField';
+export * from '@jerecocc/tracker-ui/components/ReadOnlyField/ReadOnlyField';

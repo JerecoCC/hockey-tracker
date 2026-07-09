@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/Card/Card';
-export * from 'tracker-ui/components/Card/Card';
+export { default } from '@jerecocc/tracker-ui/components/Card/Card';
+export * from '@jerecocc/tracker-ui/components/Card/Card';

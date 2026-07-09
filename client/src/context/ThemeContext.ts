@@ -1,1 +1,1 @@
-export * from 'tracker-ui/context/ThemeContext';
+export * from '@jerecocc/tracker-ui/context/ThemeContext';

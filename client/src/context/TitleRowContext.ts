@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/context/TitleRowContext';
-export * from 'tracker-ui/context/TitleRowContext';
+export { default } from '@jerecocc/tracker-ui/context/TitleRowContext';
+export * from '@jerecocc/tracker-ui/context/TitleRowContext';

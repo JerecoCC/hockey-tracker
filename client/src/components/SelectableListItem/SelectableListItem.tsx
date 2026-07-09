@@ -1,2 +1,2 @@
-export { default } from 'tracker-ui/components/SelectableListItem/SelectableListItem';
-export * from 'tracker-ui/components/SelectableListItem/SelectableListItem';
+export { default } from '@jerecocc/tracker-ui/components/SelectableListItem/SelectableListItem';
+export * from '@jerecocc/tracker-ui/components/SelectableListItem/SelectableListItem';
