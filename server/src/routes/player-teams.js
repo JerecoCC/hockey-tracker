@@ -83,6 +83,85 @@ const closeActiveCareerStints = (player_id, end_date) => sql`
   RETURNING id, team_id
 `;
 
+const resolveTradeRosterSeason = async ({
+  sourceSeasonId,
+  tradeDate,
+  requestedSeasonId = null,
+}) => {
+  const rows = (await sql`
+    WITH source_season AS (
+      SELECT id, league_id, start_date, end_date
+      FROM seasons
+      WHERE id = ${sourceSeasonId}
+    ),
+    requested_season AS (
+      SELECT id, league_id
+      FROM seasons
+      WHERE id = ${requestedSeasonId}::uuid
+    ),
+    next_season AS (
+      SELECT s.id
+      FROM seasons s
+      JOIN source_season source ON source.league_id = s.league_id
+      WHERE s.id <> source.id
+        AND (
+          (source.start_date IS NOT NULL AND s.start_date > source.start_date)
+          OR (source.start_date IS NULL AND source.end_date IS NOT NULL AND s.start_date > source.end_date)
+          OR (source.start_date IS NULL AND source.end_date IS NULL)
+        )
+      ORDER BY s.start_date ASC NULLS LAST, s.created_at ASC
+      LIMIT 1
+    )
+    SELECT
+      source.id AS source_season_id,
+      source.league_id AS source_league_id,
+      source.start_date::text AS source_start_date,
+      source.end_date::text AS source_end_date,
+      requested.id AS requested_season_id,
+      requested.league_id AS requested_league_id,
+      (source.end_date IS NOT NULL AND ${tradeDate}::date > source.end_date) AS is_after_source_end,
+      CASE
+        WHEN ${requestedSeasonId}::uuid IS NOT NULL
+          AND requested.id IS NOT NULL
+          AND requested.league_id = source.league_id
+        THEN requested.id
+        WHEN source.end_date IS NOT NULL AND ${tradeDate}::date > source.end_date
+        THEN next_season.id
+        ELSE source.id
+      END AS roster_season_id
+    FROM source_season source
+    LEFT JOIN requested_season requested ON TRUE
+    LEFT JOIN next_season ON TRUE
+  `) ?? [];
+
+  if (rows.length === 0) {
+    return { error: { status: 404, message: 'Season not found' } };
+  }
+
+  const row = rows[0];
+  if (requestedSeasonId && !row.requested_season_id) {
+    return { error: { status: 404, message: 'Roster season not found' } };
+  }
+  if (requestedSeasonId && row.requested_league_id !== row.source_league_id) {
+    return {
+      error: { status: 400, message: 'Roster season must belong to the same league' },
+    };
+  }
+  if (!requestedSeasonId && row.is_after_source_end && !row.roster_season_id) {
+    return {
+      error: {
+        status: 400,
+        message: 'No later season found for this move. Choose a roster season first.',
+      },
+    };
+  }
+
+  return {
+    rosterSeasonId: row.roster_season_id,
+    isAfterSourceEnd: !!row.is_after_source_end,
+  };
+};
+
 const playerHasStatsForTeam = async (playerId, teamId) => {
   const rows = (await sql`
     SELECT
@@ -911,6 +990,7 @@ router.delete('/:id', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/bulk-trade', async (req, res) => {
   const { players, season_id, to_team_id, trade_date } = req.body;
+  const requestedRosterSeasonId = req.body.target_season_id ?? req.body.roster_season_id ?? null;
   const acquisition_type =
     'acquisition_type' in req.body ? normalizeAcquisitionType(req.body.acquisition_type) : 'trade';
 
@@ -919,9 +999,22 @@ router.post('/bulk-trade', async (req, res) => {
   if (!season_id)  return res.status(400).json({ error: 'season_id is required' });
   if (!to_team_id) return res.status(400).json({ error: 'to_team_id is required' });
   if (!trade_date) return res.status(400).json({ error: 'trade_date is required' });
+  if (!isValidDateOnly(trade_date)) return res.status(400).json({ error: 'trade_date must be YYYY-MM-DD' });
   if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
 
   try {
+    const seasonResolution = await resolveTradeRosterSeason({
+      sourceSeasonId: season_id,
+      tradeDate: trade_date,
+      requestedSeasonId: requestedRosterSeasonId,
+    });
+    if (seasonResolution.error) {
+      return res
+        .status(seasonResolution.error.status)
+        .json({ error: seasonResolution.error.message });
+    }
+
+    const rosterSeasonId = seasonResolution.rosterSeasonId;
     const traded = [];
     const failed = [];
 
@@ -946,7 +1039,7 @@ router.post('/bulk-trade', async (req, res) => {
       // Open new stint on the destination team
       const created = await sql`
         INSERT INTO player_teams (player_id, team_id, season_id, start_date, jersey_number, position, acquisition_type)
-        VALUES (${player_id}, ${to_team_id}, ${season_id}, ${trade_date}, ${jersey_number}, ${position}, ${acquisition_type})
+        VALUES (${player_id}, ${to_team_id}, ${rosterSeasonId}, ${trade_date}, ${jersey_number}, ${position}, ${acquisition_type})
         RETURNING id, player_id, team_id, season_id, jersey_number, position, acquisition_type,
                   start_date::text AS start_date, end_date::text AS end_date
       `;
@@ -962,6 +1055,11 @@ router.post('/bulk-trade', async (req, res) => {
 
     return res.status(201).json({ traded, failed });
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({
+        error: 'Player already has an active roster row in the target season.',
+      });
+    }
     console.error('player-teams bulk-trade error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -975,15 +1073,29 @@ router.post('/bulk-trade', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/trade', async (req, res) => {
   const { player_id, season_id, to_team_id, trade_date, jersey_number = null, position = null } = req.body;
+  const requestedRosterSeasonId = req.body.target_season_id ?? req.body.roster_season_id ?? null;
   const acquisition_type =
     'acquisition_type' in req.body ? normalizeAcquisitionType(req.body.acquisition_type) : 'trade';
   if (!player_id)  return res.status(400).json({ error: 'player_id is required' });
   if (!season_id)  return res.status(400).json({ error: 'season_id is required' });
   if (!to_team_id) return res.status(400).json({ error: 'to_team_id is required' });
   if (!trade_date) return res.status(400).json({ error: 'trade_date is required' });
+  if (!isValidDateOnly(trade_date)) return res.status(400).json({ error: 'trade_date must be YYYY-MM-DD' });
   if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
 
   try {
+    const seasonResolution = await resolveTradeRosterSeason({
+      sourceSeasonId: season_id,
+      tradeDate: trade_date,
+      requestedSeasonId: requestedRosterSeasonId,
+    });
+    if (seasonResolution.error) {
+      return res
+        .status(seasonResolution.error.status)
+        .json({ error: seasonResolution.error.message });
+    }
+
+    const rosterSeasonId = seasonResolution.rosterSeasonId;
     // 1. Find and close the current active stint
     const closed = await sql`
       UPDATE player_teams
@@ -1002,7 +1114,7 @@ router.post('/trade', async (req, res) => {
     // 2. Open new stint on the destination team
     const created = await sql`
       INSERT INTO player_teams (player_id, team_id, season_id, start_date, jersey_number, position, acquisition_type)
-      VALUES (${player_id}, ${to_team_id}, ${season_id}, ${trade_date}, ${jersey_number}, ${position}, ${acquisition_type})
+      VALUES (${player_id}, ${to_team_id}, ${rosterSeasonId}, ${trade_date}, ${jersey_number}, ${position}, ${acquisition_type})
       RETURNING id, player_id, team_id, season_id, jersey_number, position, acquisition_type,
                 start_date::text AS start_date, end_date::text AS end_date
     `;
@@ -1018,6 +1130,11 @@ router.post('/trade', async (req, res) => {
       new_stint: created[0],
     });
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({
+        error: 'Player already has an active roster row in the target season.',
+      });
+    }
     console.error('player-teams trade error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

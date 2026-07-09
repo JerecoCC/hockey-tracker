@@ -1,6 +1,7 @@
 /* eslint-disable react/prop-types */
 import type { ComponentProps, ReactNode } from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import MovePlayerModal from './MovePlayerModal';
 
 jest.mock('@/components/Modal/Modal', () => {
@@ -8,13 +9,20 @@ jest.mock('@/components/Modal/Modal', () => {
     open: boolean;
     title: string;
     children: ReactNode;
+    confirmForm?: string;
   }
 
-  const MockModal = ({ open, title, children }: MockModalProps) =>
+  const MockModal = ({ open, title, children, confirmForm }: MockModalProps) =>
     open ? (
       <div>
         <h1>{title}</h1>
         {children}
+        <button
+          type="submit"
+          form={confirmForm}
+        >
+          Move
+        </button>
       </div>
     ) : null;
 
@@ -139,6 +147,63 @@ describe('MovePlayerModal', () => {
           .getAllByLabelText(/^(Type|Date)$/)
           .map((control) => control.getAttribute('aria-label')),
       ).toEqual(['Type', 'Date']);
+    });
+  });
+
+  it('defaults off-season moves to the next roster season and submits the selection', async () => {
+    const user = userEvent.setup();
+    const movePlayer = jest.fn().mockResolvedValue(true);
+
+    render(
+      <MovePlayerModal
+        open
+        player={player}
+        currentTeamId="team-current"
+        seasonId="season-2025"
+        leagueId="league-1"
+        seasons={[
+          {
+            id: 'season-2025',
+            league_id: 'league-1',
+            name: '2025-26',
+            start_date: '2025-10-01',
+            end_date: '2026-06-30',
+            created_at: '2025-01-01T00:00:00Z',
+          },
+          {
+            id: 'season-2026',
+            league_id: 'league-1',
+            name: '2026-27',
+            start_date: '2026-10-01',
+            end_date: '2027-06-30',
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ] as ComponentProps<typeof MovePlayerModal>['seasons']}
+        onClose={jest.fn()}
+        movePlayer={movePlayer}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText('Move To'), 'team-next');
+    await user.type(screen.getByLabelText('Date'), '2026-07-15');
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Roster Season')).toHaveValue('season-2026');
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Move' }));
+
+    await waitFor(() => {
+      expect(movePlayer).toHaveBeenCalledWith(
+        'player-1',
+        'season-2025',
+        'team-next',
+        '2026-07-15',
+        20,
+        null,
+        'trade',
+        'season-2026',
+      );
     });
   });
 });

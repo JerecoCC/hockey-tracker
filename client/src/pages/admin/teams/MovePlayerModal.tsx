@@ -1,7 +1,8 @@
-import { useCallback, useLayoutEffect, useMemo } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
+import { type SeasonRecord } from '@/hooks/useSeasons';
 import useTeams from '@/hooks/useTeams';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { ACQUISITION_TYPE_OPTIONS } from '../players/StintEditModal';
@@ -24,6 +25,7 @@ interface FormValues {
   jersey_number: string;
   position: string;
   acquisition_type: string;
+  target_season_id: string;
 }
 
 interface Props {
@@ -32,6 +34,7 @@ interface Props {
   currentTeamId: string;
   seasonId: string;
   leagueId: string;
+  seasons?: SeasonRecord[];
   onClose: () => void;
   movePlayer: (
     playerId: string,
@@ -41,8 +44,34 @@ interface Props {
     jerseyNumber?: number | null,
     position?: string | null,
     acquisitionType?: string | null,
+    targetSeasonId?: string | null,
   ) => Promise<boolean>;
 }
+
+const dateKey = (value?: string | null) => value?.slice(0, 10) ?? null;
+
+const sortSeasonsOldestFirst = (seasons: SeasonRecord[]) =>
+  [...seasons].sort((a, b) => {
+    const startCmp = (a.start_date ?? '').localeCompare(b.start_date ?? '');
+    if (startCmp !== 0) return startCmp;
+    const createdCmp = (a.created_at ?? '').localeCompare(b.created_at ?? '');
+    if (createdCmp !== 0) return createdCmp;
+    return a.name.localeCompare(b.name);
+  });
+
+const findNextSeasonId = (sourceSeason: SeasonRecord | null, seasons: SeasonRecord[]) => {
+  if (!sourceSeason) return null;
+  const sourceStart = dateKey(sourceSeason.start_date);
+  const sourceEnd = dateKey(sourceSeason.end_date);
+  const futureSeasons = sortSeasonsOldestFirst(seasons).filter((season) => {
+    if (season.id === sourceSeason.id || season.league_id !== sourceSeason.league_id) return false;
+    const start = dateKey(season.start_date);
+    if (!start) return false;
+    if (sourceStart) return start > sourceStart;
+    return sourceEnd ? start > sourceEnd : true;
+  });
+  return futureSeasons[0]?.id ?? null;
+};
 
 const MovePlayerModal = ({
   open,
@@ -50,6 +79,7 @@ const MovePlayerModal = ({
   currentTeamId,
   seasonId,
   leagueId,
+  seasons = [],
   onClose,
   movePlayer,
 }: Props) => {
@@ -60,10 +90,23 @@ const MovePlayerModal = ({
       jersey_number: player?.jersey_number == null ? '' : String(player.jersey_number),
       position: '',
       acquisition_type: 'trade',
+      target_season_id: '',
     }),
     [player?.jersey_number],
   );
   const { teams } = useTeams();
+  const sourceSeason = useMemo(
+    () => seasons.find((season) => season.id === seasonId) ?? null,
+    [seasonId, seasons],
+  );
+  const leagueSeasons = useMemo(
+    () => seasons.filter((season) => season.league_id === leagueId),
+    [leagueId, seasons],
+  );
+  const nextSeasonId = useMemo(
+    () => findNextSeasonId(sourceSeason, seasons),
+    [seasons, sourceSeason],
+  );
 
   const teamOptions = teams
     .filter((t) => t.league_id === leagueId && t.id !== currentTeamId)
@@ -80,15 +123,47 @@ const MovePlayerModal = ({
     control,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
     mode: 'onChange',
   });
+  const tradeDate = watch('trade_date');
+  const targetSeasonId = watch('target_season_id');
+  const sourceSeasonEnd = dateKey(sourceSeason?.end_date);
+  const showRosterSeasonSelect = !!sourceSeasonEnd && !!tradeDate && tradeDate > sourceSeasonEnd;
+  const seasonOptions = useMemo(
+    () =>
+      [...leagueSeasons]
+        .sort((a, b) => {
+          const startCmp = (b.start_date ?? '').localeCompare(a.start_date ?? '');
+          if (startCmp !== 0) return startCmp;
+          const createdCmp = (b.created_at ?? '').localeCompare(a.created_at ?? '');
+          if (createdCmp !== 0) return createdCmp;
+          return b.name.localeCompare(a.name);
+        })
+        .map((season) => ({
+          value: season.id,
+          label: season.name,
+        })),
+    [leagueSeasons],
+  );
 
   useLayoutEffect(() => {
     reset(formValues);
   }, [formValues, reset]);
+
+  useEffect(() => {
+    if (!showRosterSeasonSelect) {
+      if (targetSeasonId) setValue('target_season_id', '', { shouldDirty: false });
+      return;
+    }
+    if (!targetSeasonId && nextSeasonId) {
+      setValue('target_season_id', nextSeasonId, { shouldDirty: false, shouldValidate: true });
+    }
+  }, [nextSeasonId, setValue, showRosterSeasonSelect, targetSeasonId]);
 
   const handleClose = useCallback(() => {
     reset(formValues);
@@ -99,6 +174,7 @@ const MovePlayerModal = ({
     if (!player || !data.to_team_id) return;
     const jerseyNumber = data.jersey_number ? Number(data.jersey_number) : null;
     const position = data.position || null;
+    const rosterSeasonId = showRosterSeasonSelect ? data.target_season_id || null : null;
     const ok = await movePlayer(
       player.id,
       seasonId,
@@ -107,6 +183,7 @@ const MovePlayerModal = ({
       jerseyNumber,
       position,
       data.acquisition_type || 'trade',
+      rosterSeasonId,
     );
     if (ok) handleClose();
   });
@@ -182,6 +259,20 @@ const MovePlayerModal = ({
                 disabled={isSubmitting}
               />
             </div>
+            {showRosterSeasonSelect && (
+              <Field
+                type="select"
+                label="Roster Season"
+                control={control}
+                name="target_season_id"
+                options={seasonOptions}
+                placeholder="Select roster season..."
+                searchable
+                required
+                rules={{ required: 'Roster season is required' }}
+                disabled={isSubmitting}
+              />
+            )}
           </fieldset>
         </form>
       </div>

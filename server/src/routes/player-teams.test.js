@@ -413,6 +413,16 @@ describe('PATCH /api/admin/player-teams', () => {
 describe('POST /api/admin/player-teams/trade', () => {
   it('keeps acquisition_type null when explicitly provided as unknown', async () => {
     sql
+      .mockResolvedValueOnce([{
+        source_season_id: 'season-1',
+        source_league_id: 'league-1',
+        source_start_date: '2025-10-01',
+        source_end_date: '2026-06-30',
+        requested_season_id: null,
+        requested_league_id: null,
+        is_after_source_end: false,
+        roster_season_id: 'season-1',
+      }])
       .mockResolvedValueOnce([{ id: 'old-stint', team_id: 'team-old' }])
       .mockResolvedValueOnce([{ id: 'old-career-stint' }])
       .mockResolvedValueOnce([{
@@ -442,8 +452,95 @@ describe('POST /api/admin/player-teams/trade', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.new_stint.acquisition_type).toBeNull();
-    const insertValues = sql.mock.calls[2].slice(1);
+    const insertValues = sql.mock.calls[3].slice(1);
     expect(insertValues[insertValues.length - 1]).toBeNull();
+  });
+
+  it('adds the destination row to the next season when the move is after the source season ended', async () => {
+    sql
+      .mockResolvedValueOnce([{
+        source_season_id: 'season-2025',
+        source_league_id: 'league-1',
+        source_start_date: '2025-10-01',
+        source_end_date: '2026-06-30',
+        requested_season_id: null,
+        requested_league_id: null,
+        is_after_source_end: true,
+        roster_season_id: 'season-2026',
+      }])
+      .mockResolvedValueOnce([{ id: 'old-stint', team_id: 'team-old' }])
+      .mockResolvedValueOnce([{ id: 'old-career-stint' }])
+      .mockResolvedValueOnce([{
+        id: 'new-stint',
+        player_id: 'player-1',
+        team_id: 'team-new',
+        season_id: 'season-2026',
+        jersey_number: 28,
+        position: 'D',
+        acquisition_type: 'trade',
+        start_date: '2026-07-15',
+        end_date: null,
+      }])
+      .mockResolvedValueOnce([{ id: 'new-career-stint' }]);
+
+    const res = await request(app)
+      .post('/api/admin/player-teams/trade')
+      .send({
+        player_id: 'player-1',
+        season_id: 'season-2025',
+        to_team_id: 'team-new',
+        trade_date: '2026-07-15',
+        jersey_number: 28,
+        position: 'D',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.new_stint.season_id).toBe('season-2026');
+    expect(sql.mock.calls[3].slice(1)).toEqual(expect.arrayContaining(['season-2026']));
+  });
+
+  it('uses the selected roster season when one is provided', async () => {
+    sql
+      .mockResolvedValueOnce([{
+        source_season_id: 'season-2025',
+        source_league_id: 'league-1',
+        source_start_date: '2025-10-01',
+        source_end_date: '2026-06-30',
+        requested_season_id: 'season-choice',
+        requested_league_id: 'league-1',
+        is_after_source_end: true,
+        roster_season_id: 'season-choice',
+      }])
+      .mockResolvedValueOnce([{ id: 'old-stint', team_id: 'team-old' }])
+      .mockResolvedValueOnce([{ id: 'old-career-stint' }])
+      .mockResolvedValueOnce([{
+        id: 'new-stint',
+        player_id: 'player-1',
+        team_id: 'team-new',
+        season_id: 'season-choice',
+        jersey_number: 28,
+        position: 'D',
+        acquisition_type: 'trade',
+        start_date: '2026-07-15',
+        end_date: null,
+      }])
+      .mockResolvedValueOnce([{ id: 'new-career-stint' }]);
+
+    const res = await request(app)
+      .post('/api/admin/player-teams/trade')
+      .send({
+        player_id: 'player-1',
+        season_id: 'season-2025',
+        target_season_id: 'season-choice',
+        to_team_id: 'team-new',
+        trade_date: '2026-07-15',
+        jersey_number: 28,
+        position: 'D',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.new_stint.season_id).toBe('season-choice');
+    expect(sql.mock.calls[3].slice(1)).toEqual(expect.arrayContaining(['season-choice']));
   });
 });
 

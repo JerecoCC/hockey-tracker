@@ -2434,6 +2434,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     jerseyNumber?: number | null,
     position?: string | null,
     acquisitionType?: string | null,
+    targetSeasonId?: string | null,
     options: { showToast?: boolean; navigateAfter?: boolean } = {},
   ): Promise<boolean> => {
     try {
@@ -2447,6 +2448,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           jersey_number: jerseyNumber ?? null,
           position: position ?? null,
           acquisition_type: acquisitionType ?? null,
+          target_season_id: targetSeasonId ?? null,
         },
         { headers: authHeaders() },
       );
@@ -3682,6 +3684,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             currentTeamId={latestStint?.team_id ?? teamId ?? ''}
             seasonId={latestStint?.season_id ?? ''}
             leagueId={leagueId ?? ''}
+            seasons={seasons}
             onClose={() => setMovePlayerOpen(false)}
             movePlayer={movePlayer}
           />
