@@ -1,66 +1,70 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import type { CSSProperties, ReactNode } from 'react';
 import ScoreboardCard from './ScoreboardCard';
 import styles from './ScoreboardCard.module.scss';
 
 jest.mock('@/components/Tag/Tag', () => {
-  const React = require('react');
   return {
     __esModule: true,
-    default: ({ label, className }: { label: string; className?: string }) =>
-      React.createElement('span', { className }, label),
+    default: function MockTag({ label, className }: { label: string; className?: string }) {
+      return <span className={className}>{label}</span>;
+    },
   };
 });
 
 jest.mock('@/components/Tooltip/Tooltip', () => {
-  const React = require('react');
   return {
     __esModule: true,
-    default: ({
+    default: function MockTooltip({
       text,
       children,
       className,
     }: {
       text: string;
-      children: React.ReactNode;
+      children: ReactNode;
       className?: string;
-    }) =>
-      React.createElement(
-        'span',
-        { className },
-        children,
-        React.createElement('span', { role: 'tooltip' }, text),
-      ),
+    }) {
+      return (
+        <span className={className}>
+          {children}
+          <span role="tooltip">{text}</span>
+        </span>
+      );
+    },
   };
 });
 
 jest.mock('@/components/StickyHeroCard/StickyHeroCard', () => {
-  const React = require('react');
   return {
     __esModule: true,
-    default: React.forwardRef(
-      (
-        {
-          children,
-          className,
-          style,
-        }: {
-          children: React.ReactNode;
-          className?: string;
-          style?: React.CSSProperties;
-        },
-        ref: React.ForwardedRef<HTMLDivElement>,
-      ) => React.createElement('div', { ref, className, style }, children),
-    ),
+    default: function MockStickyHeroCard({
+      children,
+      className,
+      style,
+    }: {
+      children: ReactNode;
+      className?: string;
+      style?: CSSProperties;
+    }) {
+      return (
+        <div
+          className={className}
+          style={style}
+        >
+          {children}
+        </div>
+      );
+    },
   };
 });
 
 jest.mock('@/components/TeamLogo/TeamLogo', () => {
-  const React = require('react');
   return {
     __esModule: true,
-    default: ({ code, className }: { code: string; className?: string }) =>
-      React.createElement('span', { className }, code),
+    default: function MockTeamLogo({ code, className }: { code: string; className?: string }) {
+      return <span className={className}>{code}</span>;
+    },
   };
 });
 
@@ -140,5 +144,47 @@ describe('ScoreboardCard', () => {
     expect(screen.getByRole('tooltip')).toHaveTextContent('Atlantic Division Semifinal · Game 5');
     expect(meta).not.toHaveStyle({ fontSize: '8px' });
     expect(meta.getAttribute('style')).toBeNull();
+  });
+
+  it('renders playoff series dots instead of numeric scores when series score is supplied', () => {
+    render(
+      <MemoryRouter>
+        <ScoreboardCard
+          game={{
+            status: 'in_progress',
+            scheduled_at: null,
+            scheduled_time: null,
+            home_team: team('home'),
+            away_team: team('away'),
+          }}
+          isFinal={false}
+          isInProgress
+          liveAwayScore={2}
+          liveHomeScore={1}
+          seriesScore={{
+            awayWins: 2,
+            homeWins: 1,
+            winsNeeded: 4,
+          }}
+          overtimeSuffix=""
+          leagueId="league-1"
+          leagueCode="NHL"
+        />
+      </MemoryRouter>,
+    );
+
+    const awayDots = screen.getByRole('img', {
+      name: 'Detroit Red Wings series wins 2 of 4',
+    });
+    const homeDots = screen.getByRole('img', {
+      name: 'Toronto Maple Leafs series wins 1 of 4',
+    });
+
+    expect(awayDots.querySelectorAll(`.${styles.scoreSeriesDot}`)).toHaveLength(4);
+    expect(awayDots.querySelectorAll(`.${styles.scoreSeriesDotFilled}`)).toHaveLength(2);
+    expect(homeDots.querySelectorAll(`.${styles.scoreSeriesDot}`)).toHaveLength(4);
+    expect(homeDots.querySelectorAll(`.${styles.scoreSeriesDotFilled}`)).toHaveLength(1);
+    expect(screen.queryByText('2')).not.toBeInTheDocument();
+    expect(screen.queryByText('1')).not.toBeInTheDocument();
   });
 });

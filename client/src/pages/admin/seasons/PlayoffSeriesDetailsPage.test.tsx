@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
 import useLeagues from '@/hooks/useLeagues';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
@@ -9,6 +10,10 @@ import PlayoffSeriesDetailsPage from './PlayoffSeriesDetailsPage';
 
 const mockUseParams = jest.fn();
 const mockStartSeries = jest.fn();
+const mockScoreboardCard = jest.fn((props: unknown) => {
+  void props;
+  return <div>scoreboard</div>;
+});
 
 jest.mock('react-router-dom', () => ({
   useParams: () => mockUseParams(),
@@ -24,15 +29,66 @@ jest.mock('@/hooks/useGames', () => ({
 jest.mock('@/context/BreadcrumbContext', () => ({
   usePageBreadcrumbs: jest.fn(),
 }));
-jest.mock('@/pages/admin/games/game-details/ScoreboardCard', () => function MockScoreboardCard() {
-  return <div>scoreboard</div>;
-});
-jest.mock('@/components/GameListItem', () => function MockGameListItem() {
-  return <li>game item</li>;
-});
-jest.mock('./GameFormModal', () => function MockGameFormModal() {
-  return null;
-});
+jest.mock(
+  '@/components/Section/Section',
+  () =>
+    function MockSection({
+      title,
+      action,
+      children,
+    }: {
+      title?: ReactNode;
+      action?: ReactNode;
+      children?: ReactNode;
+    }) {
+      return (
+        <section>
+          {title && <h2>{title}</h2>}
+          {action}
+          {children}
+        </section>
+      );
+    },
+);
+jest.mock(
+  '@/components/Button/Button',
+  () =>
+    function MockButton({ children, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
+      return <button {...props}>{children}</button>;
+    },
+);
+jest.mock(
+  '@/components/LoadingSpinner/LoadingSpinner',
+  () =>
+    function MockLoadingSpinner({ message }: { message?: ReactNode }) {
+      return <div>{message}</div>;
+    },
+);
+jest.mock(
+  '@/components/Skeleton/Skeleton',
+  () =>
+    function MockSkeleton(props: HTMLAttributes<HTMLDivElement>) {
+      return <div {...props} />;
+    },
+);
+jest.mock(
+  '@/pages/admin/games/game-details/ScoreboardCard',
+  () => (props: unknown) => mockScoreboardCard(props),
+);
+jest.mock(
+  '@/components/GameListItem',
+  () =>
+    function MockGameListItem() {
+      return <li>game item</li>;
+    },
+);
+jest.mock(
+  './GameFormModal',
+  () =>
+    function MockGameFormModal() {
+      return null;
+    },
+);
 
 const mockUseLeagues = useLeagues as jest.Mock;
 const mockUseLeagueDetails = useLeagueDetails as jest.Mock;
@@ -144,5 +200,35 @@ describe('PlayoffSeriesDetailsPage', () => {
     expect(await screen.findByLabelText(/loading series games/i)).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(7);
     expect(screen.queryByText(/no games have been generated/i)).not.toBeInTheDocument();
+  });
+
+  it('passes playoff series wins to the scoreboard as dot data', () => {
+    mockUsePlayoffSeries.mockReturnValue({
+      series: [
+        {
+          ...series,
+          status: 'active',
+          away_wins: 2,
+          home_wins: 1,
+        },
+      ],
+      loading: false,
+      busy: null,
+      startSeries: mockStartSeries,
+    });
+
+    renderPage();
+
+    expect(mockScoreboardCard.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        liveAwayScore: 2,
+        liveHomeScore: 1,
+        seriesScore: {
+          awayWins: 2,
+          homeWins: 1,
+          winsNeeded: 4,
+        },
+      }),
+    );
   });
 });

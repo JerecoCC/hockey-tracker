@@ -452,6 +452,48 @@ $scoreboard-stripe-overlap: 8px;
     color: var(--app-text-muted, #{$text-dim});
   }
 
+  &SeriesDots {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 5rem;
+    height: 2.75rem;
+    transition: opacity 0.15s;
+
+    @media (max-width: 900px) {
+      gap: 4px;
+      min-width: 4rem;
+      height: 2rem;
+    }
+  }
+
+  &SeriesDotsLoser {
+    opacity: 0.58;
+  }
+
+  &SeriesDot {
+    width: 0.85rem;
+    height: 0.85rem;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    border: 2px solid color-mix(in srgb, var(--app-text-muted, #{$text-dim}) 58%, transparent);
+    border-radius: 999px;
+    background: transparent;
+
+    @media (max-width: 900px) {
+      width: 0.68rem;
+      height: 0.68rem;
+      border-width: 1.5px;
+    }
+  }
+
+  &SeriesDotFilled {
+    border-color: $success;
+    background: $success;
+    box-shadow: 0 0 0 1px color-mix(in srgb, $success 28%, transparent);
+  }
+
   &Meta {
     display: block;
     width: 100%;

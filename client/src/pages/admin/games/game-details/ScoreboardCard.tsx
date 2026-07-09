@@ -53,6 +53,11 @@ interface Props {
   isEditMode?: boolean;
   liveAwayScore: number;
   liveHomeScore: number;
+  seriesScore?: {
+    awayWins: number;
+    homeWins: number;
+    winsNeeded: number;
+  };
   overtimeSuffix: string;
   /** When omitted, team logo buttons don't navigate anywhere. */
   leagueId?: string;
@@ -97,6 +102,43 @@ function teamTextShadow(textHex: string, bgHex: string, threshold = 3): string {
 
 const teamPlaceLabel = (team: TeamInfo) => team.place_name?.trim() || '';
 const teamNameLabel = (team: TeamInfo) => team.team_name?.trim() || team.name?.trim() || team.code;
+const teamScoreLabel = (team: TeamInfo) => team.name?.trim() || teamNameLabel(team);
+const clampSeriesWins = (wins: number, total: number) =>
+  Math.min(Math.max(Math.trunc(wins), 0), total);
+
+const SeriesScoreDots = ({
+  label,
+  wins,
+  total,
+  isLoser,
+}: {
+  label: string;
+  wins: number;
+  total: number;
+  isLoser: boolean;
+}) => {
+  const safeWins = clampSeriesWins(wins, total);
+
+  return (
+    <span
+      role="img"
+      aria-label={`${label} series wins ${safeWins} of ${total}`}
+      className={[styles.scoreSeriesDots, isLoser ? styles.scoreSeriesDotsLoser : '']
+        .filter(Boolean)
+        .join(' ')}
+    >
+      {Array.from({ length: total }, (_, index) => (
+        <span
+          key={index}
+          aria-hidden="true"
+          className={[styles.scoreSeriesDot, index < safeWins ? styles.scoreSeriesDotFilled : '']
+            .filter(Boolean)
+            .join(' ')}
+        />
+      ))}
+    </span>
+  );
+};
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -106,6 +148,7 @@ const ScoreboardCard = ({
   isInProgress,
   liveAwayScore,
   liveHomeScore,
+  seriesScore,
   overtimeSuffix,
   leagueId,
   leagueCode,
@@ -115,6 +158,12 @@ const ScoreboardCard = ({
 }: Props) => {
   const navigate = useNavigate();
   const playoffScoreMeta = getPlayoffScoreMetaDisplay(game);
+  const seriesWinsNeeded =
+    seriesScore && Number.isFinite(seriesScore.winsNeeded)
+      ? Math.max(Math.trunc(seriesScore.winsNeeded), 0)
+      : 0;
+  const showSeriesScoreDots = !!seriesScore && seriesWinsNeeded > 0;
+  const showNumberScore = !showSeriesScoreDots && (isFinal || isInProgress);
   const buildTeamPath = (team: TeamInfo) =>
     mode === 'user'
       ? buildUserTeamDetailsPath({
@@ -217,7 +266,14 @@ const ScoreboardCard = ({
 
         {/* ── Center: score + status ── */}
         <div className={styles.scoreCenter}>
-          {(isFinal || isInProgress) && (
+          {showSeriesScoreDots ? (
+            <SeriesScoreDots
+              label={teamScoreLabel(game.away_team)}
+              wins={seriesScore.awayWins}
+              total={seriesWinsNeeded}
+              isLoser={isFinal && liveAwayScore < liveHomeScore}
+            />
+          ) : showNumberScore ? (
             <span
               className={[
                 styles.scoreNumber,
@@ -228,7 +284,7 @@ const ScoreboardCard = ({
             >
               {liveAwayScore}
             </span>
-          )}
+          ) : null}
           <div className={styles.scoreBlock}>
             {playoffScoreMeta &&
               (playoffScoreMeta.tooltip ? (
@@ -269,7 +325,14 @@ const ScoreboardCard = ({
               </span>
             )}
           </div>
-          {(isFinal || isInProgress) && (
+          {showSeriesScoreDots ? (
+            <SeriesScoreDots
+              label={teamScoreLabel(game.home_team)}
+              wins={seriesScore.homeWins}
+              total={seriesWinsNeeded}
+              isLoser={isFinal && liveHomeScore < liveAwayScore}
+            />
+          ) : showNumberScore ? (
             <span
               className={[
                 styles.scoreNumber,
@@ -280,7 +343,7 @@ const ScoreboardCard = ({
             >
               {liveHomeScore}
             </span>
-          )}
+          ) : null}
         </div>
 
         {/* ── Home side ── */}

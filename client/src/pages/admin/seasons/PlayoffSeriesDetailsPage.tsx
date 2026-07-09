@@ -392,6 +392,11 @@ const PlayoffSeriesDetailsPage = () => {
         isInProgress={playoffSeries.status === 'active'}
         liveAwayScore={playoffSeries.away_wins}
         liveHomeScore={playoffSeries.home_wins}
+        seriesScore={{
+          awayWins: playoffSeries.away_wins,
+          homeWins: playoffSeries.home_wins,
+          winsNeeded: playoffSeries.games_to_win,
+        }}
         overtimeSuffix=""
         leagueId={routeLeagueId}
         leagueCode={leagueCode}
