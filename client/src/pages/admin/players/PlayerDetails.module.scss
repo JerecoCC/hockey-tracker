@@ -214,7 +214,6 @@
     letter-spacing: 0;
     overflow-wrap: anywhere;
   }
-
 }
 
 .heroPositionTag.heroPositionTag {
@@ -244,7 +243,7 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: $space-xs;
+  gap: $space-sm;
 }
 
 .inlineActionIndicator {
@@ -645,7 +644,6 @@
     gap: $space-lg;
     align-items: start;
   }
-
 }
 
 .currentSeasonCards {

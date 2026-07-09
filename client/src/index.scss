@@ -136,7 +136,17 @@ button {
   line-height: 1;
 }
 
-// ── Font Awesome icon baseline fix ─────────────────────────────────────
+// Filled shared card surfaces collapse to full-width slabs on mobile.
+@media (max-width: 768px) {
+  #root [data-testid='card'][class*='_filled_'] {
+    border-width: 1px 0 !important;
+    border-style: solid !important;
+    border-color: var(--app-border) !important;
+    border-radius: 0 !important;
+  }
+}
+
+// Font Awesome icon baseline fix.
 svg[aria-hidden] {
   vertical-align: -0.15em;
   user-select: none;

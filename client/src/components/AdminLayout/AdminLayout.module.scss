@@ -81,9 +81,9 @@ $bg-page: #0f172a;
   flex: 1;
 
   @media (max-width: 768px) {
-    --main-inline-padding: #{$space-lg};
-    --main-inline-padding-offset: -#{$space-lg};
+    --main-inline-padding: 0px;
+    --main-inline-padding-offset: 0px;
 
-    padding: $space-2xl $space-lg;
+    padding: 0;
   }
 }
