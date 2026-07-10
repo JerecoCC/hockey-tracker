@@ -200,7 +200,7 @@
   &FirstName {
     font-size: $font-lg;
     font-weight: 600;
-    color: #fff;
+    color: var(--app-text-strong, #{$text-bright});
     line-height: 1.25;
     letter-spacing: 0;
     @include truncate;
