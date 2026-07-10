@@ -6,12 +6,12 @@ import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import Field from '@jerecocc/tracker-ui/components/Field/Field';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import Slider from '@jerecocc/tracker-ui/components/Slider/Slider';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import useLeagueDraftDates, {
   type LeagueDraftDateRecord,
   type LeagueDraftEventPayload,
 } from '@/hooks/useLeagueDraftDates';
-import Slider from '@/shared/Slider/Slider';
 import {
   LeagueListRowSkeleton,
   TabActionSkeleton,
