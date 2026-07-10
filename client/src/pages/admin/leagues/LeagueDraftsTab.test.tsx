@@ -215,8 +215,17 @@ describe('LeagueDraftsTab', () => {
       within(secondDayGroup).getByText('Round 2'),
     );
     expect(within(firstDayGroup).getAllByRole('slider')).toHaveLength(1);
-    expect(within(firstDayGroup).getByRole('slider', { name: 'Day 1 end round' })).toBeDisabled();
+    const firstDaySlider = within(firstDayGroup).getByRole('slider', {
+      name: 'Day 1 end round',
+    });
+    expect(firstDaySlider).toBeDisabled();
+    expect(firstDaySlider.closest('.draftDaySlider')).not.toBeNull();
     expect(within(secondDayGroup).getAllByRole('slider')).toHaveLength(2);
+    expect(
+      within(secondDayGroup)
+        .getByRole('slider', { name: 'Day 2 start round' })
+        .closest('.draftDaySlider'),
+    ).not.toBeNull();
     await waitFor(() => expect(submitButton).toBeEnabled());
     fireEvent.click(submitButton as HTMLButtonElement);
 

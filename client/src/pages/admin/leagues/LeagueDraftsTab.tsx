@@ -669,6 +669,7 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
                     </div>
                     {index === 0 ? (
                       <Slider
+                        className={styles.draftDaySlider}
                         label="End Round"
                         min={sliderMin}
                         max={sliderMax}
@@ -680,6 +681,7 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
                       />
                     ) : (
                       <Slider
+                        className={styles.draftDaySlider}
                         variant="range"
                         label="Round Range"
                         min={sliderMin}

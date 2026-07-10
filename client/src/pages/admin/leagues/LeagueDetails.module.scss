@@ -1654,3 +1654,10 @@ $league-tab-list-gap: $space-md;
     font-size: $font-base;
   }
 }
+
+.draftDaySlider {
+  // Tracker UI renders the stop markers as the second decorative span inside the control.
+  > span:has(> input[type='range']) > span[aria-hidden='true']:nth-of-type(2) > span {
+    background: rgba(255, 255, 255, 0.52);
+  }
+}
