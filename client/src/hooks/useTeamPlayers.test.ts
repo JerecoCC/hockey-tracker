@@ -130,10 +130,9 @@ describe('useTeamPlayers roster updates', () => {
     queryClient.setQueryData(season2026Key, [player2026]);
     mockedAxios.delete.mockResolvedValueOnce({});
 
-    const { result } = renderHook(
-      () => useTeamPlayers(undefined, 'season-2026'),
-      { wrapper: createWrapper(queryClient) },
-    );
+    const { result } = renderHook(() => useTeamPlayers(undefined, 'season-2026'), {
+      wrapper: createWrapper(queryClient),
+    });
 
     await act(async () => {
       await result.current.removePlayerFromTeam(player2026);
@@ -146,7 +145,10 @@ describe('useTeamPlayers roster updates', () => {
   it('updates prospect status only on the matching season roster row', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const season2025Key = ['players', { team_id: 'team-1', season_id: 'season-2025' }];
-    const season2026Key = ['players', { team_id: 'team-1', season_id: 'season-2026', prospectsOnly: true }];
+    const season2026Key = [
+      'players',
+      { team_id: 'team-1', season_id: 'season-2026', prospectsOnly: true },
+    ];
     const player2025 = { ...PLAYER, player_team_id: 'player-team-2025', is_prospect: false };
     const player2026 = { ...PLAYER, player_team_id: 'player-team-2026', is_prospect: true };
     queryClient.setQueryData(season2025Key, [player2025]);
@@ -187,6 +189,48 @@ describe('usePlayerTradeHistory', () => {
 });
 
 describe('useStintActions', () => {
+  it('reconciles reviewed career stints in one request and refreshes player history', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
+    mockedAxios.post.mockResolvedValueOnce({
+      data: {
+        actions: [{ import_key: '2026-03-06|trade|team-2', action: 'create' }],
+        summary: { total: 1, create: 1, update: 0, adopt: 0, unchanged: 0, conflict: 0 },
+      },
+    });
+
+    const { result } = renderHook(() => useStintActions('player-1'), {
+      wrapper: createWrapper(queryClient),
+    });
+    const stints = [
+      {
+        import_key: '2026-03-06|trade|team-2',
+        team_id: 'team-2',
+        position: 'C',
+        acquisition_type: 'trade',
+        start_date: '2026-03-06',
+        end_date: null,
+      },
+    ];
+
+    await act(async () => {
+      await expect(result.current.reconcilePlayerStints(stints)).resolves.toMatchObject({
+        summary: { create: 1, conflict: 0 },
+      });
+    });
+
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      '/api/admin/player-teams/history/player-1/reconcile',
+      { source: 'nhl_puckpedia', dry_run: false, stints },
+      { headers: { Authorization: 'Bearer test-token' } },
+    );
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['player-trade-history', 'player-1'],
+    });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['player', 'player-1'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['players'] });
+  });
+
   it('updates a jersey history row and refreshes related player data', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
@@ -288,4 +332,3 @@ describe('useStintActions', () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['players'] });
   });
 });
-

@@ -59,6 +59,37 @@ export interface CreateStintData {
   end_date?: string | null;
 }
 
+export interface ReconcilePlayerStintInput {
+  import_key: string;
+  team_id: string;
+  position?: string | null;
+  acquisition_type?: string | null;
+  start_date: string;
+  end_date?: string | null;
+}
+
+export type ReconcilePlayerStintAction = 'create' | 'update' | 'adopt' | 'unchanged' | 'conflict';
+
+export interface ReconcilePlayerStintsResult {
+  actions: Array<{
+    import_key: string;
+    action: ReconcilePlayerStintAction;
+    stint_id?: string | null;
+    changes?: string[];
+    conflicts?: string[];
+    conflict_type?: string | null;
+    applied?: boolean;
+  }>;
+  summary: {
+    total: number;
+    create: number;
+    update: number;
+    adopt: number;
+    unchanged: number;
+    conflict: number;
+  };
+}
+
 export interface UpdateJerseyHistoryEntryData {
   jersey_number: number;
   effective_from: string;
@@ -205,6 +236,38 @@ export const useStintActions = (playerId: string | null) => {
     } catch (err) {
       toast.error(apiError(err, 'Failed to record stint'));
       return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const reconcilePlayerStints = async (
+    stints: ReconcilePlayerStintInput[],
+    options: { dryRun?: boolean; source?: string } = {},
+  ): Promise<ReconcilePlayerStintsResult | null> => {
+    if (!playerId || stints.length === 0) return null;
+
+    setSaving(true);
+    try {
+      const { data } = await axios.post<ReconcilePlayerStintsResult>(
+        `${API}/admin/player-teams/history/${playerId}/reconcile`,
+        {
+          source: options.source ?? 'nhl_puckpedia',
+          dry_run: options.dryRun ?? false,
+          stints,
+        },
+        { headers: authHeaders() },
+      );
+
+      if (!options.dryRun) {
+        await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+        await queryClient.invalidateQueries({ queryKey: ['player', playerId] });
+        await queryClient.invalidateQueries({ queryKey: ['players'] });
+      }
+      return data;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to apply player team stints'));
+      return null;
     } finally {
       setSaving(false);
     }
@@ -399,6 +462,7 @@ export const useStintActions = (playerId: string | null) => {
 
   return {
     createStint,
+    reconcilePlayerStints,
     updateStint,
     deleteStint,
     changeJerseyNumber,

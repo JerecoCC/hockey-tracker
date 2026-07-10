@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useForm } from 'react-hook-form';
+import ActionOverlay from '@jerecocc/tracker-ui/components/ActionOverlay/ActionOverlay';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
-import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import Field from '@jerecocc/tracker-ui/components/Field/Field';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
@@ -38,7 +38,13 @@ interface DraftEvent {
   startDate: string;
   endDate: string;
   totalRounds: number;
-  dayCount: number;
+}
+
+interface DraftTimelineSegment {
+  startRound: number;
+  endRound: number;
+  draftDate: LeagueDraftDateRecord | null;
+  dayIndex: number | null;
 }
 
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -103,7 +109,15 @@ const formatDate = (iso: string) =>
   });
 
 const formatDateRange = (startDate: string, endDate: string) =>
-  startDate === endDate ? formatDate(startDate) : `${formatDate(startDate)} - ${formatDate(endDate)}`;
+  startDate === endDate
+    ? formatDate(startDate)
+    : `${formatDate(startDate)} - ${formatDate(endDate)}`;
+
+const formatMonthDay = (iso: string) =>
+  new Date(`${iso}T00:00:00`).toLocaleDateString('en-CA', {
+    month: 'short',
+    day: 'numeric',
+  });
 
 const formatRoundRange = (draftDate: Pick<LeagueDraftDateRecord, 'start_round' | 'end_round'>) =>
   draftDate.start_round === draftDate.end_round
@@ -131,9 +145,7 @@ const normalizeDayRanges = (
         : clamp(Math.ceil(((index + 1) * totalRounds) / dates.length), startRound, maxEndRound);
     const preferredEndRound = previousByDate.get(date)?.endRound ?? fallbackEndRound;
     const endRound =
-      index === dates.length - 1
-        ? totalRounds
-        : clamp(preferredEndRound, startRound, maxEndRound);
+      index === dates.length - 1 ? totalRounds : clamp(preferredEndRound, startRound, maxEndRound);
 
     ranges.push({ date, startRound, endRound });
     nextStartRound = endRound + 1;
@@ -154,33 +166,71 @@ const buildDraftEvents = (draftDates: LeagueDraftDateRecord[]) => {
     .map(([draftYear, rows]): DraftEvent => {
       const sortedRows = [...rows].sort(
         (left, right) =>
-          left.draft_date.localeCompare(right.draft_date) ||
-          left.start_round - right.start_round,
+          left.draft_date.localeCompare(right.draft_date) || left.start_round - right.start_round,
       );
       const dates = sortedRows.map((row) => row.draft_date);
-      const uniqueDates = Array.from(new Set(dates));
       return {
         draftYear,
         rows: sortedRows,
         startDate: dates[0],
         endDate: dates[dates.length - 1],
         totalRounds: Math.max(...sortedRows.map((row) => row.end_round)),
-        dayCount: uniqueDates.length,
       };
     })
     .sort((left, right) => right.draftYear - left.draftYear);
 };
 
-const LeagueDraftsTab = ({
-  leagueId,
-  className,
-}: {
-  leagueId: string;
-  className?: string;
-}) => {
+const buildDraftTimelineSegments = (rows: LeagueDraftDateRecord[], totalRoundColumns: number) => {
+  const segments: DraftTimelineSegment[] = [];
+  let nextRound = 1;
+
+  rows.forEach((row, dayIndex) => {
+    const startRound = clamp(row.start_round, 1, totalRoundColumns);
+    const endRound = clamp(row.end_round, startRound, totalRoundColumns);
+
+    while (nextRound < startRound) {
+      segments.push({
+        startRound: nextRound,
+        endRound: nextRound,
+        draftDate: null,
+        dayIndex: null,
+      });
+      nextRound += 1;
+    }
+
+    const visibleStartRound = Math.max(startRound, nextRound);
+    if (endRound >= visibleStartRound) {
+      segments.push({
+        startRound: visibleStartRound,
+        endRound,
+        draftDate: row,
+        dayIndex,
+      });
+      nextRound = endRound + 1;
+    }
+  });
+
+  while (nextRound <= totalRoundColumns) {
+    segments.push({
+      startRound: nextRound,
+      endRound: nextRound,
+      draftDate: null,
+      dayIndex: null,
+    });
+    nextRound += 1;
+  }
+
+  return segments;
+};
+
+const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?: string }) => {
   const { draftDates, loading, createDraftEvent, updateDraftEvent, deleteDraftEvent } =
     useLeagueDraftDates(leagueId);
   const draftEvents = useMemo(() => buildDraftEvents(draftDates), [draftDates]);
+  const totalRoundColumns = useMemo(
+    () => Math.max(0, ...draftEvents.map((draftEvent) => draftEvent.totalRounds)),
+    [draftEvents],
+  );
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<DraftEvent | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<DraftEvent | null>(null);
@@ -214,9 +264,7 @@ const LeagueDraftsTab = ({
     parsedStartDate !== null &&
     parsedEndDate >= parsedStartDate;
   const invalidDateRange =
-    !!startDateValue &&
-    !!endDateValue &&
-    (draftDatesInRange.length === 0 || dateRangeOverflow);
+    !!startDateValue && !!endDateValue && (draftDatesInRange.length === 0 || dateRangeOverflow);
   const totalRoundsTooLow =
     totalRounds !== null && draftDatesInRange.length > 0 && totalRounds < draftDatesInRange.length;
 
@@ -275,9 +323,7 @@ const LeagueDraftsTab = ({
         ? clamp(value[0], previousDay.startRound + 1, day.endRound)
         : day.startRound;
       const nextEndRound =
-        index === next.length - 1
-          ? totalRounds
-          : clamp(value[1], nextStartRound, maxEndRound);
+        index === next.length - 1 ? totalRounds : clamp(value[1], nextStartRound, maxEndRound);
 
       if (previousDay) {
         next[index - 1] = { ...previousDay, endRound: nextStartRound - 1 };
@@ -345,76 +391,157 @@ const LeagueDraftsTab = ({
         >
           {draftEvents.length === 0 ? (
             <p className={styles.emptyMsg}>
-              No drafts configured yet. Add draft dates so drafted player stints can use the
-              correct start date.
+              No drafts configured yet. Add draft dates so drafted player stints can use the correct
+              start date.
             </p>
           ) : (
-            <ul
-              className={styles.awardDefinitionList}
-              aria-label="Drafts"
-            >
-              {draftEvents.map((item) => (
-                <li
-                  key={item.draftYear}
-                  className={styles.awardDefinitionSortableItem}
-                >
-                  <div className={styles.awardDefinitionItem}>
-                    <div className={styles.awardDefinitionHeader}>
-                      <div className={styles.awardDefinitionMain}>
-                        <span className={styles.awardDefinitionName}>
-                          {item.draftYear} Draft
-                        </span>
-                        <span className={styles.awardDefinitionDescription}>
-                          {formatDateRange(item.startDate, item.endDate)}
-                        </span>
-                      </div>
-                      <div className={styles.awardDefinitionActions}>
-                        <Button
-                          variant="outlined"
-                          intent="neutral"
-                          icon="edit"
-                          tooltip="Edit draft"
-                          aria-label={`Edit ${item.draftYear} draft`}
-                          onClick={() => openEdit(item)}
-                        />
-                        <Button
-                          variant="outlined"
-                          intent="danger"
-                          icon="delete"
-                          tooltip="Remove draft"
-                          aria-label={`Remove ${item.draftYear} draft`}
-                          onClick={() => setConfirmDelete(item)}
-                        />
-                      </div>
-                    </div>
-                    <Divider
-                      variant="horizontal"
-                      className={styles.awardDefinitionDivider}
+            <div className={styles.draftTimelineScroll}>
+              <table
+                className={styles.draftTimelineTable}
+                aria-label="Draft schedule by round"
+                style={{ '--draft-round-count': totalRoundColumns } as CSSProperties}
+              >
+                <caption className={styles.srOnly}>
+                  Draft years and the rounds held on each draft day
+                </caption>
+                <colgroup>
+                  <col className={styles.draftTimelineYearColumn} />
+                  {Array.from({ length: totalRoundColumns }, (_, index) => (
+                    <col
+                      key={index + 1}
+                      className={styles.draftTimelineRoundColumn}
                     />
-                    <div
-                      className={styles.awardDefinitionMeta}
-                      aria-label="Draft details"
+                  ))}
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th
+                      scope="col"
+                      className={styles.draftTimelineYearHeader}
                     >
-                      <Tag
-                        label={`${item.totalRounds} rounds`}
-                        intent="info"
-                      />
-                      <Tag
-                        label={`${item.dayCount} ${item.dayCount === 1 ? 'day' : 'days'}`}
-                        intent="neutral"
-                      />
-                      {item.rows.map((row) => (
-                        <Tag
-                          key={row.id}
-                          label={`${formatDate(row.draft_date)}: ${formatRoundRange(row)}`}
-                          intent="neutral"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                      Draft year
+                    </th>
+                    {Array.from({ length: totalRoundColumns }, (_, index) => (
+                      <th
+                        key={index + 1}
+                        scope="col"
+                        className={styles.draftTimelineRoundHeader}
+                      >
+                        <span>Round</span>
+                        <strong>{index + 1}</strong>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {draftEvents.map((item) => {
+                    const timelineSegments = buildDraftTimelineSegments(
+                      item.rows,
+                      totalRoundColumns,
+                    );
+                    const scheduledSegments = timelineSegments.filter(
+                      (segment) => segment.draftDate && segment.dayIndex !== null,
+                    );
+                    const scheduledByStartRound = new Map(
+                      scheduledSegments.map((segment) => [segment.startRound, segment]),
+                    );
+
+                    return (
+                      <tr key={item.draftYear}>
+                        <th
+                          scope="row"
+                          className={styles.draftTimelineYearCell}
+                        >
+                          <div className={styles.draftTimelineYearMain}>
+                            <strong className={styles.draftTimelineYear}>{item.draftYear}</strong>
+                            <span className={styles.draftTimelineDates}>
+                              {formatDateRange(item.startDate, item.endDate)}
+                            </span>
+                          </div>
+                          <ActionOverlay
+                            className={styles.draftTimelineActions}
+                            data-hover-actions
+                          >
+                            <Button
+                              variant="outlined"
+                              intent="neutral"
+                              icon="edit"
+                              tooltip="Edit draft"
+                              aria-label={`Edit ${item.draftYear} draft`}
+                              onClick={() => openEdit(item)}
+                            />
+                            <Button
+                              variant="outlined"
+                              intent="danger"
+                              icon="delete"
+                              tooltip="Remove draft"
+                              aria-label={`Remove ${item.draftYear} draft`}
+                              onClick={() => setConfirmDelete(item)}
+                            />
+                          </ActionOverlay>
+                        </th>
+                        {Array.from({ length: totalRoundColumns }, (_, index) => {
+                          const round = index + 1;
+                          const coveringSegment = scheduledSegments.find(
+                            (segment) => round >= segment.startRound && round <= segment.endRound,
+                          );
+                          const startingSegment = scheduledByStartRound.get(round);
+
+                          if (!startingSegment?.draftDate || startingSegment.dayIndex === null) {
+                            return (
+                              <td
+                                key={round}
+                                className={styles.draftTimelineRoundCell}
+                                aria-label={
+                                  coveringSegment?.dayIndex !== null &&
+                                  coveringSegment?.dayIndex !== undefined
+                                    ? `Round ${round}, Day ${coveringSegment.dayIndex + 1}`
+                                    : `Round ${round} not scheduled`
+                                }
+                              />
+                            );
+                          }
+
+                          const roundSpan =
+                            startingSegment.endRound - startingSegment.startRound + 1;
+                          const fullDate = formatDate(startingSegment.draftDate.draft_date);
+                          const roundRange = formatRoundRange({
+                            start_round: startingSegment.startRound,
+                            end_round: startingSegment.endRound,
+                          });
+                          const rangeLabel = `Day ${startingSegment.dayIndex + 1}, ${fullDate}, ${roundRange}`;
+
+                          return (
+                            <td
+                              key={round}
+                              className={styles.draftTimelineRoundCell}
+                              aria-label={`Round ${round}, Day ${startingSegment.dayIndex + 1}`}
+                            >
+                              <div
+                                className={styles.draftTimelineDay}
+                                aria-label={rangeLabel}
+                                data-round-span={roundSpan}
+                                title={`${fullDate}: ${roundRange}`}
+                                style={
+                                  {
+                                    '--draft-range-width': `calc(${roundSpan * 100}% + ${roundSpan - 1}px - 1rem)`,
+                                  } as CSSProperties
+                                }
+                              >
+                                <span>Day {startingSegment.dayIndex + 1}</span>
+                                <strong>
+                                  {formatMonthDay(startingSegment.draftDate.draft_date)}
+                                </strong>
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </Section>
       </div>
@@ -549,7 +676,6 @@ const LeagueDraftsTab = ({
               })}
             </div>
           )}
-
         </form>
       </Modal>
 

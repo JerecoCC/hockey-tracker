@@ -14,6 +14,7 @@ import useSeasons from '@/hooks/useSeasons';
 import useTeams from '@/hooks/useTeams';
 import useTabState from '@/hooks/useTabState';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
+import useLeagueDraftDates from '@/hooks/useLeagueDraftDates';
 import {
   useJerseyHistory,
   usePlayerPhotoHistory,
@@ -21,6 +22,7 @@ import {
   useStintActions,
 } from '@/hooks/useTeamPlayers';
 import PlayerDetails, {
+  buildManualMovementStintImport,
   buildCareerStatColumns,
   buildGameLogColumns,
   collapseSameTeamStints,
@@ -69,6 +71,7 @@ jest.mock('@/hooks/useSeasons', () => jest.fn());
 jest.mock('@/hooks/useTeams', () => jest.fn());
 jest.mock('@/hooks/useTabState', () => jest.fn());
 jest.mock('@/hooks/useDocumentIcon', () => jest.fn());
+jest.mock('@/hooks/useLeagueDraftDates', () => jest.fn());
 jest.mock('@/hooks/useTeamPlayers', () => ({
   usePlayerTradeHistory: jest.fn(),
   useJerseyHistory: jest.fn(),
@@ -280,6 +283,7 @@ const mockUseSeasons = useSeasons as jest.Mock;
 const mockUseTeams = useTeams as jest.Mock;
 const mockUseTabState = useTabState as jest.Mock;
 const mockUseDocumentIcon = useDocumentIcon as jest.Mock;
+const mockUseLeagueDraftDates = useLeagueDraftDates as jest.Mock;
 const mockUsePlayerTradeHistory = usePlayerTradeHistory as jest.Mock;
 const mockUseJerseyHistory = useJerseyHistory as jest.Mock;
 const mockUsePlayerPhotoHistory = usePlayerPhotoHistory as jest.Mock;
@@ -319,6 +323,7 @@ beforeEach(() => {
   (mockedAxios.isAxiosError as unknown as jest.Mock).mockReturnValue(false);
   document.title = 'Hockey Tracker';
   mockUseTabState.mockReturnValue([0, jest.fn()]);
+  mockUseLeagueDraftDates.mockReturnValue({ draftDates: [], loading: false });
   mockUsePlayerRouteLookup.mockReturnValue({
     routeLookup: {
       player_id: 'player-1',
@@ -412,6 +417,7 @@ beforeEach(() => {
   mockUsePlayerPhotoHistory.mockReturnValue({ byTeam: {} });
   mockUseStintActions.mockReturnValue({
     createStint: jest.fn(),
+    reconcilePlayerStints: jest.fn(),
     updateStint: jest.fn(),
     deleteStint: jest.fn(),
     changeJerseyNumber: jest.fn(),
@@ -1058,7 +1064,7 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getByRole('dialog', { name: 'PuckPedia Source' })).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: 'Open PuckPedia' })).toHaveAttribute(
       'href',
-      'https://puckpedia.com/player/andrew-peeke/transactions?transaction_type=trade,waiver,signing',
+      'https://puckpedia.com/player/andrew-peeke/transactions?transaction_type=trade,waiver,signing,roster',
     );
     expect(mockedAxios.get).not.toHaveBeenCalled();
 
@@ -1109,6 +1115,88 @@ describe('PlayerDetails info tab', () => {
     expect(screen.queryByText('April 1, 2019')).not.toBeInTheDocument();
     expect(screen.queryByText(/acquired Andrew Peeke/)).not.toBeInTheDocument();
     expect(screen.queryByText(/signs a 3-Year/)).not.toBeInTheDocument();
+  });
+
+  it('applies reviewed NHL movements to career history in one reconciliation request', async () => {
+    const user = userEvent.setup();
+    const reconcilePlayerStints = jest.fn().mockResolvedValue({
+      actions: [
+        {
+          import_key: 'nhl_puckpedia:v1:anchor:stint-1',
+          action: 'adopt',
+        },
+        {
+          import_key: 'nhl_puckpedia:v1:event:stint-1:1',
+          action: 'create',
+        },
+      ],
+      summary: { total: 2, create: 1, update: 0, adopt: 1, unchanged: 0, conflict: 0 },
+    });
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUseTeams.mockReturnValue({
+      teams: [
+        { id: 'team-1', name: 'Toronto Maple Leafs', code: 'TOR', league_id: 'league-1' },
+        { id: 'team-nyr', name: 'New York Rangers', code: 'NYR', league_id: 'league-1' },
+      ],
+    });
+    mockUseStintActions.mockReturnValue({
+      createStint: jest.fn(),
+      reconcilePlayerStints,
+      updateStint: jest.fn(),
+      deleteStint: jest.fn(),
+      changeJerseyNumber: jest.fn(),
+      updateJerseyHistoryEntry: jest.fn(),
+      deleteJerseyHistoryEntry: jest.fn(),
+      changePlayerPhoto: jest.fn(),
+      deletePlayerPhoto: jest.fn(),
+      uploadStintPhoto: jest.fn(),
+      saving: false,
+    });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'PuckPedia source' }));
+    fireEvent.change(screen.getByLabelText('PuckPedia transactions text or HTML'), {
+      target: {
+        value: `
+          Date Type Teams Details
+          Mar 6, 2026 Trade
+
+          The New York Rangers acquired John Smith from the Toronto Maple Leafs for Future Considerations
+        `,
+      },
+    });
+    await user.click(screen.getByText('Build report'));
+    await user.click(screen.getByRole('button', { name: 'Apply reviewed team stints' }));
+
+    const confirmation = screen.getByRole('dialog', { name: 'Apply Team Stints' });
+    expect(within(confirmation).getByText(/season rosters are not changed/i)).toBeInTheDocument();
+    await user.click(within(confirmation).getByRole('button', { name: 'Apply Team Stints' }));
+
+    await waitFor(() =>
+      expect(reconcilePlayerStints).toHaveBeenCalledWith(
+        [
+          {
+            import_key: 'nhl_puckpedia:v1:anchor:stint-1',
+            team_id: 'team-1',
+            position: 'C',
+            acquisition_type: 'trade',
+            start_date: '2024-10-01',
+            end_date: '2026-03-06',
+          },
+          {
+            import_key: 'nhl_puckpedia:v1:event:stint-1:1',
+            team_id: 'team-nyr',
+            position: 'C',
+            acquisition_type: 'trade',
+            start_date: '2026-03-06',
+            end_date: null,
+          },
+        ],
+        { source: 'nhl_puckpedia' },
+      ),
+    );
+    expect(mockedToast.success).toHaveBeenCalledWith('2 team stints applied.');
   });
 
   it('reports waiver claims as the latest team-changing movement', async () => {
@@ -1350,12 +1438,11 @@ describe('PlayerDetails info tab', () => {
       .filter((row): row is HTMLElement => row !== null);
 
     expect(carolinaMovementRows).toHaveLength(1);
-    expect(within(carolinaMovementRows[0]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
-      'Carolina Hurricanes',
-      'Waivers',
-      'October 4, 2025',
-      'Present',
-    ]);
+    expect(
+      within(carolinaMovementRows[0])
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['Carolina Hurricanes', 'Waivers', 'October 4, 2025', 'Present']);
     expect(report.queryByText('Current stint')).not.toBeInTheDocument();
     expect(report.queryByText('October 7, 2025')).not.toBeInTheDocument();
     expect(report.queryByText('October 5, 2025')).not.toBeInTheDocument();
@@ -1515,7 +1602,11 @@ describe('PlayerDetails info tab', () => {
     const movementRows = report
       .getAllByRole('row')
       .slice(1)
-      .map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+      .map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent),
+      );
 
     expect(movementRows).toEqual([
       ['Ottawa Senators', 'Free Agency', 'January 12, 2026', 'Present'],
@@ -1549,9 +1640,7 @@ describe('PlayerDetails info tab', () => {
       loading: false,
     });
     mockUseTeams.mockReturnValue({
-      teams: [
-        { id: 'team-tbl', name: 'Tampa Bay Lightning', code: 'TBL', league_id: 'league-1' },
-      ],
+      teams: [{ id: 'team-tbl', name: 'Tampa Bay Lightning', code: 'TBL', league_id: 'league-1' }],
     });
     mockUseSeasons.mockReturnValue({
       seasons: [
@@ -1624,7 +1713,11 @@ describe('PlayerDetails info tab', () => {
     const movementRows = report
       .getAllByRole('row')
       .slice(1)
-      .map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+      .map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent),
+      );
 
     expect(movementRows).toEqual([
       ['Tampa Bay Lightning', 'Free Agency', 'May 5, 2025', 'Present'],
@@ -2337,7 +2430,7 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getByRole('dialog', { name: 'PuckPedia Source' })).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: 'Open PuckPedia' })).toHaveAttribute(
       'href',
-      'https://puckpedia.com/player/john-smith/transactions?transaction_type=trade,waiver,signing',
+      'https://puckpedia.com/player/john-smith/transactions?transaction_type=trade,waiver,signing,roster',
     );
     expect(screen.getByLabelText('PuckPedia transactions text or HTML')).toBeInTheDocument();
 
@@ -2370,9 +2463,7 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getByText('Winnipeg Jets')).toBeInTheDocument();
     expect(screen.getAllByText('New York Rangers').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Utah Mammoth').length).toBeGreaterThan(0);
-    expect(screen.getByText('Jersey Number Changes')).toBeInTheDocument();
-    expect(screen.getByText('#8')).toBeInTheDocument();
-    expect(screen.getByText('#2')).toBeInTheDocument();
+    expect(screen.queryByText('Jersey Number Changes')).not.toBeInTheDocument();
     expect(screen.queryByText(/signs a 1-Year/)).not.toBeInTheDocument();
   });
 
@@ -2626,14 +2717,16 @@ describe('PlayerDetails info tab', () => {
     const movementRows = report
       .getAllByRole('row')
       .slice(1)
-      .map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+      .map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent),
+      );
 
     expect(report.getByText('Arizona Coyotes')).toBeInTheDocument();
     expect(report.getByText('Draft Year: 2016 | Round: 1')).toBeInTheDocument();
     expect(report.queryByText('ARI')).not.toBeInTheDocument();
-    expect(movementRows).toEqual([
-      ['Utah Mammoth', 'Team Transfer', 'April 18, 2024', 'Present'],
-    ]);
+    expect(movementRows).toEqual([['Utah Mammoth', 'Team Transfer', 'April 18, 2024', 'Present']]);
     expect(report.queryByText('Free Agency')).not.toBeInTheDocument();
   });
 
@@ -2743,13 +2836,17 @@ describe('PlayerDetails info tab', () => {
     const movementRows = report
       .getAllByRole('row')
       .slice(1)
-      .map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+      .map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent),
+      );
 
     expect(report.queryByText('Draft Year: 2018 | Round: 1')).not.toBeInTheDocument();
     expect(report.queryByText('Free Agency')).not.toBeInTheDocument();
     expect(movementRows).toEqual([
       ['Florida Panthers', 'Trade', 'June 21, 2026', 'Present'],
-      ['Ottawa Senators', 'Draft', '-', 'June 21, 2026'],
+      ['Ottawa Senators', 'Draft', 'August 13, 2018', 'June 21, 2026'],
     ]);
   });
 
@@ -2899,7 +2996,11 @@ describe('PlayerDetails info tab', () => {
     const movementRows = within(reportSection)
       .getAllByRole('row')
       .slice(1)
-      .map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+      .map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent),
+      );
 
     expect(movementRows).toEqual([
       ['Colorado Avalanche', 'Trade', 'February 24, 2026', 'Present'],
@@ -3042,12 +3143,14 @@ describe('PlayerDetails info tab', () => {
     const movementRows = report
       .getAllByRole('row')
       .slice(1)
-      .map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+      .map((row) =>
+        within(row)
+          .getAllByRole('cell')
+          .map((cell) => cell.textContent),
+      );
 
     expect(report.getByText('Draft Year: 2011 | Round: 1')).toBeInTheDocument();
-    expect(movementRows).toEqual([
-      ['New York Rangers', 'Trade', 'January 31, 2025', 'Present'],
-    ]);
+    expect(movementRows).toEqual([['New York Rangers', 'Trade', 'January 31, 2025', 'Present']]);
   });
 
   it('auto-fills PWHL player details from HockeyTech profile data', async () => {
@@ -3656,6 +3759,217 @@ describe('PlayerDetails awards tab', () => {
     expect(within(championshipBanner as HTMLElement).getByText('Victoire')).toHaveClass(
       'awardBannerTeamName',
     );
+  });
+});
+
+describe('buildManualMovementStintImport', () => {
+  it('turns reviewed NHL movements into idempotent career-stint inputs', () => {
+    const result = buildManualMovementStintImport(
+      {
+        playerName: 'John Smith',
+        sourceUrl: 'https://puckpedia.com/player/john-smith/transactions',
+        draft: null,
+        playerStatus: null,
+        movementAnchor: {
+          stintId: 'stint-1',
+          teamCode: 'TOR',
+          teamName: 'Toronto Maple Leafs',
+          seasonName: '2025-26',
+          seasonStartDate: '2025-10-01',
+          stintStartDate: '2025-10-01',
+          acquisitionType: 'free_agency',
+        },
+        movements: [
+          {
+            id: 'anchor:stint-1',
+            acquisitionType: 'current_stint',
+            startDate: '2025-10-01',
+            endDate: '2026-03-06',
+            previousEndDate: null,
+            fromTeamName: null,
+            toTeamName: 'Toronto Maple Leafs',
+            detail: '',
+          },
+          {
+            id: 'trade',
+            acquisitionType: 'trade',
+            startDate: '2026-03-06',
+            endDate: null,
+            previousEndDate: '2026-03-06',
+            fromTeamName: 'Toronto Maple Leafs',
+            toTeamName: 'New York Rangers',
+            detail: 'The Rangers acquired John Smith from Toronto.',
+          },
+        ],
+      },
+      [
+        { id: 'team-tor', name: 'Toronto Maple Leafs', code: 'TOR' },
+        { id: 'team-nyr', name: 'New York Rangers', code: 'NYR' },
+      ],
+      'C',
+    );
+
+    expect(result.issues).toEqual([]);
+    expect(result.stints).toEqual([
+      {
+        import_key: 'nhl_puckpedia:v1:anchor:stint-1',
+        team_id: 'team-tor',
+        position: 'C',
+        acquisition_type: 'free_agency',
+        start_date: '2025-10-01',
+        end_date: '2026-03-06',
+      },
+      {
+        import_key: 'nhl_puckpedia:v1:trade',
+        team_id: 'team-nyr',
+        position: 'C',
+        acquisition_type: 'trade',
+        start_date: '2026-03-06',
+        end_date: null,
+      },
+    ]);
+  });
+
+  it('keeps source identity stable when reviewed acquisition, team, or date values are corrected', () => {
+    const report = (acquisitionType: string, toTeamName: string, startDate = '2026-03-06') =>
+      buildManualMovementStintImport(
+        {
+          playerName: 'John Smith',
+          sourceUrl: 'https://puckpedia.com/player/john-smith/transactions',
+          draft: null,
+          playerStatus: null,
+          movements: [
+            {
+              id: 'event:stint-1:1',
+              acquisitionType,
+              startDate,
+              endDate: null,
+              previousEndDate: startDate,
+              fromTeamName: 'Toronto Maple Leafs',
+              toTeamName,
+              detail: '',
+            },
+          ],
+        },
+        [
+          { id: 'team-nyr', name: 'New York Rangers', code: 'NYR' },
+          { id: 'team-nyi', name: 'New York Islanders', code: 'NYI' },
+        ],
+        'C',
+      );
+
+    const original = report('trade', 'New York Rangers');
+    const corrected = report('waivers', 'New York Islanders', '2026-03-07');
+
+    expect(original.stints[0].import_key).toBe('nhl_puckpedia:v1:event:stint-1:1');
+    expect(corrected.stints[0].import_key).toBe(original.stints[0].import_key);
+    expect(corrected.stints[0]).toMatchObject({
+      team_id: 'team-nyi',
+      acquisition_type: 'waivers',
+    });
+  });
+
+  it('keeps an anchor identity tied to the persisted stint when its reviewed date changes', () => {
+    const buildAnchor = (startDate: string) =>
+      buildManualMovementStintImport(
+        {
+          playerName: 'John Smith',
+          sourceUrl: 'https://puckpedia.com/player/john-smith/transactions',
+          draft: null,
+          playerStatus: null,
+          movements: [
+            {
+              id: 'anchor:stint-1',
+              acquisitionType: 'draft',
+              startDate,
+              endDate: null,
+              previousEndDate: null,
+              fromTeamName: null,
+              toTeamName: 'Toronto Maple Leafs',
+              detail: '',
+            },
+          ],
+        },
+        [{ id: 'team-tor', name: 'Toronto Maple Leafs', code: 'TOR' }],
+        'C',
+      );
+
+    expect(buildAnchor('2025-10-01').stints[0].import_key).toBe(
+      'nhl_puckpedia:v1:anchor:stint-1',
+    );
+    expect(buildAnchor('2025-10-02').stints[0].import_key).toBe(
+      'nhl_puckpedia:v1:anchor:stint-1',
+    );
+  });
+
+  it('blocks ambiguous same-date source events instead of shifting their identities', () => {
+    const result = buildManualMovementStintImport(
+      {
+        playerName: 'John Smith',
+        sourceUrl: 'https://puckpedia.com/player/john-smith/transactions',
+        draft: null,
+        playerStatus: null,
+        movements: [
+          {
+            id: 'event:2026-03-06',
+            acquisitionType: 'trade',
+            startDate: '2026-03-06',
+            endDate: null,
+            previousEndDate: null,
+            fromTeamName: 'Toronto Maple Leafs',
+            toTeamName: 'New York Rangers',
+            detail: '',
+          },
+          {
+            id: 'event:2026-03-06',
+            acquisitionType: 'waivers',
+            startDate: '2026-03-06',
+            endDate: null,
+            previousEndDate: null,
+            fromTeamName: 'New York Rangers',
+            toTeamName: 'New York Islanders',
+            detail: '',
+          },
+        ],
+      },
+      [
+        { id: 'team-nyr', name: 'New York Rangers', code: 'NYR' },
+        { id: 'team-nyi', name: 'New York Islanders', code: 'NYI' },
+      ],
+      'C',
+    );
+
+    expect(result.issues).toEqual([
+      '2026-03-06 has multiple team-changing events; review them manually.',
+    ]);
+  });
+
+  it('blocks applying movements whose destination team is not in the NHL league', () => {
+    const result = buildManualMovementStintImport(
+      {
+        playerName: 'John Smith',
+        sourceUrl: 'https://puckpedia.com/player/john-smith/transactions',
+        draft: null,
+        playerStatus: null,
+        movements: [
+          {
+            id: 'trade',
+            acquisitionType: 'trade',
+            startDate: '2026-03-06',
+            endDate: null,
+            previousEndDate: '2026-03-06',
+            fromTeamName: 'Toronto Maple Leafs',
+            toTeamName: 'Missing NHL Team',
+            detail: '',
+          },
+        ],
+      },
+      [{ id: 'team-tor', name: 'Toronto Maple Leafs', code: 'TOR' }],
+      'C',
+    );
+
+    expect(result.stints).toEqual([]);
+    expect(result.issues).toEqual(['Missing NHL Team does not match an NHL team.']);
   });
 });
 

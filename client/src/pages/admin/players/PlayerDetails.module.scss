@@ -440,6 +440,14 @@
 }
 
 // ── Team history stint list ───────────────────────────────────────────────
+.manualMovementActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: $space-sm;
+}
+
 .stint {
   &List {
     list-style: none;

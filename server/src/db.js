@@ -1282,6 +1282,10 @@ async function initSchema() {
       acquisition_type TEXT CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'foundational_signing', 'expansion_signing', 'expansion_draft', 'team_transfer', 'loan', 'other')),
       start_date       DATE,
       end_date         DATE,
+      import_source    TEXT,
+      import_key       TEXT,
+      import_snapshot  JSONB,
+      imported_at      TIMESTAMPTZ,
       created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
@@ -1289,6 +1293,10 @@ async function initSchema() {
   await sql`ALTER TABLE player_team_stints ADD COLUMN IF NOT EXISTS acquisition_type TEXT`;
   await sql`ALTER TABLE player_team_stints ADD COLUMN IF NOT EXISTS start_date DATE`;
   await sql`ALTER TABLE player_team_stints ADD COLUMN IF NOT EXISTS end_date DATE`;
+  await sql`ALTER TABLE player_team_stints ADD COLUMN IF NOT EXISTS import_source TEXT`;
+  await sql`ALTER TABLE player_team_stints ADD COLUMN IF NOT EXISTS import_key TEXT`;
+  await sql`ALTER TABLE player_team_stints ADD COLUMN IF NOT EXISTS import_snapshot JSONB`;
+  await sql`ALTER TABLE player_team_stints ADD COLUMN IF NOT EXISTS imported_at TIMESTAMPTZ`;
   await sql`ALTER TABLE player_team_stints DROP CONSTRAINT IF EXISTS player_team_stints_position_check`;
   await sql`
     ALTER TABLE player_team_stints ADD CONSTRAINT player_team_stints_position_check
@@ -1307,6 +1315,11 @@ async function initSchema() {
     CREATE INDEX IF NOT EXISTS player_team_stints_active_lookup
       ON player_team_stints (player_id, team_id)
       WHERE end_date IS NULL
+  `;
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS player_team_stints_import_identity_unique
+      ON player_team_stints (player_id, import_source, import_key)
+      WHERE import_source IS NOT NULL AND import_key IS NOT NULL
   `;
   await sql`
     CREATE TABLE IF NOT EXISTS _migrations (

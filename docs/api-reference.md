@@ -504,6 +504,18 @@ All stints for a player. Optionally filter by `?season_id=`.
 
 ---
 
+### `POST /api/admin/player-teams/history/:playerId/reconcile`
+
+Preview or atomically apply a reviewed NHL/PuckPedia career-stint import. This endpoint updates only `player_team_stints`; it never changes season roster rows in `player_teams`.
+
+**Body** `{ source?: "nhl_puckpedia", dry_run?: boolean, apply?: boolean, stints*: [{ import_key*, team_id*, position?, acquisition_type?, start_date?, end_date? }] }`
+
+Preview mode is the default. Apply with `apply: true` or `dry_run: false`.
+
+**Response `200`** `{ source, dry_run, applied, actions: [{ action: "create" | "update" | "adopt" | "unchanged" | "conflict", ... }], summary: { total, create, update, adopt, unchanged, conflict } }`
+
+---
+
 ### `GET /api/admin/player-teams/history/:playerId/jerseys`
 
 Jersey number history across all stints for a player.

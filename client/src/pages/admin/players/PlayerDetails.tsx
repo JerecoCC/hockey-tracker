@@ -55,6 +55,7 @@ import {
   type JerseyHistoryEntry,
   type PlayerPhotoEntry,
   type PlayerStintRecord,
+  type ReconcilePlayerStintInput,
   type TeamPlayerRecord,
 } from '@/hooks/useTeamPlayers';
 import {
@@ -240,6 +241,7 @@ interface PlayerManualStatusReport {
 }
 
 interface PlayerManualMovementAnchor {
+  stintId?: string | null;
   teamCode: string | null;
   teamName: string | null;
   seasonName: string | null;
@@ -401,6 +403,7 @@ const normalizeIsoDate = (value: string | null | undefined) => {
 };
 
 type TeamReportLookupRecord = {
+  id?: string | null;
   code?: string | null;
   name?: string | null;
 };
@@ -680,6 +683,24 @@ const resolveReportTeamNameByText = (
   );
 };
 
+const findReportTeamByText = (
+  teams: TeamReportLookupRecord[],
+  value: string | null | undefined,
+) => {
+  const teamName = value?.replace(/^the\s+/i, '').trim();
+  const teamKey = normalizeTeamNameKey(teamName);
+  if (!teamName || !teamKey) return null;
+
+  const directMatch = teams.find((team) => {
+    const codeKey = normalizeTeamCode(team.code)?.toLowerCase() ?? null;
+    return codeKey === teamKey || reportTeamTextMatches(team.name, teamName);
+  });
+  if (directMatch) return directMatch;
+
+  const alias = findReportFranchiseTransferAliasByText(teams, teamName);
+  return alias ? (teams.find((team) => reportTeamMatchesAliasCurrent(team, alias)) ?? null) : null;
+};
+
 const draftReportFromLanding = (
   landing: NhlPlayerLanding,
   teams: TeamReportLookupRecord[],
@@ -906,10 +927,13 @@ const rawPuckPediaEventFromDetail = ({
   }
 
   const signingTeamName = teamName ?? extractPuckPediaSigningTeam(detail);
+  const isTryoutAgreement =
+    /\b(?:professional\s+|amateur\s+)?tryout(?:\s+agreement)?\b|\bPTO\b/i.test(detail);
   const isSigning =
-    normalizedType === 'signing' ||
-    /(?:standard|entry level|two-way|arbitration|offer sheet)\s*\|\s*\d+\s*yrs/i.test(detail) ||
-    /\bsigns?.*?\bwith\b/i.test(detail);
+    !isTryoutAgreement &&
+    (normalizedType === 'signing' ||
+      /(?:standard|entry level|two-way|arbitration|offer sheet)\s*\|\s*\d+\s*yrs/i.test(detail) ||
+      /\bsigns?.*?\bwith\b/i.test(detail));
 
   if (signingTeamName && isPlayerDetail && isSigning) {
     return {
@@ -1139,6 +1163,8 @@ const buildManualMovementReport = ({
   };
 
   rawEvents.forEach((event) => {
+    const sourceEventId = `event:${event.date}`;
+
     if (event.type === 'jersey') {
       jerseyChanges.push({
         id: `${event.date}-jersey-${event.toNumber ?? event.detail}`,
@@ -1159,7 +1185,7 @@ const buildManualMovementReport = ({
       );
       const toTeamName = resolveReportTeamNameByText(teamLookup, event.toTeamName);
       addMovement({
-        id: `${event.date}-${event.type}-${toTeamName}`,
+        id: sourceEventId,
         acquisitionType:
           event.type === 'waiver'
             ? MANUAL_MOVEMENT_ACQUISITION_TYPES.waivers
@@ -1191,7 +1217,7 @@ const buildManualMovementReport = ({
         return;
       }
       addMovement({
-        id: `${event.date}-signing-${toTeamName}`,
+        id: sourceEventId,
         acquisitionType: MANUAL_MOVEMENT_ACQUISITION_TYPES.freeAgency,
         startDate: event.date,
         endDate: null,
@@ -1234,7 +1260,7 @@ const buildManualMovementReport = ({
         visibleMovements = [
           {
             ...visibleMovements[0],
-            id: `${anchorDraftStartDate ?? 'unknown'}-anchor-${anchorTeamName}`,
+            id: `anchor:${movementAnchor?.stintId ?? anchorDraftStartDate ?? 'unknown'}`,
             acquisitionType: MANUAL_MOVEMENT_ACQUISITION_TYPES.draft,
             startDate: anchorDraftStartDate,
             previousEndDate: null,
@@ -1261,7 +1287,7 @@ const buildManualMovementReport = ({
         const anchorStartDate = anchorIsDraftStint ? draftStartDate : anchorStintStartDate;
         visibleMovements = [
           {
-            id: `${anchorStartDate ?? 'unknown'}-anchor-${anchorTeamName}`,
+            id: `anchor:${movementAnchor?.stintId ?? anchorStartDate ?? 'unknown'}`,
             acquisitionType: anchorAcquisitionType,
             startDate: anchorStartDate,
             endDate: null,
@@ -1277,10 +1303,30 @@ const buildManualMovementReport = ({
     }
   }
 
-  const movementsWithEndDates = visibleMovements.map((movement, index) => ({
-    ...movement,
-    endDate: visibleMovements[index + 1]?.startDate ?? null,
-  }));
+  const movementDateCounts = visibleMovements.reduce<Map<string, number>>((counts, movement) => {
+    if (movement.startDate) counts.set(movement.startDate, (counts.get(movement.startDate) ?? 0) + 1);
+    return counts;
+  }, new Map());
+  let anchoredEventSequence = 0;
+  const movementsWithEndDates = visibleMovements.map((movement, index) => {
+    const isPersistedAnchor = index === 0 && !!movementAnchor?.stintId;
+    let id = movement.id;
+    if (isPersistedAnchor) {
+      id = `anchor:${movementAnchor.stintId}`;
+    } else if (movementAnchor?.stintId) {
+      anchoredEventSequence += 1;
+      id =
+        movement.startDate && (movementDateCounts.get(movement.startDate) ?? 0) > 1
+          ? `ambiguous:${movementAnchor.stintId}:${movement.startDate}`
+          : `event:${movementAnchor.stintId}:${anchoredEventSequence}`;
+    }
+
+    return {
+      ...movement,
+      id,
+      endDate: visibleMovements[index + 1]?.startDate ?? null,
+    };
+  });
   const visibleJerseyChanges = reportStartDate
     ? jerseyChanges.filter((change) => change.date >= reportStartDate)
     : jerseyChanges;
@@ -1325,6 +1371,60 @@ const formatManualMovementAcquisitionType = (acquisitionType: string) =>
   acquisitionType === MANUAL_MOVEMENT_CURRENT_STINT_ACQUISITION
     ? 'Current stint'
     : (ACQUISITION_TYPE_LABELS[acquisitionType] ?? acquisitionType);
+
+export const buildManualMovementStintImport = (
+  report: PlayerManualMovementReport,
+  teams: TeamReportLookupRecord[],
+  position: string | null | undefined,
+): { stints: ReconcilePlayerStintInput[]; issues: string[] } => {
+  const stints: ReconcilePlayerStintInput[] = [];
+  const issues: string[] = [];
+  const importKeys = new Set<string>();
+
+  [...report.movements]
+    .sort((left, right) => (left.startDate ?? '').localeCompare(right.startDate ?? ''))
+    .forEach((movement) => {
+      const acquisitionType =
+        movement.acquisitionType === MANUAL_MOVEMENT_CURRENT_STINT_ACQUISITION
+          ? (report.movementAnchor?.acquisitionType ?? null)
+          : movement.acquisitionType;
+
+      if (!movement.startDate) {
+        issues.push(`${movement.toTeamName ?? 'Unknown team'} is missing a start date.`);
+        return;
+      }
+      if (movement.endDate && movement.endDate < movement.startDate) {
+        issues.push(
+          `${movement.toTeamName ?? 'Unknown team'} has dates outside the tracked history.`,
+        );
+        return;
+      }
+
+      const team = findReportTeamByText(teams, movement.toTeamName);
+      if (!team?.id) {
+        issues.push(`${movement.toTeamName ?? 'Unknown team'} does not match an NHL team.`);
+        return;
+      }
+
+      const importKey = `nhl_puckpedia:v1:${movement.id}`;
+      if (importKeys.has(importKey)) {
+        issues.push(`${movement.startDate} has multiple team-changing events; review them manually.`);
+        return;
+      }
+      importKeys.add(importKey);
+
+      stints.push({
+        import_key: importKey,
+        team_id: team.id,
+        position: position ?? null,
+        acquisition_type: acquisitionType,
+        start_date: movement.startDate,
+        end_date: movement.endDate,
+      });
+    });
+
+  return { stints, issues: [...new Set(issues)] };
+};
 
 const manualMovementStintColumns: Column<PlayerManualMovementReportEntry>[] = [
   { header: 'Team', key: 'toTeamName' },
@@ -1393,9 +1493,17 @@ const manualMovementStatusTagIntents: Record<PlayerStatus, TagIntent> = {
 
 const ManualMovementReportSection = ({
   report,
+  applyBusy,
+  applyIssues,
+  applyStintCount,
+  onApply,
   onOpenSource,
 }: {
   report: PlayerManualMovementReport | null;
+  applyBusy: boolean;
+  applyIssues: string[];
+  applyStintCount: number;
+  onApply: () => void;
   onOpenSource: () => void;
 }) => {
   const reportMovements = report
@@ -1410,20 +1518,51 @@ const ManualMovementReportSection = ({
       title="Manual Movement Report"
       className={styles.stintHistorySection}
       action={
-        <Button
-          type="button"
-          variant="outlined"
-          intent="neutral"
-          icon="description"
-          size="medium"
-          tooltip="PuckPedia source"
-          onClick={onOpenSource}
-        >
-          PuckPedia Source
-        </Button>
+        <div className={styles.manualMovementActions}>
+          {report && applyStintCount > 0 && (
+            <Button
+              type="button"
+              variant="outlined"
+              intent="neutral"
+              icon="sync"
+              size="medium"
+              tooltip={
+                applyIssues.length > 0
+                  ? 'Resolve unmatched teams or missing dates before applying'
+                  : 'Apply reviewed team stints'
+              }
+              disabled={applyBusy || applyIssues.length > 0}
+              onClick={onApply}
+            >
+              {applyBusy
+                ? 'Applying...'
+                : `Apply ${applyStintCount} Stint${applyStintCount === 1 ? '' : 's'}`}
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="outlined"
+            intent="neutral"
+            icon="description"
+            size="medium"
+            tooltip="PuckPedia source"
+            onClick={onOpenSource}
+          >
+            PuckPedia Source
+          </Button>
+        </div>
       }
     >
       {!report && <p className={styles.placeholder}>No manual movement report generated yet.</p>}
+
+      {report && applyIssues.length > 0 && (
+        <Banner
+          intent="warning"
+          icon="warning"
+        >
+          {applyIssues.join(' ')}
+        </Banner>
+      )}
 
       {report?.draft && (
         <ul className={styles.stintHistoryList}>
@@ -2279,6 +2418,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     usePlayerPhotoHistory(adminPlayerId);
   const {
     createStint,
+    reconcilePlayerStints,
     updateStint,
     deleteStint,
     changeJerseyNumber,
@@ -2343,6 +2483,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const [manualMovementReport, setManualMovementReport] =
     useState<PlayerManualMovementReport | null>(null);
   const [manualMovementSourceOpen, setManualMovementSourceOpen] = useState(false);
+  const [manualMovementApplyOpen, setManualMovementApplyOpen] = useState(false);
+  const [manualMovementApplying, setManualMovementApplying] = useState(false);
   const [retirePlayerOpen, setRetirePlayerOpen] = useState(false);
   const [playerStatusSaving, setPlayerStatusSaving] = useState(false);
   const [gameLogSeasonId, setGameLogSeasonId] = useState('all');
@@ -2557,6 +2699,14 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const manualMovementReportTeams = leagueId
     ? teams.filter((team) => team.league_id === leagueId)
     : teams;
+  const manualMovementStintImport =
+    manualMovementReport && player
+      ? buildManualMovementStintImport(
+          manualMovementReport,
+          manualMovementReportTeams,
+          player.position,
+        )
+      : { stints: [], issues: [] };
   const manualMovementStartSeason =
     gameLogSeasons.find((season) => season.name === MANUAL_MOVEMENT_START_SEASON_NAME) ??
     playerSeasonOptions.find((season) => season.name === MANUAL_MOVEMENT_START_SEASON_NAME) ??
@@ -2578,6 +2728,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     null;
   const manualMovementAnchor: PlayerManualMovementAnchor | null = manualMovementAnchorStint
     ? {
+        stintId: manualMovementAnchorStint.id,
         teamCode: normalizeTeamCode(manualMovementAnchorStint.team.code),
         teamName: manualMovementAnchorStint.team.name ?? null,
         seasonName: manualMovementStartSeason?.name ?? MANUAL_MOVEMENT_START_SEASON_NAME,
@@ -2611,6 +2762,38 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
         : createManualMovementReportSeed(fullName),
     );
     setManualMovementSourceOpen(true);
+  };
+
+  const handleApplyManualMovementStints = async () => {
+    if (
+      manualMovementStintImport.stints.length === 0 ||
+      manualMovementStintImport.issues.length > 0
+    ) {
+      return;
+    }
+
+    setManualMovementApplying(true);
+    try {
+      const result = await reconcilePlayerStints(manualMovementStintImport.stints, {
+        source: 'nhl_puckpedia',
+      });
+      if (!result) return;
+
+      const { create, update, adopt, unchanged, conflict } = result.summary;
+      const applied = create + update + adopt;
+      if (conflict > 0) {
+        toast.warn(
+          `${applied} team stint${applied === 1 ? '' : 's'} applied; ${conflict} manual conflict${conflict === 1 ? '' : 's'} preserved.`,
+        );
+      } else {
+        toast.success(
+          `${applied} team stint${applied === 1 ? '' : 's'} applied${unchanged > 0 ? `; ${unchanged} already up to date` : ''}.`,
+        );
+      }
+      setManualMovementApplyOpen(false);
+    } finally {
+      setManualMovementApplying(false);
+    }
   };
 
   const fetchNhlProxy = async <T,>(url: string) => {
@@ -3722,6 +3905,10 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                       {currentLeagueCode === 'NHL' && (
                         <ManualMovementReportSection
                           report={manualMovementReport}
+                          applyBusy={manualMovementApplying}
+                          applyIssues={manualMovementStintImport.issues}
+                          applyStintCount={manualMovementStintImport.stints.length}
+                          onApply={() => setManualMovementApplyOpen(true)}
                           onOpenSource={openManualMovementReport}
                         />
                       )}
@@ -3824,6 +4011,24 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             draftDates={leagueDraftDates}
             onReportBuilt={setManualMovementReport}
             onClose={() => setManualMovementSourceOpen(false)}
+          />
+
+          <ConfirmModal
+            open={manualMovementApplyOpen}
+            title="Apply Team Stints"
+            body={
+              <>
+                Apply {manualMovementStintImport.stints.length} reviewed NHL team stint
+                {manualMovementStintImport.stints.length === 1 ? '' : 's'} to this player&apos;s
+                career history? Existing manual values are preserved, and season rosters are not
+                changed.
+              </>
+            }
+            confirmLabel="Apply Team Stints"
+            confirmIcon="sync"
+            busy={manualMovementApplying}
+            onConfirm={handleApplyManualMovementStints}
+            onCancel={() => setManualMovementApplyOpen(false)}
           />
 
           <ConfirmModal

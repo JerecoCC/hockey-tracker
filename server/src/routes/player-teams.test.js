@@ -8,6 +8,8 @@ jest.mock('drizzle-orm', () => ({
 }));
 
 jest.mock('../db', () => {
+  const mockSql = jest.fn();
+  mockSql.transaction = jest.fn();
   const mockDbChain = {
     from: jest.fn(() => mockDbChain),
     innerJoin: jest.fn(() => mockDbChain),
@@ -33,7 +35,7 @@ jest.mock('../db', () => {
     textColor: 't.text_color',
   };
   return {
-    sql: jest.fn(),
+    sql: mockSql,
     db: {
       select: jest.fn(() => mockDbChain),
     },
@@ -79,9 +81,24 @@ const STINT_ROW = {
   text_color: '#ffffff',
 };
 
+const RECONCILE_PLAYER_ID = '11111111-1111-4111-8111-111111111111';
+const RECONCILE_TEAM_ID = '22222222-2222-4222-8222-222222222222';
+const RECONCILE_OLD_TEAM_ID = '33333333-3333-4333-8333-333333333333';
+const RECONCILE_URL = `/api/admin/player-teams/history/${RECONCILE_PLAYER_ID}/reconcile`;
+
+const RECONCILE_STINT = {
+  import_key: 'nhl_puckpedia:v1:event:2025-03-07',
+  team_id: RECONCILE_TEAM_ID,
+  position: 'D',
+  acquisition_type: 'trade',
+  start_date: '2025-03-07',
+  end_date: null,
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   sql.mockReset();
+  sql.transaction.mockReset();
   __mockDbChain.from.mockClear();
   __mockDbChain.innerJoin.mockClear();
   __mockDbChain.where.mockClear();
@@ -293,6 +310,302 @@ describe('GET /api/admin/player-teams/history/:playerId', () => {
     const res = await request(app).get('/api/admin/player-teams/history/player-1');
 
     expect(res.status).toBe(500);
+  });
+});
+
+describe('POST /api/admin/player-teams/history/:playerId/reconcile', () => {
+  const mockReconcileReads = (existingStints = [], leagueCode = 'NHL') => {
+    sql
+      .mockResolvedValueOnce([{ id: RECONCILE_PLAYER_ID, league_player_number: '8478402' }])
+      .mockResolvedValueOnce([{ id: RECONCILE_TEAM_ID, league_code: leagueCode }])
+      .mockResolvedValueOnce(existingStints);
+  };
+
+  it('rejects malformed player and team UUIDs before querying the database', async () => {
+    const malformedPlayer = await request(app)
+      .post('/api/admin/player-teams/history/not-a-uuid/reconcile')
+      .send({ stints: [RECONCILE_STINT] });
+
+    expect(malformedPlayer.status).toBe(400);
+    expect(malformedPlayer.body.error).toMatch(/playerId must be a UUID/i);
+
+    const malformedTeam = await request(app)
+      .post(RECONCILE_URL)
+      .send({ stints: [{ ...RECONCILE_STINT, team_id: 'not-a-uuid' }] });
+
+    expect(malformedTeam.status).toBe(400);
+    expect(malformedTeam.body.error).toMatch(/team_id must be a UUID/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('rejects display-only acquisition values before querying the database', async () => {
+    const res = await request(app)
+      .post(RECONCILE_URL)
+      .send({
+        stints: [{ ...RECONCILE_STINT, acquisition_type: 'current_stint' }],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/invalid acquisition_type/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('previews career-only creates without opening a transaction', async () => {
+    mockReconcileReads();
+
+    const res = await request(app)
+      .post(RECONCILE_URL)
+      .send({ stints: [RECONCILE_STINT], dry_run: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      source: 'nhl_puckpedia',
+      dry_run: true,
+      applied: false,
+      summary: { total: 1, create: 1, conflict: 0 },
+      actions: [expect.objectContaining({ action: 'create' })],
+    });
+    expect(sql.transaction).not.toHaveBeenCalled();
+    expect(sql).toHaveBeenCalledTimes(3);
+  });
+
+  it('atomically applies only player_team_stints writes behind an advisory lock', async () => {
+    mockReconcileReads();
+    let transactionQueries = [];
+    sql.transaction.mockImplementationOnce(async (buildQueries) => {
+      const txn = jest.fn((strings, ...values) => ({ strings, values }));
+      transactionQueries = buildQueries(txn);
+      return [[], [], [{ id: 'career-stint-1' }], []];
+    });
+
+    const res = await request(app)
+      .post(RECONCILE_URL)
+      .send({ stints: [RECONCILE_STINT], apply: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      dry_run: false,
+      applied: true,
+      summary: { create: 1, conflict: 0 },
+      actions: [
+        expect.objectContaining({
+          action: 'create',
+          stint_id: 'career-stint-1',
+          applied: true,
+        }),
+      ],
+    });
+    expect(sql.transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'Serializable',
+    });
+    expect(transactionQueries).toHaveLength(4);
+    expect(transactionQueries[0].strings.join(' ')).toContain('pg_advisory_xact_lock');
+    expect(transactionQueries[1].strings.join(' ')).toContain('current_state');
+    const writeQuery = transactionQueries[2].strings.join(' ');
+    expect(writeQuery).toContain('INSERT INTO player_team_stints');
+    expect(writeQuery).not.toMatch(/\bplayer_teams\b/);
+    expect(writeQuery).toContain('ON CONFLICT (player_id, import_source, import_key)');
+  });
+
+  it('does no writes when an identical imported stint is applied again', async () => {
+    mockReconcileReads([
+      {
+        id: 'career-stint-1',
+        player_id: RECONCILE_PLAYER_ID,
+        ...RECONCILE_STINT,
+        import_source: 'nhl_puckpedia',
+        import_snapshot: {
+          team_id: RECONCILE_TEAM_ID,
+          position: 'D',
+          acquisition_type: 'trade',
+          start_date: '2025-03-07',
+          end_date: null,
+        },
+      },
+    ]);
+
+    const res = await request(app)
+      .post(RECONCILE_URL)
+      .send({ stints: [RECONCILE_STINT], apply: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.summary).toMatchObject({
+      unchanged: 1,
+      create: 0,
+      update: 0,
+    });
+    expect(res.body.actions[0]).toMatchObject({
+      action: 'unchanged',
+      applied: false,
+      stint_id: 'career-stint-1',
+    });
+    expect(sql.transaction).not.toHaveBeenCalled();
+  });
+
+  it('returns 409 when the under-lock state guard detects a stale preview', async () => {
+    mockReconcileReads();
+    sql.transaction.mockRejectedValueOnce(Object.assign(new Error('state changed'), { code: '22P02' }));
+
+    const res = await request(app)
+      .post(RECONCILE_URL)
+      .send({ stints: [RECONCILE_STINT], apply: true });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/changed during reconciliation/i);
+  });
+
+  it('preserves a manual override while applying other source-owned updates', async () => {
+    mockReconcileReads([
+      {
+        id: 'career-stint-1',
+        player_id: RECONCILE_PLAYER_ID,
+        ...RECONCILE_STINT,
+        acquisition_type: 'other',
+        import_source: 'nhl_puckpedia',
+        import_snapshot: {
+          team_id: RECONCILE_TEAM_ID,
+          position: 'D',
+          acquisition_type: 'trade',
+          start_date: '2025-03-07',
+          end_date: null,
+        },
+      },
+    ]);
+    let transactionQueries = [];
+    sql.transaction.mockImplementationOnce(async (buildQueries) => {
+      const txn = jest.fn((strings, ...values) => ({ strings, values }));
+      transactionQueries = buildQueries(txn);
+      return [[], [], [{ id: 'career-stint-1', runtime_conflicts: ['acquisition_type'] }], []];
+    });
+
+    const res = await request(app)
+      .post(RECONCILE_URL)
+      .send({
+        stints: [
+          {
+            ...RECONCILE_STINT,
+            acquisition_type: 'waivers',
+            end_date: '2026-03-06',
+          },
+        ],
+        apply: true,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.actions[0]).toMatchObject({
+      action: 'update',
+      applied: true,
+      changes: ['end_date'],
+      conflicts: ['acquisition_type'],
+      conflict_type: 'manual_override',
+    });
+    expect(res.body.summary).toMatchObject({ update: 1, conflict: 1 });
+    const writeQuery = transactionQueries[2].strings.join(' ');
+    expect(writeQuery).toContain('WITH before AS');
+    expect(writeQuery).toContain('import_snapshot');
+    expect(writeQuery).not.toMatch(/\bplayer_teams\b/);
+  });
+
+  it('previews a differing manual row as an adoption that preserves its override', async () => {
+    mockReconcileReads([
+      {
+        id: 'manual-stint-1',
+        player_id: RECONCILE_PLAYER_ID,
+        ...RECONCILE_STINT,
+        acquisition_type: 'draft',
+        import_source: null,
+        import_key: null,
+        import_snapshot: null,
+      },
+    ]);
+
+    const res = await request(app)
+      .post(RECONCILE_URL)
+      .send({ stints: [RECONCILE_STINT], dry_run: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.actions[0]).toMatchObject({
+      action: 'adopt',
+      stint_id: 'manual-stint-1',
+      conflicts: ['acquisition_type'],
+      conflict_type: 'manual_override',
+    });
+    expect(sql.transaction).not.toHaveBeenCalled();
+  });
+
+  it('virtually closes an exact manual anchor before planning the destination create', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: RECONCILE_PLAYER_ID, league_player_number: '8478402' }])
+      .mockResolvedValueOnce([
+        { id: RECONCILE_OLD_TEAM_ID, league_code: 'NHL' },
+        { id: RECONCILE_TEAM_ID, league_code: 'NHL' },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: 'manual-anchor',
+          player_id: RECONCILE_PLAYER_ID,
+          team_id: RECONCILE_OLD_TEAM_ID,
+          position: 'D',
+          acquisition_type: 'draft',
+          start_date: '2020-10-01',
+          end_date: null,
+          import_source: null,
+          import_key: null,
+          import_snapshot: null,
+        },
+      ]);
+
+    const res = await request(app)
+      .post(RECONCILE_URL)
+      .send({
+        dry_run: true,
+        stints: [
+          {
+            import_key: '2020-10-01|draft|-|team-old',
+            team_id: RECONCILE_OLD_TEAM_ID,
+            position: 'D',
+            acquisition_type: 'draft',
+            start_date: '2020-10-01',
+            end_date: '2025-03-07',
+          },
+          RECONCILE_STINT,
+        ],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.actions).toEqual([
+      expect.objectContaining({
+        action: 'adopt',
+        stint_id: 'manual-anchor',
+        changes: ['end_date'],
+      }),
+      expect.objectContaining({
+        action: 'create',
+        import_key: RECONCILE_STINT.import_key,
+      }),
+    ]);
+    expect(res.body.summary).toMatchObject({
+      adopt: 1,
+      create: 1,
+      conflict: 0,
+    });
+  });
+
+  it('rejects teams outside the NHL league', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: RECONCILE_PLAYER_ID, league_player_number: '8478402' }])
+      .mockResolvedValueOnce([{ id: RECONCILE_TEAM_ID, league_code: 'PWHL' }]);
+
+    const res = await request(app)
+      .post(RECONCILE_URL)
+      .send({ stints: [RECONCILE_STINT] });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      invalid_team_ids: [RECONCILE_TEAM_ID],
+    });
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql.transaction).not.toHaveBeenCalled();
   });
 });
 

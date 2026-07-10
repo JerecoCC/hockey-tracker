@@ -1,6 +1,12 @@
 const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
 const { sql } = require('../db');
+const {
+  planPlayerStintReconciliation,
+  stintRangesOverlap,
+  stintSnapshot,
+  summarizeReconciliationActions,
+} = require('../lib/playerStintReconciliation');
 
 router.use(requireAdmin);
 
@@ -17,6 +23,10 @@ const ACQUISITION_TYPES = new Set([
   'loan',
   'other',
 ]);
+const PLAYER_POSITIONS = new Set(['C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G']);
+const NHL_PUCKPEDIA_IMPORT_SOURCE = 'nhl_puckpedia';
+const UUID_PATTERN = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+const isValidUuid = (value) => typeof value === 'string' && UUID_PATTERN.test(value);
 const normalizeAcquisitionType = (value) => (value === '' || value == null ? null : value);
 const isValidAcquisitionType = (value) => value == null || ACQUISITION_TYPES.has(value);
 const isValidDateOnly = (value) => {
@@ -27,6 +37,70 @@ const isValidDateOnly = (value) => {
 const isValidJerseyNumber = (value) => {
   const number = Number(value);
   return Number.isInteger(number) && number >= 0 && number <= 99;
+};
+
+const normalizeReconcileStint = (stint) => ({
+  import_key: typeof stint?.import_key === 'string' ? stint.import_key.trim() : '',
+  team_id: typeof stint?.team_id === 'string' ? stint.team_id.trim() : '',
+  position: stint?.position === '' || stint?.position == null ? null : stint.position,
+  acquisition_type: normalizeAcquisitionType(stint?.acquisition_type),
+  start_date: stint?.start_date === '' || stint?.start_date == null ? null : stint.start_date,
+  end_date: stint?.end_date === '' || stint?.end_date == null ? null : stint.end_date,
+});
+
+const validateReconcileStints = (rawStints) => {
+  if (!Array.isArray(rawStints) || rawStints.length === 0) {
+    return { error: 'stints must be a non-empty array' };
+  }
+  if (rawStints.length > 500) return { error: 'stints cannot contain more than 500 rows' };
+
+  const stints = rawStints.map(normalizeReconcileStint);
+  const seenImportKeys = new Set();
+  let openStints = 0;
+
+  for (let index = 0; index < stints.length; index += 1) {
+    const stint = stints[index];
+    const rowLabel = `Row ${index + 1}`;
+    if (!stint.import_key) return { error: `${rowLabel}: import_key is required` };
+    if (seenImportKeys.has(stint.import_key)) {
+      return {
+        error: `${rowLabel}: import_key must be unique within the request`,
+      };
+    }
+    seenImportKeys.add(stint.import_key);
+    if (!stint.team_id) return { error: `${rowLabel}: team_id is required` };
+    if (!isValidUuid(stint.team_id)) return { error: `${rowLabel}: team_id must be a UUID` };
+    if (stint.position != null && !PLAYER_POSITIONS.has(stint.position)) {
+      return { error: `${rowLabel}: Invalid position` };
+    }
+    if (!isValidAcquisitionType(stint.acquisition_type)) {
+      return { error: `${rowLabel}: Invalid acquisition_type` };
+    }
+    if (stint.start_date != null && !isValidDateOnly(stint.start_date)) {
+      return { error: `${rowLabel}: start_date must be YYYY-MM-DD or null` };
+    }
+    if (stint.end_date != null && !isValidDateOnly(stint.end_date)) {
+      return { error: `${rowLabel}: end_date must be YYYY-MM-DD or null` };
+    }
+    if (stint.start_date && stint.end_date && stint.end_date < stint.start_date) {
+      return { error: `${rowLabel}: end_date cannot be before start_date` };
+    }
+    if (stint.end_date == null) openStints += 1;
+  }
+
+  if (openStints > 1) return { error: 'Only one imported stint may have an open end date' };
+
+  for (let left = 0; left < stints.length; left += 1) {
+    for (let right = left + 1; right < stints.length; right += 1) {
+      if (stintRangesOverlap(stints[left], stints[right])) {
+        return {
+          error: `Imported stints ${left + 1} and ${right + 1} overlap`,
+        };
+      }
+    }
+  }
+
+  return { stints };
 };
 
 const upsertCareerStint = async ({
@@ -210,6 +284,296 @@ const mapHistoryRow = (row) => ({
     text_color: row.text_color,
   },
 });
+
+const reconcileStateSnapshot = (stints) =>
+  stints
+    .map((stint) => ({
+      id: stint.id,
+      team_id: stint.team_id,
+      position: stint.position ?? null,
+      acquisition_type: stint.acquisition_type ?? null,
+      start_date: stint.start_date ?? null,
+      end_date: stint.end_date ?? null,
+      import_source: stint.import_source ?? null,
+      import_key: stint.import_key ?? null,
+      import_snapshot: stint.import_snapshot ?? null,
+    }))
+    .sort((left, right) => String(left.id).localeCompare(String(right.id)));
+
+const buildReconciliationWriteQuery = (txn, playerId, importSource, action) => {
+  const incoming = action.incoming;
+  const snapshotJson = JSON.stringify(stintSnapshot(incoming));
+
+  if (action.action === 'create') {
+    return txn`
+      WITH inserted AS (
+        INSERT INTO player_team_stints (
+          player_id, team_id, position, acquisition_type, start_date, end_date,
+          import_source, import_key, import_snapshot, imported_at
+        )
+        VALUES (
+          ${playerId}, ${incoming.team_id}, ${incoming.position},
+          ${incoming.acquisition_type}, ${incoming.start_date}::date, ${incoming.end_date}::date,
+          ${importSource}, ${incoming.import_key}, ${snapshotJson}::jsonb, NOW()
+        )
+        ON CONFLICT (player_id, import_source, import_key)
+          WHERE import_source IS NOT NULL AND import_key IS NOT NULL
+        DO NOTHING
+        RETURNING id
+      )
+      SELECT COALESCE(
+        (SELECT id::text FROM inserted),
+        'concurrent-player-stint-import'
+      )::uuid AS id
+    `;
+  }
+
+  if (action.action === 'adopt') {
+    return txn`
+      WITH before AS (
+        SELECT *
+        FROM player_team_stints
+        WHERE id = ${action.stint_id}
+          AND player_id = ${playerId}
+          AND import_source IS NULL
+        FOR UPDATE
+      ),
+      adopted AS (
+        UPDATE player_team_stints pts
+        SET
+          team_id = CASE WHEN before.team_id IS NULL THEN ${incoming.team_id}::uuid ELSE before.team_id END,
+          position = CASE WHEN before.position IS NULL THEN ${incoming.position}::text ELSE before.position END,
+          acquisition_type = CASE WHEN before.acquisition_type IS NULL THEN ${incoming.acquisition_type}::text ELSE before.acquisition_type END,
+          start_date = CASE WHEN before.start_date IS NULL THEN ${incoming.start_date}::date ELSE before.start_date END,
+          end_date = CASE WHEN before.end_date IS NULL THEN ${incoming.end_date}::date ELSE before.end_date END,
+          import_source = ${importSource},
+          import_key = ${incoming.import_key},
+          import_snapshot = ${snapshotJson}::jsonb,
+          imported_at = NOW()
+        FROM before
+        WHERE pts.id = before.id
+          AND before.team_id IS NOT DISTINCT FROM ${action.previous_snapshot.team_id}::uuid
+          AND before.position IS NOT DISTINCT FROM ${action.previous_snapshot.position}::text
+          AND before.acquisition_type IS NOT DISTINCT FROM ${action.previous_snapshot.acquisition_type}::text
+          AND before.start_date IS NOT DISTINCT FROM ${action.previous_snapshot.start_date}::date
+          AND before.end_date IS NOT DISTINCT FROM ${action.previous_snapshot.end_date}::date
+        RETURNING pts.id
+      )
+      SELECT COALESCE(
+        (SELECT id::text FROM adopted),
+        'concurrent-player-stint-adoption'
+      )::uuid AS id
+    `;
+  }
+
+  const previous = action.previous_snapshot;
+  return txn`
+    WITH before AS (
+      SELECT
+        pts.*,
+        ARRAY_REMOVE(ARRAY[
+          CASE
+            WHEN pts.team_id IS DISTINCT FROM ${incoming.team_id}::uuid
+             AND pts.team_id IS DISTINCT FROM ${previous.team_id}::uuid
+            THEN 'team_id'
+          END,
+          CASE
+            WHEN pts.position IS DISTINCT FROM ${incoming.position}::text
+             AND pts.position IS DISTINCT FROM ${previous.position}::text
+            THEN 'position'
+          END,
+          CASE
+            WHEN pts.acquisition_type IS DISTINCT FROM ${incoming.acquisition_type}::text
+             AND pts.acquisition_type IS DISTINCT FROM ${previous.acquisition_type}::text
+            THEN 'acquisition_type'
+          END,
+          CASE
+            WHEN pts.start_date IS DISTINCT FROM ${incoming.start_date}::date
+             AND pts.start_date IS DISTINCT FROM ${previous.start_date}::date
+            THEN 'start_date'
+          END,
+          CASE
+            WHEN pts.end_date IS DISTINCT FROM ${incoming.end_date}::date
+             AND pts.end_date IS DISTINCT FROM ${previous.end_date}::date
+            THEN 'end_date'
+          END
+        ], NULL) AS runtime_conflicts
+      FROM player_team_stints pts
+      WHERE pts.id = ${action.stint_id}
+        AND pts.player_id = ${playerId}
+        AND pts.import_source = ${importSource}
+        AND pts.import_key = ${incoming.import_key}
+      FOR UPDATE
+    ),
+    updated AS (
+      UPDATE player_team_stints pts
+      SET
+        team_id = CASE
+          WHEN before.team_id IS NOT DISTINCT FROM ${previous.team_id}::uuid
+            OR before.team_id IS NOT DISTINCT FROM ${incoming.team_id}::uuid
+          THEN ${incoming.team_id}::uuid
+          ELSE before.team_id
+        END,
+        position = CASE
+          WHEN before.position IS NOT DISTINCT FROM ${previous.position}::text
+            OR before.position IS NOT DISTINCT FROM ${incoming.position}::text
+          THEN ${incoming.position}::text
+          ELSE before.position
+        END,
+        acquisition_type = CASE
+          WHEN before.acquisition_type IS NOT DISTINCT FROM ${previous.acquisition_type}::text
+            OR before.acquisition_type IS NOT DISTINCT FROM ${incoming.acquisition_type}::text
+          THEN ${incoming.acquisition_type}::text
+          ELSE before.acquisition_type
+        END,
+        start_date = CASE
+          WHEN before.start_date IS NOT DISTINCT FROM ${previous.start_date}::date
+            OR before.start_date IS NOT DISTINCT FROM ${incoming.start_date}::date
+          THEN ${incoming.start_date}::date
+          ELSE before.start_date
+        END,
+        end_date = CASE
+          WHEN before.end_date IS NOT DISTINCT FROM ${previous.end_date}::date
+            OR before.end_date IS NOT DISTINCT FROM ${incoming.end_date}::date
+          THEN ${incoming.end_date}::date
+          ELSE before.end_date
+        END,
+        import_snapshot = ${snapshotJson}::jsonb,
+        imported_at = NOW()
+      FROM before
+      WHERE pts.id = before.id
+        AND before.import_snapshot IS NOT DISTINCT FROM ${JSON.stringify(previous)}::jsonb
+      RETURNING pts.id, before.runtime_conflicts
+    )
+    SELECT
+      COALESCE(
+        (SELECT id::text FROM updated),
+        'concurrent-player-stint-update'
+      )::uuid AS id,
+      (SELECT runtime_conflicts FROM updated) AS runtime_conflicts
+  `;
+};
+
+const applyReconciliationPlan = async ({ playerId, importSource, plan, existingStints }) => {
+  const writableActions = plan.actions.filter((action) => ['create', 'adopt', 'update'].includes(action.action));
+  if (writableActions.length === 0) {
+    return {
+      actions: plan.actions.map((action) => ({ ...action, applied: false })),
+      summary: plan.summary,
+    };
+  }
+
+  const expectedStateJson = JSON.stringify(reconcileStateSnapshot(existingStints));
+  const lockKey = `player-stint-reconcile:${playerId}`;
+  const results = await sql.transaction(
+    (txn) => [
+      txn`SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}::text, 0))`,
+      txn`
+        WITH current_state AS (
+          SELECT COALESCE(
+            jsonb_agg(
+              jsonb_build_object(
+                'id', id::text,
+                'team_id', team_id::text,
+                'position', position,
+                'acquisition_type', acquisition_type,
+                'start_date', start_date::text,
+                'end_date', end_date::text,
+                'import_source', import_source,
+                'import_key', import_key,
+                'import_snapshot', import_snapshot
+              ) ORDER BY id::text
+            ),
+            '[]'::jsonb
+          ) AS value
+          FROM player_team_stints
+          WHERE player_id = ${playerId}
+        )
+        SELECT CASE
+          WHEN value = ${expectedStateJson}::jsonb THEN TRUE
+          ELSE value::text::uuid IS NULL
+        END AS state_matches
+        FROM current_state
+      `,
+      ...writableActions.map((action) => buildReconciliationWriteQuery(txn, playerId, importSource, action)),
+      txn`
+        WITH overlapping AS (
+          SELECT 1
+          FROM player_team_stints left_stint
+          JOIN player_team_stints right_stint
+            ON right_stint.player_id = left_stint.player_id
+           AND right_stint.id > left_stint.id
+          WHERE left_stint.player_id = ${playerId}
+            AND NOT (
+              left_stint.end_date IS NOT NULL
+              AND right_stint.start_date IS NOT NULL
+              AND left_stint.end_date <= right_stint.start_date
+            )
+            AND NOT (
+              right_stint.end_date IS NOT NULL
+              AND left_stint.start_date IS NOT NULL
+              AND right_stint.end_date <= left_stint.start_date
+            )
+          LIMIT 1
+        ),
+        open_count AS (
+          SELECT COUNT(*)::int AS value
+          FROM player_team_stints
+          WHERE player_id = ${playerId}
+            AND end_date IS NULL
+        )
+        SELECT CASE
+          WHEN NOT EXISTS (SELECT 1 FROM overlapping)
+           AND (SELECT value FROM open_count) <= 1
+          THEN TRUE
+          ELSE ('invalid-player-stint-timeline-' || (SELECT value FROM open_count))::uuid IS NULL
+        END AS timeline_valid
+      `,
+    ],
+    { isolationLevel: 'Serializable' },
+  );
+
+  const resultByAction = new Map();
+  writableActions.forEach((action, index) => {
+    resultByAction.set(action.import_key, results[index + 2] ?? []);
+  });
+
+  const actions = plan.actions.map((action) => {
+    if (!resultByAction.has(action.import_key)) return { ...action, applied: false };
+    const rows = resultByAction.get(action.import_key);
+    const row = rows[0] ?? null;
+
+    if (!row) {
+      if (action.action === 'create') {
+        return {
+          ...action,
+          action: 'unchanged',
+          applied: false,
+          changes: [],
+        };
+      }
+      return {
+        ...action,
+        action: 'conflict',
+        applied: false,
+        changes: [],
+        conflicts: [...new Set([...action.conflicts, 'concurrent_change'])],
+        conflict_type: 'concurrent_change',
+      };
+    }
+
+    const runtimeConflicts = Array.isArray(row.runtime_conflicts) ? row.runtime_conflicts : [];
+    return {
+      ...action,
+      stint_id: row.id ?? action.stint_id,
+      applied: true,
+      conflicts: [...new Set([...action.conflicts, ...runtimeConflicts])],
+      conflict_type: action.conflict_type ?? (runtimeConflicts.length > 0 ? 'manual_override' : null),
+    };
+  });
+
+  return { actions, summary: summarizeReconciliationActions(actions) };
+};
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/player-teams/bulk
@@ -533,6 +897,130 @@ router.get('/history/:playerId', async (req, res) => {
     return res.json(rows.map(mapHistoryRow));
   } catch (err) {
     console.error('player-teams history error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/player-teams/history/:playerId/reconcile
+// Body: { source?, dry_run?, apply?, stints: [{ import_key, team_id,
+//         position?, acquisition_type?, start_date?, end_date? }] }
+// Previews or atomically applies NHL/PuckPedia career-stint changes. This route
+// intentionally writes only player_team_stints; season rosters are never
+// inferred from transaction history.
+// ---------------------------------------------------------------------------
+router.post('/history/:playerId/reconcile', async (req, res) => {
+  const { playerId } = req.params;
+  if (!isValidUuid(playerId)) return res.status(400).json({ error: 'playerId must be a UUID' });
+
+  const importSource = req.body.source ?? req.body.import_source ?? NHL_PUCKPEDIA_IMPORT_SOURCE;
+
+  if (importSource !== NHL_PUCKPEDIA_IMPORT_SOURCE) {
+    return res.status(400).json({ error: 'Only nhl_puckpedia stint imports are supported' });
+  }
+  if ('dry_run' in req.body && typeof req.body.dry_run !== 'boolean') {
+    return res.status(400).json({ error: 'dry_run must be a boolean' });
+  }
+  if ('apply' in req.body && typeof req.body.apply !== 'boolean') {
+    return res.status(400).json({ error: 'apply must be a boolean' });
+  }
+  if ('dry_run' in req.body && 'apply' in req.body && req.body.dry_run === req.body.apply) {
+    return res.status(400).json({ error: 'dry_run and apply must request opposite modes' });
+  }
+
+  const dryRun = 'apply' in req.body ? !req.body.apply : (req.body.dry_run ?? true);
+  const validation = validateReconcileStints(req.body.stints);
+  if (validation.error) return res.status(400).json({ error: validation.error });
+  const incomingStints = validation.stints;
+
+  try {
+    const playerRows = await sql`
+      SELECT id, league_player_number
+      FROM players
+      WHERE id = ${playerId}
+    `;
+    if (playerRows.length === 0) return res.status(404).json({ error: 'Player not found' });
+
+    const teamIds = [...new Set(incomingStints.map((stint) => stint.team_id))];
+    const teamRows = await sql`
+      SELECT t.id, UPPER(l.code) AS league_code
+      FROM teams t
+      JOIN leagues l ON l.id = t.league_id
+      WHERE t.id = ANY(${teamIds}::uuid[])
+    `;
+    const validNhlTeamIds = new Set(teamRows.filter((team) => team.league_code === 'NHL').map((team) => team.id));
+    const invalidTeamIds = teamIds.filter((teamId) => !validNhlTeamIds.has(teamId));
+    if (invalidTeamIds.length > 0) {
+      return res.status(400).json({
+        error: 'Every imported team must belong to the NHL league',
+        invalid_team_ids: invalidTeamIds,
+      });
+    }
+
+    const existingStints = await sql`
+      SELECT
+        id,
+        player_id,
+        team_id,
+        position,
+        acquisition_type,
+        start_date::text AS start_date,
+        end_date::text AS end_date,
+        import_source,
+        import_key,
+        import_snapshot,
+        imported_at
+      FROM player_team_stints
+      WHERE player_id = ${playerId}
+      ORDER BY start_date ASC NULLS FIRST, created_at ASC, id ASC
+    `;
+
+    const plan = planPlayerStintReconciliation({
+      incomingStints,
+      existingStints,
+      importSource,
+    });
+
+    if (dryRun) {
+      return res.json({
+        source: importSource,
+        dry_run: true,
+        applied: false,
+        actions: plan.actions,
+        summary: plan.summary,
+      });
+    }
+
+    const appliedPlan = await applyReconciliationPlan({
+      playerId,
+      importSource,
+      plan,
+      existingStints,
+    });
+    return res.json({
+      source: importSource,
+      dry_run: false,
+      applied: true,
+      actions: appliedPlan.actions,
+      summary: appliedPlan.summary,
+    });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({
+        error: 'The stint import changed concurrently. Preview the reconciliation again.',
+      });
+    }
+    if (err.code === '40001') {
+      return res.status(409).json({
+        error: 'The stint import was updated concurrently. Retry the reconciliation.',
+      });
+    }
+    if (err.code === '22P02') {
+      return res.status(409).json({
+        error: 'The stint history changed during reconciliation. Preview and retry the import.',
+      });
+    }
+    console.error('player-teams reconcile error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

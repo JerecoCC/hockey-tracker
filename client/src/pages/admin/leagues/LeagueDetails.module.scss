@@ -1418,6 +1418,197 @@ $league-tab-list-gap: $space-md;
   font-size: $font-sm;
 }
 
+.draftTimelineScroll {
+  overflow-x: auto;
+  padding-bottom: $space-xs;
+  border: 1px solid var(--app-border, #{$border});
+  border-radius: $radius-md;
+  scrollbar-color: $border transparent;
+  scrollbar-width: thin;
+}
+
+.draftTimelineTable {
+  width: 100%;
+  min-width: calc(14rem + (var(--draft-round-count) * 4.5rem));
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  color: var(--app-text, #{$text-body});
+  font-size: $font-sm;
+  font-variant-numeric: tabular-nums;
+
+  th,
+  td {
+    box-sizing: border-box;
+  }
+
+  thead th {
+    padding: $space-sm;
+    border-right: 1px solid var(--app-border, #{$border});
+    border-bottom: 1px solid var(--app-border, #{$border});
+    background: color-mix(
+      in srgb,
+      var(--app-accent, #{$accent}) 10%,
+      var(--app-surface, #{$bg-card})
+    );
+    color: var(--app-text-muted, #{$text-dim});
+    font-size: $font-xs;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  thead th:last-child,
+  tbody tr > :last-child {
+    border-right: 0;
+  }
+
+  tbody tr:last-child > * {
+    border-bottom: 0;
+  }
+}
+
+.draftTimelineYearColumn {
+  width: 14rem;
+}
+
+.draftTimelineRoundColumn {
+  width: 4.5rem;
+}
+
+.draftTimelineYearHeader {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  text-align: left !important;
+}
+
+.draftTimelineRoundHeader {
+  span,
+  strong {
+    display: block;
+  }
+
+  strong {
+    margin-top: 2px;
+    color: var(--app-text-strong, #{$text-bright});
+    font-size: $font-sm;
+  }
+}
+
+.draftTimelineYearCell {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  padding: $space-md;
+  border-right: 1px solid var(--app-border, #{$border});
+  border-bottom: 1px solid var(--app-border, #{$border});
+  background: var(--app-surface, #{$bg-card});
+  text-align: left;
+  vertical-align: middle;
+
+  &:hover,
+  &:focus-within {
+    --draft-actions-bg: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
+
+    background: var(--draft-actions-bg);
+
+    .draftTimelineActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+.draftTimelineYearMain {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  min-width: 0;
+}
+
+.draftTimelineYear {
+  color: var(--app-text-strong, #{$text-bright});
+  font-size: $font-lg;
+  line-height: 1.2;
+}
+
+.draftTimelineDates {
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-xs;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.draftTimelineActions {
+  z-index: 3;
+  border-radius: 0;
+  background:
+    linear-gradient(var(--draft-actions-bg, transparent), var(--draft-actions-bg, transparent)),
+    var(--app-surface, #{$bg-card});
+
+  &::before {
+    background:
+      linear-gradient(to right, transparent, var(--draft-actions-bg, transparent)),
+      linear-gradient(to right, transparent, var(--app-surface, #{$bg-card}));
+  }
+}
+
+.draftTimelineRoundCell {
+  position: relative;
+  height: 4.5rem;
+  border-right: 1px solid var(--app-border, #{$border});
+  border-bottom: 1px solid var(--app-border, #{$border});
+  background: color-mix(in srgb, var(--app-surface, #{$bg-card}) 96%, transparent);
+  vertical-align: middle;
+  overflow: visible;
+}
+
+.draftTimelineDay {
+  position: absolute;
+  top: $space-sm;
+  bottom: $space-sm;
+  left: $space-sm;
+  z-index: 1;
+  display: flex;
+  width: var(--draft-range-width);
+  min-width: 0;
+  box-sizing: border-box;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: $space-xs $space-sm;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--app-accent, #{$accent}) 58%, transparent);
+  border-radius: $radius-md;
+  background: color-mix(in srgb, var(--app-accent, #{$accent}) 24%, transparent);
+  color: var(--app-accent-light, #{$accent-light});
+  text-align: center;
+
+  span,
+  strong {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  span {
+    font-size: $font-xs;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  strong {
+    color: var(--app-text-strong, #{$text-bright});
+    font-size: $font-sm;
+    line-height: 1.2;
+  }
+}
+
 .draftDayList {
   display: flex;
   flex-direction: column;

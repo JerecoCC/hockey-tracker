@@ -9,6 +9,7 @@ const {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } = require('drizzle-orm/pg-core');
 const { sql } = require('drizzle-orm');
@@ -271,8 +272,16 @@ const playerTeamStints = pgTable('player_team_stints', {
   acquisitionType: text('acquisition_type'),
   startDate: date('start_date'),
   endDate: date('end_date'),
+  importSource: text('import_source'),
+  importKey: text('import_key'),
+  importSnapshot: jsonb('import_snapshot'),
+  importedAt: timestamp('imported_at', { withTimezone: true }),
   createdAt: createdAt(),
-});
+}, (table) => ({
+  importIdentityUnique: uniqueIndex('player_team_stints_import_identity_unique')
+    .on(table.playerId, table.importSource, table.importKey)
+    .where(sql`${table.importSource} IS NOT NULL AND ${table.importKey} IS NOT NULL`),
+}));
 
 const playerPhotos = pgTable('player_photos', {
   id: id(),
