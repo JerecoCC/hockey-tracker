@@ -186,7 +186,7 @@ jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => ({ size }: 
 jest.mock('@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip', () => ({ ariaLabel, text, content }: any) => (
   <span aria-label={ariaLabel ?? text ?? 'Information'}>{content ?? text}</span>
 ));
-jest.mock('@jerecocc/tracker-ui/components/Table/Table', () => ({ columns, data, rowKey, emptyMessage }: any) => (
+jest.mock('@jerecocc/tracker-ui/components/Table/Table', () => ({ columns, data, rowKey, emptyMessage, rowClassName }: any) => (
   <table>
     <thead>
       <tr>
@@ -198,7 +198,10 @@ jest.mock('@jerecocc/tracker-ui/components/Table/Table', () => ({ columns, data,
     <tbody>
       {data.length > 0 ? (
         data.map((row: any, rowIndex: number) => (
-          <tr key={rowKey?.(row) ?? rowIndex}>
+          <tr
+            key={rowKey?.(row) ?? rowIndex}
+            className={rowClassName?.(row, rowIndex)}
+          >
             {columns.map((column: any, columnIndex: number) => {
               const content =
                 column.type === 'custom'
@@ -1115,6 +1118,16 @@ describe('PlayerDetails info tab', () => {
     expect(screen.queryByText('April 1, 2019')).not.toBeInTheDocument();
     expect(screen.queryByText(/acquired Andrew Peeke/)).not.toBeInTheDocument();
     expect(screen.queryByText(/signs a 3-Year/)).not.toBeInTheDocument();
+    const warningMessage = screen.getByText(
+      /Utah Mammoth movement occurred after 2025-26, the player's latest played season/i,
+    );
+    expect(warningMessage.closest('tr')).toBeNull();
+    const warningRow = screen
+      .getAllByText('Utah Mammoth')
+      .map((element) => element.closest('tr'))
+      .find((row): row is HTMLTableRowElement => row != null);
+    expect(warningRow).toHaveClass('manualMovementWarningRow');
+    expect(screen.queryByRole('columnheader', { name: 'Review' })).not.toBeInTheDocument();
   });
 
   it('applies reviewed NHL movements to career history in one reconciliation request', async () => {
@@ -3867,6 +3880,73 @@ describe('buildManualMovementStintImport', () => {
       team_id: 'team-nyi',
       acquisition_type: 'waivers',
     });
+  });
+
+  it('leaves movements after the latest played season for a manual roster move', () => {
+    const result = buildManualMovementStintImport(
+      {
+        playerName: 'John Smith',
+        sourceUrl: 'https://puckpedia.com/player/john-smith/transactions',
+        draft: null,
+        playerStatus: null,
+        movements: [
+          {
+            id: 'anchor:stint-1',
+            acquisitionType: 'current_stint',
+            startDate: '2025-10-01',
+            endDate: '2026-07-03',
+            previousEndDate: null,
+            fromTeamName: null,
+            toTeamName: 'Boston Bruins',
+            detail: '',
+          },
+          {
+            id: 'post-season-signing',
+            acquisitionType: 'free_agency',
+            startDate: '2026-07-03',
+            endDate: null,
+            previousEndDate: '2026-07-03',
+            fromTeamName: 'Boston Bruins',
+            toTeamName: 'Utah Mammoth',
+            detail: '',
+          },
+        ],
+        movementAnchor: {
+          stintId: 'stint-1',
+          teamCode: 'BOS',
+          teamName: 'Boston Bruins',
+          seasonName: '2025-26',
+          seasonStartDate: '2025-10-01',
+          stintStartDate: '2025-10-01',
+          acquisitionType: 'trade',
+        },
+      },
+      [
+        { id: 'team-bos', name: 'Boston Bruins', code: 'BOS' },
+        { id: 'team-uta', name: 'Utah Mammoth', code: 'UTA' },
+      ],
+      'D',
+      { name: '2025-26', endDate: '2026-06-30' },
+    );
+
+    expect(result.issues).toEqual([]);
+    expect(result.stints).toEqual([
+      {
+        import_key: 'nhl_puckpedia:v1:anchor:stint-1',
+        team_id: 'team-bos',
+        position: 'D',
+        acquisition_type: 'trade',
+        start_date: '2025-10-01',
+        end_date: null,
+      },
+    ]);
+    expect(result.warnings).toEqual([
+      {
+        movementId: 'post-season-signing',
+        message:
+          "Utah Mammoth movement occurred after 2025-26, the player's latest played season. Select the appropriate season and move the player manually so they are added to that team's roster.",
+      },
+    ]);
   });
 
   it('keeps an anchor identity tied to the persisted stint when its reviewed date changes', () => {

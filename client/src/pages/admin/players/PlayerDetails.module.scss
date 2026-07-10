@@ -448,6 +448,13 @@
   gap: $space-sm;
 }
 
+.manualMovementWarningRow {
+  --table-row-hover-bg: #{rgba($warning, 0.14)};
+
+  background: rgba($warning, 0.08);
+  box-shadow: inset 3px 0 0 $warning-light;
+}
+
 .stint {
   &List {
     list-style: none;

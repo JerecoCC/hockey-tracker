@@ -225,6 +225,16 @@ interface PlayerManualMovementReportEntry {
   detail: string;
 }
 
+interface PlayerManualMovementImportWarning {
+  movementId: string;
+  message: string;
+}
+
+interface PlayerManualMovementSeasonBoundary {
+  name: string;
+  endDate: string | null;
+}
+
 interface PlayerManualJerseyReportEntry {
   id: string;
   date: string;
@@ -1376,9 +1386,15 @@ export const buildManualMovementStintImport = (
   report: PlayerManualMovementReport,
   teams: TeamReportLookupRecord[],
   position: string | null | undefined,
-): { stints: ReconcilePlayerStintInput[]; issues: string[] } => {
+  latestPlayedSeason?: PlayerManualMovementSeasonBoundary | null,
+): {
+  stints: ReconcilePlayerStintInput[];
+  issues: string[];
+  warnings: PlayerManualMovementImportWarning[];
+} => {
   const stints: ReconcilePlayerStintInput[] = [];
   const issues: string[] = [];
+  const warnings: PlayerManualMovementImportWarning[] = [];
   const importKeys = new Set<string>();
 
   [...report.movements]
@@ -1391,6 +1407,13 @@ export const buildManualMovementStintImport = (
 
       if (!movement.startDate) {
         issues.push(`${movement.toTeamName ?? 'Unknown team'} is missing a start date.`);
+        return;
+      }
+      if (latestPlayedSeason?.endDate && movement.startDate > latestPlayedSeason.endDate) {
+        warnings.push({
+          movementId: movement.id,
+          message: `${movement.toTeamName ?? 'This team'} movement occurred after ${latestPlayedSeason.name}, the player's latest played season. Select the appropriate season and move the player manually so they are added to that team's roster.`,
+        });
         return;
       }
       if (movement.endDate && movement.endDate < movement.startDate) {
@@ -1413,17 +1436,28 @@ export const buildManualMovementStintImport = (
       }
       importKeys.add(importKey);
 
+      const endDate =
+        movement.endDate &&
+        latestPlayedSeason?.endDate &&
+        movement.endDate > latestPlayedSeason.endDate
+          ? null
+          : movement.endDate;
+
       stints.push({
         import_key: importKey,
         team_id: team.id,
         position: position ?? null,
         acquisition_type: acquisitionType,
         start_date: movement.startDate,
-        end_date: movement.endDate,
+        end_date: endDate,
       });
     });
 
-  return { stints, issues: [...new Set(issues)] };
+  return {
+    stints,
+    issues: [...new Set(issues)],
+    warnings: [...new Map(warnings.map((warning) => [warning.movementId, warning])).values()],
+  };
 };
 
 const manualMovementStintColumns: Column<PlayerManualMovementReportEntry>[] = [
@@ -1495,6 +1529,7 @@ const ManualMovementReportSection = ({
   report,
   applyBusy,
   applyIssues,
+  applyWarnings,
   applyStintCount,
   onApply,
   onOpenSource,
@@ -1502,6 +1537,7 @@ const ManualMovementReportSection = ({
   report: PlayerManualMovementReport | null;
   applyBusy: boolean;
   applyIssues: string[];
+  applyWarnings: PlayerManualMovementImportWarning[];
   applyStintCount: number;
   onApply: () => void;
   onOpenSource: () => void;
@@ -1512,6 +1548,9 @@ const ManualMovementReportSection = ({
   const jerseyChanges = report?.jerseyChanges
     ? [...report.jerseyChanges].sort((a, b) => b.date.localeCompare(a.date))
     : [];
+  const warningByMovementId = new Map(
+    applyWarnings.map((warning) => [warning.movementId, warning.message]),
+  );
 
   return (
     <Section
@@ -1529,6 +1568,8 @@ const ManualMovementReportSection = ({
               tooltip={
                 applyIssues.length > 0
                   ? 'Resolve unmatched teams or missing dates before applying'
+                  : applyWarnings.length > 0
+                    ? 'Apply eligible stints; highlighted movements require a manual move'
                   : 'Apply reviewed team stints'
               }
               disabled={applyBusy || applyIssues.length > 0}
@@ -1561,6 +1602,15 @@ const ManualMovementReportSection = ({
           icon="warning"
         >
           {applyIssues.join(' ')}
+        </Banner>
+      )}
+
+      {report && applyWarnings.length > 0 && (
+        <Banner
+          intent="warning"
+          icon="warning"
+        >
+          {applyWarnings.map((warning) => warning.message).join(' ')}
         </Banner>
       )}
 
@@ -1598,6 +1648,11 @@ const ManualMovementReportSection = ({
           columns={manualMovementStintColumns}
           data={reportMovements}
           rowKey={(movement) => movement.id}
+          rowClassName={(movement) =>
+            warningByMovementId.has(movement.id)
+              ? styles.manualMovementWarningRow
+              : undefined
+          }
           emptyMessage="No team stints generated yet."
         />
       )}
@@ -2444,6 +2499,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   });
   const playerSeasonOptions = gameLogSeasons.filter((season) => playerSeasonIds.has(season.id));
   const defaultPlayerSeasonId = getLatestEndedSeasonId(playerSeasonOptions);
+  const latestPlayedSeason =
+    playerSeasonOptions.find((season) => season.id === defaultPlayerSeasonId) ?? null;
   const [seasonStatsSeasonId, setSeasonStatsSeasonId] = useState<string | null>(null);
   const effectiveSeasonStatsSeasonId = seasonStatsSeasonId ?? defaultPlayerSeasonId;
   const { currentSeasonStats: seasonStats, loading: seasonStatsLoading } =
@@ -2705,8 +2762,14 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           manualMovementReport,
           manualMovementReportTeams,
           player.position,
+          latestPlayedSeason
+            ? {
+                name: latestPlayedSeason.name,
+                endDate: dateKey(latestPlayedSeason.end_date),
+              }
+            : null,
         )
-      : { stints: [], issues: [] };
+      : { stints: [], issues: [], warnings: [] };
   const manualMovementStartSeason =
     gameLogSeasons.find((season) => season.name === MANUAL_MOVEMENT_START_SEASON_NAME) ??
     playerSeasonOptions.find((season) => season.name === MANUAL_MOVEMENT_START_SEASON_NAME) ??
@@ -3907,6 +3970,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                           report={manualMovementReport}
                           applyBusy={manualMovementApplying}
                           applyIssues={manualMovementStintImport.issues}
+                          applyWarnings={manualMovementStintImport.warnings}
                           applyStintCount={manualMovementStintImport.stints.length}
                           onApply={() => setManualMovementApplyOpen(true)}
                           onOpenSource={openManualMovementReport}
