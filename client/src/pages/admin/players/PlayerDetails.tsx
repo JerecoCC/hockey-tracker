@@ -102,6 +102,8 @@ const AUTOFILL_RESULT_TOAST_MS = 4000;
 const AUTOFILL_FAILURE_TOAST_MS = 12000;
 const PLAYER_AUTOFILL_PROGRESS_STEPS = 2;
 const HERO_AVATAR_SIZE = 88;
+const MANUAL_MOVEMENT_START_SEASON_NAME = '2025-26';
+const MANUAL_MOVEMENT_START_FALLBACK_DATE = '2025-10-01';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PLAYER_POSITION_TAG_INTENTS: Record<PlayerPosition, TagIntent> = {
   F: 'accent',
@@ -2543,28 +2545,31 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const manualMovementReportTeams = leagueId
     ? teams.filter((team) => team.league_id === leagueId)
     : teams;
-  const latestEndedPlayerSeason =
-    playerSeasonOptions.find((season) => season.id === defaultPlayerSeasonId) ?? null;
-  const latestEndedPlayerSeasonStart = dateKey(latestEndedPlayerSeason?.start_date);
+  const manualMovementStartSeason =
+    gameLogSeasons.find((season) => season.name === MANUAL_MOVEMENT_START_SEASON_NAME) ??
+    playerSeasonOptions.find((season) => season.name === MANUAL_MOVEMENT_START_SEASON_NAME) ??
+    null;
+  const manualMovementStartSeasonStart =
+    dateKey(manualMovementStartSeason?.start_date) ?? MANUAL_MOVEMENT_START_FALLBACK_DATE;
   const manualMovementAnchorStint =
-    (latestEndedPlayerSeasonStart
+    (manualMovementStartSeasonStart
       ? stints.find((stint) => {
           const stintStart = dateKey(stint.start_date);
           const stintEnd = dateKey(stint.end_date);
           return (
-            (!stintStart || stintStart <= latestEndedPlayerSeasonStart) &&
-            (!stintEnd || stintEnd >= latestEndedPlayerSeasonStart)
+            (!stintStart || stintStart <= manualMovementStartSeasonStart) &&
+            (!stintEnd || stintEnd >= manualMovementStartSeasonStart)
           );
         })
       : null) ??
-    stints.find((stint) => stint.season_id === defaultPlayerSeasonId) ??
+    stints.find((stint) => stint.season_id === manualMovementStartSeason?.id) ??
     null;
   const manualMovementAnchor: PlayerManualMovementAnchor | null = manualMovementAnchorStint
     ? {
         teamCode: normalizeTeamCode(manualMovementAnchorStint.team.code),
         teamName: manualMovementAnchorStint.team.name ?? null,
-        seasonName: latestEndedPlayerSeason?.name ?? null,
-        seasonStartDate: latestEndedPlayerSeasonStart,
+        seasonName: manualMovementStartSeason?.name ?? MANUAL_MOVEMENT_START_SEASON_NAME,
+        seasonStartDate: manualMovementStartSeasonStart,
         stintStartDate: dateKey(manualMovementAnchorStint.start_date),
         acquisitionType: manualMovementAnchorStint.acquisition_type ?? null,
       }
