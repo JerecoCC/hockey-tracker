@@ -143,7 +143,8 @@ const normalizeDayRanges = (
       index === dates.length - 1
         ? totalRounds
         : clamp(Math.ceil(((index + 1) * totalRounds) / dates.length), startRound, maxEndRound);
-    const preferredEndRound = previousByDate.get(date)?.endRound ?? fallbackEndRound;
+    const preferredEndRound =
+      previousByDate.get(date)?.endRound ?? previous[index]?.endRound ?? fallbackEndRound;
     const endRound =
       index === dates.length - 1 ? totalRounds : clamp(preferredEndRound, startRound, maxEndRound);
 
@@ -281,8 +282,9 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
     totalRounds !== null && draftDatesInRange.length > 0 && totalRounds < draftDatesInRange.length;
 
   useEffect(() => {
+    if (datesCrossYears) return;
     setDayRanges((previous) => normalizeDayRanges(draftDatesInRange, totalRounds, previous));
-  }, [draftDatesInRange, totalRounds]);
+  }, [datesCrossYears, draftDatesInRange, totalRounds]);
 
   if (loading) return <LeagueDraftsTabSkeleton className={className} />;
 
@@ -294,8 +296,7 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
     setModalOpen(true);
   };
 
-  const openEdit = (draftEvent: DraftEvent) => {
-    setEditTarget(draftEvent);
+  const populateDraftForm = (draftEvent: DraftEvent) => {
     form.reset({
       startDate: draftEvent.startDate,
       endDate: draftEvent.endDate,
@@ -309,6 +310,17 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
       })),
     );
     setRangeDirty(false);
+  };
+
+  const openCopy = (draftEvent: DraftEvent) => {
+    setEditTarget(null);
+    populateDraftForm(draftEvent);
+    setModalOpen(true);
+  };
+
+  const openEdit = (draftEvent: DraftEvent) => {
+    setEditTarget(draftEvent);
+    populateDraftForm(draftEvent);
     setModalOpen(true);
   };
 
@@ -478,6 +490,14 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
                             <Button
                               variant="outlined"
                               intent="neutral"
+                              icon="clone"
+                              tooltip="Create copy"
+                              aria-label={`Create copy of ${item.draftYear} draft`}
+                              onClick={() => openCopy(item)}
+                            />
+                            <Button
+                              variant="outlined"
+                              intent="neutral"
                               icon="edit"
                               tooltip="Edit draft"
                               aria-label={`Edit ${item.draftYear} draft`}
@@ -638,7 +658,7 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
             </p>
           )}
 
-          {dayRanges.length > 0 && (
+          {!datesCrossYears && dayRanges.length > 0 && (
             <div className={styles.draftDayList}>
               {dayRanges.map((day, index) => {
                 const isLastDay = index === dayRanges.length - 1;

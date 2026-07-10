@@ -165,6 +165,69 @@ describe('LeagueDraftsTab', () => {
     ).toBeInTheDocument();
   });
 
+  it('opens a copied draft in create mode and preserves its round allocations', async () => {
+    const createDraftEvent = jest.fn(async () => true);
+    const updateDraftEvent = jest.fn(async () => true);
+    mockUseLeagueDraftDates.mockReturnValue({
+      ...hookResult([
+        draftDate('2026-day-1', 2026, 1, 2, '2026-06-26'),
+        draftDate('2026-day-2', 2026, 3, 7, '2026-06-27'),
+      ]),
+      createDraftEvent,
+      updateDraftEvent,
+    });
+
+    render(<LeagueDraftsTab leagueId="league-1" />);
+
+    const draftYearCell = screen.getByRole('rowheader', { name: /2026/ });
+    const copyButton = within(draftYearCell).getByRole('button', {
+      name: 'Create copy of 2026 draft',
+    });
+    expect(copyButton.querySelector('svg')).not.toBeNull();
+    fireEvent.click(copyButton);
+
+    expect(screen.getByRole('heading', { name: 'Create Draft' })).toBeInTheDocument();
+    const form = document.getElementById('league-draft-form');
+    expect(form).not.toBeNull();
+    const copiedForm = within(form as HTMLFormElement);
+    const startDate = copiedForm.getByLabelText('Start Date');
+    const endDate = copiedForm.getByLabelText('End Date');
+    expect(startDate).toHaveValue('2026-06-26');
+    expect(endDate).toHaveValue('2026-06-27');
+    expect(copiedForm.getByLabelText('Total Rounds')).toHaveValue(7);
+    expect(
+      within(screen.getByRole('group', { name: 'Day 1' })).getByText('Rounds 1-2'),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('group', { name: 'Day 2' })).getByText('Rounds 3-7'),
+    ).toBeInTheDocument();
+
+    fireEvent.change(startDate, { target: { value: '2027-06-26' } });
+    fireEvent.change(endDate, { target: { value: '2027-06-27' } });
+    const submitButton = document.querySelector<HTMLButtonElement>(
+      'button[form="league-draft-form"]',
+    );
+    expect(submitButton).not.toBeNull();
+    await waitFor(() => expect(submitButton).toBeEnabled());
+    fireEvent.click(submitButton as HTMLButtonElement);
+
+    await waitFor(() =>
+      expect(createDraftEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          draft_year: 2027,
+          start_date: '2027-06-26',
+          end_date: '2027-06-27',
+          total_rounds: 7,
+          days: [
+            { draft_date: '2027-06-26', start_round: 1, end_round: 2 },
+            { draft_date: '2027-06-27', start_round: 3, end_round: 7 },
+          ],
+        }),
+      ),
+    );
+    expect(updateDraftEvent).not.toHaveBeenCalled();
+  });
+
   it('derives the draft year from the start date and requires both dates to share a year', async () => {
     const createDraftEvent = jest.fn(async () => true);
     mockUseLeagueDraftDates.mockReturnValue({
