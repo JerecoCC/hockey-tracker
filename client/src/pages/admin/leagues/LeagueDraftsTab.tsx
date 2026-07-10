@@ -4,10 +4,12 @@ import ActionOverlay from '@jerecocc/tracker-ui/components/ActionOverlay/ActionO
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import GroupedFields from '@jerecocc/tracker-ui/components/GroupedFields/GroupedFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Slider from '@jerecocc/tracker-ui/components/Slider/Slider';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
+import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import useLeagueDraftDates, {
   type LeagueDraftDateRecord,
   type LeagueDraftEventPayload,
@@ -20,7 +22,6 @@ import {
 import styles from './LeagueDetails.module.scss';
 
 interface DraftFormValues {
-  draftYear: string;
   startDate: string;
   endDate: string;
   totalRounds: string;
@@ -51,7 +52,6 @@ const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_DRAFT_EVENT_DAYS = 31;
 
 const emptyValues: DraftFormValues = {
-  draftYear: '',
   startDate: '',
   endDate: '',
   totalRounds: '',
@@ -242,21 +242,30 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
     mode: 'onChange',
   });
 
-  const draftYearValue = form.watch('draftYear');
   const startDateValue = form.watch('startDate');
   const endDateValue = form.watch('endDate');
   const totalRoundsValue = form.watch('totalRounds');
-  const draftYear = toInteger(draftYearValue);
   const totalRounds = toInteger(totalRoundsValue);
-  const draftDatesInRange = useMemo(
-    () => getDateRange(startDateValue, endDateValue),
-    [startDateValue, endDateValue],
-  );
   const parsedStartDate = parseDateOnly(startDateValue);
   const parsedEndDate = parseDateOnly(endDateValue);
+  const draftYear = parsedStartDate?.getUTCFullYear() ?? null;
+  const datesCrossYears =
+    parsedStartDate !== null &&
+    parsedEndDate !== null &&
+    parsedStartDate.getUTCFullYear() !== parsedEndDate.getUTCFullYear();
+  const draftYearOutOfRange = draftYear !== null && (draftYear < 1900 || draftYear > 2200);
+  const draftDatesInRange = useMemo(() => {
+    const startDate = parseDateOnly(startDateValue);
+    const endDate = parseDateOnly(endDateValue);
+    if (startDate && endDate && startDate.getUTCFullYear() !== endDate.getUTCFullYear()) {
+      return [];
+    }
+    return getDateRange(startDateValue, endDateValue);
+  }, [startDateValue, endDateValue]);
   const dateRangeOverflow =
     !!startDateValue &&
     !!endDateValue &&
+    !datesCrossYears &&
     DATE_ONLY_RE.test(startDateValue) &&
     DATE_ONLY_RE.test(endDateValue) &&
     draftDatesInRange.length === 0 &&
@@ -264,7 +273,10 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
     parsedStartDate !== null &&
     parsedEndDate >= parsedStartDate;
   const invalidDateRange =
-    !!startDateValue && !!endDateValue && (draftDatesInRange.length === 0 || dateRangeOverflow);
+    !!startDateValue &&
+    !!endDateValue &&
+    !datesCrossYears &&
+    (draftDatesInRange.length === 0 || dateRangeOverflow);
   const totalRoundsTooLow =
     totalRounds !== null && draftDatesInRange.length > 0 && totalRounds < draftDatesInRange.length;
 
@@ -285,7 +297,6 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
   const openEdit = (draftEvent: DraftEvent) => {
     setEditTarget(draftEvent);
     form.reset({
-      draftYear: String(draftEvent.draftYear),
       startDate: draftEvent.startDate,
       endDate: draftEvent.endDate,
       totalRounds: String(draftEvent.totalRounds),
@@ -341,10 +352,12 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
     !!draftYear &&
     draftYear >= 1900 &&
     draftYear <= 2200 &&
+    !draftYearOutOfRange &&
     !!startDateValue &&
     !!endDateValue &&
     !!totalRounds &&
     totalRounds > 1 &&
+    !datesCrossYears &&
     !invalidDateRange &&
     !totalRoundsTooLow &&
     dayRanges.length === draftDatesInRange.length &&
@@ -385,7 +398,7 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
               size="medium"
               onClick={openCreate}
             >
-              Add Draft
+              Create Draft
             </Button>
           }
         >
@@ -516,23 +529,27 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
                               key={round}
                               className={styles.draftTimelineRoundCell}
                               aria-label={`Round ${round}, Day ${startingSegment.dayIndex + 1}`}
+                              style={
+                                {
+                                  '--draft-range-width': `calc(${roundSpan * 100}% + ${roundSpan - 1}px - 1rem)`,
+                                } as CSSProperties
+                              }
                             >
-                              <div
-                                className={styles.draftTimelineDay}
-                                aria-label={rangeLabel}
-                                data-round-span={roundSpan}
-                                title={`${fullDate}: ${roundRange}`}
-                                style={
-                                  {
-                                    '--draft-range-width': `calc(${roundSpan * 100}% + ${roundSpan - 1}px - 1rem)`,
-                                  } as CSSProperties
-                                }
+                              <Tooltip
+                                text={`${fullDate}: ${roundRange}`}
+                                className={styles.draftTimelineDayTooltip}
                               >
-                                <span>Day {startingSegment.dayIndex + 1}</span>
-                                <strong>
-                                  {formatMonthDay(startingSegment.draftDate.draft_date)}
-                                </strong>
-                              </div>
+                                <div
+                                  className={styles.draftTimelineDay}
+                                  aria-label={rangeLabel}
+                                  data-round-span={roundSpan}
+                                >
+                                  <span>Day {startingSegment.dayIndex + 1}</span>
+                                  <strong>
+                                    {formatMonthDay(startingSegment.draftDate.draft_date)}
+                                  </strong>
+                                </div>
+                              </Tooltip>
                             </td>
                           );
                         })}
@@ -548,10 +565,10 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
 
       <Modal
         open={modalOpen}
-        title={editTarget ? 'Edit Draft' : 'Add Draft'}
+        title={editTarget ? 'Edit Draft' : 'Create Draft'}
         onClose={closeModal}
         confirmForm="league-draft-form"
-        confirmLabel={submitting ? 'Saving...' : editTarget ? 'Save Changes' : 'Add Draft'}
+        confirmLabel={submitting ? 'Saving...' : editTarget ? 'Save Changes' : 'Create Draft'}
         confirmIcon="save"
         confirmDisabled={!canSubmit}
         busy={submitting}
@@ -562,38 +579,6 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
           onSubmit={submit}
         >
           <div className={styles.draftFormGrid}>
-            <Field
-              control={form.control}
-              name="draftYear"
-              type="number"
-              label="Draft Year"
-              min={1900}
-              max={2200}
-              required
-              disabled={submitting}
-              rules={{
-                required: 'Draft year is required',
-                min: { value: 1900, message: 'Must be 1900 or later' },
-                max: { value: 2200, message: 'Must be 2200 or earlier' },
-                validate: (value) => Number.isInteger(Number(value)) || 'Must be a whole number',
-              }}
-            />
-            <Field
-              control={form.control}
-              name="totalRounds"
-              type="number"
-              label="Total Rounds"
-              min={2}
-              max={99}
-              required
-              disabled={submitting}
-              rules={{
-                required: 'Total rounds is required',
-                min: { value: 2, message: 'Must be greater than 1' },
-                max: { value: 99, message: 'Must be 99 or fewer' },
-                validate: (value) => Number.isInteger(Number(value)) || 'Must be a whole number',
-              }}
-            />
             <Field
               control={form.control}
               name="startDate"
@@ -614,8 +599,33 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
               disabled={submitting}
               rules={{ required: 'End date is required' }}
             />
+            <Field
+              control={form.control}
+              name="totalRounds"
+              type="number"
+              label="Total Rounds"
+              wrapperClassName={styles.draftFormFullWidth}
+              min={2}
+              max={99}
+              required
+              disabled={submitting}
+              rules={{
+                required: 'Total rounds is required',
+                min: { value: 2, message: 'Must be greater than 1' },
+                max: { value: 99, message: 'Must be 99 or fewer' },
+                validate: (value) => Number.isInteger(Number(value)) || 'Must be a whole number',
+              }}
+            />
           </div>
 
+          {datesCrossYears && (
+            <p className={styles.draftFormError}>
+              Start and end dates must be within the same calendar year.
+            </p>
+          )}
+          {draftYearOutOfRange && (
+            <p className={styles.draftFormError}>Start date year must be between 1900 and 2200.</p>
+          )}
           {invalidDateRange && (
             <p className={styles.draftFormError}>
               End date must be on or after start date and span no more than {MAX_DRAFT_EVENT_DAYS}{' '}
@@ -640,15 +650,14 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
                 const sliderMin = Math.min(day.startRound, minStartRound);
                 const sliderMax = Math.max(day.startRound, maxEndRound);
                 return (
-                  <div
+                  <GroupedFields
                     key={day.date}
-                    className={styles.draftDayRow}
+                    className={styles.draftDayGroup}
+                    fieldsClassName={styles.draftDayGroupFields}
+                    legend={`Day ${index + 1}`}
                   >
-                    <div className={styles.draftDayHeader}>
-                      <div className={styles.draftDayTitle}>
-                        <span>Day {index + 1}</span>
-                        <strong>{formatDate(day.date)}</strong>
-                      </div>
+                    <div className={styles.draftDaySummary}>
+                      <strong>{formatDate(day.date)}</strong>
                       <Tag
                         label={
                           day.startRound === day.endRound
@@ -658,20 +667,33 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
                         intent="info"
                       />
                     </div>
-                    <Slider
-                      variant="range"
-                      label="Round Range"
-                      min={sliderMin}
-                      max={sliderMax}
-                      step={1}
-                      value={[day.startRound, day.endRound]}
-                      disabledStart={index === 0 || sliderMin === sliderMax}
-                      disabledEnd={isLastDay || day.startRound >= sliderMax}
-                      startAriaLabel={`Day ${index + 1} start round`}
-                      endAriaLabel={`Day ${index + 1} end round`}
-                      onChange={(value) => updateDayRoundRange(index, value)}
-                    />
-                  </div>
+                    {index === 0 ? (
+                      <Slider
+                        label="End Round"
+                        min={sliderMin}
+                        max={sliderMax}
+                        step={1}
+                        value={day.endRound}
+                        disabled={isLastDay || day.startRound >= sliderMax}
+                        aria-label="Day 1 end round"
+                        onChange={(value) => updateDayRoundRange(index, [day.startRound, value])}
+                      />
+                    ) : (
+                      <Slider
+                        variant="range"
+                        label="Round Range"
+                        min={sliderMin}
+                        max={sliderMax}
+                        step={1}
+                        value={[day.startRound, day.endRound]}
+                        disabledStart={sliderMin === sliderMax}
+                        disabledEnd={isLastDay || day.startRound >= sliderMax}
+                        startAriaLabel={`Day ${index + 1} start round`}
+                        endAriaLabel={`Day ${index + 1} end round`}
+                        onChange={(value) => updateDayRoundRange(index, value)}
+                      />
+                    )}
+                  </GroupedFields>
                 );
               })}
             </div>

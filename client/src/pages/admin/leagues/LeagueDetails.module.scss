@@ -1412,6 +1412,10 @@ $league-tab-list-gap: $space-md;
   }
 }
 
+.draftFormFullWidth {
+  grid-column: 1 / -1;
+}
+
 .draftFormError {
   margin: 0;
   color: $danger;
@@ -1420,7 +1424,6 @@ $league-tab-list-gap: $space-md;
 
 .draftTimelineScroll {
   overflow-x: auto;
-  padding-bottom: $space-xs;
   border: 1px solid var(--app-border, #{$border});
   border-radius: $radius-md;
   scrollbar-color: $border transparent;
@@ -1512,6 +1515,7 @@ $league-tab-list-gap: $space-md;
   &:focus-within {
     --draft-actions-bg: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
 
+    z-index: 3;
     background: var(--draft-actions-bg);
 
     .draftTimelineActions {
@@ -1565,7 +1569,7 @@ $league-tab-list-gap: $space-md;
   overflow: visible;
 }
 
-.draftTimelineDay {
+.draftTimelineDayTooltip {
   position: absolute;
   top: $space-sm;
   bottom: $space-sm;
@@ -1573,7 +1577,15 @@ $league-tab-list-gap: $space-md;
   z-index: 1;
   display: flex;
   width: var(--draft-range-width);
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.draftTimelineDay {
+  display: flex;
+  width: 100%;
   min-width: 0;
+  height: 100%;
   box-sizing: border-box;
   flex-direction: column;
   align-items: center;
@@ -1583,7 +1595,11 @@ $league-tab-list-gap: $space-md;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--app-accent, #{$accent}) 58%, transparent);
   border-radius: $radius-md;
-  background: color-mix(in srgb, var(--app-accent, #{$accent}) 24%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--app-accent, #{$accent}) 24%,
+    var(--app-surface, #{$bg-card})
+  );
   color: var(--app-accent-light, #{$accent-light});
   text-align: center;
 
@@ -1615,46 +1631,26 @@ $league-tab-list-gap: $space-md;
   gap: $space-md;
 }
 
-.draftDayRow {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
+.draftDayGroup {
+  --grouped-fields-gap: #{$space-sm};
+
   min-width: 0;
-  padding: $space-md;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: rgba(255, 255, 255, 0.02);
 }
 
-.draftDayHeader {
+.draftDayGroupFields {
+  gap: $space-md;
+}
+
+.draftDaySummary {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: $space-md;
   min-width: 0;
 
-  @media (max-width: 640px) {
-    flex-direction: column;
-  }
-}
-
-.draftDayTitle {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  min-width: 0;
-
-  span {
-    color: var(--app-text-muted, #{$text-dim});
-    font-size: $font-xs;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
   strong {
+    min-width: 0;
     color: var(--app-text-strong, #{$text-bright});
     font-size: $font-base;
-    letter-spacing: 0;
   }
 }

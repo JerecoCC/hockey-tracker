@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import useLeagueDraftDates, { type LeagueDraftDateRecord } from '@/hooks/useLeagueDraftDates';
 import LeagueDraftsTab from './LeagueDraftsTab';
 
@@ -6,6 +6,59 @@ jest.mock('@/hooks/useLeagueDraftDates', () => ({
   __esModule: true,
   default: jest.fn(),
 }));
+
+jest.mock('@jerecocc/tracker-ui/components/Field/Field', () => {
+  const { useController } = jest.requireActual<typeof import('react-hook-form')>('react-hook-form');
+
+  type MockFieldProps = {
+    control: import('react-hook-form').Control;
+    name: string;
+    type?: string;
+    label: string;
+    required?: boolean;
+    rules?: import('react-hook-form').RegisterOptions;
+    min?: number;
+    max?: number;
+    disabled?: boolean;
+    wrapperClassName?: string;
+  };
+
+  const MockField = ({
+    control,
+    name,
+    type,
+    label,
+    required,
+    rules,
+    min,
+    max,
+    disabled,
+    wrapperClassName,
+  }: MockFieldProps) => {
+    const { field } = useController({ control, name, rules });
+
+    return (
+      <label className={wrapperClassName}>
+        {label}
+        <input
+          {...field}
+          aria-label={label}
+          type={type === 'number' ? 'number' : 'text'}
+          value={typeof field.value === 'string' ? field.value : ''}
+          required={required}
+          min={min}
+          max={max}
+          disabled={disabled}
+        />
+      </label>
+    );
+  };
+
+  return {
+    __esModule: true,
+    default: MockField,
+  };
+});
 
 const mockUseLeagueDraftDates = useLeagueDraftDates as jest.Mock;
 
@@ -40,6 +93,10 @@ const hookResult = (draftDates: LeagueDraftDateRecord[]) => ({
 describe('LeagueDraftsTab', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    Object.defineProperty(window, 'scrollTo', {
+      configurable: true,
+      value: jest.fn(),
+    });
   });
 
   it('renders round columns with each draft day spanning its configured rounds', () => {
@@ -67,10 +124,10 @@ describe('LeagueDraftsTab', () => {
       within(rowHeaders[0]).getByRole('button', { name: 'Edit 2026 draft' }),
     );
 
-    expect(within(table).getByLabelText('Day 1, June 26, 2026, Rounds 1-2')).toHaveAttribute(
-      'data-round-span',
-      '2',
-    );
+    const firstRange = within(table).getByLabelText('Day 1, June 26, 2026, Rounds 1-2');
+    expect(firstRange).toHaveAttribute('data-round-span', '2');
+    fireEvent.mouseEnter(firstRange.parentElement as HTMLElement);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('June 26, 2026: Rounds 1-2');
     expect(within(table).getByLabelText('Day 2, June 27, 2026, Rounds 3-7')).toHaveAttribute(
       'data-round-span',
       '5',
@@ -106,5 +163,72 @@ describe('LeagueDraftsTab', () => {
         name: 'Round 3 not scheduled',
       }),
     ).toBeInTheDocument();
+  });
+
+  it('derives the draft year from the start date and requires both dates to share a year', async () => {
+    const createDraftEvent = jest.fn(async () => true);
+    mockUseLeagueDraftDates.mockReturnValue({
+      ...hookResult([]),
+      createDraftEvent,
+    });
+
+    render(<LeagueDraftsTab leagueId="league-1" />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create Draft' }));
+    expect(screen.getByRole('heading', { name: 'Create Draft' })).toBeInTheDocument();
+    const form = document.getElementById('league-draft-form');
+    expect(form).not.toBeNull();
+    const draftForm = within(form as HTMLFormElement);
+    expect(draftForm.queryByLabelText('Draft Year')).not.toBeInTheDocument();
+
+    const startDate = draftForm.getByLabelText('Start Date');
+    const endDate = draftForm.getByLabelText('End Date');
+    const totalRounds = draftForm.getByLabelText('Total Rounds');
+    expect(totalRounds.closest('label')).toHaveClass('draftFormFullWidth');
+    expect(
+      startDate.compareDocumentPosition(endDate) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      endDate.compareDocumentPosition(totalRounds) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    fireEvent.change(startDate, { target: { value: '2026-12-31' } });
+    fireEvent.change(endDate, { target: { value: '2027-01-01' } });
+    fireEvent.change(totalRounds, { target: { value: '2' } });
+    expect(
+      draftForm.getByText('Start and end dates must be within the same calendar year.'),
+    ).toBeInTheDocument();
+    const submitButton = document.querySelector<HTMLButtonElement>(
+      'button[form="league-draft-form"]',
+    );
+    expect(submitButton).not.toBeNull();
+    expect(submitButton).toBeDisabled();
+
+    fireEvent.change(startDate, { target: { value: '2026-12-30' } });
+    fireEvent.change(endDate, { target: { value: '2026-12-31' } });
+    const firstDayGroup = await screen.findByRole('group', { name: 'Day 1' });
+    const secondDayGroup = screen.getByRole('group', { name: 'Day 2' });
+    const firstDayDate = within(firstDayGroup).getByText('December 30, 2026');
+    const secondDayDate = within(secondDayGroup).getByText('December 31, 2026');
+    expect(firstDayDate.parentElement).toContainElement(within(firstDayGroup).getByText('Round 1'));
+    expect(secondDayDate.parentElement).toContainElement(
+      within(secondDayGroup).getByText('Round 2'),
+    );
+    expect(within(firstDayGroup).getAllByRole('slider')).toHaveLength(1);
+    expect(within(firstDayGroup).getByRole('slider', { name: 'Day 1 end round' })).toBeDisabled();
+    expect(within(secondDayGroup).getAllByRole('slider')).toHaveLength(2);
+    await waitFor(() => expect(submitButton).toBeEnabled());
+    fireEvent.click(submitButton as HTMLButtonElement);
+
+    await waitFor(() =>
+      expect(createDraftEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          draft_year: 2026,
+          start_date: '2026-12-30',
+          end_date: '2026-12-31',
+          total_rounds: 2,
+        }),
+      ),
+    );
   });
 });
