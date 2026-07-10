@@ -533,6 +533,42 @@ describe('POST /api/admin/player-teams/history/:playerId/reconcile', () => {
     expect(sql.transaction).not.toHaveBeenCalled();
   });
 
+  it('applies an inferred start date to an existing manual stint whose start is null', async () => {
+    mockReconcileReads([
+      {
+        id: 'manual-stint-1',
+        player_id: RECONCILE_PLAYER_ID,
+        ...RECONCILE_STINT,
+        start_date: null,
+        import_source: null,
+        import_key: null,
+        import_snapshot: null,
+      },
+    ]);
+    let transactionQueries = [];
+    sql.transaction.mockImplementationOnce(async (buildQueries) => {
+      const txn = jest.fn((strings, ...values) => ({ strings, values }));
+      transactionQueries = buildQueries(txn);
+      return [[], [], [{ id: 'manual-stint-1' }], []];
+    });
+
+    const res = await request(app)
+      .post(RECONCILE_URL)
+      .send({ stints: [RECONCILE_STINT], apply: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.actions[0]).toMatchObject({
+      action: 'adopt',
+      stint_id: 'manual-stint-1',
+      changes: ['start_date'],
+      applied: true,
+    });
+    expect(res.body.summary).toMatchObject({ adopt: 1, conflict: 0 });
+    expect(transactionQueries[2].strings.join(' ')).toContain(
+      'WHEN before.start_date IS NULL',
+    );
+  });
+
   it('virtually closes an exact manual anchor before planning the destination create', async () => {
     sql
       .mockResolvedValueOnce([{ id: RECONCILE_PLAYER_ID, league_player_number: '8478402' }])

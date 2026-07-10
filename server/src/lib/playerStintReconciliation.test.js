@@ -122,6 +122,127 @@ describe('planPlayerStintReconciliation', () => {
     });
   });
 
+  it('fills a missing start date when adopting a unique manual stint', () => {
+    const manual = existing({
+      start_date: null,
+      import_source: null,
+      import_key: null,
+      import_snapshot: null,
+    });
+    const result = plan([incoming()], [manual]);
+
+    expect(result.actions[0]).toMatchObject({
+      action: 'adopt',
+      stint_id: 'stint-1',
+      changes: ['start_date'],
+      conflicts: [],
+    });
+    expect(result.summary).toMatchObject({ adopt: 1, conflict: 0 });
+  });
+
+  it('fills null dates across multiple existing stints before validating the projected timeline', () => {
+    const result = plan(
+      [
+        incoming({
+          import_key: 'nhl_puckpedia:v1:anchor:stint-a',
+          team_id: 'team-a',
+          acquisition_type: 'draft',
+          start_date: '2020-01-01',
+          end_date: '2022-01-01',
+        }),
+        incoming({
+          import_key: 'nhl_puckpedia:v1:event:stint-a:1',
+          team_id: 'team-b',
+          start_date: '2022-01-01',
+          end_date: null,
+        }),
+      ],
+      [
+        existing({
+          id: 'stint-a',
+          team_id: 'team-a',
+          acquisition_type: null,
+          start_date: null,
+          end_date: null,
+          import_source: null,
+          import_key: null,
+          import_snapshot: null,
+        }),
+        existing({
+          id: 'stint-b',
+          team_id: 'team-b',
+          start_date: null,
+          end_date: null,
+          import_source: null,
+          import_key: null,
+          import_snapshot: null,
+        }),
+      ],
+    );
+
+    expect(result.actions).toEqual([
+      expect.objectContaining({
+        action: 'adopt',
+        stint_id: 'stint-a',
+        changes: ['acquisition_type', 'start_date', 'end_date'],
+      }),
+      expect.objectContaining({
+        action: 'adopt',
+        stint_id: 'stint-b',
+        changes: ['start_date'],
+      }),
+    ]);
+    expect(result.summary).toMatchObject({ adopt: 2, conflict: 0 });
+  });
+
+  it('matches an open null-date stint to the open return instead of an earlier same-team stint', () => {
+    const result = plan(
+      [
+        incoming({
+          import_key: 'team-a-first',
+          team_id: 'team-a',
+          start_date: '2020-01-01',
+          end_date: '2021-01-01',
+        }),
+        incoming({
+          import_key: 'team-b',
+          team_id: 'team-b',
+          start_date: '2021-01-01',
+          end_date: '2024-01-01',
+        }),
+        incoming({
+          import_key: 'team-a-return',
+          team_id: 'team-a',
+          start_date: '2024-01-01',
+          end_date: null,
+        }),
+      ],
+      [
+        existing({
+          id: 'current-team-a',
+          team_id: 'team-a',
+          start_date: null,
+          end_date: null,
+          import_source: null,
+          import_key: null,
+          import_snapshot: null,
+        }),
+      ],
+    );
+
+    expect(result.actions).toEqual([
+      expect.objectContaining({ action: 'create', import_key: 'team-a-first' }),
+      expect.objectContaining({ action: 'create', import_key: 'team-b' }),
+      expect.objectContaining({
+        action: 'adopt',
+        import_key: 'team-a-return',
+        stint_id: 'current-team-a',
+        changes: ['start_date'],
+      }),
+    ]);
+    expect(result.summary).toMatchObject({ create: 2, adopt: 1, conflict: 0 });
+  });
+
   it('adopts differing manual rows while preserving their non-null overrides', () => {
     const manual = existing({
       import_source: null,

@@ -164,10 +164,11 @@ const summarizeReconciliationActions = (actions) => ({
 /**
  * Build a conservative reconciliation plan.
  *
- * Imported rows are matched only by their stable source key. Manual rows may
- * be adopted only when their full persisted values exactly match an incoming
- * team/start-date identity. Anything ambiguous or overlapping is surfaced as
- * a conflict; the planner never schedules a deletion.
+ * Imported rows are matched only by their stable source key. Manual rows use
+ * exact team/start identities first; a unique same-team row with a null start
+ * may be adopted when its end-date/sequence makes the match unambiguous.
+ * Anything ambiguous or overlapping is surfaced as a conflict; the planner
+ * never schedules a deletion.
  */
 const planPlayerStintReconciliation = ({ incomingStints, existingStints, importSource }) => {
   const normalizedIncoming = incomingStints
@@ -181,6 +182,39 @@ const planPlayerStintReconciliation = ({ incomingStints, existingStints, importS
         (left.start_date ?? '').localeCompare(right.start_date ?? '') || left.originalIndex - right.originalIndex,
     );
   const virtualStints = existingStints.map((stint) => ({ ...stint }));
+
+  const findManualMatches = (incoming) => {
+    const sameTeamManualStints = virtualStints.filter(
+      (existing) => existing.import_source == null && sameValue(existing.team_id, incoming.team_id),
+    );
+    const exactStartMatches = sameTeamManualStints.filter((existing) =>
+      sameValue(existing.start_date, incoming.start_date),
+    );
+    if (exactStartMatches.length > 0) return exactStartMatches;
+
+    const missingStartCandidates = sameTeamManualStints.filter(
+      (existing) => nullable(existing.start_date) == null,
+    );
+    if (missingStartCandidates.length === 0) return [];
+
+    const exactEndMatches = missingStartCandidates.filter((existing) =>
+      sameValue(existing.end_date, incoming.end_date),
+    );
+    if (exactEndMatches.length > 0) return exactEndMatches;
+    if (missingStartCandidates.length !== 1) return [];
+
+    const sameTeamIncoming = normalizedIncoming.filter((candidate) =>
+      sameValue(candidate.team_id, incoming.team_id),
+    );
+    const preferredByEndDate = sameTeamIncoming.filter((candidate) =>
+      sameValue(candidate.end_date, missingStartCandidates[0].end_date),
+    );
+    if (preferredByEndDate.length === 1) {
+      return preferredByEndDate[0].import_key === incoming.import_key ? missingStartCandidates : [];
+    }
+
+    return sameTeamIncoming.length === 1 ? missingStartCandidates : [];
+  };
 
   const projectAction = (action, existing) => {
     if (action.action === 'create') {
@@ -211,62 +245,16 @@ const planPlayerStintReconciliation = ({ incomingStints, existingStints, importS
     );
     if (importedMatch) {
       const action = planImportedStint(incoming, importedMatch);
-      if (
-        action.action === 'update' &&
-        action.changes.some((field) => ['team_id', 'start_date', 'end_date'].includes(field))
-      ) {
-        const projected = { ...importedMatch };
-        for (const field of action.changes) projected[field] = incoming[field];
-        const overlaps = virtualStints.filter(
-          (existing) => existing.id !== importedMatch.id && stintRangesOverlap(existing, projected),
-        );
-        if (overlaps.length > 0) {
-          return conflictAction(incoming, {
-            stint_id: importedMatch.id,
-            conflict_type: 'overlap',
-            conflict_stint_ids: overlaps.map((stint) => stint.id),
-            previous_snapshot: action.previous_snapshot,
-          });
-        }
-      }
       projectAction(action, importedMatch);
       return action;
     }
 
-    const manualMatches = virtualStints.filter(
-      (existing) =>
-        existing.import_source == null &&
-        sameValue(existing.team_id, incoming.team_id) &&
-        sameValue(existing.start_date, incoming.start_date),
-    );
+    const manualMatches = findManualMatches(incoming);
     if (manualMatches.length > 0) {
       const action = planManualMatch(incoming, manualMatches);
       const existing = manualMatches.length === 1 ? manualMatches[0] : null;
-      if (existing && action.action === 'adopt') {
-        const projected = { ...existing };
-        for (const field of action.changes) projected[field] = incoming[field];
-        const overlaps = virtualStints.filter(
-          (stint) => stint.id !== existing.id && stintRangesOverlap(stint, projected),
-        );
-        if (overlaps.length > 0) {
-          return conflictAction(incoming, {
-            stint_id: existing.id,
-            conflicts: action.conflicts,
-            conflict_type: 'overlap',
-            conflict_stint_ids: overlaps.map((stint) => stint.id),
-          });
-        }
-      }
       projectAction(action, existing);
       return action;
-    }
-
-    const overlappingStints = virtualStints.filter((existing) => stintRangesOverlap(existing, incoming));
-    if (overlappingStints.length > 0) {
-      return conflictAction(incoming, {
-        conflict_type: 'overlap',
-        conflict_stint_ids: overlappingStints.map((stint) => stint.id),
-      });
     }
 
     const action = {
