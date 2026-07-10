@@ -11,6 +11,7 @@ import useLeagueDraftDates, {
   type LeagueDraftDateRecord,
   type LeagueDraftEventPayload,
 } from '@/hooks/useLeagueDraftDates';
+import Slider from '@/shared/Slider/Slider';
 import {
   LeagueListRowSkeleton,
   TabActionSkeleton,
@@ -512,18 +513,15 @@ const LeagueDraftsTab = ({
                         intent="info"
                       />
                     </div>
-                    <label className={styles.draftRoundSlider}>
-                      <span>Round Range</span>
-                      <input
-                        type="range"
-                        min={day.startRound}
-                        max={sliderMax}
-                        step={1}
-                        value={day.endRound}
-                        disabled={isLastDay || day.startRound === sliderMax}
-                        onChange={(event) => updateDayEndRound(index, event.target.value)}
-                      />
-                    </label>
+                    <Slider
+                      label="Round Range"
+                      min={day.startRound}
+                      max={sliderMax}
+                      step={1}
+                      value={day.endRound}
+                      disabled={isLastDay || day.startRound === sliderMax}
+                      onChange={(value) => updateDayEndRound(index, String(value))}
+                    />
                   </div>
                 );
               })}

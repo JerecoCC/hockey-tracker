@@ -1467,24 +1467,3 @@ $league-tab-list-gap: $space-md;
     letter-spacing: 0;
   }
 }
-
-.draftRoundSlider {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  min-width: 0;
-  color: var(--app-text-muted, #{$text-dim});
-  font-size: $font-xs;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-
-  input {
-    width: 100%;
-    accent-color: $accent;
-
-    &:disabled {
-      opacity: 0.55;
-    }
-  }
-}
