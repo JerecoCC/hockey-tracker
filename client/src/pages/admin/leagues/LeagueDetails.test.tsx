@@ -1490,7 +1490,8 @@ describe('LeagueDetailsPage – players tab', () => {
 
     const row = screen.getByText(/^John Smith/).closest('li');
     expect(row?.querySelector('a')).toHaveAttribute('href', '/admin/leagues/tl/players/1001');
-    expect(screen.getByText('Center | Last played: Spring 2024')).toBeInTheDocument();
+    expect(screen.getByText('Center')).toBeInTheDocument();
+    expect(screen.queryByText(/Last played:/)).not.toBeInTheDocument();
   });
 
   it('shows rookie and player status row tags', async () => {
@@ -1547,6 +1548,8 @@ describe('LeagueDetailsPage – players tab', () => {
           created_at: '2024-01-01T00:00:00Z',
           team_id: null,
           team_code: null,
+          last_season_id: 'season-previous',
+          last_season_name: 'Fall 2023',
         },
         {
           id: 'player-3',
@@ -1566,6 +1569,8 @@ describe('LeagueDetailsPage – players tab', () => {
           created_at: '2024-01-01T00:00:00Z',
           team_id: null,
           team_code: null,
+          last_season_id: 'season-previous',
+          last_season_name: 'Spring 2023',
         },
       ],
       total: 3,
@@ -1576,6 +1581,9 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.getByText('Inactive')).toBeInTheDocument();
     expect(screen.getByText('Retired')).toBeInTheDocument();
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
+    expect(screen.getByText('Defense | Last played: Fall 2023')).toBeInTheDocument();
+    expect(screen.getByText('Goalie | Last played: Spring 2023')).toBeInTheDocument();
+    expect(screen.queryByText('Center | Last played: Spring 2024')).not.toBeInTheDocument();
   });
 
   it('shows player list skeleton rows only after pagination controls start fetching', () => {

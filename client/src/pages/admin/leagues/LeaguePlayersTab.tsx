@@ -107,8 +107,10 @@ const playerDataIndicator = (
 
 const playerSubtitle = (player: PlayerRecord, showLastSeasonSubtitle: boolean) => {
   const position = formatPlayerPosition(player.position);
+  const status = getPlayerStatus(player);
+  const showLastSeason = status === 'inactive' || status === 'retired';
   const lastSeason =
-    showLastSeasonSubtitle && player.last_season_name
+    showLastSeasonSubtitle && showLastSeason && player.last_season_name
       ? `Last played: ${player.last_season_name}`
       : null;
   return [position, lastSeason].filter(Boolean).join(' | ') || undefined;
