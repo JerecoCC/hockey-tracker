@@ -207,6 +207,205 @@ describe('PATCH /api/admin/leagues/:id', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Draft dates
+// ---------------------------------------------------------------------------
+describe('league draft dates', () => {
+  const DRAFT_DATE = {
+    id: 'draft-date-1',
+    league_id: 'league-1',
+    draft_year: 2026,
+    start_round: 1,
+    end_round: 2,
+    draft_date: '2026-06-26',
+    notes: null,
+    created_at: new Date().toISOString(),
+  };
+  const DRAFT_EVENT_PAYLOAD = {
+    draft_year: 2026,
+    start_date: '2026-06-26',
+    end_date: '2026-06-27',
+    total_rounds: 7,
+    days: [
+      { draft_date: '2026-06-26', start_round: 1, end_round: 1 },
+      { draft_date: '2026-06-27', start_round: 2, end_round: 7 },
+    ],
+  };
+
+  it('lists draft date round ranges for a league', async () => {
+    sql.mockResolvedValueOnce([DRAFT_DATE]);
+
+    const res = await request(app).get('/api/admin/leagues/league-1/draft-dates');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([DRAFT_DATE]);
+    expect(sql.mock.calls[0][0].join(' ')).toContain('FROM league_draft_dates');
+  });
+
+  it('creates a draft date when the round range does not overlap', async () => {
+    sql
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([DRAFT_DATE]);
+
+    const res = await request(app)
+      .post('/api/admin/leagues/league-1/draft-dates')
+      .send({
+        draft_year: 2026,
+        start_round: 1,
+        end_round: 2,
+        draft_date: '2026-06-26',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(DRAFT_DATE);
+  });
+
+  it('creates a draft event with one saved row per draft day', async () => {
+    const dayOne = { ...DRAFT_DATE, start_round: 1, end_round: 1, draft_date: '2026-06-26' };
+    const dayTwo = {
+      ...DRAFT_DATE,
+      id: 'draft-date-2',
+      start_round: 2,
+      end_round: 7,
+      draft_date: '2026-06-27',
+    };
+    sql
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([dayOne])
+      .mockResolvedValueOnce([dayTwo]);
+
+    const res = await request(app)
+      .post('/api/admin/leagues/league-1/draft-dates/events')
+      .send(DRAFT_EVENT_PAYLOAD);
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual([dayOne, dayTwo]);
+  });
+
+  it('creates a one-day draft event', async () => {
+    const oneDayPayload = {
+      draft_year: 2026,
+      start_date: '2026-06-26',
+      end_date: '2026-06-26',
+      total_rounds: 7,
+      days: [{ draft_date: '2026-06-26', start_round: 1, end_round: 7 }],
+    };
+    sql
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ ...DRAFT_DATE, end_round: 7 }]);
+
+    const res = await request(app)
+      .post('/api/admin/leagues/league-1/draft-dates/events')
+      .send(oneDayPayload);
+
+    expect(res.status).toBe(201);
+    expect(res.body[0].end_round).toBe(7);
+  });
+
+  it('rejects draft events that reuse a previous day round range', async () => {
+    const res = await request(app)
+      .post('/api/admin/leagues/league-1/draft-dates/events')
+      .send({
+        ...DRAFT_EVENT_PAYLOAD,
+        days: [
+          { draft_date: '2026-06-26', start_round: 1, end_round: 3 },
+          { draft_date: '2026-06-27', start_round: 3, end_round: 7 },
+        ],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/continuous and non-overlapping/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('replaces all rows for an existing draft event', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'existing-draft-date' }])
+      .mockResolvedValueOnce([{ id: 'deleted-draft-date' }])
+      .mockResolvedValueOnce([{ ...DRAFT_DATE, end_round: 7 }]);
+
+    const res = await request(app)
+      .put('/api/admin/leagues/league-1/draft-dates/events/2026')
+      .send({
+        draft_year: 2026,
+        start_date: '2026-06-26',
+        end_date: '2026-06-26',
+        total_rounds: 7,
+        days: [{ draft_date: '2026-06-26', start_round: 1, end_round: 7 }],
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].end_round).toBe(7);
+  });
+
+  it('rejects overlapping draft date ranges', async () => {
+    sql.mockResolvedValueOnce([{ id: 'existing' }]);
+
+    const res = await request(app)
+      .post('/api/admin/leagues/league-1/draft-dates')
+      .send({
+        draft_year: 2026,
+        start_round: 2,
+        end_round: 4,
+        draft_date: '2026-06-27',
+      });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/overlaps/i);
+  });
+
+  it('rejects invalid draft date payloads', async () => {
+    const res = await request(app)
+      .post('/api/admin/leagues/league-1/draft-dates')
+      .send({
+        draft_year: 2026,
+        start_round: 4,
+        end_round: 2,
+        draft_date: '2026-06-26',
+      });
+
+    expect(res.status).toBe(400);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('updates a draft date after checking overlap against other rows', async () => {
+    sql
+      .mockResolvedValueOnce([DRAFT_DATE])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ ...DRAFT_DATE, end_round: 3 }]);
+
+    const res = await request(app)
+      .patch('/api/admin/leagues/league-1/draft-dates/draft-date-1')
+      .send({ end_round: 3 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.end_round).toBe(3);
+  });
+
+  it('deletes a draft date', async () => {
+    sql.mockResolvedValueOnce([{ id: 'draft-date-1' }]);
+
+    const res = await request(app).delete(
+      '/api/admin/leagues/league-1/draft-dates/draft-date-1',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/removed/i);
+  });
+
+  it('deletes all rows for a draft event', async () => {
+    sql.mockResolvedValueOnce([{ id: 'draft-date-1' }, { id: 'draft-date-2' }]);
+
+    const res = await request(app).delete(
+      '/api/admin/leagues/league-1/draft-dates/events/2026',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.count).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // DELETE /api/admin/leagues/:id
 // ---------------------------------------------------------------------------
 describe('DELETE /api/admin/leagues/:id', () => {

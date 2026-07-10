@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import LeagueAlignmentsTab, { LeagueAlignmentsTabSkeleton } from './LeagueAlignmentsTab';
 import LeagueAwardsTab, { LeagueAwardsTabSkeleton } from './LeagueAwardsTab';
+import LeagueDraftsTab, { LeagueDraftsTabSkeleton } from './LeagueDraftsTab';
 import LeagueEditModal from './LeagueEditModal';
 import LeagueInfoTab, { LeagueInfoTabSkeleton } from './LeagueInfoTab';
 import LeaguePlayersTab, { LeaguePlayersTabSkeleton } from './LeaguePlayersTab';
@@ -278,6 +279,11 @@ const LeagueDetailsPage = () => {
             content: <LeaguePlayoffsTabSkeleton />,
           },
           {
+            label: 'Drafts',
+            icon: 'calendar_month',
+            content: <LeagueDraftsTabSkeleton />,
+          },
+          {
             label: 'Awards',
             icon: 'workspace_premium',
             content: <LeagueAwardsTabSkeleton />,
@@ -336,6 +342,11 @@ const LeagueDetailsPage = () => {
               label: 'Playoffs',
               icon: 'emoji_events',
               content: <LeaguePlayoffsTab leagueId={league.id} />,
+            },
+            {
+              label: 'Drafts',
+              icon: 'calendar_month',
+              content: <LeagueDraftsTab leagueId={league.id} />,
             },
             {
               label: 'Awards',

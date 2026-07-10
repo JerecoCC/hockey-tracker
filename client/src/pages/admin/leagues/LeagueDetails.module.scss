@@ -1395,3 +1395,96 @@ $league-tab-list-gap: $space-md;
     gap: $space-md;
   }
 }
+
+.draftForm {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.draftFormGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-md;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.draftFormError {
+  margin: 0;
+  color: $danger;
+  font-size: $font-sm;
+}
+
+.draftDayList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.draftDayRow {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  min-width: 0;
+  padding: $space-md;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.draftDayHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-md;
+  min-width: 0;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+  }
+}
+
+.draftDayTitle {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  min-width: 0;
+
+  span {
+    color: var(--app-text-muted, #{$text-dim});
+    font-size: $font-xs;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  strong {
+    color: var(--app-text-strong, #{$text-bright});
+    font-size: $font-base;
+    letter-spacing: 0;
+  }
+}
+
+.draftRoundSlider {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  min-width: 0;
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-xs;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  input {
+    width: 100%;
+    accent-color: $accent;
+
+    &:disabled {
+      opacity: 0.55;
+    }
+  }
+}

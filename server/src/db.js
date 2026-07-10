@@ -607,6 +607,23 @@ async function initSchema() {
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS uses_team_selection BOOLEAN NOT NULL DEFAULT false`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS player_eligibility JSONB NOT NULL DEFAULT '{}'::jsonb`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS team_eligibility JSONB NOT NULL DEFAULT '{}'::jsonb`;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS league_draft_dates (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      league_id    UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+      draft_year   SMALLINT NOT NULL CHECK (draft_year BETWEEN 1900 AND 2200),
+      start_round  SMALLINT NOT NULL CHECK (start_round > 0),
+      end_round    SMALLINT NOT NULL CHECK (end_round >= start_round),
+      draft_date   DATE NOT NULL,
+      notes        TEXT,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS league_draft_dates_lookup
+    ON league_draft_dates (league_id, draft_year, start_round, end_round)
+  `;
   await sql`
     CREATE TABLE IF NOT EXISTS _migrations (
       name       TEXT PRIMARY KEY,

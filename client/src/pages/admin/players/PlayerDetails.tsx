@@ -63,6 +63,8 @@ import {
   type PlayerShoots,
 } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
+import useLeagueDraftDates, { type LeagueDraftDateRecord } from '@/hooks/useLeagueDraftDates';
+import { getDraftPickStartDate } from '@/lib/draftDates';
 import { formatPlayerPosition } from '@/lib/playerPosition';
 import { PLAYER_STATUS_LABELS, getPlayerStatus, type PlayerStatus } from '@/lib/playerStatus';
 import { getLatestEndedSeasonId } from '@/lib/seasonSelection';
@@ -1031,6 +1033,7 @@ const buildManualMovementReport = ({
   playerStatus,
   movementAnchor,
   teams,
+  draftDates,
 }: {
   playerName: string;
   sourceUrl: string;
@@ -1039,6 +1042,7 @@ const buildManualMovementReport = ({
   playerStatus?: PlayerManualStatusReport | null;
   movementAnchor?: PlayerManualMovementAnchor | null;
   teams?: TeamReportLookupRecord[];
+  draftDates?: LeagueDraftDateRecord[];
 }): PlayerManualMovementReport => {
   const rawEvents = parsePuckPediaTransactions(transactionsHtml, playerName).sort((a, b) =>
     a.date.localeCompare(b.date),
@@ -1058,10 +1062,12 @@ const buildManualMovementReport = ({
         teamName: draftTeamName ?? draft.teamName ?? null,
       }
     : null;
+  const draftStartDate = getDraftPickStartDate(normalizedDraft, draftDates ?? []);
   const anchorHasDraftAcquisition =
     movementAnchor?.acquisitionType === MANUAL_MOVEMENT_ACQUISITION_TYPES.draft;
   const anchorIsDraftStint = anchorHasDraftAcquisition || teamsMatch(anchorTeamName, draftTeamName);
-  const anchorDraftStartDate = anchorHasDraftAcquisition ? anchorStintStartDate : null;
+  const anchorDraftStartDate =
+    draftStartDate ?? (anchorHasDraftAcquisition ? anchorStintStartDate : null);
   const anchorIsTeamTransferStint =
     movementAnchor?.acquisitionType === MANUAL_MOVEMENT_ACQUISITION_TYPES.teamTransfer ||
     reportTeamsShareFranchiseTransfer(teamLookup, draftTeamName, anchorTeamName);
@@ -1219,7 +1225,7 @@ const buildManualMovementReport = ({
     if (anchorMovementIndex >= 0) {
       visibleMovements = movements.slice(anchorMovementIndex);
       const anchorMovementIsKnownDraftStart =
-        anchorHasDraftAcquisition &&
+        anchorIsDraftStint &&
         visibleMovements[0] &&
         (!visibleMovements[0].startDate ||
           (!!anchorDraftStartDate &&
@@ -1228,9 +1234,9 @@ const buildManualMovementReport = ({
         visibleMovements = [
           {
             ...visibleMovements[0],
-            id: `unknown-anchor-${anchorTeamName}`,
+            id: `${anchorDraftStartDate ?? 'unknown'}-anchor-${anchorTeamName}`,
             acquisitionType: MANUAL_MOVEMENT_ACQUISITION_TYPES.draft,
-            startDate: null,
+            startDate: anchorDraftStartDate,
             previousEndDate: null,
             fromTeamName: null,
             detail: visibleMovements[0].detail,
@@ -1252,7 +1258,7 @@ const buildManualMovementReport = ({
           : anchorIsTeamTransferStint
             ? MANUAL_MOVEMENT_ACQUISITION_TYPES.teamTransfer
             : MANUAL_MOVEMENT_CURRENT_STINT_ACQUISITION;
-        const anchorStartDate = anchorIsDraftStint ? null : anchorStintStartDate;
+        const anchorStartDate = anchorIsDraftStint ? draftStartDate : anchorStintStartDate;
         visibleMovements = [
           {
             id: `${anchorStartDate ?? 'unknown'}-anchor-${anchorTeamName}`,
@@ -1475,12 +1481,14 @@ const ManualMovementReportModal = ({
   open,
   report,
   teams,
+  draftDates,
   onReportBuilt,
   onClose,
 }: {
   open: boolean;
   report: PlayerManualMovementReport | null;
   teams: TeamReportLookupRecord[];
+  draftDates: LeagueDraftDateRecord[];
   onReportBuilt: (report: PlayerManualMovementReport) => void;
   onClose: () => void;
 }) => {
@@ -1515,6 +1523,7 @@ const ManualMovementReportModal = ({
       playerStatus: report.playerStatus,
       movementAnchor: report.movementAnchor,
       teams,
+      draftDates,
     });
 
     if (
@@ -2282,6 +2291,9 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   } = useStintActions(adminPlayerId);
   const { teams } = useTeams({ mode });
   const { seasons } = useSeasons(leagueId, { mode });
+  const { draftDates: leagueDraftDates } = useLeagueDraftDates(leagueId, {
+    enabled: isAdminView && !isLegacyIdRoute,
+  });
   const gameLogSeasons = seasons.filter((season) => !leagueId || season.league_id === leagueId);
   const playerSeasonIds = new Set<string>();
   stats.forEach((row) => {
@@ -3809,6 +3821,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             open={manualMovementSourceOpen}
             report={manualMovementReport}
             teams={manualMovementReportTeams}
+            draftDates={leagueDraftDates}
             onReportBuilt={setManualMovementReport}
             onClose={() => setManualMovementSourceOpen(false)}
           />

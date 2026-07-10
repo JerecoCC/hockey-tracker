@@ -50,6 +50,192 @@ const parseOptionalNonNegativeInteger = (value) => {
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : Number.NaN;
 };
 
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_DRAFT_EVENT_DAYS = 31;
+
+const parseDraftInteger = (value, { min, max }) => {
+  if (value === undefined || value === null || value === '') return Number.NaN;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= min && parsed <= max ? parsed : Number.NaN;
+};
+
+const normalizeDraftDatePayload = (body) => {
+  const draftYear = parseDraftInteger(body.draft_year, { min: 1900, max: 2200 });
+  const startRound = parseDraftInteger(body.start_round, { min: 1, max: 99 });
+  const endRound = parseDraftInteger(body.end_round, { min: 1, max: 99 });
+  const draftDate = typeof body.draft_date === 'string' ? body.draft_date.trim() : '';
+
+  if (Number.isNaN(draftYear)) return { error: 'draft_year must be a valid year' };
+  if (Number.isNaN(startRound)) return { error: 'start_round must be a positive integer' };
+  if (Number.isNaN(endRound)) return { error: 'end_round must be a positive integer' };
+  if (endRound < startRound) {
+    return { error: 'end_round must be greater than or equal to start_round' };
+  }
+  if (!DATE_ONLY_RE.test(draftDate)) return { error: 'draft_date must be YYYY-MM-DD' };
+
+  return {
+    value: {
+      draft_year: draftYear,
+      start_round: startRound,
+      end_round: endRound,
+      draft_date: draftDate,
+      notes: typeof body.notes === 'string' && body.notes.trim() ? body.notes.trim() : null,
+    },
+  };
+};
+
+const parseDraftDateOnly = (value) => {
+  const text = typeof value === 'string' ? value.trim() : '';
+  if (!DATE_ONLY_RE.test(text)) return null;
+
+  const [year, month, day] = text.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year
+    || date.getUTCMonth() !== month - 1
+    || date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return date;
+};
+
+const formatDraftDateOnly = (date) => date.toISOString().slice(0, 10);
+
+const addUtcDays = (date, days) => {
+  const next = new Date(date.getTime());
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+};
+
+const getDraftEventDates = (startDate, endDate) => {
+  const dates = [];
+  for (let cursor = startDate; cursor <= endDate; cursor = addUtcDays(cursor, 1)) {
+    dates.push(formatDraftDateOnly(cursor));
+    if (dates.length > MAX_DRAFT_EVENT_DAYS) break;
+  }
+  return dates;
+};
+
+const normalizeDraftEventPayload = (body) => {
+  const draftYear = parseDraftInteger(body.draft_year, { min: 1900, max: 2200 });
+  const totalRounds = parseDraftInteger(body.total_rounds, { min: 2, max: 99 });
+  const startDate = parseDraftDateOnly(body.start_date);
+  const endDate = parseDraftDateOnly(body.end_date);
+  const days = Array.isArray(body.days) ? body.days : null;
+
+  if (Number.isNaN(draftYear)) return { error: 'draft_year must be a valid year' };
+  if (Number.isNaN(totalRounds)) return { error: 'total_rounds must be an integer greater than 1' };
+  if (!startDate) return { error: 'start_date must be YYYY-MM-DD' };
+  if (!endDate) return { error: 'end_date must be YYYY-MM-DD' };
+  if (endDate < startDate) return { error: 'end_date must be on or after start_date' };
+  if (!days) return { error: 'days must be an array' };
+
+  const expectedDates = getDraftEventDates(startDate, endDate);
+  if (expectedDates.length > MAX_DRAFT_EVENT_DAYS) {
+    return { error: `draft cannot span more than ${MAX_DRAFT_EVENT_DAYS} days` };
+  }
+  if (days.length !== expectedDates.length) {
+    return { error: 'days must include one row for each draft date' };
+  }
+  if (totalRounds < expectedDates.length) {
+    return { error: 'total_rounds must be at least the number of draft days' };
+  }
+
+  const normalizedDays = [];
+  let nextStartRound = 1;
+
+  for (let i = 0; i < days.length; i += 1) {
+    const day = days[i] ?? {};
+    const draftDate = typeof day.draft_date === 'string' ? day.draft_date.trim() : '';
+    const startRound = parseDraftInteger(day.start_round, { min: 1, max: totalRounds });
+    const endRound = parseDraftInteger(day.end_round, { min: 1, max: totalRounds });
+
+    if (draftDate !== expectedDates[i]) {
+      return { error: 'days must match start_date through end_date in order' };
+    }
+    if (Number.isNaN(startRound)) return { error: 'day start_round must be a positive integer' };
+    if (Number.isNaN(endRound)) return { error: 'day end_round must be a positive integer' };
+    if (endRound < startRound) {
+      return { error: 'day end_round must be greater than or equal to start_round' };
+    }
+    if (startRound !== nextStartRound) {
+      return { error: 'draft day round ranges must be continuous and non-overlapping' };
+    }
+
+    normalizedDays.push({
+      draft_year: draftYear,
+      start_round: startRound,
+      end_round: endRound,
+      draft_date: draftDate,
+      notes: null,
+    });
+    nextStartRound = endRound + 1;
+  }
+
+  if (normalizedDays.at(-1)?.end_round !== totalRounds) {
+    return { error: 'draft day round ranges must cover all configured rounds' };
+  }
+
+  return {
+    value: {
+      draft_year: draftYear,
+      total_rounds: totalRounds,
+      start_date: formatDraftDateOnly(startDate),
+      end_date: formatDraftDateOnly(endDate),
+      days: normalizedDays,
+    },
+  };
+};
+
+const findDraftDateOverlap = async ({ leagueId, draftYear, startRound, endRound, excludeId }) => {
+  if (excludeId) {
+    return sql`
+      SELECT id
+      FROM league_draft_dates
+      WHERE league_id = ${leagueId}
+        AND draft_year = ${draftYear}
+        AND start_round <= ${endRound}
+        AND end_round >= ${startRound}
+        AND id <> ${excludeId}
+      LIMIT 1
+    `;
+  }
+
+  return sql`
+    SELECT id
+    FROM league_draft_dates
+    WHERE league_id = ${leagueId}
+      AND draft_year = ${draftYear}
+      AND start_round <= ${endRound}
+      AND end_round >= ${startRound}
+    LIMIT 1
+  `;
+};
+
+const insertDraftEventRows = async ({ leagueId, event }) => {
+  const rows = [];
+  for (const day of event.days) {
+    const inserted = await sql`
+      INSERT INTO league_draft_dates (
+        league_id, draft_year, start_round, end_round, draft_date, notes
+      )
+      VALUES (
+        ${leagueId},
+        ${day.draft_year},
+        ${day.start_round},
+        ${day.end_round},
+        ${day.draft_date},
+        ${day.notes}
+      )
+      RETURNING id, league_id, draft_year, start_round, end_round, draft_date::text AS draft_date,
+                notes, created_at
+    `;
+    rows.push(inserted[0]);
+  }
+  return rows;
+};
+
 const REGULAR_SEASON_AWARD_STAT_KEYS = new Set([
   'points',
   'goals',
@@ -284,8 +470,247 @@ router.patch('/:id', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /api/admin/leagues/:id  – delete a league
+// GET /api/admin/leagues/:id/draft-dates - configured draft dates by round range
 // ---------------------------------------------------------------------------
+router.get('/:id/draft-dates', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      SELECT id, league_id, draft_year, start_round, end_round, draft_date::text AS draft_date,
+             notes, created_at
+      FROM league_draft_dates
+      WHERE league_id = ${id}
+      ORDER BY draft_year DESC, draft_date ASC, start_round ASC
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('league draft dates list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/leagues/:id/draft-dates/events - create a full draft event
+// ---------------------------------------------------------------------------
+router.post('/:id/draft-dates/events', async (req, res) => {
+  const { id } = req.params;
+  const normalized = normalizeDraftEventPayload(req.body ?? {});
+  if (normalized.error) return res.status(400).json({ error: normalized.error });
+  const event = normalized.value;
+
+  try {
+    const existing = await sql`
+      SELECT id
+      FROM league_draft_dates
+      WHERE league_id = ${id}
+        AND draft_year = ${event.draft_year}
+      LIMIT 1
+    `;
+    if (existing.length > 0) {
+      return res.status(409).json({ error: 'Draft year already has configured dates' });
+    }
+
+    const rows = await insertDraftEventRows({ leagueId: id, event });
+    return res.status(201).json(rows);
+  } catch (err) {
+    if (err.code === '23503') return res.status(404).json({ error: 'League not found' });
+    console.error('league draft event create error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/admin/leagues/:id/draft-dates/events/:draftYear - replace a draft event
+// ---------------------------------------------------------------------------
+router.put('/:id/draft-dates/events/:draftYear', async (req, res) => {
+  const { id, draftYear } = req.params;
+  const sourceDraftYear = parseDraftInteger(draftYear, { min: 1900, max: 2200 });
+  if (Number.isNaN(sourceDraftYear)) {
+    return res.status(400).json({ error: 'draftYear must be a valid year' });
+  }
+
+  const normalized = normalizeDraftEventPayload(req.body ?? {});
+  if (normalized.error) return res.status(400).json({ error: normalized.error });
+  const event = normalized.value;
+
+  try {
+    const existing = await sql`
+      SELECT id
+      FROM league_draft_dates
+      WHERE league_id = ${id}
+        AND draft_year = ${sourceDraftYear}
+      LIMIT 1
+    `;
+    if (existing.length === 0) return res.status(404).json({ error: 'Draft event not found' });
+
+    if (event.draft_year !== sourceDraftYear) {
+      const targetExisting = await sql`
+        SELECT id
+        FROM league_draft_dates
+        WHERE league_id = ${id}
+          AND draft_year = ${event.draft_year}
+        LIMIT 1
+      `;
+      if (targetExisting.length > 0) {
+        return res.status(409).json({ error: 'Draft year already has configured dates' });
+      }
+    }
+
+    await sql`
+      DELETE FROM league_draft_dates
+      WHERE league_id = ${id}
+        AND draft_year = ${sourceDraftYear}
+    `;
+    const rows = await insertDraftEventRows({ leagueId: id, event });
+    return res.json(rows);
+  } catch (err) {
+    if (err.code === '23503') return res.status(404).json({ error: 'League not found' });
+    console.error('league draft event update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/leagues/:id/draft-dates/events/:draftYear - delete a draft event
+// ---------------------------------------------------------------------------
+router.delete('/:id/draft-dates/events/:draftYear', async (req, res) => {
+  const { id, draftYear } = req.params;
+  const sourceDraftYear = parseDraftInteger(draftYear, { min: 1900, max: 2200 });
+  if (Number.isNaN(sourceDraftYear)) {
+    return res.status(400).json({ error: 'draftYear must be a valid year' });
+  }
+
+  try {
+    const rows = await sql`
+      DELETE FROM league_draft_dates
+      WHERE league_id = ${id}
+        AND draft_year = ${sourceDraftYear}
+      RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Draft event not found' });
+    return res.json({ message: 'Draft event removed', count: rows.length });
+  } catch (err) {
+    console.error('league draft event delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/leagues/:id/draft-dates - create a draft date range
+// ---------------------------------------------------------------------------
+router.post('/:id/draft-dates', async (req, res) => {
+  const { id } = req.params;
+  const normalized = normalizeDraftDatePayload(req.body ?? {});
+  if (normalized.error) return res.status(400).json({ error: normalized.error });
+  const payload = normalized.value;
+
+  try {
+    const overlaps = await findDraftDateOverlap({
+      leagueId: id,
+      draftYear: payload.draft_year,
+      startRound: payload.start_round,
+      endRound: payload.end_round,
+    });
+    if (overlaps.length > 0) {
+      return res.status(409).json({ error: 'Draft date round range overlaps an existing entry' });
+    }
+
+    const rows = await sql`
+      INSERT INTO league_draft_dates (
+        league_id, draft_year, start_round, end_round, draft_date, notes
+      )
+      VALUES (
+        ${id},
+        ${payload.draft_year},
+        ${payload.start_round},
+        ${payload.end_round},
+        ${payload.draft_date},
+        ${payload.notes}
+      )
+      RETURNING id, league_id, draft_year, start_round, end_round, draft_date::text AS draft_date,
+                notes, created_at
+    `;
+    return res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === '23503') return res.status(404).json({ error: 'League not found' });
+    console.error('league draft date create error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/leagues/:id/draft-dates/:draftDateId - update a draft date range
+// ---------------------------------------------------------------------------
+router.patch('/:id/draft-dates/:draftDateId', async (req, res) => {
+  const { id, draftDateId } = req.params;
+  try {
+    const existingRows = await sql`
+      SELECT id, draft_year, start_round, end_round, draft_date::text AS draft_date, notes
+      FROM league_draft_dates
+      WHERE id = ${draftDateId} AND league_id = ${id}
+    `;
+    if (existingRows.length === 0) return res.status(404).json({ error: 'Draft date not found' });
+
+    const existing = existingRows[0];
+    const normalized = normalizeDraftDatePayload({
+      draft_year: req.body?.draft_year ?? existing.draft_year,
+      start_round: req.body?.start_round ?? existing.start_round,
+      end_round: req.body?.end_round ?? existing.end_round,
+      draft_date: req.body?.draft_date ?? existing.draft_date,
+      notes: 'notes' in (req.body ?? {}) ? req.body.notes : existing.notes,
+    });
+    if (normalized.error) return res.status(400).json({ error: normalized.error });
+    const payload = normalized.value;
+
+    const overlaps = await findDraftDateOverlap({
+      leagueId: id,
+      draftYear: payload.draft_year,
+      startRound: payload.start_round,
+      endRound: payload.end_round,
+      excludeId: draftDateId,
+    });
+    if (overlaps.length > 0) {
+      return res.status(409).json({ error: 'Draft date round range overlaps an existing entry' });
+    }
+
+    const rows = await sql`
+      UPDATE league_draft_dates
+      SET
+        draft_year = ${payload.draft_year},
+        start_round = ${payload.start_round},
+        end_round = ${payload.end_round},
+        draft_date = ${payload.draft_date},
+        notes = ${payload.notes}
+      WHERE id = ${draftDateId} AND league_id = ${id}
+      RETURNING id, league_id, draft_year, start_round, end_round, draft_date::text AS draft_date,
+                notes, created_at
+    `;
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('league draft date update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/leagues/:id/draft-dates/:draftDateId - delete a draft date range
+// ---------------------------------------------------------------------------
+router.delete('/:id/draft-dates/:draftDateId', async (req, res) => {
+  const { id, draftDateId } = req.params;
+  try {
+    const rows = await sql`
+      DELETE FROM league_draft_dates
+      WHERE id = ${draftDateId} AND league_id = ${id}
+      RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Draft date not found' });
+    return res.json({ message: 'Draft date removed' });
+  } catch (err) {
+    console.error('league draft date delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ---------------------------------------------------------------------------
 // GET /api/admin/leagues/:id/awards - league-wide award definitions
 // ---------------------------------------------------------------------------
