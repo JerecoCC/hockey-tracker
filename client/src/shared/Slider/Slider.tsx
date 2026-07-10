@@ -6,26 +6,57 @@ type NativeRangeProps = Omit<
   'type' | 'value' | 'min' | 'max' | 'step' | 'onChange'
 >;
 
-interface SliderProps extends NativeRangeProps {
+interface SliderCommonProps extends NativeRangeProps {
   label?: string;
   valueLabel?: string;
-  value: number;
   min: number;
   max: number;
   step?: number;
-  onChange: (value: number) => void;
   className?: string;
   inputClassName?: string;
   showStops?: boolean;
   formatStopLabel?: (value: number) => ReactNode;
 }
 
-const sliderStyle = (value: number, min: number, max: number) => {
+interface SingleSliderProps extends SliderCommonProps {
+  variant?: 'single';
+  value: number;
+  onChange: (value: number) => void;
+}
+
+interface RangeSliderProps extends SliderCommonProps {
+  variant: 'range';
+  value: [number, number];
+  onChange: (value: [number, number]) => void;
+  disabledStart?: boolean;
+  disabledEnd?: boolean;
+  startAriaLabel?: string;
+  endAriaLabel?: string;
+}
+
+type SliderProps = SingleSliderProps | RangeSliderProps;
+
+const toRatio = (value: number, min: number, max: number) => {
   const range = Math.max(max - min, 1);
-  const progressRatio = Math.min(Math.max((value - min) / range, 0), 1);
+  return Math.min(Math.max((value - min) / range, 0), 1);
+};
+
+const trackPosition = (ratio: number) =>
+  `calc(var(--slider-native-track-offset) + ((100% - (var(--slider-native-track-offset) * 2)) * ${ratio}))`;
+
+const sliderStyle = (value: number | [number, number], min: number, max: number) => {
+  const [startValue, endValue] = Array.isArray(value) ? value : [min, value];
+  const startRatio = toRatio(startValue, min, max);
+  const endRatio = toRatio(endValue, min, max);
+  const fillLeft = startRatio <= 0 ? 'var(--slider-inset)' : trackPosition(startRatio);
+  const fillEnd = trackPosition(endRatio);
+  const fillRight = `calc(100% - ${fillEnd})`;
+
   return {
-    '--slider-progress': `${progressRatio * 100}%`,
-    '--slider-progress-ratio': String(progressRatio),
+    '--slider-start-progress': `${startRatio * 100}%`,
+    '--slider-end-progress': `${endRatio * 100}%`,
+    '--slider-fill-left': fillLeft,
+    '--slider-fill-right': fillRight,
   } as CSSProperties;
 };
 
@@ -57,6 +88,7 @@ const buildStops = (min: number, max: number, step: number) => {
 };
 
 const Slider = ({
+  variant = 'single',
   label,
   valueLabel,
   value,
@@ -69,12 +101,26 @@ const Slider = ({
   showStops = true,
   formatStopLabel = (stopValue) => stopValue,
   disabled,
+  disabledStart,
+  disabledEnd,
+  startAriaLabel,
+  endAriaLabel,
   ...inputProps
-}: SliderProps) => {
+}: SliderProps & Partial<RangeSliderProps>) => {
+  const isRange = variant === 'range';
   const stops = showStops ? buildStops(min, max, step) : [];
+  const startValue = Array.isArray(value) ? value[0] : min;
+  const endValue = Array.isArray(value) ? value[1] : value;
+  const startDisabled = isRange ? disabled || disabledStart : disabled;
+  const endDisabled = isRange ? disabled || disabledEnd : disabled;
+  const controlDisabled = disabled || (isRange && startDisabled && endDisabled);
+  const rangeLabel = typeof label === 'string' ? label : 'Range';
+  const singleOnChange = onChange as SingleSliderProps['onChange'];
+  const rangeOnChange = onChange as RangeSliderProps['onChange'];
+  const Root = isRange ? 'div' : 'label';
 
   return (
-    <label className={[styles.slider, className].filter(Boolean).join(' ')}>
+    <Root className={[styles.slider, className].filter(Boolean).join(' ')}>
       {(label || valueLabel) && (
         <span className={styles.header}>
           {label && <span className={styles.label}>{label}</span>}
@@ -82,7 +128,7 @@ const Slider = ({
         </span>
       )}
       <span
-        className={[styles.control, disabled ? styles.disabled : ''].filter(Boolean).join(' ')}
+        className={[styles.control, controlDisabled ? styles.disabled : ''].filter(Boolean).join(' ')}
         style={sliderStyle(value, min, max)}
       >
         <span className={styles.fill} aria-hidden="true" />
@@ -98,19 +144,65 @@ const Slider = ({
           </span>
         )}
         <span className={styles.thumbTrack} aria-hidden="true">
-          <span className={styles.thumb} />
+          {isRange && (
+            <span className={[styles.thumb, styles.thumbStart].filter(Boolean).join(' ')} />
+          )}
+          <span className={[styles.thumb, styles.thumbEnd].filter(Boolean).join(' ')} />
         </span>
-        <input
-          {...inputProps}
-          className={[styles.input, inputClassName].filter(Boolean).join(' ')}
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          disabled={disabled}
-          onChange={(event) => onChange(Number(event.target.value))}
-        />
+        {isRange ? (
+          <>
+            <input
+              className={[
+                styles.input,
+                styles.rangeInput,
+                styles.inputStart,
+                inputClassName,
+              ].filter(Boolean).join(' ')}
+              type="range"
+              min={min}
+              max={max}
+              step={step}
+              value={startValue}
+              disabled={startDisabled}
+              aria-label={startAriaLabel ?? `${rangeLabel} start`}
+              onChange={(event) => {
+                const nextStart = Math.min(Number(event.target.value), endValue);
+                rangeOnChange([nextStart, endValue]);
+              }}
+            />
+            <input
+              className={[
+                styles.input,
+                styles.rangeInput,
+                styles.inputEnd,
+                inputClassName,
+              ].filter(Boolean).join(' ')}
+              type="range"
+              min={min}
+              max={max}
+              step={step}
+              value={endValue}
+              disabled={endDisabled}
+              aria-label={endAriaLabel ?? `${rangeLabel} end`}
+              onChange={(event) => {
+                const nextEnd = Math.max(Number(event.target.value), startValue);
+                rangeOnChange([startValue, nextEnd]);
+              }}
+            />
+          </>
+        ) : (
+          <input
+            {...inputProps}
+            className={[styles.input, inputClassName].filter(Boolean).join(' ')}
+            type="range"
+            min={min}
+            max={max}
+            step={step}
+            value={endValue}
+            disabled={disabled}
+            onChange={(event) => singleOnChange(Number(event.target.value))}
+          />
+        )}
       </span>
       {stops.length > 0 && (
         <span className={styles.indicators} aria-hidden="true">
@@ -129,7 +221,7 @@ const Slider = ({
           ))}
         </span>
       )}
-    </label>
+    </Root>
   );
 };
 

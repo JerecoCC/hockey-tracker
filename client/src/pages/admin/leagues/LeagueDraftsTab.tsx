@@ -262,12 +262,27 @@ const LeagueDraftsTab = ({
     setSubmitting(false);
   };
 
-  const updateDayEndRound = (index: number, value: string) => {
-    const nextEndRound = Number(value);
+  const updateDayRoundRange = (index: number, value: [number, number]) => {
     setDayRanges((current) => {
       const next = normalizeDayRanges(draftDatesInRange, totalRounds, current);
-      if (!next[index]) return next;
-      next[index] = { ...next[index], endRound: nextEndRound };
+      const day = next[index];
+      if (!day || !totalRounds) return next;
+
+      const previousDay = next[index - 1];
+      const remainingDays = next.length - index - 1;
+      const maxEndRound = totalRounds - remainingDays;
+      const nextStartRound = previousDay
+        ? clamp(value[0], previousDay.startRound + 1, day.endRound)
+        : day.startRound;
+      const nextEndRound =
+        index === next.length - 1
+          ? totalRounds
+          : clamp(value[1], nextStartRound, maxEndRound);
+
+      if (previousDay) {
+        next[index - 1] = { ...previousDay, endRound: nextStartRound - 1 };
+      }
+      next[index] = { ...day, endRound: nextEndRound };
       return normalizeDayRanges(draftDatesInRange, totalRounds, next);
     });
     setRangeDirty(true);
@@ -490,9 +505,12 @@ const LeagueDraftsTab = ({
             <div className={styles.draftDayList}>
               {dayRanges.map((day, index) => {
                 const isLastDay = index === dayRanges.length - 1;
+                const previousDay = dayRanges[index - 1];
                 const maxEndRound = totalRounds
                   ? totalRounds - (dayRanges.length - index - 1)
                   : day.endRound;
+                const minStartRound = previousDay ? previousDay.startRound + 1 : day.startRound;
+                const sliderMin = Math.min(day.startRound, minStartRound);
                 const sliderMax = Math.max(day.startRound, maxEndRound);
                 return (
                   <div
@@ -514,13 +532,17 @@ const LeagueDraftsTab = ({
                       />
                     </div>
                     <Slider
+                      variant="range"
                       label="Round Range"
-                      min={day.startRound}
+                      min={sliderMin}
                       max={sliderMax}
                       step={1}
-                      value={day.endRound}
-                      disabled={isLastDay || day.startRound === sliderMax}
-                      onChange={(value) => updateDayEndRound(index, String(value))}
+                      value={[day.startRound, day.endRound]}
+                      disabledStart={index === 0 || sliderMin === sliderMax}
+                      disabledEnd={isLastDay || day.startRound >= sliderMax}
+                      startAriaLabel={`Day ${index + 1} start round`}
+                      endAriaLabel={`Day ${index + 1} end round`}
+                      onChange={(value) => updateDayRoundRange(index, value)}
                     />
                   </div>
                 );

@@ -87,19 +87,14 @@
   position: absolute;
   z-index: 1;
   top: var(--slider-inset);
-  left: var(--slider-inset);
-  width: calc(
-    (var(--slider-native-track-offset) - var(--slider-inset)) +
-      ((100% - (var(--slider-native-track-offset) * 2)) * var(--slider-progress-ratio, 0))
-  );
+  left: var(--slider-fill-left, var(--slider-inset));
+  right: var(--slider-fill-right, calc(100% - var(--slider-native-track-offset)));
   height: var(--slider-thumb-size);
   border-radius: $radius-md;
   background: var(--slider-track-active-bg);
   opacity: 0.9;
   pointer-events: none;
-  transition:
-    background $transition-fast,
-    width $transition-fast;
+  transition: background $transition-fast;
 }
 
 .stops {
@@ -136,7 +131,7 @@
 .thumb {
   position: absolute;
   top: 0;
-  left: var(--slider-progress);
+  left: var(--slider-end-progress, 0%);
   width: var(--slider-thumb-size);
   height: var(--slider-thumb-size);
   box-sizing: border-box;
@@ -150,7 +145,17 @@
     transform $transition-fast;
 }
 
-.control:has(.input:active:not(:disabled)) .thumb {
+.thumbStart {
+  left: var(--slider-start-progress, 0%);
+}
+
+.thumbEnd {
+  left: var(--slider-end-progress, 0%);
+}
+
+.control:has(.input:not(.rangeInput):active:not(:disabled)) .thumb,
+.control:has(.inputEnd:active:not(:disabled)) .thumbEnd,
+.control:has(.inputStart:active:not(:disabled)) .thumbStart {
   transform: translateX(-50%) scale(0.96);
 }
 
@@ -237,6 +242,26 @@
   &:active:not(:disabled)::-moz-range-thumb {
     background: transparent;
   }
+}
+
+.rangeInput {
+  pointer-events: none;
+
+  &::-webkit-slider-thumb {
+    pointer-events: auto;
+  }
+
+  &::-moz-range-thumb {
+    pointer-events: auto;
+  }
+}
+
+.inputStart {
+  z-index: 5;
+}
+
+.inputEnd {
+  z-index: 6;
 }
 
 .indicators {
