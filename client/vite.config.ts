@@ -12,6 +12,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['@jerecocc/tracker-ui'],
+    include: ['classnames'],
   },
   css: {
     preprocessorOptions: {
