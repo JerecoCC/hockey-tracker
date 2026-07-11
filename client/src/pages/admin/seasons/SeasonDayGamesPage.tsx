@@ -7,6 +7,7 @@ import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import GameListItem from '@/shared/GameListItem';
 import type { TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
 import type { SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
@@ -646,7 +647,7 @@ const SeasonDayGamesPage = () => {
   }
 
   if (!dateKey || !seasonId) {
-    return <p className={styles.emptyState}>Schedule day not found.</p>;
+    return <EmptyMessage>Schedule day not found.</EmptyMessage>;
   }
 
   return (
@@ -666,7 +667,7 @@ const SeasonDayGamesPage = () => {
         action={sectionActions}
       >
         {visibleGames.length === 0 ? (
-          <p className={styles.emptyState}>No games are scheduled for {dayTitle}.</p>
+          <EmptyMessage>No games are scheduled for {dayTitle}.</EmptyMessage>
         ) : (
           <ul className={styles.gameList}>
             {visibleGames.map((game) => {

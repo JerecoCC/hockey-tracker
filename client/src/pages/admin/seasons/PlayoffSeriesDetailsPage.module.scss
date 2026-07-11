@@ -67,12 +67,3 @@
     }
   }
 }
-
-.emptyState {
-  margin: 0;
-  padding: $space-lg 0;
-  color: var(--app-text-muted, #{$text-dim});
-  font-size: $font-sm;
-  font-style: italic;
-  text-align: center;
-}

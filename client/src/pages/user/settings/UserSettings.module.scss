@@ -136,13 +136,6 @@
   gap: $page-section-gap;
 }
 
-.empty {
-  margin: 0;
-  font-size: $font-base;
-  color: var(--app-text-muted, #{$text-dim});
-  padding: $space-lg 0;
-}
-
 .leaguesList {
   display: flex;
   flex-direction: column;

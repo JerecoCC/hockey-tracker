@@ -15,6 +15,7 @@ import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import type { GameRecord, GameStatus } from '@/hooks/useGames';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import { buildUserGameDetailsPath, userWatchedTeamRouteSlug } from '@/lib/routeSlugs';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import {
   getScheduledGameYear,
   getWatchedTeamSummaries,
@@ -400,7 +401,7 @@ const UserGamesWatchedTeam = () => {
   }
 
   if (!allTeamSummary) {
-    return <p className={styles.emptyState}>Watched team not found.</p>;
+    return <EmptyMessage>Watched team not found.</EmptyMessage>;
   }
 
   return (
@@ -434,7 +435,7 @@ const UserGamesWatchedTeam = () => {
         }
       >
         {teamGames.length === 0 ? (
-          <p className={styles.emptyState}>No watched games.</p>
+          <EmptyMessage>No watched games.</EmptyMessage>
         ) : (
           <ul className={styles.gameList}>
             {teamGames.map((game) => {

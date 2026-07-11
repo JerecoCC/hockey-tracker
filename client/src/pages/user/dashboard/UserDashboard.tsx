@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
@@ -519,9 +520,9 @@ const UserDashboard = () => {
             }
           >
             {gamesLoading ? (
-              <p className={styles.empty}>Loading...</p>
+              <EmptyMessage>Loading...</EmptyMessage>
             ) : todayGames.length === 0 ? (
-              <p className={styles.empty}>No games scheduled for today.</p>
+              <EmptyMessage>No games scheduled for today.</EmptyMessage>
             ) : (
               <div className={styles.todayGamesGrid}>
                 {todayGames.map((game) => {
@@ -579,9 +580,9 @@ const UserDashboard = () => {
               Your favorite teams, ordered by the games you have watched most.
             </p>
             {watchedTeamsLoading ? (
-              <p className={styles.empty}>Loading...</p>
+              <EmptyMessage>Loading...</EmptyMessage>
             ) : watchedTeamSummaries.length === 0 ? (
-              <p className={styles.empty}>No favorite teams yet.</p>
+              <EmptyMessage>No favorite teams yet.</EmptyMessage>
             ) : (
               <ul className={styles.watchList}>
                 {watchedTeamSummaries.map((summary) => (

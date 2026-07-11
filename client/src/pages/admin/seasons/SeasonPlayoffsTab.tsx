@@ -11,6 +11,7 @@ import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import Banner from '@jerecocc/tracker-ui/components/Banner/Banner';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import { type PlayoffSeriesRecord, type SeriesStatus, usePlayoffSeries } from '@/hooks/useGames';
 import { type PlayoffFormatRule } from '@/hooks/useLeagues';
 import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
@@ -1245,7 +1246,7 @@ const SeasonPlayoffsTab = ({
             }
           >
             {seriesLoading ? (
-              <p className={styles.emptyState}>Loading…</p>
+              <EmptyMessage>Loading…</EmptyMessage>
             ) : bracketStructure ? (
               <div className={styles.bracketGrid}>
                 <div
@@ -1421,9 +1422,9 @@ const SeasonPlayoffsTab = ({
                 </div>
               </div>
             ) : series.length === 0 ? (
-              <p className={styles.emptyState}>
+              <EmptyMessage>
                 No playoff series yet. Configure a playoff format or add a series manually.
-              </p>
+              </EmptyMessage>
             ) : (
               <div className={styles.seriesStack}>
                 {Object.keys(seriesByRound)

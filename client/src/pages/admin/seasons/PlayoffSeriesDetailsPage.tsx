@@ -27,6 +27,7 @@ import {
   UUID_PATTERN,
 } from '@/lib/routeSlugs';
 import ScoreboardCard from '@/pages/admin/games/game-details/ScoreboardCard';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import GameListItem from '@/shared/GameListItem';
 import GameFormModal, { type GameFormTeam } from './GameFormModal';
 import { buildPlayoffSeriesDocumentTitle } from './playoffSeriesDocumentTitle';
@@ -323,7 +324,7 @@ const PlayoffSeriesDetailsPage = () => {
   }
 
   if (!playoffSeries || !scoreboardGame) {
-    return <p className={styles.emptyState}>Playoff series not found.</p>;
+    return <EmptyMessage>Playoff series not found.</EmptyMessage>;
   }
 
   const homeTeam = scoreboardGame.home_team;
@@ -422,7 +423,9 @@ const PlayoffSeriesDetailsPage = () => {
         {isStartingSeries ? (
           <SeriesGamesSkeleton count={seriesGamesSkeletonCount} />
         ) : visibleGames.length === 0 ? (
-          <p className={styles.emptyState}>No games have been generated for this series yet.</p>
+          <EmptyMessage>
+            No games have been generated for this series yet.
+          </EmptyMessage>
         ) : (
           <ul className={styles.gameList}>
             {visibleGames.map((game) => {

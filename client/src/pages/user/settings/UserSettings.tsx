@@ -14,6 +14,7 @@ import { useTheme } from '@/context/ThemeContext';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
 import useLeagues from '@/hooks/useLeagues';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import StatusTag from '@/shared/StatusTag/StatusTag';
 import styles from './UserSettings.module.scss';
 
@@ -177,11 +178,11 @@ const UserSettings = () => {
               className={styles.searchField}
             />
             {loading ? (
-              <p className={styles.empty}>Loading...</p>
+              <EmptyMessage>Loading...</EmptyMessage>
             ) : leagues.length === 0 ? (
-              <p className={styles.empty}>No leagues available.</p>
+              <EmptyMessage>No leagues available.</EmptyMessage>
             ) : filteredLeagues.length === 0 ? (
-              <p className={styles.empty}>No leagues or teams match your search.</p>
+              <EmptyMessage>No leagues or teams match your search.</EmptyMessage>
             ) : (
               <div className={styles.leaguesList}>
                 {filteredLeagues.map(({ league, teams: leagueTeams }) => {
@@ -234,7 +235,7 @@ const UserSettings = () => {
         <aside className={styles.sideColumn}>
           <Section title="My Teams">
             {favoriteTeams.length === 0 ? (
-              <p className={styles.empty}>No favorite teams yet.</p>
+              <EmptyMessage>No favorite teams yet.</EmptyMessage>
             ) : (
               <ul className={styles.favoriteList}>
                 {favoriteTeams.map((team) => (

@@ -292,13 +292,6 @@
   line-height: 1.5;
 }
 
-.empty {
-  margin: 0;
-  font-size: $font-base;
-  color: var(--app-text-muted, #{$text-dim});
-  padding: $space-lg 0;
-}
-
 .todayGames {
   &Grid {
     display: grid;

@@ -20,13 +20,6 @@
   white-space: nowrap;
 }
 
-.empty {
-  margin: 0;
-  font-size: $font-base;
-  color: var(--app-text-muted, #{$text-dim});
-  padding: $space-lg 0;
-}
-
 .teamCell {
   display: inline-flex;
   align-items: center;
