@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import styles from './UserNav.module.scss';
@@ -25,6 +26,7 @@ const UserNav = (props: UserNavProps) => {
   const { collapsed, mobileOpen, onMobileClose } = props;
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { user } = useAuth();
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
@@ -89,6 +91,25 @@ const UserNav = (props: UserNavProps) => {
           />
           {showExpanded && <span className={styles.label}>Settings</span>}
         </Button>
+        {user?.role === 'admin' && (
+          <div className={styles.modeSwitch}>
+            <Button
+              variant="ghost"
+              intent="neutral"
+              className={styles.navItem}
+              onClick={() => handleNavClick('/admin/leagues')}
+              aria-label="Admin Panel"
+              tooltip={!showExpanded ? 'Admin Panel' : undefined}
+              tooltipClassName={!showExpanded ? styles.navTooltipWrapper : undefined}
+            >
+              <Icon
+                name="shield"
+                className={styles.icon}
+              />
+              {showExpanded && <span className={styles.label}>Admin Panel</span>}
+            </Button>
+          </div>
+        )}
       </div>
     </nav>
   );

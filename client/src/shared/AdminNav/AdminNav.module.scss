@@ -119,6 +119,12 @@ $nav-collapsed-width: 56px;
   padding-top: $space-sm;
 }
 
+.modeSwitch {
+  margin-top: $space-xs;
+  padding-top: $space-sm;
+  border-top: 1px solid var(--app-border, #{$border});
+}
+
 // ── Nav tooltip wrapper (makes Tooltip full-width for nav items) ───────
 .themeToggle {
   &[aria-checked='true'] {

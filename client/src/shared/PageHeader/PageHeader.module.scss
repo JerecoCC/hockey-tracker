@@ -19,10 +19,10 @@
   align-items: center;
   justify-content: space-between;
   height: 52px;
-  padding: 0 $space-4xl;
+  padding: 0 $space-xl;
 
-  @media (max-width: 768px) {
-    padding: 0 $space-lg;
+  @media (max-width: 640px) {
+    padding: 0 $space-md;
   }
 }
 
@@ -48,6 +48,10 @@
   display: none;
   align-items: center;
   flex-shrink: 0;
+
+  &:empty {
+    display: none;
+  }
 
   @media (max-width: 768px) {
     display: flex;
@@ -170,29 +174,6 @@
   }
 }
 
-// ── Switch panel button ────────────────────────────────────────────────
-.switchBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  color: var(--app-text-strong, #{$text-bright});
-  cursor: pointer;
-}
-
-.adminPanelButton {
-  color: var(--app-text-subtle, #{$text-light});
-  flex-shrink: 0;
-
-  &:hover {
-    color: var(--app-text-strong, #{$text-bright});
-  }
-}
-
 // ── User profile chip ──────────────────────────────────────────────────
 .profile {
   &Chip {
@@ -200,6 +181,10 @@
     display: flex;
     align-items: center;
     gap: $space-xs;
+
+    @media (max-width: #{$bp-tablet}) {
+      display: none;
+    }
   }
 
   &Btn {

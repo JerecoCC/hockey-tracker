@@ -105,6 +105,23 @@ const AdminNav = (props: AdminNavProps) => {
             </>
           )}
         </Button>
+        <div className={styles.modeSwitch}>
+          <Button
+            variant="ghost"
+            intent="neutral"
+            className={styles.navItem}
+            onClick={() => handleNavClick('/dashboard')}
+            aria-label="User View"
+            tooltip={!showExpanded ? 'User View' : undefined}
+            tooltipClassName={!showExpanded ? styles.navTooltipWrapper : undefined}
+          >
+            <Icon
+              name="apps"
+              className={styles.icon}
+            />
+            {showExpanded && <span className={styles.label}>User View</span>}
+          </Button>
+        </div>
       </div>
     </nav>
   );
