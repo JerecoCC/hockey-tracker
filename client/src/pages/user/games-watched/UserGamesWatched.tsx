@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
+import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
 import Table, { type Column } from '@jerecocc/tracker-ui/components/Table/Table';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import type { GameRecord } from '@/hooks/useGames';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import {
   getWatchedTeamSummaries,
   getWatchedYears,
@@ -108,6 +110,53 @@ const WatchedTeamsTable = ({
   );
 };
 
+const WatchedTeamsList = ({
+  summaries,
+  loading,
+  onSelectTeam,
+}: {
+  summaries: TeamWatchSummary[];
+  loading: boolean;
+  onSelectTeam: (summary: TeamWatchSummary) => void;
+}) => {
+  if (loading) return <EmptyMessage>Loading...</EmptyMessage>;
+  if (summaries.length === 0) return <EmptyMessage>No watched games yet.</EmptyMessage>;
+
+  return (
+    <ul className={styles.teamList}>
+      {summaries.map((summary) => {
+        const { team, count } = summary;
+        const teamName = getTeamName(team);
+        const teamLabel = team.place_name ? `${team.place_name} ${teamName}` : teamName;
+
+        return (
+          <ListItem
+            key={team.id}
+            image={team.logo}
+            imageDark={team.logo_dark}
+            imageLight={team.logo_light}
+            imageSize={40}
+            eyebrow={team.place_name || undefined}
+            name={teamName}
+            rightContent={
+              <span
+                className={styles.mobileSeenValue}
+                aria-label={`${count} watched ${count === 1 ? 'game' : 'games'}`}
+              >
+                {count}x
+              </span>
+            }
+            primaryColor={team.primary_color}
+            textColor={team.text_color}
+            onClick={() => onSelectTeam(summary)}
+            ariaLabel={`View ${teamLabel} games watched`}
+          />
+        );
+      })}
+    </ul>
+  );
+};
+
 const UserGamesWatched = () => {
   const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useState(ALL_YEARS);
@@ -154,7 +203,8 @@ const UserGamesWatched = () => {
   return (
     <div className={styles.page}>
       <Section
-        title="Games Watched"
+        className={styles.gamesWatchedSection}
+        title={<span className={styles.sectionTitle}>Games Watched</span>}
         action={
           <div className={styles.yearFilter}>
             <span className={styles.yearLabel}>Year</span>
@@ -167,20 +217,38 @@ const UserGamesWatched = () => {
           </div>
         }
       >
-        <WatchedTeamsTable
-          summaries={summaries}
-          loading={isLoading}
-          onSelectTeam={(summary) =>
-            navigate(
-              buildUserWatchedTeamPath({
-                teamCode: summary.team.code,
-                teamName: getTeamName(summary.team),
-                teamPlaceName: summary.team.place_name,
-                teamId: summary.team.id,
-              }),
-            )
-          }
-        />
+        <div className={styles.tableView}>
+          <WatchedTeamsTable
+            summaries={summaries}
+            loading={isLoading}
+            onSelectTeam={(summary) =>
+              navigate(
+                buildUserWatchedTeamPath({
+                  teamCode: summary.team.code,
+                  teamName: getTeamName(summary.team),
+                  teamPlaceName: summary.team.place_name,
+                  teamId: summary.team.id,
+                }),
+              )
+            }
+          />
+        </div>
+        <div className={styles.mobileListView}>
+          <WatchedTeamsList
+            summaries={summaries}
+            loading={isLoading}
+            onSelectTeam={(summary) =>
+              navigate(
+                buildUserWatchedTeamPath({
+                  teamCode: summary.team.code,
+                  teamName: getTeamName(summary.team),
+                  teamPlaceName: summary.team.place_name,
+                  teamId: summary.team.id,
+                }),
+              )
+            }
+          />
+        </div>
       </Section>
     </div>
   );

@@ -15,14 +15,16 @@
 
 // ── Title row (hamburger + title + profile) ────────────────────────────
 .titleRow {
+  --title-row-inline-spacing: #{$space-xl};
+
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: 52px;
-  padding: 0 $space-xl;
+  padding: 0 var(--title-row-inline-spacing);
 
   @media (max-width: 640px) {
-    padding: 0 $space-md;
+    --title-row-inline-spacing: #{$space-md};
   }
 }
 
@@ -37,6 +39,7 @@
 .left {
   flex: 1;
   min-width: 0;
+  gap: var(--title-row-inline-spacing);
 }
 
 .right {

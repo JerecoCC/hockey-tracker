@@ -237,6 +237,24 @@ describe('UserGamesWatched', () => {
     );
   });
 
+  it('renders mobile list items with team info and only the seen value on the right', () => {
+    renderWatchedPage();
+
+    const torontoItem = screen.getByRole('button', {
+      name: 'View Toronto Toronto Maple Leafs games watched',
+    });
+
+    expect(within(torontoItem).getByText('Toronto')).toBeInTheDocument();
+    expect(within(torontoItem).getByText('Toronto Maple Leafs')).toBeInTheDocument();
+    expect(within(torontoItem).getByLabelText('3 watched games')).toHaveTextContent('3x');
+    expect(within(torontoItem).queryByText('3-0-0')).not.toBeInTheDocument();
+
+    fireEvent.click(torontoItem);
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      '/dashboard/games-watched/tor-maple-leafs',
+    );
+  });
+
   it('shows a dashboard breadcrumb trail and back button', () => {
     renderWatchedPage();
 
