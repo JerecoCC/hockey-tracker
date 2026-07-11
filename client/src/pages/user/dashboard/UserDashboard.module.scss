@@ -18,7 +18,7 @@
   --rink-red-line: #ff2028;
   --rink-crease-fill: #0a91d2;
   --rink-board-line: #0077b6;
-  --hero-panel-bg: color-mix(in srgb, var(--app-bg, #{$bg-page}) 78%, transparent);
+  --hero-panel-bg: color-mix(in srgb, var(--app-surface, #{$bg-card}) 78%, transparent);
 
   position: relative;
   isolation: isolate;
