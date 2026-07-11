@@ -6,6 +6,10 @@
   flex-direction: column;
   gap: $page-section-gap;
   container-type: inline-size;
+
+  @media (max-width: #{$bp-tablet}) {
+    gap: $space-xs;
+  }
 }
 
 .account {
@@ -128,6 +132,7 @@
 
   @container (max-width: #{$bp-tablet}) {
     grid-template-columns: 1fr;
+    gap: $space-xs;
   }
 }
 

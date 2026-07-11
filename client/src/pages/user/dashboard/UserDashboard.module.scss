@@ -6,6 +6,10 @@
   flex-direction: column;
   gap: $space-2xl;
   container-type: inline-size;
+
+  @media (max-width: #{$bp-tablet}) {
+    gap: $space-xs;
+  }
 }
 
 .hero {
@@ -276,6 +280,7 @@
 
   @container (max-width: #{$bp-tablet}) {
     grid-template-columns: 1fr;
+    gap: $space-xs;
   }
 }
 
