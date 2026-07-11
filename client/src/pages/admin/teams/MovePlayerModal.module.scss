@@ -1,5 +1,5 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 .layout {
   display: flex;
@@ -17,6 +17,10 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 6rem;
   gap: $space-md;
+}
+
+.teamRowSingle {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .fieldGroup {

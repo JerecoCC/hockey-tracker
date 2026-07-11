@@ -133,7 +133,7 @@ const MovePlayerModal = ({
   const tradeDate = watch('trade_date');
   const targetSeasonId = watch('target_season_id');
   const sourceSeasonEnd = dateKey(sourceSeason?.end_date);
-  const showRosterSeasonSelect = !!sourceSeasonEnd && !!tradeDate && tradeDate > sourceSeasonEnd;
+  const isPostSeasonMove = !!sourceSeasonEnd && !!tradeDate && tradeDate > sourceSeasonEnd;
   const seasonOptions = useMemo(
     () =>
       [...leagueSeasons]
@@ -156,14 +156,14 @@ const MovePlayerModal = ({
   }, [formValues, reset]);
 
   useEffect(() => {
-    if (!showRosterSeasonSelect) {
+    if (!isPostSeasonMove) {
       if (targetSeasonId) setValue('target_season_id', '', { shouldDirty: false });
       return;
     }
     if (!targetSeasonId && nextSeasonId) {
       setValue('target_season_id', nextSeasonId, { shouldDirty: false, shouldValidate: true });
     }
-  }, [nextSeasonId, setValue, showRosterSeasonSelect, targetSeasonId]);
+  }, [isPostSeasonMove, nextSeasonId, setValue, targetSeasonId]);
 
   const handleClose = useCallback(() => {
     reset(formValues);
@@ -172,9 +172,10 @@ const MovePlayerModal = ({
 
   const onSubmit = handleSubmit(async (data) => {
     if (!player || !data.to_team_id) return;
-    const jerseyNumber = data.jersey_number ? Number(data.jersey_number) : null;
+    const jerseyNumber =
+      !isPostSeasonMove && data.jersey_number ? Number(data.jersey_number) : null;
     const position = data.position || null;
-    const rosterSeasonId = showRosterSeasonSelect ? data.target_season_id || null : null;
+    const rosterSeasonId = isPostSeasonMove ? data.target_season_id || null : null;
     const ok = await movePlayer(
       player.id,
       seasonId,
@@ -214,7 +215,7 @@ const MovePlayerModal = ({
             placeholder="Inherit from player..."
             disabled={isSubmitting}
           />
-          <div className={styles.teamRow}>
+          <div className={`${styles.teamRow} ${isPostSeasonMove ? styles.teamRowSingle : ''}`}>
             <Field
               type="select"
               label="Move To"
@@ -227,16 +228,18 @@ const MovePlayerModal = ({
               rules={{ required: true }}
               disabled={isSubmitting}
             />
-            <Field
-              type="number"
-              label="Jersey #"
-              control={control}
-              name="jersey_number"
-              placeholder="e.g. 97"
-              min={0}
-              max={99}
-              disabled={isSubmitting}
-            />
+            {!isPostSeasonMove && (
+              <Field
+                type="number"
+                label="Jersey #"
+                control={control}
+                name="jersey_number"
+                placeholder="e.g. 97"
+                min={0}
+                max={99}
+                disabled={isSubmitting}
+              />
+            )}
           </div>
           <fieldset className={styles.fieldGroup}>
             <legend className={styles.groupLabel}>MOVEMENT</legend>
@@ -259,7 +262,7 @@ const MovePlayerModal = ({
                 disabled={isSubmitting}
               />
             </div>
-            {showRosterSeasonSelect && (
+            {isPostSeasonMove && (
               <Field
                 type="select"
                 label="Roster Season"

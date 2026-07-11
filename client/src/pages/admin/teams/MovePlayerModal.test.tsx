@@ -108,6 +108,25 @@ const player = {
   jersey_number: 20,
 } as NonNullable<ComponentProps<typeof MovePlayerModal>['player']>;
 
+const seasons = [
+  {
+    id: 'season-2025',
+    league_id: 'league-1',
+    name: '2025-26',
+    start_date: '2025-10-01',
+    end_date: '2026-06-30',
+    created_at: '2025-01-01T00:00:00Z',
+  },
+  {
+    id: 'season-2026',
+    league_id: 'league-1',
+    name: '2026-27',
+    start_date: '2026-10-01',
+    end_date: '2027-06-30',
+    created_at: '2026-01-01T00:00:00Z',
+  },
+] as ComponentProps<typeof MovePlayerModal>['seasons'];
+
 describe('MovePlayerModal', () => {
   it('does not render team history in the move player form', async () => {
     render(
@@ -150,7 +169,7 @@ describe('MovePlayerModal', () => {
     });
   });
 
-  it('defaults off-season moves to the next roster season and submits the selection', async () => {
+  it('hides and clears the inherited jersey number for post-season moves', async () => {
     const user = userEvent.setup();
     const movePlayer = jest.fn().mockResolvedValue(true);
 
@@ -161,24 +180,7 @@ describe('MovePlayerModal', () => {
         currentTeamId="team-current"
         seasonId="season-2025"
         leagueId="league-1"
-        seasons={[
-          {
-            id: 'season-2025',
-            league_id: 'league-1',
-            name: '2025-26',
-            start_date: '2025-10-01',
-            end_date: '2026-06-30',
-            created_at: '2025-01-01T00:00:00Z',
-          },
-          {
-            id: 'season-2026',
-            league_id: 'league-1',
-            name: '2026-27',
-            start_date: '2026-10-01',
-            end_date: '2027-06-30',
-            created_at: '2026-01-01T00:00:00Z',
-          },
-        ] as ComponentProps<typeof MovePlayerModal>['seasons']}
+        seasons={seasons}
         onClose={jest.fn()}
         movePlayer={movePlayer}
       />,
@@ -189,6 +191,7 @@ describe('MovePlayerModal', () => {
 
     await waitFor(() => {
       expect(screen.getByLabelText('Roster Season')).toHaveValue('season-2026');
+      expect(screen.queryByLabelText('Jersey #')).not.toBeInTheDocument();
     });
 
     await user.click(screen.getByRole('button', { name: 'Move' }));
@@ -199,10 +202,49 @@ describe('MovePlayerModal', () => {
         'season-2025',
         'team-next',
         '2026-07-15',
-        20,
+        null,
         null,
         'trade',
         'season-2026',
+      );
+    });
+  });
+
+  it('keeps the inherited jersey number for an in-season move', async () => {
+    const user = userEvent.setup();
+    const movePlayer = jest.fn().mockResolvedValue(true);
+
+    render(
+      <MovePlayerModal
+        open
+        player={player}
+        currentTeamId="team-current"
+        seasonId="season-2025"
+        leagueId="league-1"
+        seasons={seasons}
+        onClose={jest.fn()}
+        movePlayer={movePlayer}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText('Move To'), 'team-next');
+    await user.type(screen.getByLabelText('Date'), '2026-03-15');
+
+    expect(screen.getByLabelText('Jersey #')).toHaveValue('20');
+    expect(screen.queryByLabelText('Roster Season')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Move' }));
+
+    await waitFor(() => {
+      expect(movePlayer).toHaveBeenCalledWith(
+        'player-1',
+        'season-2025',
+        'team-next',
+        '2026-03-15',
+        20,
+        null,
+        'trade',
+        null,
       );
     });
   });
