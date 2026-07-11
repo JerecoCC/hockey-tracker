@@ -48,3 +48,13 @@
   --player-status-color: #fff;
   --player-status-bg: #{$warning};
 }
+
+.admin {
+  --player-status-color: #fff;
+  --player-status-bg: #{$accent};
+}
+
+.user {
+  --player-status-color: var(--app-text, #{$text-body});
+  --player-status-bg: var(--app-border, #{$border});
+}

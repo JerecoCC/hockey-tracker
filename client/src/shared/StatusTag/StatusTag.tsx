@@ -2,12 +2,20 @@ import type { HTMLAttributes } from 'react';
 import { PLAYER_STATUS_LABELS, type PlayerStatus } from '@/lib/playerStatus';
 import styles from './StatusTag.module.scss';
 
+export type StatusTagStatus = PlayerStatus | 'admin' | 'user';
+
+const STATUS_TAG_LABELS: Record<StatusTagStatus, string> = {
+  ...PLAYER_STATUS_LABELS,
+  admin: 'Admin',
+  user: 'User',
+};
+
 export interface StatusTagProps extends Omit<HTMLAttributes<HTMLSpanElement>, 'children'> {
-  status: PlayerStatus;
+  status: StatusTagStatus;
 }
 
 const StatusTag = ({ status, className, ...rest }: StatusTagProps) => {
-  const label = PLAYER_STATUS_LABELS[status];
+  const label = STATUS_TAG_LABELS[status];
 
   return (
     <span

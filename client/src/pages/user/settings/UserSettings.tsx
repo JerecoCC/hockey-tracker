@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
+import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import InfoItem from '@jerecocc/tracker-ui/components/InfoItem/InfoItem';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
@@ -13,6 +14,7 @@ import { useTheme } from '@/context/ThemeContext';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
 import useLeagues from '@/hooks/useLeagues';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
+import StatusTag from '@/shared/StatusTag/StatusTag';
 import styles from './UserSettings.module.scss';
 
 interface TeamCardProps {
@@ -23,13 +25,21 @@ interface TeamCardProps {
 }
 
 const getUserInitials = (name: string, email?: string) => {
-  const parts = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+  const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   if (parts.length === 1 && parts[0] !== 'Player') return parts[0].slice(0, 2).toUpperCase();
   return (email?.slice(0, 2) || 'P').toUpperCase();
+};
+
+const getUserNameParts = (name: string) => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) {
+    return { firstName: '', lastName: parts[0] || 'Player' };
+  }
+  return {
+    firstName: parts.slice(0, -1).join(' '),
+    lastName: parts[parts.length - 1],
+  };
 };
 
 const TeamCard = ({ team, favorited, showFavoriteIndicator = false, onToggle }: TeamCardProps) => (
@@ -64,8 +74,8 @@ const UserSettings = () => {
   const { isFavorite, toggle } = useFavoriteTeams();
   const [leagueSearch, setLeagueSearch] = useState('');
   const displayName = user?.display_name ?? user?.displayName ?? 'Player';
+  const { firstName, lastName } = getUserNameParts(displayName);
   const authProvider = user?.is_google ? 'Google' : 'Email';
-  const accountCode = user?.role === 'admin' ? 'Admin' : 'User';
   const userInitials = getUserInitials(displayName, user?.email);
 
   const teamsByLeague = useMemo(() => {
@@ -116,22 +126,34 @@ const UserSettings = () => {
             className={styles.accountAvatar}
           />
           <div className={styles.accountTitle}>
-            <h2 className={styles.accountName}>{displayName}</h2>
-            <span className={styles.accountBadge}>{accountCode}</span>
+            <h2
+              className={styles.accountName}
+              aria-label={displayName}
+            >
+              {firstName && <span className={styles.accountFirstName}>{firstName}</span>}
+              <span className={styles.accountLastName}>{lastName}</span>
+            </h2>
           </div>
-          <div className={styles.themeControl}>
-            <span className={styles.themeLabel}>Dark mode</span>
-            <ToggleButton
-              variant="switch"
-              active={isDarkMode}
-              onClick={toggleTheme}
-              activeIcon="dark_mode"
-              inactiveIcon="light_mode"
-              activeTooltip="Switch to light mode"
-              inactiveTooltip="Switch to dark mode"
+          <div className={styles.accountRight}>
+            <div className={styles.themeControl}>
+              <span className={styles.themeLabel}>Dark mode</span>
+              <ToggleButton
+                variant="switch"
+                active={isDarkMode}
+                onClick={toggleTheme}
+                activeIcon="dark_mode"
+                inactiveIcon="light_mode"
+                activeTooltip="Switch to light mode"
+                inactiveTooltip="Switch to dark mode"
+              />
+            </div>
+            <StatusTag
+              className={styles.accountRole}
+              status={user?.role ?? 'user'}
             />
           </div>
         </div>
+        <Divider className={styles.accountDivider} />
         <div className={styles.infoGrid}>
           <InfoItem
             label="Email"

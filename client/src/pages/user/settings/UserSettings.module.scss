@@ -1,5 +1,5 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 .page {
   display: flex;
@@ -14,17 +14,13 @@
   }
 
   &Hero {
-    position: relative;
     display: flex;
     align-items: center;
     gap: $space-lg;
-    margin-bottom: $space-xl;
-    padding-right: 10rem;
 
     @container (max-width: 560px) {
       align-items: flex-start;
       flex-wrap: wrap;
-      padding-right: 0;
     }
   }
 
@@ -42,31 +38,65 @@
   }
 
   &Name {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
     margin: 0;
-    font-size: $font-2xl;
-    line-height: 1.1;
-    color: var(--app-text-strong, #{$text-bright});
-    letter-spacing: 0;
+    overflow-wrap: anywhere;
   }
 
-  &Badge {
-    align-self: flex-start;
-    border: 1px solid rgba($accent, 0.35);
-    border-radius: $radius-sm;
-    background: rgba($accent, 0.12);
-    color: $accent;
-    font-size: $font-xs;
-    font-weight: 700;
-    line-height: 1;
-    padding: $space-xs $space-sm;
-    text-transform: uppercase;
+  &FirstName {
+    color: var(--app-text-strong, #{$text-bright});
+    font-size: $font-lg;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: 0;
+    @include truncate;
+  }
+
+  &LastName {
+    color: var(--app-text-strong, #{$text-bright});
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &Role {
+    align-self: flex-end;
+  }
+
+  &Right {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: $space-lg;
+    margin-left: auto;
+    flex-shrink: 0;
+
+    @container (max-width: 560px) {
+      align-self: auto;
+    }
+
+    @container (max-width: 420px) {
+      width: 100%;
+      flex-direction: row;
+      align-items: center;
+    }
+  }
+
+  &Divider {
+    --divider-color: var(--app-border, #{$border});
+
+    margin: $space-xl 0;
   }
 }
 
 .themeControl {
-  position: absolute;
-  top: 0;
-  right: 0;
   display: inline-flex;
   align-items: center;
   gap: $space-sm;
@@ -74,17 +104,6 @@
   font-size: $font-xs;
   font-weight: 700;
   text-transform: uppercase;
-
-  @container (max-width: 560px) {
-    position: static;
-    margin-left: auto;
-  }
-
-  @container (max-width: 420px) {
-    width: 100%;
-    justify-content: space-between;
-    margin-left: 0;
-  }
 }
 
 .themeLabel {
@@ -202,4 +221,10 @@
   flex-direction: column;
   gap: $space-md;
   padding: 0;
+}
+
+@container (max-width: 640px) {
+  .accountLastName {
+    font-size: $font-3xl;
+  }
 }
