@@ -129,13 +129,20 @@ jest.mock(
   '@jerecocc/tracker-ui/components/DatePicker/DatePicker',
   () => (props: any) =>
     props.triggerLabel ? (
+      <button
+        type="button"
+        aria-label={props.triggerAriaLabel ?? props.triggerLabel}
+      >
+        {props.triggerLabel}
+      </button>
+    ) : (
       <>
-        <button
-          type="button"
-          aria-label={props.triggerAriaLabel ?? props.triggerLabel}
-        >
-          {props.triggerLabel}
-        </button>
+        <input
+          aria-label={props.ariaLabelledBy ? undefined : props.placeholder}
+          aria-labelledby={props.ariaLabelledBy}
+          value={props.value}
+          onChange={(e) => props.onChange(e.target.value)}
+        />
         {props.value && (
           <button
             type="button"
@@ -146,12 +153,6 @@ jest.mock(
           </button>
         )}
       </>
-    ) : (
-      <input
-        aria-label={props.placeholder}
-        value={props.value}
-        onChange={(e) => props.onChange(e.target.value)}
-      />
     ),
 );
 jest.mock('@/pages/admin/games/game-details/ScoreImageModal', () => ({
@@ -366,9 +367,9 @@ describe('UserDashboard', () => {
 
     render(<UserDashboard />);
 
-    expect(
-      screen.getByRole('button', { name: 'Override the dashboard date for testing' }),
-    ).toHaveTextContent('06/22/2026');
+    expect(screen.getByLabelText('Override the dashboard date for testing')).toHaveValue(
+      '2026-06-22',
+    );
     expect(screen.getByText('Monday, June 22, 2026')).toBeInTheDocument();
     expect(screen.queryByText('Test date')).not.toBeInTheDocument();
     expect(

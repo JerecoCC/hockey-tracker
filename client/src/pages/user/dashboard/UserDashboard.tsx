@@ -68,15 +68,6 @@ const fmtDayHeading = (key: string) => {
   });
 };
 
-const fmtNumericDate = (key: string) => {
-  const [year, month, day] = key.split('-').map(Number);
-  return new Intl.DateTimeFormat('en-US', {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric',
-  }).format(new Date(year, month - 1, day));
-};
-
 const getEtAbbrForDateKey = (dateKey: string): string =>
   new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York',
@@ -507,13 +498,18 @@ const UserDashboard = () => {
             action={
               isAdmin ? (
                 <div className={styles.testDateControl}>
+                  <span
+                    id="dashboard-test-date-label"
+                    className={styles.srOnly}
+                  >
+                    Override the dashboard date for testing
+                  </span>
                   <DatePicker
                     value={dateOverride}
                     onChange={updateDateOverride}
                     granularity="day"
                     placeholder="MM/DD/YYYY"
-                    triggerLabel={dateOverride ? fmtNumericDate(dateOverride) : 'MM/DD/YYYY'}
-                    triggerAriaLabel="Override the dashboard date for testing"
+                    ariaLabelledBy="dashboard-test-date-label"
                   />
                 </div>
               ) : undefined
