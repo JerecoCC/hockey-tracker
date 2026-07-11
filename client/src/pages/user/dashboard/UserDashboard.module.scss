@@ -410,16 +410,8 @@
   .sideColumn {
     position: static;
   }
-}
 
-@container (max-width: 640px) {
   .hero {
-    --rink-inset: #{$space-xs};
-
-    min-height: 0;
-    padding: $space-xl;
-    border-right: 0;
-    border-left: 0;
     border-radius: 0;
 
     &::before,
@@ -430,6 +422,34 @@
 
   .rinkCreases {
     border-radius: 0;
+  }
+
+  .heroKicker {
+    font-size: 0.6875rem;
+  }
+
+  .welcomeName {
+    font-size: $font-xl;
+  }
+
+  .heroLead {
+    font-size: $font-base;
+  }
+
+  .summaryStat {
+    --stat-item-label-font-size: 0.6875rem;
+    --stat-item-value-font-size: #{$font-2xl};
+  }
+}
+
+@container (max-width: 640px) {
+  .hero {
+    --rink-inset: #{$space-xs};
+
+    min-height: 0;
+    padding: $space-xl;
+    border-right: 0;
+    border-left: 0;
   }
 
   .identity {
@@ -444,7 +464,6 @@
 
   .summaryStat {
     --stat-item-label-font-size: 0.65rem;
-    --stat-item-value-font-size: #{$font-2xl};
 
     min-height: 88px;
     padding: $space-md $space-xs;
