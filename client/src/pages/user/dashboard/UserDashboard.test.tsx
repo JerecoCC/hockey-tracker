@@ -129,12 +129,23 @@ jest.mock(
   '@jerecocc/tracker-ui/components/DatePicker/DatePicker',
   () => (props: any) =>
     props.triggerLabel ? (
-      <button
-        type="button"
-        aria-label={props.triggerAriaLabel ?? props.triggerLabel}
-      >
-        {props.triggerLabel}
-      </button>
+      <>
+        <button
+          type="button"
+          aria-label={props.triggerAriaLabel ?? props.triggerLabel}
+        >
+          {props.triggerLabel}
+        </button>
+        {props.value && (
+          <button
+            type="button"
+            aria-label="Clear"
+            onClick={() => props.onChange('')}
+          >
+            Clear
+          </button>
+        )}
+      </>
     ) : (
       <input
         aria-label={props.placeholder}
@@ -344,7 +355,7 @@ describe('UserDashboard', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard/games-watched/bos-bruins');
   });
 
-  it('shows the admin test date field in numeric format in the day section header', () => {
+  it('shows and clears the admin date override through the date picker', () => {
     mockAuthUser = {
       display_name: 'Taylor',
       email: 'taylor@example.com',
@@ -359,6 +370,15 @@ describe('UserDashboard', () => {
       screen.getByRole('button', { name: 'Override the dashboard date for testing' }),
     ).toHaveTextContent('06/22/2026');
     expect(screen.getByText('Monday, June 22, 2026')).toBeInTheDocument();
+    expect(screen.queryByText('Test date')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Reset dashboard date to today' }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+
+    expect(localStorage.getItem('admin-dashboard-date-override')).toBeNull();
+    expect(screen.getByText('Sunday, June 21, 2026')).toBeInTheDocument();
   });
 
   it('marks a dashboard game as watched', async () => {

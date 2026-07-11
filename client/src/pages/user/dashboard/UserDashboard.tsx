@@ -506,7 +506,6 @@ const UserDashboard = () => {
             action={
               isAdmin ? (
                 <div className={styles.testDateControl}>
-                  <span className={styles.testDateLabel}>Test date</span>
                   <DatePicker
                     value={dateOverride}
                     onChange={updateDateOverride}
@@ -515,17 +514,6 @@ const UserDashboard = () => {
                     triggerLabel={dateOverride ? fmtNumericDate(dateOverride) : 'MM/DD/YYYY'}
                     triggerAriaLabel="Override the dashboard date for testing"
                   />
-                  {dateOverride && (
-                    <Button
-                      variant="ghost"
-                      intent="neutral"
-                      size="medium"
-                      icon="close"
-                      tooltip="Reset to today"
-                      aria-label="Reset dashboard date to today"
-                      onClick={() => updateDateOverride('')}
-                    />
-                  )}
                 </div>
               ) : undefined
             }

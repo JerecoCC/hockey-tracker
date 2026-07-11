@@ -365,21 +365,10 @@
 
     display: inline-flex;
     align-items: center;
-    gap: $space-sm;
 
     @container (max-width: 520px) {
       width: 100%;
-      justify-content: space-between;
     }
-  }
-
-  &Label {
-    font-size: $font-xs;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--app-text-muted, #{$text-dim});
-    white-space: nowrap;
   }
 }
 
