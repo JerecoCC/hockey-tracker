@@ -76,6 +76,7 @@ jest.mock(
         onClick={onClick}
         disabled={disabled}
         aria-label={tooltip ?? (children ? undefined : icon)}
+        data-icon={icon}
       >
         {children ?? tooltip ?? icon}
       </button>
@@ -345,7 +346,9 @@ describe('UserDashboard', () => {
       ),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'View all games watched' }));
+    const viewAllButton = screen.getByRole('button', { name: 'View all games watched' });
+    expect(viewAllButton).toHaveAttribute('data-icon', 'view_list');
+    fireEvent.click(viewAllButton);
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard/games-watched');
   });
 

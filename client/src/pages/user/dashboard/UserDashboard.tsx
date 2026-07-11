@@ -573,7 +573,7 @@ const UserDashboard = () => {
                 variant="outlined"
                 intent="neutral"
                 size="medium"
-                icon="table_rows"
+                icon="view_list"
                 tooltip="View all games watched"
                 aria-label="View all games watched"
                 onClick={() => navigate('/dashboard/games-watched')}
