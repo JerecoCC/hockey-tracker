@@ -147,6 +147,13 @@ button {
   }
 }
 
+// Keep tablet card spacing intact; use compact padding on phones only.
+@media (max-width: 640px) {
+  #root [data-testid='card'] {
+    padding: 0.75rem !important;
+  }
+}
+
 // Font Awesome icon baseline fix.
 svg[aria-hidden] {
   vertical-align: -0.15em;

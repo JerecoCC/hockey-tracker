@@ -447,9 +447,13 @@
     --rink-inset: #{$space-xs};
 
     min-height: 0;
-    padding: $space-xl;
+    padding: $space-md;
     border-right: 0;
     border-left: 0;
+  }
+
+  .heroContent {
+    gap: $space-md;
   }
 
   .identity {
