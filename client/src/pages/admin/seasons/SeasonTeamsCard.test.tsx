@@ -159,6 +159,48 @@ describe('SeasonTeamsCard', () => {
     expect(Array.from(teamList?.children ?? [])).toHaveLength(2);
   });
 
+  it('filters league-wide teams by name or code', () => {
+    const teams = [
+      makeSeasonTeam('team-1', 'Seattle', 'Wolves', 'SEA'),
+      makeSeasonTeam('team-2', 'Boston', 'Bears', 'BOS'),
+    ];
+    renderCard({
+      alignmentSets: [makeAlignmentSet('align-league', 'league')],
+      groupAlignmentSetId: 'align-league',
+      seasonTeams: teams,
+    });
+
+    const search = screen.getByPlaceholderText('Search teams...');
+    fireEvent.change(search, { target: { value: 'bos' } });
+
+    expect(screen.getByText('Bears')).toBeInTheDocument();
+    expect(screen.queryByText('Wolves')).not.toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: 'missing' } });
+    expect(screen.getByText('No teams match "missing".')).toBeInTheDocument();
+  });
+
+  it('keeps matching teams in their group hierarchy while searching', () => {
+    const wolves = makeTeam('team-1', 'Seattle', 'Wolves', 'SEA');
+    const bears = makeTeam('team-2', 'Boston', 'Bears', 'BOS');
+    const groups = [
+      makeGroup('east', 'Eastern', 'conference', null),
+      makeGroup('metro', 'Metropolitan', 'division', 'east', [wolves]),
+      makeGroup('west', 'Western', 'conference', null),
+      makeGroup('pacific', 'Pacific', 'division', 'west', [bears]),
+    ];
+    renderCard({ groups });
+
+    fireEvent.change(screen.getByPlaceholderText('Search teams...'), {
+      target: { value: 'Boston' },
+    });
+
+    expect(screen.getByText('Bears')).toBeInTheDocument();
+    expect(screen.getByText('Western Conference')).toBeInTheDocument();
+    expect(screen.queryByText('Wolves')).not.toBeInTheDocument();
+    expect(screen.queryByText('Eastern Conference')).not.toBeInTheDocument();
+  });
+
   it('ignores saved groups when the selected alignment is league-wide', () => {
     const teams = [
       makeSeasonTeam('team-1', 'Seattle', 'Wolves', 'SEA'),

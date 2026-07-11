@@ -285,13 +285,6 @@
   top: $space-lg;
 }
 
-.sectionCaption {
-  margin: 0 0 $space-lg;
-  color: var(--app-text-muted, #{$text-dim});
-  font-size: $font-sm;
-  line-height: 1.5;
-}
-
 .todayGames {
   &Grid {
     display: grid;

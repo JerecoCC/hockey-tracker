@@ -326,6 +326,7 @@ describe('UserDashboard', () => {
     expect(screen.getByLabelText('Dashboard summary')).toHaveTextContent('Games watched');
     expect(screen.getByLabelText('Dashboard summary')).toHaveTextContent('Teams tracked');
     expect(screen.getByText('Games Watched')).toBeInTheDocument();
+    expect(screen.getByLabelText('About Games Watched')).toBeInTheDocument();
     expect(screen.getByText('Boston')).toBeInTheDocument();
     expect(screen.getByText('Bruins')).toBeInTheDocument();
     expect(screen.getByText('Toronto')).toBeInTheDocument();

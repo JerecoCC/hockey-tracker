@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
+import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
@@ -560,6 +561,13 @@ const UserDashboard = () => {
         <aside className={styles.sideColumn}>
           <Section
             title="Games Watched"
+            titleAccessory={
+              <InfoTooltip
+                text="Your favorite teams, ordered by the games you have watched most."
+                ariaLabel="About Games Watched"
+                size="0.85rem"
+              />
+            }
             action={
               <Button
                 variant="outlined"
@@ -572,9 +580,6 @@ const UserDashboard = () => {
               />
             }
           >
-            <p className={styles.sectionCaption}>
-              Your favorite teams, ordered by the games you have watched most.
-            </p>
             {watchedTeamsLoading ? (
               <EmptyMessage>Loading...</EmptyMessage>
             ) : watchedTeamSummaries.length === 0 ? (

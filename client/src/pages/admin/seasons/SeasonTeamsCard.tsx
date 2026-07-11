@@ -5,6 +5,7 @@ import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
+import SearchableList from '@jerecocc/tracker-ui/components/SearchableList/SearchableList';
 import Select from '@jerecocc/tracker-ui/components/Select/Select';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
@@ -44,6 +45,57 @@ type TeamDisplayRecord = Pick<
   | 'primary_color'
   | 'text_color'
 >;
+
+const teamMatchesSearch = (team: TeamDisplayRecord, query: string) => {
+  const normalizedQuery = query.toLowerCase();
+  return [team.name, team.place_name, team.team_name, team.code]
+    .filter(Boolean)
+    .some((value) => value!.toLowerCase().includes(normalizedQuery));
+};
+
+const getLeafGroupTeams = (groups: SeasonGroupRecord[]): TeamDisplayRecord[] => {
+  const parentIds = new Set(
+    groups.map((group) => group.parent_id).filter((id): id is string => id !== null),
+  );
+  const teams = groups
+    .filter((group) => !parentIds.has(group.id))
+    .flatMap((group) => group.teams);
+
+  return Array.from(new Map(teams.map((team) => [team.id, team])).values());
+};
+
+const filterGroupsByTeams = (
+  groups: SeasonGroupRecord[],
+  matchingTeamIds: Set<string>,
+): SeasonGroupRecord[] => {
+  const childrenByParentId = new Map<string, SeasonGroupRecord[]>();
+  groups.forEach((group) => {
+    if (!group.parent_id) return;
+    const children = childrenByParentId.get(group.parent_id) ?? [];
+    children.push(group);
+    childrenByParentId.set(group.parent_id, children);
+  });
+
+  const keptGroupIds = new Set<string>();
+  const keepGroup = (group: SeasonGroupRecord): boolean => {
+    const hasMatchingTeam = group.teams.some((team) => matchingTeamIds.has(team.id));
+    let hasMatchingChild = false;
+    (childrenByParentId.get(group.id) ?? []).forEach((child) => {
+      if (keepGroup(child)) hasMatchingChild = true;
+    });
+    if (hasMatchingTeam || hasMatchingChild) keptGroupIds.add(group.id);
+    return hasMatchingTeam || hasMatchingChild;
+  };
+
+  groups.filter((group) => group.parent_id === null).forEach(keepGroup);
+
+  return groups
+    .filter((group) => keptGroupIds.has(group.id))
+    .map((group) => ({
+      ...group,
+      teams: group.teams.filter((team) => matchingTeamIds.has(team.id)),
+    }));
+};
 
 interface TeamListProps {
   teams: TeamDisplayRecord[];
@@ -313,6 +365,7 @@ const SeasonTeamsCard = ({
     showPreview && isLeagueWideAlignment
       ? (draftAlignmentDetails?.teams ?? [])
       : savedFlatTeams;
+  const searchableTeams = userRoots.length > 0 ? getLeafGroupTeams(userGroups) : flatTeams;
   const alignmentOptions = alignmentSets.map((set) => ({
     value: set.id,
     label: set.structure_type === 'league' ? `${set.name} (league-wide)` : set.name,
@@ -383,33 +436,54 @@ const SeasonTeamsCard = ({
     >
       {loading || (showPreview && previewLoading) ? (
         <SeasonTeamsSkeleton />
-      ) : userRoots.length > 0 ? (
-        <ul className={styles.groupList}>
-          {userRoots.map((group) => (
-            <GroupNode
-              key={group.id}
-              group={group}
-              allGroups={userGroups}
-              leagueCode={leagueCode}
-              seasonId={seasonId}
-              seasonName={seasonName}
-            />
-          ))}
-        </ul>
-      ) : flatTeams.length > 0 ? (
-        <TeamList
-          teams={flatTeams}
-          leagueCode={leagueCode}
-          leagueId={leagueId}
-          seasonId={seasonId}
-          seasonName={seasonName}
-        />
       ) : (
-        <p className={styles.emptyMsg}>
-          {draftAlignment
-            ? 'No teams are defined for this alignment set.'
-            : 'Select an alignment set to view this season team structure.'}
-        </p>
+        <SearchableList
+          items={searchableTeams}
+          filterFn={teamMatchesSearch}
+          renderItems={(filteredTeams) => {
+            if (userRoots.length > 0) {
+              const matchingTeamIds = new Set(filteredTeams.map((team) => team.id));
+              const filteredGroups = filterGroupsByTeams(userGroups, matchingTeamIds);
+              const filteredRoots = filteredGroups
+                .filter((group) => group.parent_id === null)
+                .sort(
+                  (a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name),
+                );
+
+              return (
+                <ul className={styles.groupList}>
+                  {filteredRoots.map((group) => (
+                    <GroupNode
+                      key={group.id}
+                      group={group}
+                      allGroups={filteredGroups}
+                      leagueCode={leagueCode}
+                      seasonId={seasonId}
+                      seasonName={seasonName}
+                    />
+                  ))}
+                </ul>
+              );
+            }
+
+            return (
+              <TeamList
+                teams={filteredTeams}
+                leagueCode={leagueCode}
+                leagueId={leagueId}
+                seasonId={seasonId}
+                seasonName={seasonName}
+              />
+            );
+          }}
+          placeholder="Search teams..."
+          emptyMessage={
+            draftAlignment
+              ? 'No teams are defined for this alignment set.'
+              : 'Select an alignment set to view this season team structure.'
+          }
+          noResultsMessage={(query) => `No teams match "${query}".`}
+        />
       )}
     </Section>
   );
