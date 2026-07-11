@@ -11,6 +11,7 @@ import UserGameActions from '@/shared/GameCard/UserGameActions';
 import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import StatItem from '@jerecocc/tracker-ui/components/StatItem/StatItem';
 import { useAuth } from '@/context/AuthContext';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
 import { type GameRecord } from '@/hooks/useGames';
@@ -259,6 +260,7 @@ const UserDashboard = () => {
   const todayKey = isAdmin && dateOverride ? dateOverride : dateToISO(new Date());
   const tzPref = USER_TIMEZONE;
   const displayName = user?.display_name ?? user?.displayName ?? 'Player';
+  const avatarInitial = displayName.trim().charAt(0).toUpperCase() || 'P';
 
   const { data: games = [], isLoading: gamesLoading } = useQuery<GameRecord[]>({
     queryKey: ['user-dashboard-games', todayKey],
@@ -431,20 +433,71 @@ const UserDashboard = () => {
 
   return (
     <div className={styles.page}>
-      <div className={styles.welcome}>
-        {user?.photo && (
-          <img
-            src={user.photo}
-            alt=""
-            className={styles.avatar}
-            referrerPolicy="no-referrer"
-          />
-        )}
-        <div>
-          <h2 className={styles.welcomeName}>Welcome, {displayName}!</h2>
-          <p className={styles.welcomeEmail}>{user?.email}</p>
+      <section
+        className={styles.hero}
+        aria-labelledby="dashboard-welcome"
+      >
+        <span
+          className={styles.rinkCreases}
+          aria-hidden="true"
+        />
+        <div className={styles.heroContent}>
+          <div className={styles.identity}>
+            <div className={styles.avatarFrame}>
+              {user?.photo ? (
+                <img
+                  src={user.photo}
+                  alt=""
+                  className={styles.avatar}
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span
+                  className={styles.avatarFallback}
+                  aria-hidden="true"
+                >
+                  {avatarInitial}
+                </span>
+              )}
+            </div>
+
+            <div className={styles.welcome}>
+              <span className={styles.heroKicker}>Game day command center</span>
+              <h1
+                id="dashboard-welcome"
+                className={styles.welcomeName}
+              >
+                Welcome, {displayName}!
+              </h1>
+              <p className={styles.heroLead}>
+                Keep today&apos;s matchups, your watch list, and favorite teams in one view.
+              </p>
+            </div>
+          </div>
+
+          <div
+            className={styles.summaryStats}
+            aria-label="Dashboard summary"
+            role="group"
+          >
+            <StatItem
+              className={styles.summaryStat}
+              label="Today's slate"
+              value={gamesLoading ? '—' : todayGames.length}
+            />
+            <StatItem
+              className={styles.summaryStat}
+              label="Games watched"
+              value={watchedGamesLoading ? '—' : watchedGames.length}
+            />
+            <StatItem
+              className={styles.summaryStat}
+              label="Teams tracked"
+              value={watchedTeamsLoading ? '—' : watchedTeamSummaries.length}
+            />
+          </div>
         </div>
-      </div>
+      </section>
 
       <div className={styles.contentGrid}>
         <div className={styles.mainColumn}>
@@ -534,6 +587,9 @@ const UserDashboard = () => {
               />
             }
           >
+            <p className={styles.sectionCaption}>
+              Your favorite teams, ordered by the games you have watched most.
+            </p>
             {watchedTeamsLoading ? (
               <p className={styles.empty}>Loading...</p>
             ) : watchedTeamSummaries.length === 0 ? (

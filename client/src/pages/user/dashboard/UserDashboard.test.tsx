@@ -81,7 +81,9 @@ jest.mock(
       </button>
     ),
 );
-jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => ({ code }: any) => <span>{code}</span>);
+jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => ({ code }: any) => (
+  <span>{code}</span>
+));
 jest.mock(
   '@jerecocc/tracker-ui/components/Modal/Modal',
   () =>
@@ -306,6 +308,11 @@ describe('UserDashboard', () => {
     render(<UserDashboard />);
 
     expect(screen.getByText('Welcome, Taylor!')).toBeInTheDocument();
+    expect(screen.queryByText('taylor@example.com')).not.toBeInTheDocument();
+    expect(screen.getByText('Game day command center')).toBeInTheDocument();
+    expect(screen.getByLabelText('Dashboard summary')).toHaveTextContent("Today's slate");
+    expect(screen.getByLabelText('Dashboard summary')).toHaveTextContent('Games watched');
+    expect(screen.getByLabelText('Dashboard summary')).toHaveTextContent('Teams tracked');
     expect(screen.getByText('Games Watched')).toBeInTheDocument();
     expect(screen.getByText('Boston')).toBeInTheDocument();
     expect(screen.getByText('Bruins')).toBeInTheDocument();
