@@ -1595,10 +1595,13 @@ $league-tab-list-gap: $space-md;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--app-accent, #{$accent}) 58%, transparent);
   border-radius: $radius-md;
-  background: color-mix(
-    in srgb,
-    var(--app-accent, #{$accent}) 24%,
-    var(--app-surface, #{$bg-card})
+  @include glass-surface(
+    $color: var(--app-accent, #{$accent}),
+    $opacity: 62%,
+    $blur: 2px,
+    $saturation: 1.28,
+    $base-color: var(--app-surface, #{$bg-card}),
+    $tint-strength: 24%
   );
   color: var(--app-accent-light, #{$accent-light});
   text-align: center;

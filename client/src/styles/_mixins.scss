@@ -102,3 +102,27 @@ $transition-layout: 0.22s;
   font-weight: 700;
   margin: 0;
 }
+
+/// Translucent, backdrop-filtered surface that accepts any CSS or Sass color.
+/// Optionally blend the color into a base surface before applying translucency.
+@mixin glass-surface(
+  $color,
+  $opacity: 78%,
+  $blur: 10px,
+  $saturation: 1.12,
+  $base-color: null,
+  $tint-strength: 100%
+) {
+  @if $base-color == null {
+    background-color: color-mix(in srgb, #{$color} #{$opacity}, transparent);
+  } @else {
+    background-color: color-mix(
+      in srgb,
+      color-mix(in srgb, #{$color} #{$tint-strength}, #{$base-color}) #{$opacity},
+      transparent
+    );
+  }
+
+  backdrop-filter: blur($blur) saturate($saturation);
+  -webkit-backdrop-filter: blur($blur) saturate($saturation);
+}
