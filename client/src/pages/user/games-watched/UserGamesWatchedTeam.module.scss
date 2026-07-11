@@ -8,9 +8,7 @@ $hero-strip-meet-offset: ($hero-strip-slant-offset * 0.5) + $hero-strip-fill-ove
 $hero-strip-duration: 0.42s;
 
 .page {
-  display: flex;
-  flex-direction: column;
-  gap: $page-section-gap;
+  @include page-layout;
 }
 
 .yearFilter {

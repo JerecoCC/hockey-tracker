@@ -103,6 +103,26 @@ $transition-layout: 0.22s;
   margin: 0;
 }
 
+/// Standard content-page wrapper with consistent responsive section spacing.
+@mixin page-layout(
+  $gap: $page-section-gap,
+  $compact-gap: $space-xs,
+  $compact-breakpoint: $bp-tablet,
+  $container: inline-size
+) {
+  display: flex;
+  flex-direction: column;
+  gap: $gap;
+
+  @if $container != null {
+    container-type: $container;
+  }
+
+  @media (max-width: #{$compact-breakpoint}) {
+    gap: $compact-gap;
+  }
+}
+
 /// Translucent, backdrop-filtered surface that accepts any CSS or Sass color.
 /// Optionally blend the color into a base surface before applying translucency.
 @mixin glass-surface(

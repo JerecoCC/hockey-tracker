@@ -2,9 +2,7 @@
 @use "styles/mixins" as *;
 
 .page {
-  display: flex;
-  flex-direction: column;
-  gap: $page-section-gap;
+  @include page-layout;
 }
 
 .gameList {

@@ -2,14 +2,7 @@
 @use 'styles/mixins' as *;
 
 .page {
-  display: flex;
-  flex-direction: column;
-  gap: $page-section-gap;
-  container-type: inline-size;
-
-  @media (max-width: #{$bp-tablet}) {
-    gap: $space-xs;
-  }
+  @include page-layout;
 }
 
 .account {

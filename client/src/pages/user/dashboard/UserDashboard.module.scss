@@ -2,14 +2,7 @@
 @use 'styles/mixins' as *;
 
 .page {
-  display: flex;
-  flex-direction: column;
-  gap: $space-2xl;
-  container-type: inline-size;
-
-  @media (max-width: #{$bp-tablet}) {
-    gap: $space-xs;
-  }
+  @include page-layout;
 }
 
 .hero {
