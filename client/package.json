@@ -16,7 +16,7 @@
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
     "@fortawesome/free-solid-svg-icons": "^7.2.0",
     "@fortawesome/react-fontawesome": "^3.3.0",
-    "@jerecocc/tracker-ui": "file:vendor/jerecocc-tracker-ui-0.2.4.tgz",
+    "@jerecocc/tracker-ui": "file:vendor/jerecocc-tracker-ui-0.2.5.tgz",
     "@tanstack/react-query": "^5.99.0",
     "@tiptap/pm": "^3.22.2",
     "@tiptap/react": "^3.22.2",

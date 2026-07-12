@@ -138,38 +138,9 @@ button {
   line-height: 1;
 }
 
-// Keep shared section headers aligned with the responsive spacing used by page lists.
-#root [data-testid='card'] > [class*='_sectionHeader_'] {
-  gap: var(--app-list-gap) !important;
-  margin-bottom: var(--app-list-gap) !important;
-}
-
-#root [data-testid='card'] > [class*='_sectionHeader_'][class*='_sectionHeaderNoMargin_'] {
-  margin-bottom: 0 !important;
-}
-
-#root [class*='_sectionTitleGroup_'] {
-  gap: var(--app-list-gap) !important;
-}
-
-// Filled shared card surfaces collapse to full-width slabs on mobile.
 @media (max-width: 768px) {
   :root {
     --app-list-gap: 0.5rem;
-  }
-
-  #root [data-testid='card'][class*='_filled_'] {
-    border-width: 1px 0 !important;
-    border-style: solid !important;
-    border-color: var(--app-border) !important;
-    border-radius: 0 !important;
-  }
-}
-
-// Keep tablet card spacing intact; use compact padding on phones only.
-@media (max-width: 640px) {
-  #root [data-testid='card'] {
-    padding: 0.75rem !important;
   }
 }
 
