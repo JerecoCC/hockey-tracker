@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -6,7 +6,7 @@ import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
 import GameCard from '@/shared/GameCard/GameCard';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
-import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
+import { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import StickyHeroCard from '@jerecocc/tracker-ui/components/StickyHeroCard/StickyHeroCard';
 import { type TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
@@ -16,6 +16,7 @@ import type { GameRecord, GameStatus } from '@/hooks/useGames';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import { buildUserGameDetailsPath, userWatchedTeamRouteSlug } from '@/lib/routeSlugs';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
+import YearFilter from '@/shared/YearFilter/YearFilter';
 import {
   getScheduledGameYear,
   getWatchedTeamSummaries,
@@ -317,7 +318,6 @@ const UserGamesWatchedTeamSkeleton = () => (
 
 const UserGamesWatchedTeam = () => {
   const { teamSlug = '' } = useParams<{ teamSlug?: string }>();
-  const yearFilterLabelId = useId();
   const [selectedYear, setSelectedYear] = useState(ALL_YEARS);
   const { teams, loading: teamsLoading } = useTeams();
 
@@ -418,7 +418,7 @@ const UserGamesWatchedTeam = () => {
       <TeamWatchedHero summary={allTeamSummary} />
 
       <Section
-        title="Watched Games"
+        title={<span className={styles.sectionTitle}>Team Games Watched</span>}
         titleAccessory={
           <Badge
             value={teamGames.length}
@@ -426,21 +426,11 @@ const UserGamesWatchedTeam = () => {
           />
         }
         action={
-          <div className={styles.yearFilter}>
-            <span
-              id={yearFilterLabelId}
-              className={styles.yearLabel}
-            >
-              Year
-            </span>
-            <Select
-              value={selectedYear}
-              options={yearOptions}
-              onChange={setSelectedYear}
-              ariaLabelledBy={yearFilterLabelId}
-              width="content"
-            />
-          </div>
+          <YearFilter
+            value={selectedYear}
+            options={yearOptions}
+            onChange={setSelectedYear}
+          />
         }
       >
         {teamGames.length === 0 ? (

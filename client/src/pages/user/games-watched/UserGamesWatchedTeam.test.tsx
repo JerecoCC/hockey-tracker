@@ -215,6 +215,7 @@ describe('UserGamesWatchedTeam', () => {
     renderTeamPage();
 
     expect(screen.getByRole('heading', { name: 'Toronto Maple Leafs' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Team Games Watched' })).toBeInTheDocument();
     expect(screen.getByLabelText('Toronto Maple Leafs watched games summary')).toBeInTheDocument();
     expect(screen.getByTestId('team-hero-left-strip')).toBeInTheDocument();
     expect(screen.getByTestId('team-hero-right-strip')).toBeInTheDocument();

@@ -5,21 +5,6 @@
   @include page-layout;
 }
 
-.yearFilter {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-sm;
-}
-
-.yearLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--app-text-muted, #{$text-dim});
-  white-space: nowrap;
-}
-
 .teamCell {
   display: inline-flex;
   align-items: center;
@@ -97,40 +82,10 @@
   .page div:has(> h3 > .sectionTitle) {
     display: none;
   }
-
-  .yearFilter {
-    flex: 1 1 100%;
-    flex-direction: column;
-    align-items: stretch;
-    gap: $space-sm;
-    width: 100%;
-    min-width: 0;
-    color: var(--app-text-muted, #{$text-dim});
-    font-size: 0.8125rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-
-    > div {
-      width: 100%;
-    }
-
-    > div > button {
-      width: 100%;
-    }
-  }
-
-  .yearLabel {
-    display: flex;
-    align-items: center;
-    gap: $space-xs;
-    font-size: inherit;
-    letter-spacing: inherit;
-  }
 }
 
 @media (max-width: 640px) {
-  .gamesWatchedSection > div:has(.yearFilter) {
+  .gamesWatchedSection > div:has([data-year-filter]) {
     margin-bottom: $space-md;
   }
 

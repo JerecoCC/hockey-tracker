@@ -11,17 +11,6 @@ $hero-strip-duration: 0.42s;
   @include page-layout;
 }
 
-.yearFilter {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-sm;
-}
-
-.yearLabel {
-  color: var(--app-text-muted, #{$text-dim});
-  font-size: $font-sm;
-}
-
 .heroCard {
   min-width: 0;
 }
@@ -236,6 +225,16 @@ $hero-strip-duration: 0.42s;
 
 .gameCardGrid {
   display: none;
+}
+
+@media (max-width: 768px) {
+  .sectionTitle {
+    display: none;
+  }
+
+  .page div:has(> h3 > .sectionTitle) {
+    display: none;
+  }
 }
 
 @media (max-width: 640px) {

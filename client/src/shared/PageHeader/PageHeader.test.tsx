@@ -41,7 +41,7 @@ describe('PageHeader – title resolution', () => {
     ['/leagues/nhl/players/auston-matthews', 'Player Details'],
     ['/leagues/nhl/teams/tor', 'Team Details'],
     ['/dashboard/games-watched', 'Games Watched'],
-    ['/dashboard/games-watched/tor-maple-leafs', 'Games Watched'],
+    ['/dashboard/games-watched/tor-maple-leafs', 'Team Games Watched'],
     ['/games/watched', 'Games Watched'],
     ['/settings', 'Settings'],
   ])('shows "%s" title for %s', (pathname, title) => {

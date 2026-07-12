@@ -5,12 +5,13 @@ import axios from 'axios';
 import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
 import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
-import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
+import { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
 import Table, { type Column } from '@jerecocc/tracker-ui/components/Table/Table';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import type { GameRecord } from '@/hooks/useGames';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
+import YearFilter from '@/shared/YearFilter/YearFilter';
 import {
   getWatchedTeamSummaries,
   getWatchedYears,
@@ -206,15 +207,11 @@ const UserGamesWatched = () => {
         className={styles.gamesWatchedSection}
         title={<span className={styles.sectionTitle}>Games Watched</span>}
         action={
-          <div className={styles.yearFilter}>
-            <span className={styles.yearLabel}>Year</span>
-            <Select
-              value={selectedYear}
-              options={yearOptions}
-              onChange={setSelectedYear}
-              width="content"
-            />
-          </div>
+          <YearFilter
+            value={selectedYear}
+            options={yearOptions}
+            onChange={setSelectedYear}
+          />
         }
       >
         <div className={styles.tableView}>
