@@ -215,14 +215,6 @@ $hero-strip-duration: 0.42s;
   }
 }
 
-.gameList {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  margin: 0;
-  padding: 0;
-}
-
 .gameCardGrid {
   display: none;
 }

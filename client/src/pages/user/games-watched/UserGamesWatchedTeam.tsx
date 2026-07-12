@@ -16,6 +16,7 @@ import type { GameRecord, GameStatus } from '@/hooks/useGames';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import { buildUserGameDetailsPath, userWatchedTeamRouteSlug } from '@/lib/routeSlugs';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import YearFilter from '@/shared/YearFilter/YearFilter';
 import {
   getScheduledGameYear,
@@ -297,7 +298,7 @@ const UserGamesWatchedTeamSkeleton = () => (
         />
       }
     >
-      <ul className={styles.gameList}>
+      <ResponsiveList>
         {Array.from({ length: SKELETON_GAME_ROWS }, (_, index) => `game-skeleton-${index}`).map(
           (rowKey) => (
             <li
@@ -311,7 +312,7 @@ const UserGamesWatchedTeamSkeleton = () => (
             </li>
           ),
         )}
-      </ul>
+      </ResponsiveList>
     </Section>
   </div>
 );
@@ -437,7 +438,7 @@ const UserGamesWatchedTeam = () => {
           <EmptyMessage>No watched games.</EmptyMessage>
         ) : (
           <>
-            <ul className={`${styles.gameList} ${styles.gameListItems}`}>
+            <ResponsiveList className={styles.gameListItems}>
               {teamGames.map((game) => {
                 const showScore = game.status === 'final' || game.status === 'in_progress';
 
@@ -457,7 +458,7 @@ const UserGamesWatchedTeam = () => {
                   />
                 );
               })}
-            </ul>
+            </ResponsiveList>
             <div className={styles.gameCardGrid}>
               {teamGames.map((game) => (
                 <GameCard

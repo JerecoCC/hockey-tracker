@@ -1,0 +1,16 @@
+@use 'styles/mixins' as *;
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (max-width: 768px) {
+  .list {
+    gap: $space-sm;
+  }
+}

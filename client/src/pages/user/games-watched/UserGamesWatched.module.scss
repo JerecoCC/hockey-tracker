@@ -59,14 +59,6 @@
   display: none;
 }
 
-.teamList {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-  margin: 0;
-  padding: 0;
-}
-
 .mobileSeenValue {
   color: var(--app-text-strong, #{$text-bright});
   font-weight: 700;

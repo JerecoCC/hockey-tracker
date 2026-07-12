@@ -11,6 +11,7 @@ import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import type { GameRecord } from '@/hooks/useGames';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import YearFilter from '@/shared/YearFilter/YearFilter';
 import {
   getWatchedTeamSummaries,
@@ -124,7 +125,7 @@ const WatchedTeamsList = ({
   if (summaries.length === 0) return <EmptyMessage>No watched games yet.</EmptyMessage>;
 
   return (
-    <ul className={styles.teamList}>
+    <ResponsiveList>
       {summaries.map((summary) => {
         const { team, count } = summary;
         const teamName = getTeamName(team);
@@ -154,7 +155,7 @@ const WatchedTeamsList = ({
           />
         );
       })}
-    </ul>
+    </ResponsiveList>
   );
 };
 
