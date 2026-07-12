@@ -235,6 +235,9 @@ describe('UserGamesWatchedTeam', () => {
 
     const gameRows = screen.getAllByRole('listitem');
     expect(gameRows).toHaveLength(2);
+    expect(document.querySelectorAll('[data-game-card-variant="card"]')).toHaveLength(2);
+    expect(document.querySelectorAll('[data-game-card-variant="list-item"]')).toHaveLength(2);
+    expect(screen.queryByLabelText('Watched')).not.toBeInTheDocument();
     expect(within(gameRows[0]).getByText('Watched on Apr 25, 2026')).toBeInTheDocument();
     expect(within(gameRows[0]).getByText('Scotiabank Arena')).toBeInTheDocument();
     expect(gameRows[0].textContent?.indexOf('Watched on Apr 25, 2026')).toBeLessThan(

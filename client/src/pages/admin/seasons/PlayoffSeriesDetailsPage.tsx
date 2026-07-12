@@ -28,7 +28,7 @@ import {
 } from '@/lib/routeSlugs';
 import ScoreboardCard from '@/pages/admin/games/game-details/ScoreboardCard';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
-import GameListItem from '@/shared/GameListItem';
+import GameCard from '@/shared/GameCard/GameCard';
 import GameFormModal, { type GameFormTeam } from './GameFormModal';
 import { buildPlayoffSeriesDocumentTitle } from './playoffSeriesDocumentTitle';
 import styles from './PlayoffSeriesDetailsPage.module.scss';
@@ -429,41 +429,21 @@ const PlayoffSeriesDetailsPage = () => {
         ) : (
           <ul className={styles.gameList}>
             {visibleGames.map((game) => {
-              const gameHome = teamForId(game.home_team_id);
-              const gameAway = teamForId(game.away_team_id);
+              const gameRecord = toEditTarget(game);
               const showScore = game.status === 'final' || game.status === 'in_progress';
 
               return (
-                <GameListItem
+                <GameCard
                   key={game.id}
+                  variant="list-item"
+                  game={gameRecord}
+                  tzPref="ET"
                   href={gameHref(game)}
-                  awayTeam={{
-                    logo: gameAway.logo,
-                    logoDark: gameAway.logo_dark,
-                    logoLight: gameAway.logo_light,
-                    code: gameAway.code,
-                    primaryColor: gameAway.primary_color,
-                    textColor: gameAway.text_color,
-                  }}
-                  homeTeam={{
-                    logo: gameHome.logo,
-                    logoDark: gameHome.logo_dark,
-                    logoLight: gameHome.logo_light,
-                    code: gameHome.code,
-                    primaryColor: gameHome.primary_color,
-                    textColor: gameHome.text_color,
-                  }}
-                  awayScore={game.away_goals}
-                  homeScore={game.home_goals}
                   showScore={showScore}
-                  isFinal={game.status === 'final'}
                   statusLabel={formatStatusLabel(game)}
                   statusIntent={STATUS_INTENT[game.status]}
-                  date={formatDate(game.scheduled_at)}
-                  time={formatTime(game.scheduled_time, game.scheduled_at)}
-                  venue={game.venue ?? undefined}
-                  gameNumberInSeries={game.game_number_in_series}
-                  gameType="playoff"
+                  originalDateLabel={formatDate(game.scheduled_at)}
+                  timeLabel={formatTime(game.scheduled_time, game.scheduled_at)}
                   actions={[
                     {
                       icon: 'edit',

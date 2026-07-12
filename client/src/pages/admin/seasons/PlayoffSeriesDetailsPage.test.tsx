@@ -76,7 +76,7 @@ jest.mock(
   () => (props: unknown) => mockScoreboardCard(props),
 );
 jest.mock(
-  '@/shared/GameListItem',
+  '@/shared/GameCard/GameCard',
   () =>
     function MockGameListItem() {
       return <li>game item</li>;

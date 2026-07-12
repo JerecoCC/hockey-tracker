@@ -8,7 +8,7 @@ import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
-import GameListItem from '@/shared/GameListItem';
+import GameCard from '@/shared/GameCard/GameCard';
 import type { TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
 import type { SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
@@ -674,39 +674,17 @@ const SeasonDayGamesPage = () => {
               const showScore = game.status === 'final' || game.status === 'in_progress';
 
               return (
-                <GameListItem
+                <GameCard
                   key={game.id}
+                  variant="list-item"
+                  game={game}
+                  tzPref="ET"
                   href={gameHref(game)}
-                  awayTeam={{
-                    logo: game.away_team.logo,
-                    logoDark: game.away_team.logo_dark,
-                    logoLight: game.away_team.logo_light,
-                    code: game.away_team.code,
-                    primaryColor: game.away_team.primary_color,
-                    textColor: game.away_team.text_color,
-                  }}
-                  homeTeam={{
-                    logo: game.home_team.logo,
-                    logoDark: game.home_team.logo_dark,
-                    logoLight: game.home_team.logo_light,
-                    code: game.home_team.code,
-                    primaryColor: game.home_team.primary_color,
-                    textColor: game.home_team.text_color,
-                  }}
-                  awayScore={game.away_score}
-                  homeScore={game.home_score}
                   showScore={showScore}
-                  isFinal={game.status === 'final'}
                   statusLabel={formatStatusLabel(game)}
                   statusIntent={STATUS_INTENT[game.status]}
-                  date={formatDate(game.scheduled_at)}
-                  time={formatTime(game.scheduled_time, game.scheduled_at)}
-                  venue={game.venue ?? undefined}
-                  round={game.playoff_round}
-                  roundLabel={playoffRoundLabel(game)}
-                  gameNumberInSeries={game.game_number_in_series}
-                  gameNumber={game.game_number}
-                  gameType={game.game_type}
+                  originalDateLabel={formatDate(game.scheduled_at)}
+                  timeLabel={formatTime(game.scheduled_time, game.scheduled_at)}
                   actions={[
                     {
                       icon: 'edit',

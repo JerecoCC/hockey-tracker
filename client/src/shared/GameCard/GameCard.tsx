@@ -1,8 +1,13 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import ActionOverlay from '@jerecocc/tracker-ui/components/ActionOverlay/ActionOverlay';
+import Button, { type ButtonIntent } from '@jerecocc/tracker-ui/components/Button/Button';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
+import Tag, { type TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { type GameRecord, type GameType } from '@/hooks/useGames';
+import listStyles from '../GameListItem.module.scss';
 import styles from './GameCard.module.scss';
 
 export type GameCardTimezone = 'ET' | 'local';
@@ -13,20 +18,41 @@ const GAME_TYPE_CLASS: Record<GameType, string> = {
   playoff: styles.typePlayoff,
 };
 
+const LIST_GAME_TYPE_CLASS: Record<GameType, string> = {
+  preseason: listStyles.typePreseason,
+  regular: listStyles.typeRegular,
+  playoff: listStyles.typePlayoff,
+};
+
 type MaybePromise = void | Promise<void>;
 
-interface GameCardProps {
+export interface GameCardAction {
+  icon: string;
+  intent?: ButtonIntent;
+  tooltip?: string;
+  disabled?: boolean;
+  onClick: () => void;
+}
+
+export interface GameCardProps {
+  variant?: 'card' | 'list-item';
   game: GameRecord;
-  tzPref: GameCardTimezone;
-  onOpen: () => MaybePromise;
+  tzPref?: GameCardTimezone;
+  onOpen?: () => MaybePromise;
+  href?: string;
   canOpen?: boolean;
   className?: string;
   useLeagueColors?: boolean;
   originalDateLabel?: string | null;
   bottomLabel?: ReactNode;
-  actions?: ReactNode;
+  actions?: ReactNode | (GameCardAction | false | null | undefined)[];
   showScore?: boolean;
   timeLabel?: string | null;
+  statusLabel?: string;
+  statusIntent?: TagIntent;
+  supplementalMeta?: string;
+  /** Controls the watched ribbon on the card variant. Defaults to true. */
+  showWatchedBanner?: boolean;
   /** Renders a left accent stripe coloured by game type. */
   showTypeIndicator?: boolean;
 }
@@ -37,6 +63,37 @@ const ISO_MIDNIGHT_RE = /[T ]00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}(?::?[0-9]{2
 
 const run = (handler: () => MaybePromise) => {
   void handler();
+};
+
+const isGameCardActionArray = (
+  actions: GameCardProps['actions'],
+): actions is (GameCardAction | false | null | undefined)[] =>
+  Array.isArray(actions) &&
+  actions.every(
+    (action) =>
+      !action ||
+      (typeof action === 'object' &&
+        'icon' in action &&
+        'onClick' in action &&
+        typeof action.onClick === 'function'),
+  );
+
+const renderActions = (actions: GameCardProps['actions']) => {
+  if (!actions) return null;
+  if (!isGameCardActionArray(actions)) return actions;
+
+  return actions.filter(Boolean).map((action, index) => (
+    <Button
+      key={index}
+      variant="outlined"
+      intent={action.intent ?? 'neutral'}
+      icon={action.icon}
+      size="medium"
+      tooltip={action.tooltip}
+      disabled={action.disabled}
+      onClick={action.onClick}
+    />
+  ));
 };
 
 const toLocalDateKey = (iso: string) => {
@@ -239,9 +296,10 @@ const TeamLine = ({
   </div>
 );
 
-const GameCard = ({
+const GameCardVariant = ({
   game,
-  tzPref,
+  tzPref = 'local',
+  href,
   canOpen,
   className,
   useLeagueColors = false,
@@ -250,6 +308,7 @@ const GameCard = ({
   actions,
   showScore: showScoreProp,
   timeLabel: timeLabelProp,
+  showWatchedBanner = true,
   showTypeIndicator = false,
   onOpen,
 }: GameCardProps) => {
@@ -259,7 +318,7 @@ const GameCard = ({
   const awayDim = showScore && game.away_score < game.home_score;
   const homeDim = showScore && game.home_score < game.away_score;
   const isWatched = !!game.watched_by_user;
-  const isOpenable = canOpen ?? isWatched;
+  const isOpenable = canOpen ?? (!!href || isWatched);
   const timeLabel =
     timeLabelProp === undefined
       ? game.scheduled_time
@@ -279,6 +338,7 @@ const GameCard = ({
   return (
     <Card
       variant="border"
+      data-game-card-variant="card"
       className={[
         styles.card,
         showTypeIndicator ? GAME_TYPE_CLASS[game.game_type] : '',
@@ -291,22 +351,30 @@ const GameCard = ({
         .filter(Boolean)
         .join(' ')}
       style={useLeagueColors ? getLeagueStyle(game) : undefined}
-      role={isOpenable ? 'button' : undefined}
-      tabIndex={isOpenable ? 0 : undefined}
-      onClick={isOpenable ? () => run(onOpen) : undefined}
+      role={isOpenable && onOpen ? 'button' : undefined}
+      tabIndex={isOpenable && onOpen ? 0 : undefined}
+      onClick={isOpenable && onOpen ? () => run(onOpen) : undefined}
       onKeyDown={
         isOpenable
           ? (e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                run(onOpen);
+                if (onOpen) run(onOpen);
               }
             }
           : undefined
       }
     >
-      {actions && <span className={styles.gameActions}>{actions}</span>}
-      {isWatched && (
+      {href && (
+        <Link
+          to={href}
+          className={listStyles.itemLink}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+      )}
+      {actions && <span className={styles.gameActions}>{renderActions(actions)}</span>}
+      {showWatchedBanner && isWatched && (
         <span
           className={styles.watchedRibbon}
           role="img"
@@ -339,5 +407,165 @@ const GameCard = ({
     </Card>
   );
 };
+
+const LIST_DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+const DEFAULT_STATUS_INTENT: Record<GameRecord['status'], TagIntent> = {
+  scheduled: 'neutral',
+  in_progress: 'success',
+  final: 'info',
+  postponed: 'warning',
+};
+
+const GameListItemVariant = ({
+  game,
+  tzPref = 'local',
+  href,
+  showScore: showScoreProp,
+  statusLabel: statusLabelProp,
+  statusIntent,
+  originalDateLabel: dateLabelProp,
+  timeLabel: timeLabelProp,
+  supplementalMeta,
+  actions,
+}: GameCardProps) => {
+  const awayTeam = game.away_team;
+  const homeTeam = game.home_team;
+  const awayScore = game.away_score;
+  const homeScore = game.home_score;
+  const showScore = showScoreProp ?? shouldShowWatchedScore(game);
+  const isFinal = game.status === 'final';
+  const awayLost = isFinal && awayScore < homeScore;
+  const homeLost = isFinal && homeScore < awayScore;
+  const dateKey = getOriginalGameDateKey(game, tzPref);
+  const dateLabel =
+    dateLabelProp === undefined
+      ? dateKey
+        ? LIST_DATE_FMT.format(dateKeyToDate(dateKey))
+        : undefined
+      : (dateLabelProp ?? undefined);
+  const timeLabel =
+    timeLabelProp === undefined
+      ? game.scheduled_time
+        ? fmtGameTime(game.scheduled_at, game.scheduled_time, tzPref)
+        : undefined
+      : (timeLabelProp ?? undefined);
+  const dateLine = [dateLabel, timeLabel].filter(Boolean).join(' • ') || 'TBD';
+  const resolvedRoundLabel =
+    game.playoff_round != null
+      ? (game.playoff_round_names?.[game.playoff_round] ?? `Round ${game.playoff_round}`)
+      : null;
+  const metaLine =
+    resolvedRoundLabel == null && game.game_number_in_series != null
+      ? `Game ${game.game_number_in_series}`
+      : resolvedRoundLabel != null && game.game_number_in_series != null
+        ? `${resolvedRoundLabel} · Game ${game.game_number_in_series}`
+        : resolvedRoundLabel != null && game.playoff_round != null
+          ? resolvedRoundLabel
+          : game.game_number != null
+            ? `Game ${game.game_number}`
+            : null;
+  const itemClass = [listStyles.item, LIST_GAME_TYPE_CLASS[game.game_type]]
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <li
+      className={itemClass}
+      data-game-card-variant="list-item"
+    >
+      {href && (
+        <Link
+          to={href}
+          className={listStyles.itemLink}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+      )}
+      <div className={listStyles.main}>
+        <span className={listStyles.dateLine}>{dateLine}</span>
+        <div
+          className={[listStyles.teamRow, awayLost ? listStyles.teamLoser : '']
+            .filter(Boolean)
+            .join(' ')}
+        >
+          <TeamLogo
+            logo={awayTeam.logo}
+            logoDark={awayTeam.logo_dark}
+            logoLight={awayTeam.logo_light}
+            code={awayTeam.code}
+            primaryColor={awayTeam.primary_color}
+            textColor={awayTeam.text_color}
+            size={24}
+            shape="circle"
+          />
+          <span className={listStyles.teamCode}>{awayTeam.code}</span>
+          {showScore && (
+            <span
+              className={[listStyles.scoreNum, awayLost ? listStyles.scoreLoser : '']
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {awayScore}
+            </span>
+          )}
+        </div>
+        <div
+          className={[listStyles.teamRow, homeLost ? listStyles.teamLoser : '']
+            .filter(Boolean)
+            .join(' ')}
+        >
+          <TeamLogo
+            logo={homeTeam.logo}
+            logoDark={homeTeam.logo_dark}
+            logoLight={homeTeam.logo_light}
+            code={homeTeam.code}
+            primaryColor={homeTeam.primary_color}
+            textColor={homeTeam.text_color}
+            size={24}
+            shape="circle"
+          />
+          <span className={listStyles.teamCode}>{homeTeam.code}</span>
+          {showScore && (
+            <span
+              className={[listStyles.scoreNum, homeLost ? listStyles.scoreLoser : '']
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {homeScore}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className={listStyles.middle}>
+        {metaLine && <b className={listStyles.metaLine}>{metaLine}</b>}
+        {supplementalMeta && (
+          <span className={listStyles.supplementalMeta}>{supplementalMeta}</span>
+        )}
+        {game.venue && <span className={listStyles.venue}>{game.venue}</span>}
+      </div>
+      <Tag
+        label={statusLabelProp ?? getStatusLabel(game)}
+        intent={statusIntent ?? DEFAULT_STATUS_INTENT[game.status]}
+      />
+      {actions && (
+        <ActionOverlay className={listStyles.actions}>
+          {renderActions(actions)}
+        </ActionOverlay>
+      )}
+    </li>
+  );
+};
+
+const GameCard = (props: GameCardProps) =>
+  props.variant === 'list-item' ? (
+    <GameListItemVariant {...props} />
+  ) : (
+    <GameCardVariant {...props} />
+  );
 
 export default GameCard;

@@ -127,6 +127,20 @@
   width: 6px;
 }
 
+.card.typePreseason,
+.card.typeRegular,
+.card.typePlayoff {
+  padding-inline-start: calc(#{$space-xl} + 6px);
+}
+
+@media (max-width: 640px) {
+  :global(#root) .card.typePreseason,
+  :global(#root) .card.typeRegular,
+  :global(#root) .card.typePlayoff {
+    padding-inline-start: calc(#{$space-md} + 6px) !important;
+  }
+}
+
 .typePreseason::before {
   background: $text-dim; // slate — exhibition/lower stakes
 }

@@ -2,7 +2,6 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
 import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
-import GameListItem from '@/shared/GameListItem';
 import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
 import {
   ScheduleCalendarCard,
@@ -107,32 +106,24 @@ export const GameCards = {
         </StoryGrid>
       </StorySection>
 
-      <StorySection title="GameListItem">
+      <StorySection title="GameCard — list-item variant">
         <ul className="storybook-list">
-          <GameListItem
-            awayTeam={{
-              logo: teams.minnesota.logo,
-              code: teams.minnesota.code,
-              primaryColor: teams.minnesota.primary_color,
-              textColor: teams.minnesota.text_color,
+          <GameCard
+            variant="list-item"
+            game={{
+              ...sampleGame,
+              away_team: { ...sampleGame.away_team, ...teams.minnesota },
+              home_team: { ...sampleGame.home_team, ...teams.montreal },
+              away_score: 2,
+              home_score: 4,
+              venue: 'Place Bell',
+              game_number: 32,
             }}
-            homeTeam={{
-              logo: teams.montreal.logo,
-              code: teams.montreal.code,
-              primaryColor: teams.montreal.primary_color,
-              textColor: teams.montreal.text_color,
-            }}
-            awayScore={2}
-            homeScore={4}
             showScore
-            isFinal
             statusLabel="Final"
             statusIntent="success"
-            date="Jan 18, 2026"
-            time="7:00 PM"
-            venue="Place Bell"
-            gameNumber={32}
-            gameType="regular"
+            originalDateLabel="Jan 18, 2026"
+            timeLabel="7:00 PM"
             actions={[{ icon: 'edit', tooltip: 'Edit game', onClick: noop }]}
           />
         </ul>
@@ -227,27 +218,13 @@ export const CalendarAndSchedule = {
             renderDayContent={(_, games) => (
               <ScheduleGameList>
                 {games.map((game) => (
-                  <GameListItem
+                  <GameCard
                     key={game.id}
-                    awayTeam={{
-                      logo: game.away_team.logo,
-                      code: game.away_team.code,
-                      primaryColor: game.away_team.primary_color,
-                      textColor: game.away_team.text_color,
-                    }}
-                    homeTeam={{
-                      logo: game.home_team.logo,
-                      code: game.home_team.code,
-                      primaryColor: game.home_team.primary_color,
-                      textColor: game.home_team.text_color,
-                    }}
-                    awayScore={game.away_score}
-                    homeScore={game.home_score}
+                    variant="list-item"
+                    game={game}
                     showScore
-                    isFinal
                     statusLabel="Final"
                     statusIntent="success"
-                    gameType={game.game_type}
                   />
                 ))}
               </ScheduleGameList>

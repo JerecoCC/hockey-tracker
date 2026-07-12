@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
-import GameListItem from '@/shared/GameListItem';
+import GameCard from '@/shared/GameCard/GameCard';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
@@ -28,6 +28,15 @@ import styles from './UserGamesWatchedTeam.module.scss';
 const API = import.meta.env.VITE_API_URL || '/api';
 const ALL_YEARS = 'all';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+
+const getGamePath = (game: GameRecord) =>
+  buildUserGameDetailsPath({
+    gameId: game.id,
+    awayTeamCode: game.away_team.code,
+    homeTeamCode: game.home_team.code,
+    scheduledAt: game.scheduled_at,
+    scheduledTime: game.scheduled_time,
+  });
 
 const STATUS_LABEL: Record<GameStatus, string> = {
   scheduled: 'Scheduled',
@@ -437,57 +446,45 @@ const UserGamesWatchedTeam = () => {
         {teamGames.length === 0 ? (
           <EmptyMessage>No watched games.</EmptyMessage>
         ) : (
-          <ul className={styles.gameList}>
-            {teamGames.map((game) => {
-              const showScore = game.status === 'final' || game.status === 'in_progress';
-              const roundLabel =
-                game.playoff_round != null ? game.playoff_round_names?.[game.playoff_round] : null;
+          <>
+            <ul className={`${styles.gameList} ${styles.gameListItems}`}>
+              {teamGames.map((game) => {
+                const showScore = game.status === 'final' || game.status === 'in_progress';
 
-              return (
-                <GameListItem
+                return (
+                  <GameCard
+                    key={game.id}
+                    variant="list-item"
+                    game={game}
+                    tzPref="local"
+                    href={getGamePath(game)}
+                    showScore={showScore}
+                    statusLabel={formatStatusLabel(game)}
+                    statusIntent={STATUS_INTENT[game.status]}
+                    originalDateLabel={formatDate(getGameDateValue(game))}
+                    timeLabel={formatTime(game.scheduled_time)}
+                    supplementalMeta={formatScheduledWatchDate(game.scheduled_for)}
+                  />
+                );
+              })}
+            </ul>
+            <div className={styles.gameCardGrid}>
+              {teamGames.map((game) => (
+                <GameCard
                   key={game.id}
-                  href={buildUserGameDetailsPath({
-                    gameId: game.id,
-                    awayTeamCode: game.away_team.code,
-                    homeTeamCode: game.home_team.code,
-                    scheduledAt: game.scheduled_at,
-                    scheduledTime: game.scheduled_time,
-                  })}
-                  awayTeam={{
-                    logo: game.away_team.logo,
-                    logoDark: game.away_team.logo_dark,
-                    logoLight: game.away_team.logo_light,
-                    code: game.away_team.code,
-                    primaryColor: game.away_team.primary_color,
-                    textColor: game.away_team.text_color,
-                  }}
-                  homeTeam={{
-                    logo: game.home_team.logo,
-                    logoDark: game.home_team.logo_dark,
-                    logoLight: game.home_team.logo_light,
-                    code: game.home_team.code,
-                    primaryColor: game.home_team.primary_color,
-                    textColor: game.home_team.text_color,
-                  }}
-                  awayScore={game.away_score}
-                  homeScore={game.home_score}
-                  showScore={showScore}
-                  isFinal={game.status === 'final'}
-                  statusLabel={formatStatusLabel(game)}
-                  statusIntent={STATUS_INTENT[game.status]}
-                  date={formatDate(getGameDateValue(game))}
-                  time={formatTime(game.scheduled_time)}
-                  venue={game.venue ?? undefined}
-                  supplementalMeta={formatScheduledWatchDate(game.scheduled_for)}
-                  round={game.playoff_round}
-                  roundLabel={roundLabel}
-                  gameNumberInSeries={game.game_number_in_series}
-                  gameNumber={game.game_number}
-                  gameType={game.game_type}
+                  variant="card"
+                  game={game}
+                  tzPref="local"
+                  href={getGamePath(game)}
+                  showScore={game.status === 'final' || game.status === 'in_progress'}
+                  originalDateLabel={formatDate(getGameDateValue(game))}
+                  timeLabel={formatTime(game.scheduled_time)}
+                  showWatchedBanner={false}
+                  showTypeIndicator
                 />
-              );
-            })}
-          </ul>
+              ))}
+            </div>
+          </>
         )}
       </Section>
     </div>

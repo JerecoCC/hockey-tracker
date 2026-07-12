@@ -234,6 +234,22 @@ $hero-strip-duration: 0.42s;
   padding: 0;
 }
 
+.gameCardGrid {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .gameListItems {
+    display: none;
+  }
+
+  .gameCardGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: $space-sm;
+  }
+}
+
 .skeletonGameItem {
   list-style: none;
 }
