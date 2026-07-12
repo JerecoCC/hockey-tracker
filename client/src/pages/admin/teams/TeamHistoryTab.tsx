@@ -9,6 +9,7 @@ import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/L
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import useTeamHistory, { type TeamIteration } from '@/hooks/useTeamHistory';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './TeamDetails.module.scss';
 
 const HISTORY_SKELETON_ROW_COUNT = 3;
@@ -62,7 +63,7 @@ const resolveUploadedAsset = async (
 };
 
 const renderHistorySkeletons = () => (
-  <ul
+  <ResponsiveList
     className={[styles.historyList, styles.listSkeletonList].join(' ')}
     aria-label="Team history loading"
   >
@@ -74,7 +75,7 @@ const renderHistorySkeletons = () => (
         className={styles.listSkeletonRow}
       />
     ))}
-  </ul>
+  </ResponsiveList>
 );
 
 const TeamHistoryTab = ({
@@ -226,7 +227,7 @@ const TeamHistoryTab = ({
             current identity.
           </p>
         ) : (
-          <ul className={styles.historyList}>
+          <ResponsiveList className={styles.historyList}>
             {iterations.map((iter) => {
               const subtitle = iter.start_date
                 ? `${iter.start_date.slice(0, 10)} - ${iter.end_date?.slice(0, 10) ?? 'Present'}`
@@ -266,7 +267,7 @@ const TeamHistoryTab = ({
                 />
               );
             })}
-          </ul>
+          </ResponsiveList>
         )}
       </Section>
 

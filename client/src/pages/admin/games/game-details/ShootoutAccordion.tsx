@@ -9,6 +9,7 @@ import { type GoalRecord } from '@/hooks/useGameGoals';
 import { type ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import { formatPlayerName } from './formatUtils';
 import styles from './ShootoutAccordion.module.scss';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import scoringStyles from './ScoringCard.module.scss';
 import { playerDataComplete } from './gameUtils';
 import { PERIOD } from './constants';
@@ -369,7 +370,7 @@ const ShootoutAccordion = ({
     );
 
     return (
-      <ul className={scoringStyles.goalList}>
+            <ResponsiveList className={scoringStyles.goalList}>
         <li className={[scoringStyles.goalItem, styles.soWinnerGoalItem].join(' ')}>
           <span className={scoringStyles.goalTime}>SO</span>
           <TeamLogo
@@ -400,7 +401,7 @@ const ShootoutAccordion = ({
             {displayedAwayScore} - {displayedHomeScore}
           </span>
         </li>
-      </ul>
+            </ResponsiveList>
     );
   };
 

@@ -32,6 +32,7 @@ import {
   getBracketSlotHeaderLabel,
 } from './seasonPlayoffBracketLabels';
 import { hasRecordedRegularSeasonGame } from './seasonPlayoffEligibility';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './SeasonPlayoffsTab.module.scss';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -1543,7 +1544,7 @@ const SeasonPlayoffsTab = ({
                 full
               >
                 {activePlayoffFormat && activePlayoffFormat.length > 0 ? (
-                  <ul className={styles.playoffSettingsQualificationList}>
+                  <ResponsiveList className={styles.playoffSettingsQualificationList}>
                     {activePlayoffFormat.map((r, i) => (
                       <ListItem
                         key={`${r.scope}-${r.method}-${r.count}-${i}`}
@@ -1561,7 +1562,7 @@ const SeasonPlayoffsTab = ({
                         }}
                       />
                     ))}
-                  </ul>
+                  </ResponsiveList>
                 ) : (
                   <p className={styles.formatEmpty}>
                     No rules configured - qualification is managed manually.

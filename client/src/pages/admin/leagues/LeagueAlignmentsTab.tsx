@@ -26,6 +26,7 @@ import {
   TabActionSkeleton,
   type TabSkeletonProps,
 } from './LeagueTabSkeletonHelpers';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -560,7 +561,7 @@ const AlignmentGroupNode = ({
   const groupBody = (
     <div className={styles.alignmentGroupBody}>
       {isLeaf && group.teams.length > 0 && (
-        <ul className={`${styles.alignmentTeamList} ${styles.alignmentGroupTeamList}`}>
+        <ResponsiveList className={`${styles.alignmentTeamList} ${styles.alignmentGroupTeamList}`}>
           {group.teams.map((team) => (
             <ListItem
               key={team.id}
@@ -584,7 +585,7 @@ const AlignmentGroupNode = ({
               ]}
             />
           ))}
-        </ul>
+        </ResponsiveList>
       )}
       {isLeaf && group.teams.length === 0 && (
         <p className={`${styles.emptyMsg} ${styles.groupEmptyMsg}`}>
@@ -594,7 +595,7 @@ const AlignmentGroupNode = ({
       {children.length > 0 && (
         <div className={styles.alignmentGroupChildren}>
           {depth > 0 && <div className={styles.alignmentGroupChildrenLabel}>Subgroups</div>}
-          <ul className={`${styles.alignmentGroupList} ${styles.alignmentGroupListNested}`}>
+          <ResponsiveList className={`${styles.alignmentGroupList} ${styles.alignmentGroupListNested}`}>
             {children.map((child) => (
               <AlignmentGroupNode
                 key={child.id}
@@ -610,7 +611,7 @@ const AlignmentGroupNode = ({
                 onSetGroupTeams={onSetGroupTeams}
               />
             ))}
-          </ul>
+          </ResponsiveList>
         </div>
       )}
     </div>
@@ -1016,7 +1017,7 @@ const AlignmentPanel = ({
         flatTeams.length === 0 ? (
           <p className={styles.emptyMsg}>No teams are defined in this alignment.</p>
         ) : (
-          <ul className={styles.alignmentTeamList}>
+          <ResponsiveList className={styles.alignmentTeamList}>
             {flatTeams.map((team) => (
               <ListItem
                 key={team.id}
@@ -1039,13 +1040,13 @@ const AlignmentPanel = ({
                 ]}
               />
             ))}
-          </ul>
+          </ResponsiveList>
         )
       ) : roots.length === 0 ? (
         <p className={styles.emptyMsg}>No groups are defined in this alignment.</p>
       ) : (
         <div className={styles.alignmentGroupSection}>
-          <ul className={styles.alignmentGroupList}>
+          <ResponsiveList className={styles.alignmentGroupList}>
             {roots.map((group) => (
               <AlignmentGroupNode
                 key={group.id}
@@ -1060,7 +1061,7 @@ const AlignmentPanel = ({
                 onSetGroupTeams={handleSetDraftGroupTeams}
               />
             ))}
-          </ul>
+          </ResponsiveList>
         </div>
       )}
     </div>
@@ -1398,7 +1399,7 @@ const CreateAlignmentModal = ({
             draftDetails.teams.length === 0 ? (
               <p className={styles.emptyMsg}>No teams are defined in this alignment.</p>
             ) : (
-              <ul className={styles.alignmentTeamList}>
+              <ResponsiveList className={styles.alignmentTeamList}>
                 {draftDetails.teams.map((team) => (
                   <ListItem
                     key={team.id}
@@ -1421,14 +1422,14 @@ const CreateAlignmentModal = ({
                     ]}
                   />
                 ))}
-              </ul>
+              </ResponsiveList>
             )
           ) : selectedStructure === 'groups' ? (
             roots.length === 0 ? (
               <p className={styles.emptyMsg}>No groups are defined in this alignment.</p>
             ) : (
               <div className={styles.alignmentGroupSection}>
-                <ul className={styles.alignmentGroupList}>
+                <ResponsiveList className={styles.alignmentGroupList}>
                   {roots.map((group) => (
                     <AlignmentGroupNode
                       key={group.id}
@@ -1445,7 +1446,7 @@ const CreateAlignmentModal = ({
                       onSetGroupTeams={handleSetDraftGroupTeams}
                     />
                   ))}
-                </ul>
+                </ResponsiveList>
               </div>
             )
           ) : null}
@@ -1569,7 +1570,7 @@ const LeagueAlignmentsTab = (props: Props) => {
                 <p className={styles.emptyMsg}>No alignment sets yet.</p>
               </div>
             ) : (
-              <ul className={styles.alignmentSetStack}>
+              <ResponsiveList className={styles.alignmentSetStack}>
                 {alignmentSets.map((alignmentSet) => {
                   const editMode = editingAlignmentId === alignmentSet.id;
                   const editLocked =
@@ -1596,7 +1597,7 @@ const LeagueAlignmentsTab = (props: Props) => {
                     />
                   );
                 })}
-              </ul>
+              </ResponsiveList>
             )}
           </Section>
         </div>
@@ -1650,11 +1651,11 @@ export const LeagueAlignmentsTabSkeleton = ({ className }: TabSkeletonProps) => 
         aria-busy="true"
         aria-label="Loading alignments"
       >
-        <ul className={styles.alignmentSetStack}>
+        <ResponsiveList className={styles.alignmentSetStack}>
           {Array.from({ length: 5 }, (_, index) => (
             <LeagueListRowSkeleton key={index} />
           ))}
-        </ul>
+        </ResponsiveList>
       </Section>
     </div>
   </div>

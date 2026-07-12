@@ -7,6 +7,7 @@ import useLeagues, { LeagueRecord } from '@/hooks/useLeagues';
 import { buildLeagueDetailsPath } from '@/lib/routeSlugs';
 import LeagueDeleteModal from './LeagueDeleteModal';
 import LeagueFormModal from './LeagueFormModal';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './Leagues.module.scss';
 
 const LEAGUE_PHASE_TAGS: Record<
@@ -71,7 +72,7 @@ const LeaguesPage = () => {
         ) : sortedLeagues.length === 0 ? (
           <p className={styles.emptyMsg}>No leagues yet. Add one to get started.</p>
         ) : (
-          <ul className={styles.leagueList}>
+      <ResponsiveList className={styles.leagueList}>
             {sortedLeagues.map((league) => {
               const leagueHref = buildLeagueDetailsPath({
                 leagueCode: league.code,
@@ -123,7 +124,7 @@ const LeaguesPage = () => {
                 />
               );
             })}
-          </ul>
+      </ResponsiveList>
         )}
       </Section>
 

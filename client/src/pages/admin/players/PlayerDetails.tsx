@@ -86,6 +86,7 @@ import JerseyHistoryEditModal from './JerseyHistoryEditModal';
 import ChangePhotoModal from './ChangePhotoModal';
 import PlayerInfoEditModal from './PlayerInfoEditModal';
 import RetirePlayerModal from './RetirePlayerModal';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './PlayerDetails.module.scss';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
 
@@ -1615,20 +1616,20 @@ const ManualMovementReportSection = ({
       )}
 
       {report?.draft && (
-        <ul className={styles.stintHistoryList}>
+        <ResponsiveList className={styles.stintHistoryList}>
           <ListItem
             hideImage
             name={report.draft.teamName ?? report.draft.teamCode ?? 'Unknown team'}
             subtitle={`Draft Year: ${report.draft.year} | Round: ${report.draft.round}`}
             rightContent={{ type: 'tag', label: 'Draft', intent: 'info' }}
           />
-        </ul>
+        </ResponsiveList>
       )}
 
       {report?.playerStatus && (
         <>
           <h4>Player Status</h4>
-          <ul className={styles.stintHistoryList}>
+          <ResponsiveList className={styles.stintHistoryList}>
             <ListItem
               hideImage
               name={PLAYER_STATUS_LABELS[report.playerStatus.status]}
@@ -1639,7 +1640,7 @@ const ManualMovementReportSection = ({
                 intent: manualMovementStatusTagIntents[report.playerStatus.status],
               }}
             />
-          </ul>
+          </ResponsiveList>
         </>
       )}
 
@@ -2203,7 +2204,7 @@ const StintHistoryDetails = ({
         {photoHistory.length === 0 ? (
           <p className={styles.stintHistoryEmpty}>No season photos yet.</p>
         ) : (
-          <ul className={styles.stintHistoryList}>
+          <ResponsiveList className={styles.stintHistoryList}>
             {photoHistory.map((entry) => {
               const savedPhoto = hasSavedPhoto(entry);
               const current = photoHistoryKey(entry) === currentPhotoHistoryKey;
@@ -2253,7 +2254,7 @@ const StintHistoryDetails = ({
                 />
               );
             })}
-          </ul>
+          </ResponsiveList>
         )}
       </div>
 
@@ -2262,7 +2263,7 @@ const StintHistoryDetails = ({
         {jerseyRows.length === 0 ? (
           <p className={styles.stintHistoryEmpty}>No jersey number history yet.</p>
         ) : (
-          <ul className={styles.stintHistoryList}>
+          <ResponsiveList className={styles.stintHistoryList}>
             {jerseyRows.map((entry) => {
               return (
                 <ListItem
@@ -2307,7 +2308,7 @@ const StintHistoryDetails = ({
                 />
               );
             })}
-          </ul>
+          </ResponsiveList>
         )}
       </div>
     </div>
@@ -3620,7 +3621,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
               className={styles.awardGroup}
               bodyClassName={styles.awardAccordionBody}
             >
-              <ul className={styles.awardTeamList}>
+              <ResponsiveList className={styles.awardTeamList}>
                 {group.awards.map((award) => (
                   <ListItem
                     key={award.id}
@@ -3640,7 +3641,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                     }}
                   />
                 ))}
-              </ul>
+              </ResponsiveList>
             </Accordion>
           ))}
         </div>
@@ -3834,7 +3835,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                         {teamHistoryStints.length === 0 ? (
                           <p className={styles.placeholder}>No team history yet.</p>
                         ) : (
-                          <ul className={styles.stintList}>
+                          <ResponsiveList className={styles.stintList}>
                             {teamHistoryStints.map((s) => {
                               const jerseyHistory = getCollapsedJerseyHistory(
                                 s,
@@ -3962,7 +3963,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                                 </li>
                               );
                             })}
-                          </ul>
+                          </ResponsiveList>
                         )}
                       </Section>
                       {currentLeagueCode === 'NHL' && (

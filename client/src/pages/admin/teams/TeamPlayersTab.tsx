@@ -22,6 +22,7 @@ import LineupCreatePlayersModal from '../games/game-details/lineups/LineupCreate
 import AddPlayersModal from './AddPlayersModal';
 import BulkTradeModal from './BulkTradeModal';
 import TeamPlayerEditModal from './TeamPlayerEditModal';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './TeamDetails.module.scss';
 
 const FORWARD_ADD_PLAYER_POSITIONS = ['C', 'LW', 'RW', 'L', 'R', 'F'] as const;
@@ -270,7 +271,7 @@ const TeamPlayersTab = ({
   };
 
   const renderPlayerSkeletons = (sectionTitle: string) => (
-    <ul
+    <ResponsiveList
       className={[styles.rosterList, styles.listSkeletonList].join(' ')}
       aria-label={`${sectionTitle} loading`}
     >
@@ -282,7 +283,7 @@ const TeamPlayersTab = ({
           className={styles.listSkeletonRow}
         />
       ))}
-    </ul>
+    </ResponsiveList>
   );
 
   const playerViewControl = (
@@ -391,7 +392,7 @@ const TeamPlayersTab = ({
               {loading ? (
                 renderPlayerSkeletons(section.title)
               ) : sectionPlayers.length > 0 ? (
-                <ul className={styles.rosterList}>{sectionPlayers.map(renderPlayer)}</ul>
+                <ResponsiveList className={styles.rosterList}>{sectionPlayers.map(renderPlayer)}</ResponsiveList>
               ) : (
                 <p className={styles.rosterEmpty}>
                   {players.length === 0

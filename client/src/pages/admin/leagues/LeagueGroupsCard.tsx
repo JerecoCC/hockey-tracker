@@ -12,6 +12,7 @@ import {
   type GroupTeamRecord,
 } from '@/hooks/useLeagueGroups';
 import { type TeamRecord } from '@/hooks/useTeams';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 
 // ── Inline add / edit row ────────────────────────────────────────────────────
@@ -222,7 +223,7 @@ const GroupNode = (props: GroupNodeProps) => {
           }
         >
           {group.teams.length > 0 && (
-            <ul className={styles.teamList}>
+            <ResponsiveList className={styles.teamList}>
               {group.teams.map((t) => (
                 <ListItem
                   key={t.id}
@@ -259,7 +260,7 @@ const GroupNode = (props: GroupNodeProps) => {
                   }
                 />
               ))}
-            </ul>
+            </ResponsiveList>
           )}
 
           {isLeaf && !isAddingChild && (
@@ -287,7 +288,7 @@ const GroupNode = (props: GroupNodeProps) => {
 
           {children.length > 0 && (
             <div className={styles.groupNestedList}>
-              <ul className={styles.groupList}>
+              <ResponsiveList className={styles.groupList}>
                 {children.map((child) => (
                   <GroupNode
                     key={child.id}
@@ -308,7 +309,7 @@ const GroupNode = (props: GroupNodeProps) => {
                     depth={depth + 1}
                   />
                 ))}
-              </ul>
+              </ResponsiveList>
             </div>
           )}
         </Accordion>
@@ -416,7 +417,7 @@ const LeagueGroupsCard = (props: Props) => {
             </div>
           )}
           {roots.length > 0 && (
-            <ul className={styles.groupList}>
+            <ResponsiveList className={styles.groupList}>
               {roots.map((g) => (
                 <GroupNode
                   key={g.id}
@@ -436,7 +437,7 @@ const LeagueGroupsCard = (props: Props) => {
                   onSetRole={handleSetRole}
                 />
               ))}
-            </ul>
+            </ResponsiveList>
           )}
           {!isRootAdding && roots.length === 0 && ungroupedTeams.length === 0 && (
             <div className={styles.emptyState}>
@@ -459,7 +460,7 @@ const LeagueGroupsCard = (props: Props) => {
       {!loading && ungroupedTeams.length > 0 && (
         <>
           {roots.length > 0 && <p className={styles.ungroupedLabel}>Unassigned</p>}
-          <ul className={styles.teamList}>
+          <ResponsiveList className={styles.teamList}>
             {ungroupedTeams.map((t) => (
               <ListItem
                 key={t.id}
@@ -496,7 +497,7 @@ const LeagueGroupsCard = (props: Props) => {
                 }
               />
             ))}
-          </ul>
+          </ResponsiveList>
         </>
       )}
 

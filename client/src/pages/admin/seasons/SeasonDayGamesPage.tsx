@@ -36,6 +36,7 @@ import {
 } from '@/pages/admin/games/game-details/gameAutofillTypes';
 import GameAutofillManualMoveReportModal from '@/pages/admin/games/game-details/GameAutofillManualMoveReportModal';
 import { toEasternDateKey } from './seasonDateUtils';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './SeasonDayGamesPage.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -669,7 +670,7 @@ const SeasonDayGamesPage = () => {
         {visibleGames.length === 0 ? (
           <EmptyMessage>No games are scheduled for {dayTitle}.</EmptyMessage>
         ) : (
-          <ul className={styles.gameList}>
+          <ResponsiveList className={styles.gameList}>
             {visibleGames.map((game) => {
               const showScore = game.status === 'final' || game.status === 'in_progress';
 
@@ -695,7 +696,7 @@ const SeasonDayGamesPage = () => {
                 />
               );
             })}
-          </ul>
+          </ResponsiveList>
         )}
       </Section>
 

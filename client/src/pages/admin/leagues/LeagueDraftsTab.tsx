@@ -19,6 +19,7 @@ import {
   TabActionSkeleton,
   type TabSkeletonProps,
 } from './LeagueTabSkeletonHelpers';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 
 interface DraftFormValues {
@@ -753,11 +754,11 @@ export const LeagueDraftsTabSkeleton = ({ className }: TabSkeletonProps) => (
       aria-busy="true"
       aria-label="Loading drafts"
     >
-      <ul className={styles.awardDefinitionList}>
+              <ResponsiveList className={styles.awardDefinitionList}>
         {Array.from({ length: 4 }, (_, index) => (
           <LeagueListRowSkeleton key={index} />
         ))}
-      </ul>
+              </ResponsiveList>
     </Section>
   </div>
 );

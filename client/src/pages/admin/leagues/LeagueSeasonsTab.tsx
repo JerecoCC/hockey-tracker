@@ -2,6 +2,7 @@ import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import LeagueSeasonsCard from './LeagueSeasonsCard';
 import { LeagueListRowSkeleton, TabActionSkeleton } from './LeagueTabSkeletonHelpers';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 
 const LeagueSeasonsTab = () => {
@@ -26,11 +27,11 @@ export const LeagueSeasonsTabSkeleton = () => (
       aria-busy="true"
       aria-label="Loading seasons"
     >
-      <ul className={styles.tabSkeletonStack}>
+    <ResponsiveList className={styles.tabSkeletonStack}>
         {Array.from({ length: 5 }, (_, index) => (
           <LeagueListRowSkeleton key={index} />
         ))}
-      </ul>
+    </ResponsiveList>
     </Section>
   </div>
 );

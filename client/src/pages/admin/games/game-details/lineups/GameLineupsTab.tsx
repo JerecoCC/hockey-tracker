@@ -15,6 +15,7 @@ import LineupRosterModal from './LineupRosterModal';
 import LineupCreatePlayersModal from './LineupCreatePlayersModal';
 import SetLineupModal from './SetLineupModal';
 import RemoveFromLineupModal from './RemoveFromLineupModal';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from '../GameDetailsPage.module.scss';
 import { playerDataComplete } from '../gameUtils';
 import { scheduledDateInputValue } from '../formatUtils';
@@ -303,11 +304,11 @@ const GameLineupsTab = ({
 
           return (
             <>
-              <ul className={styles.lineupPlayerList}>{skaters.map(renderPlayer)}</ul>
+            <ResponsiveList className={styles.lineupPlayerList}>{skaters.map(renderPlayer)}</ResponsiveList>
               {goalies.length > 0 && (
                 <>
                   <div className={styles.lineupDivider} />
-                  <ul className={styles.lineupPlayerList}>{goalies.map(renderPlayer)}</ul>
+            <ResponsiveList className={styles.lineupPlayerList}>{goalies.map(renderPlayer)}</ResponsiveList>
                 </>
               )}
             </>

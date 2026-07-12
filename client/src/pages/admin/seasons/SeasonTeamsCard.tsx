@@ -15,6 +15,7 @@ import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import { type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
 import { type CreateSeasonData } from '@/hooks/useSeasons';
 import { buildTeamDetailsPath } from '@/lib/routeSlugs';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './SeasonTeamsCard.module.scss';
 
 const ROLE_LABELS: Record<string, string> = { conference: 'Conference', division: 'Division' };
@@ -106,7 +107,7 @@ interface TeamListProps {
 }
 
 const TeamList = ({ teams, leagueCode, leagueId, seasonId, seasonName }: TeamListProps) => (
-  <ul className={styles.teamList}>
+  <ResponsiveList className={styles.teamList}>
     {teams.map((team) => {
       const teamHref = buildTeamDetailsPath({
         leagueCode,
@@ -132,7 +133,7 @@ const TeamList = ({ teams, leagueCode, leagueId, seasonId, seasonName }: TeamLis
         />
       );
     })}
-  </ul>
+  </ResponsiveList>
 );
 
 interface GroupNodeProps {
@@ -177,7 +178,7 @@ const GroupNode = ({
       )}
       {children.length > 0 && (
         <div className={styles.groupNestedList}>
-          <ul className={`${styles.groupList} ${styles.groupSubgroupList}`}>
+          <ResponsiveList className={`${styles.groupList} ${styles.groupSubgroupList}`}>
             {children.map((child) => (
               <GroupNode
                 key={child.id}
@@ -189,7 +190,7 @@ const GroupNode = ({
                 depth={depth + 1}
               />
             ))}
-          </ul>
+          </ResponsiveList>
         </div>
       )}
     </>
@@ -255,7 +256,7 @@ const alignmentGroupsToSeasonGroups = (
   }));
 
 const SeasonTeamsSkeleton = () => (
-  <ul
+  <ResponsiveList
     className={styles.skeletonList}
     aria-hidden="true"
   >
@@ -267,7 +268,7 @@ const SeasonTeamsSkeleton = () => (
         className={styles.skeletonItem}
       />
     ))}
-  </ul>
+  </ResponsiveList>
 );
 
 interface Props {
@@ -451,7 +452,7 @@ const SeasonTeamsCard = ({
                 );
 
               return (
-                <ul className={styles.groupList}>
+                <ResponsiveList className={styles.groupList}>
                   {filteredRoots.map((group) => (
                     <GroupNode
                       key={group.id}
@@ -462,7 +463,7 @@ const SeasonTeamsCard = ({
                       seasonName={seasonName}
                     />
                   ))}
-                </ul>
+                </ResponsiveList>
               );
             }
 

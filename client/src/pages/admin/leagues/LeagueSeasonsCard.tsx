@@ -2,6 +2,7 @@ import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -45,7 +46,7 @@ const LeagueSeasonsCard = (props: Props) => {
       {seasons.length === 0 ? (
         <p className={styles.teamsEmpty}>No seasons for this league yet.</p>
       ) : (
-        <ul
+        <ResponsiveList
           className={`${styles.seasonList} ${seasons.length > 5 ? styles.seasonListLimited : ''}`}
         >
           {seasons.map((s) => (
@@ -78,7 +79,7 @@ const LeagueSeasonsCard = (props: Props) => {
               }
             />
           ))}
-        </ul>
+        </ResponsiveList>
       )}
     </Section>
   );

@@ -16,6 +16,7 @@ import useLeagues from '@/hooks/useLeagues';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import StatusTag from '@/shared/StatusTag/StatusTag';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './UserSettings.module.scss';
 
 interface TeamCardProps {
@@ -213,7 +214,7 @@ const UserSettings = () => {
                         </span>
                       }
                     >
-                      <ul className={styles.teamList}>
+                      <ResponsiveList className={styles.teamList}>
                         {leagueTeams.map((team) => (
                           <TeamCard
                             key={team.id}
@@ -223,7 +224,7 @@ const UserSettings = () => {
                             onToggle={() => toggle(team.id)}
                           />
                         ))}
-                      </ul>
+                      </ResponsiveList>
                     </Accordion>
                   );
                 })}
@@ -237,7 +238,7 @@ const UserSettings = () => {
             {favoriteTeams.length === 0 ? (
               <EmptyMessage>No favorite teams yet.</EmptyMessage>
             ) : (
-              <ul className={styles.favoriteList}>
+              <ResponsiveList className={styles.favoriteList}>
                 {favoriteTeams.map((team) => (
                   <TeamCard
                     key={team.id}
@@ -246,7 +247,7 @@ const UserSettings = () => {
                     onToggle={() => toggle(team.id)}
                   />
                 ))}
-              </ul>
+              </ResponsiveList>
             )}
           </Section>
         </aside>

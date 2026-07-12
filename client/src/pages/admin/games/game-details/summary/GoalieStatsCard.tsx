@@ -16,6 +16,7 @@ import type {
 } from '@/hooks/useGameGoalieStats';
 import { formatPlayerName } from '../formatUtils';
 import { defaultStintToi, secondsToMMSS } from '../goalieTimeOnIce';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './GoalieStatsCard.module.scss';
 import { playerDataComplete } from '../gameUtils';
 import { PERIOD } from '../constants';
@@ -240,7 +241,7 @@ const GoalieStatsCard = ({
         {goaliesWithStats.length === 0 ? (
           <p className={styles.empty}>No goalie stats recorded yet.</p>
         ) : (
-          <ul className={styles.goalieList}>
+        <ResponsiveList className={styles.goalieList}>
             {goalieRows.map((row) => {
               const playerName = formatPlayerName(row.goalie.first_name, row.goalie.last_name);
               const initials =
@@ -293,7 +294,7 @@ const GoalieStatsCard = ({
                 />
               );
             })}
-          </ul>
+        </ResponsiveList>
         )}
       </Section>
 

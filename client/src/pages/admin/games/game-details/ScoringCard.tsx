@@ -17,6 +17,7 @@ import type { ShotsNextAction } from './RecordShotsModal';
 import ShootoutAccordion from './ShootoutAccordion';
 import { formatPlayerName } from './formatUtils';
 import { PERIOD, PERIOD_IDS, PERIODS, GOAL_TYPE_BADGE, otPeriodId } from './constants';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './ScoringCard.module.scss';
 import { playerDataComplete } from './gameUtils';
 
@@ -135,7 +136,7 @@ const ScoringCard = ({
   // ── Shared goal-list renderer ──────────────────────────────────────────────
   const renderGoalList = (periodGoals: GoalRecord[]) => {
     return (
-      <ul className={styles.goalList}>
+      <ResponsiveList className={styles.goalList}>
         {periodGoals.map((goal) => {
           if (awayTeamId === goal.team_id) {
             awayScore += 1;
@@ -298,7 +299,7 @@ const ScoringCard = ({
             </li>
           );
         })}
-      </ul>
+      </ResponsiveList>
     );
   };
 

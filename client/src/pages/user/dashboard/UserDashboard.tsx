@@ -20,6 +20,7 @@ import { type GameRecord } from '@/hooks/useGames';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import { buildUserWatchedTeamPath } from '@/lib/routeSlugs';
 import { getWatchedTeamSummaries, type TeamWatchSummary } from '@/lib/watchedTeams';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './UserDashboard.module.scss';
 
 const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/ScoreImageModal'));
@@ -585,7 +586,7 @@ const UserDashboard = () => {
             ) : watchedTeamSummaries.length === 0 ? (
               <EmptyMessage>No favorite teams yet.</EmptyMessage>
             ) : (
-              <ul className={styles.watchList}>
+              <ResponsiveList className={styles.watchList}>
                 {watchedTeamSummaries.map((summary) => (
                   <WatchedTeamItem
                     key={summary.team.id}
@@ -602,7 +603,7 @@ const UserDashboard = () => {
                     }
                   />
                 ))}
-              </ul>
+              </ResponsiveList>
             )}
           </Section>
         </aside>

@@ -5,6 +5,7 @@ import BulkCreateModal from '@jerecocc/tracker-ui/components/BulkCreateModal/Bul
 import Field from '@jerecocc/tracker-ui/components/Field/Field';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import { type PlayerPosition } from '@/hooks/useLeaguePlayers';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LineupCreatePlayersModal.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -409,15 +410,15 @@ const LineupCreatePlayersModal = ({
             <p className={styles.formError}>Please fill in all required fields before saving.</p>
           )}
           {duplicateErrors.length > 0 && (
-            <ul className={styles.duplicateErrors}>
+                  <ResponsiveList className={styles.duplicateErrors}>
               {duplicateErrors.map((msg, i) => (
                 <li key={i}>{msg}</li>
               ))}
-            </ul>
+                  </ResponsiveList>
           )}
           {crossTeamWarnings.length > 0 && (
             <div className={styles.crossTeamWarnings}>
-              <ul className={styles.crossTeamWarningList}>
+                  <ResponsiveList className={styles.crossTeamWarningList}>
                 {crossTeamWarnings.map((msg, i) => (
                   <li key={i}>
                     <Icon
@@ -427,7 +428,7 @@ const LineupCreatePlayersModal = ({
                     {msg}
                   </li>
                 ))}
-              </ul>
+                  </ResponsiveList>
               <p className={styles.crossTeamWarningNote}>
                 This may be the same person. You can create a new player record or go back and add
                 the existing player from the season roster instead.

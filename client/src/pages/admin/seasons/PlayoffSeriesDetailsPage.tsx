@@ -31,6 +31,7 @@ import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import GameCard from '@/shared/GameCard/GameCard';
 import GameFormModal, { type GameFormTeam } from './GameFormModal';
 import { buildPlayoffSeriesDocumentTitle } from './playoffSeriesDocumentTitle';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './PlayoffSeriesDetailsPage.module.scss';
 
 const STATUS_LABEL: Record<GameStatus, string> = {
@@ -105,7 +106,7 @@ const seriesStatusToGameStatus = (status: PlayoffSeriesRecord['status']): GameSt
 };
 
 const SeriesGamesSkeleton = ({ count }: { count: number }) => (
-  <ul
+  <ResponsiveList
     className={styles.gameList}
     aria-label="Loading series games"
   >
@@ -158,7 +159,7 @@ const SeriesGamesSkeleton = ({ count }: { count: number }) => (
         />
       </li>
     ))}
-  </ul>
+  </ResponsiveList>
 );
 
 const teamInfoFromSeries = (series: PlayoffSeriesRecord, side: 'home' | 'away'): TeamInfo => {
@@ -427,7 +428,7 @@ const PlayoffSeriesDetailsPage = () => {
             No games have been generated for this series yet.
           </EmptyMessage>
         ) : (
-          <ul className={styles.gameList}>
+          <ResponsiveList className={styles.gameList}>
             {visibleGames.map((game) => {
               const gameRecord = toEditTarget(game);
               const showScore = game.status === 'final' || game.status === 'in_progress';
@@ -454,7 +455,7 @@ const PlayoffSeriesDetailsPage = () => {
                 />
               );
             })}
-          </ul>
+          </ResponsiveList>
         )}
       </Section>
 

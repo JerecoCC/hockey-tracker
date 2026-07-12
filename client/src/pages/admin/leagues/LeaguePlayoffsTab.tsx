@@ -15,6 +15,7 @@ import {
   TabActionSkeleton,
   type TabSkeletonProps,
 } from './LeagueTabSkeletonHelpers';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -130,7 +131,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
           {ruleSets.length === 0 ? (
             <p className={styles.emptyMsg}>No rule sets yet. Create one to get started.</p>
           ) : (
-            <ul className={styles.ruleSetList}>
+            <ResponsiveList className={styles.ruleSetList}>
               {ruleSets.map((rs) => (
                 <ListItem
                   key={rs.id}
@@ -155,7 +156,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
                   }
                 />
               ))}
-            </ul>
+            </ResponsiveList>
           )}
         </Section>
 
@@ -177,7 +178,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
               No qualification formats yet. Create one to get started.
             </p>
           ) : (
-            <ul className={styles.ruleSetList}>
+            <ResponsiveList className={styles.ruleSetList}>
               {qualificationFormats.map((format) => (
                 <ListItem
                   key={format.id}
@@ -202,7 +203,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
                   }
                 />
               ))}
-            </ul>
+            </ResponsiveList>
           )}
         </Section>
       </div>
@@ -277,11 +278,11 @@ export const LeaguePlayoffsTabSkeleton = ({ className }: TabSkeletonProps) => (
       aria-busy="true"
       aria-label="Loading playoff rule sets"
     >
-      <ul className={styles.ruleSetList}>
+      <ResponsiveList className={styles.ruleSetList}>
         {Array.from({ length: 5 }, (_, index) => (
           <LeagueListRowSkeleton key={index} />
         ))}
-      </ul>
+      </ResponsiveList>
     </Section>
     <Section
       className={[styles.playoffsTabCard, className].filter(Boolean).join(' ')}
@@ -291,11 +292,11 @@ export const LeaguePlayoffsTabSkeleton = ({ className }: TabSkeletonProps) => (
       aria-busy="true"
       aria-label="Loading qualification formats"
     >
-      <ul className={styles.ruleSetList}>
+      <ResponsiveList className={styles.ruleSetList}>
         {Array.from({ length: 3 }, (_, index) => (
           <LeagueListRowSkeleton key={index} />
         ))}
-      </ul>
+      </ResponsiveList>
     </Section>
   </div>
 );

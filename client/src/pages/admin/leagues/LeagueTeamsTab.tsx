@@ -10,6 +10,7 @@ import {
   TabActionSkeleton,
   type TabSkeletonProps,
 } from './LeagueTabSkeletonHelpers';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -45,7 +46,7 @@ const LeagueTeamsTab = (props: Props) => {
             t.code.toLowerCase().includes(q.toLowerCase())
           }
           renderItems={(filtered) => (
-            <ul className={styles.teamList}>
+    <ResponsiveList className={styles.teamList}>
               {filtered.map((t) => {
                 const teamHref = buildTeamDetailsPath({
                   leagueCode: league.code,
@@ -86,7 +87,7 @@ const LeagueTeamsTab = (props: Props) => {
                   />
                 );
               })}
-            </ul>
+    </ResponsiveList>
           )}
           placeholder="Search teams..."
           emptyMessage="No teams assigned to this league yet."
@@ -113,11 +114,11 @@ export const LeagueTeamsTabSkeleton = ({ className }: TabSkeletonProps) => (
           className={[styles.tabSkeletonSearch, styles.tabSkeletonSearchFull].join(' ')}
         />
       </div>
-      <ul className={styles.tabSkeletonGrid}>
+      <ResponsiveList className={styles.tabSkeletonGrid}>
         {Array.from({ length: 5 }, (_, index) => (
           <LeagueListRowSkeleton key={index} />
         ))}
-      </ul>
+      </ResponsiveList>
     </Section>
   </div>
 );

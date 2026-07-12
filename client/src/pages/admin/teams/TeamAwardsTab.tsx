@@ -9,6 +9,7 @@ import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { useTeamAwards, type TeamAwardRecord } from '@/hooks/useTeamDetails';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './TeamDetails.module.scss';
 
 interface Props {
@@ -228,7 +229,7 @@ const TeamAwardsTab = ({ teamId, mode = 'admin' }: Props) => {
               className={styles.awardGroup}
               bodyClassName={styles.awardAccordionBody}
             >
-              <ul className={styles.awardTeamList}>
+              <ResponsiveList className={styles.awardTeamList}>
                 {group.awards.map((award) => (
                   <ListItem
                     key={award.id}
@@ -249,7 +250,7 @@ const TeamAwardsTab = ({ teamId, mode = 'admin' }: Props) => {
                     }}
                   />
                 ))}
-              </ul>
+              </ResponsiveList>
             </Accordion>
           ))}
         </div>

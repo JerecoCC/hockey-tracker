@@ -40,6 +40,7 @@ import {
   TabActionSkeleton,
   type TabSkeletonProps,
 } from './LeagueTabSkeletonHelpers';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 
 const SOURCE_OPTIONS = [
@@ -719,7 +720,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
               No award definitions yet. Create one to apply it across seasons.
             </p>
           ) : (
-            <ul
+            <ResponsiveList
               className={styles.awardDefinitionList}
               aria-label="Award definitions"
             >
@@ -852,7 +853,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                   </li>
                 );
               })}
-            </ul>
+            </ResponsiveList>
           )}
         </Section>
       </div>
@@ -1095,11 +1096,11 @@ export const LeagueAwardsTabSkeleton = ({ className }: TabSkeletonProps) => (
       aria-busy="true"
       aria-label="Loading awards"
     >
-      <ul className={styles.awardDefinitionList}>
+            <ResponsiveList className={styles.awardDefinitionList}>
         {Array.from({ length: 5 }, (_, index) => (
           <LeagueListRowSkeleton key={index} />
         ))}
-      </ul>
+            </ResponsiveList>
     </Section>
   </div>
 );

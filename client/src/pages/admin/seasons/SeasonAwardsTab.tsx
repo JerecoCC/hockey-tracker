@@ -46,6 +46,7 @@ import {
   teamMatchesAwardEligibility,
 } from '@/lib/awardDefinitions';
 import PlayerCard, { formatPlayerPosition } from '@/shared/PlayerCard/PlayerCard';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './SeasonDetails.module.scss';
 
 const STAT_LABELS: Record<string, string> = {
@@ -2077,7 +2078,7 @@ const AwardWinnerList = ({
   const compactCards = recipients.length > 1;
 
   return (
-    <ul
+    <ResponsiveList
       className={[
         styles.awardWinnerCards,
         recipients.length > 1 ? styles.awardWinnerCardsMultiple : '',
@@ -2120,18 +2121,18 @@ const AwardWinnerList = ({
           );
         })
       )}
-    </ul>
+    </ResponsiveList>
   );
 };
 
 const AwardWinnerListSkeleton = () => (
-  <ul className={styles.awardWinnerCards}>
+                    <ResponsiveList className={styles.awardWinnerCards}>
     <Skeleton
       as="li"
       type="card"
       className={[styles.awardWinnerCard, styles.awardWinnerSkeleton].join(' ')}
     />
-  </ul>
+                    </ResponsiveList>
 );
 
 const AwardPlayerList = ({
@@ -2163,7 +2164,7 @@ const AwardPlayerList = ({
         <span className={styles.awardEmptyMessage}>{empty}</span>
       ) : null
     ) : (
-      <ul
+      <ResponsiveList
         className={[
           styles.awardPlayerListScroller,
           layout === 'column' ? styles.awardPlayerListScrollerColumn : '',
@@ -2202,7 +2203,7 @@ const AwardPlayerList = ({
             />
           );
         })}
-      </ul>
+      </ResponsiveList>
     )}
   </div>
 );

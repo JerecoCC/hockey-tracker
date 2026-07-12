@@ -17,6 +17,7 @@ import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playe
 import { getPlayerStatus, PLAYER_STATUS_LABELS, type PlayerStatus } from '@/lib/playerStatus';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -85,9 +86,9 @@ const LeaguePlayerRowsSkeleton = ({
 }: {
   rowCount?: number;
 }) => (
-  <ul className={styles.tabSkeletonStack}>
+  <ResponsiveList className={styles.tabSkeletonStack}>
     {Array.from({ length: rowCount }, (_, index) => playerSkeletonRow(index))}
-  </ul>
+  </ResponsiveList>
 );
 
 const playerDataIndicator = (
@@ -247,7 +248,7 @@ export const LeaguePlayersListSection = ({
             renderItems={(filtered) => {
               return (
                 <>
-                  <ul className={styles.rosterList}>
+                  <ResponsiveList className={styles.rosterList}>
                     {filtered.map((p) => {
                       const initials = `${p.first_name[0] ?? ''}${p.last_name[0] ?? ''}` || '?';
                       const playerHref = buildLeaguePlayerDetailsPath({
@@ -317,7 +318,7 @@ export const LeaguePlayersListSection = ({
                         />
                       );
                     })}
-                  </ul>
+                  </ResponsiveList>
 
                   <Pagination
                     page={page}

@@ -4,6 +4,7 @@ import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import PlayerCard from '@/shared/PlayerCard/PlayerCard';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import type { ReactNode } from 'react';
+import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './StatsLeaderCard.module.scss';
 
 export interface StatsLeaderItem {
@@ -56,7 +57,7 @@ export const StatsLeaderCardSkeleton = () => (
       />
     </div>
 
-    <ul className={styles.leaderList}>
+    <ResponsiveList className={styles.leaderList}>
       {Array.from({ length: TOP_LEADER_SKELETON_COUNT }, (_, index) => (
         <li
           key={index}
@@ -68,7 +69,7 @@ export const StatsLeaderCardSkeleton = () => (
           />
         </li>
       ))}
-    </ul>
+    </ResponsiveList>
   </div>
 );
 
@@ -120,7 +121,7 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
         </Card>
       </div>
 
-      <ul className={styles.leaderList}>
+      <ResponsiveList className={styles.leaderList}>
         {items.map((item, i) => {
           const playerName = getPlayerName(item);
           const className = [styles.leaderItem, i === featuredIdx ? styles.leaderItemActive : '']
@@ -150,7 +151,7 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
             />
           );
         })}
-      </ul>
+      </ResponsiveList>
     </div>
   );
 }
