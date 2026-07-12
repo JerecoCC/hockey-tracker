@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
+import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import GameCard from '@/shared/GameCard/GameCard';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
@@ -29,7 +30,22 @@ import styles from './UserGamesWatchedTeam.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const ALL_YEARS = 'all';
+const PHONE_MAX_WIDTH = 640;
+const TABLET_MAX_WIDTH = 768;
+const HERO_STICKY_TOP = 52;
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+
+const getScrollContainer = (element: HTMLElement) => {
+  let parent = element.parentElement;
+
+  while (parent) {
+    const { overflowY } = window.getComputedStyle(parent);
+    if (overflowY === 'auto' || overflowY === 'scroll') return parent;
+    parent = parent.parentElement;
+  }
+
+  return document.documentElement;
+};
 
 const getGamePath = (game: GameRecord) =>
   buildUserGameDetailsPath({
@@ -166,11 +182,40 @@ const teamMatchesSlug = (team: WatchedTeam | TeamRecord, teamSlug: string) =>
 const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
   const { team, count, record } = summary;
   const teamName = getTeamName(team);
+  const heroCardRef = useRef<HTMLDivElement>(null);
+  const [isTabletStuck, setIsTabletStuck] = useState(false);
+
+  useEffect(() => {
+    const heroCard = heroCardRef.current;
+    if (!heroCard) return;
+
+    const scrollContainer = getScrollContainer(heroCard);
+    const updateTabletStuckState = () => {
+      const isTablet =
+        window.innerWidth > PHONE_MAX_WIDTH && window.innerWidth <= TABLET_MAX_WIDTH;
+      const nextIsStuck =
+        isTablet &&
+        scrollContainer.scrollTop > 0 &&
+        heroCard.getBoundingClientRect().top <= HERO_STICKY_TOP;
+      setIsTabletStuck((current) => (current === nextIsStuck ? current : nextIsStuck));
+    };
+
+    scrollContainer.addEventListener('scroll', updateTabletStuckState, { passive: true });
+    window.addEventListener('resize', updateTabletStuckState, { passive: true });
+    updateTabletStuckState();
+
+    return () => {
+      scrollContainer.removeEventListener('scroll', updateTabletStuckState);
+      window.removeEventListener('resize', updateTabletStuckState);
+    };
+  }, []);
 
   return (
     <StickyHeroCard
-      className={styles.heroCard}
+      ref={heroCardRef}
+      className={`${styles.heroCard} ${isTabletStuck ? styles.heroCardStuck : ''}`}
       stuckClassName={styles.heroCardStuck}
+      stickyTopPx={HERO_STICKY_TOP}
       style={
         {
           padding: 0,
@@ -225,11 +270,27 @@ const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
             <div className={styles.heroText}>
               {team.place_name && <span className={styles.heroPlace}>{team.place_name}</span>}
               <h2 className={styles.heroName}>{teamName}</h2>
-              <span className={styles.heroTeamMeta}>{formatRecord(record)}</span>
+              <span className={`${styles.heroTeamMeta} ${styles.heroTeamMetaDesktop}`}>
+                {formatRecord(record)}
+              </span>
             </div>
           </div>
-          <div className={styles.heroSeen}>
+          <div className={`${styles.heroSeen} ${styles.heroSeenDesktop}`}>
             <span className={styles.heroSeenValue}>{count}x</span>
+          </div>
+          <div
+            className={styles.heroStats}
+            data-testid="team-hero-stats"
+          >
+            <div className={styles.heroSeen}>
+              <span className={styles.heroSeenValue}>{count}x</span>
+            </div>
+            <Divider
+              variant="vertical"
+              className={styles.heroStatsDivider}
+              data-testid="team-hero-stats-divider"
+            />
+            <span className={styles.heroTeamMeta}>{formatRecord(record)}</span>
           </div>
         </div>
       </section>

@@ -6,6 +6,7 @@ $hero-strip-slant-offset: $hero-strip-width * 0.3;
 $hero-strip-fill-overlap: 2px;
 $hero-strip-meet-offset: ($hero-strip-slant-offset * 0.5) + $hero-strip-fill-overlap;
 $hero-strip-duration: 0.42s;
+$hero-mobile-value-size: 1.25rem;
 
 .page {
   @include page-layout;
@@ -13,6 +14,17 @@ $hero-strip-duration: 0.42s;
 
 .heroCard {
   min-width: 0;
+
+  @media (max-width: 768px) {
+    position: sticky !important;
+    top: var(--sticky-hero-top, 52px) !important;
+    z-index: 4 !important;
+    margin-top: -1px;
+  }
+
+  @media (max-width: 640px) {
+    border-top: 0 !important;
+  }
 }
 
 .hero {
@@ -36,6 +48,10 @@ $hero-strip-duration: 0.42s;
   z-index: 0;
   background: var(--team-primary);
   transition: width $hero-strip-duration ease;
+
+  @media (max-width: 640px) {
+    transition: none;
+  }
 }
 
 .heroPrimaryFillLeft {
@@ -118,6 +134,11 @@ $hero-strip-duration: 0.42s;
     max-width: calc(100% - #{$space-2xl});
     text-align: center;
   }
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    gap: $space-md;
+  }
 }
 
 .heroStripLeft {
@@ -144,12 +165,10 @@ $hero-strip-duration: 0.42s;
 .heroText {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: $space-xs;
   min-width: 0;
-
-  @media (max-width: 768px) {
-    align-items: center;
-  }
+  text-align: left;
 }
 
 .heroTeamInfo {
@@ -203,6 +222,61 @@ $hero-strip-duration: 0.42s;
   @media (max-width: 768px) {
     font-size: 2rem;
   }
+
+  @media (max-width: 640px) {
+    font-size: $hero-mobile-value-size;
+  }
+}
+
+.heroSeenDesktop {
+  @media (max-width: 640px) {
+    display: none;
+  }
+}
+
+.heroStats {
+  display: none;
+
+  @media (max-width: 640px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-md;
+  }
+}
+
+.heroStatsDivider {
+  display: none;
+
+  @media (max-width: 640px) {
+    --divider-color: var(--app-text-muted, #{$text-dim});
+    --divider-vertical-margin-block: 0;
+
+    display: block;
+    height: $hero-mobile-value-size;
+  }
+}
+
+.heroTeamMeta {
+  @media (max-width: 640px) {
+    color: var(--app-text-strong, #{$text-bright});
+    font-size: $hero-mobile-value-size;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+}
+
+.heroTeamMetaDesktop {
+  @media (max-width: 640px) {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .heroName {
+    font-size: $hero-mobile-value-size;
+  }
 }
 
 .heroCardStuck {
@@ -212,6 +286,10 @@ $hero-strip-duration: 0.42s;
   .heroSeenValue {
     color: var(--team-text);
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  }
+
+  .heroStatsDivider {
+    --divider-color: var(--team-text);
   }
 }
 

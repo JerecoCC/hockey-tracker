@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -227,6 +227,12 @@ describe('UserGamesWatchedTeam', () => {
     expect(screen.getByLabelText('Toronto Maple Leafs watched games summary')).toHaveTextContent(
       '2-0-0',
     );
+    const heroStats = screen.getByTestId('team-hero-stats');
+    expect(heroStats).toHaveTextContent('2x2-0-0');
+    expect(within(heroStats).getByTestId('team-hero-stats-divider')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
     expect(screen.queryByText('W-L-OTL')).not.toBeInTheDocument();
     expect(screen.queryByText('Seen')).not.toBeInTheDocument();
     expect(screen.getByLabelText('2 watched games shown')).toBeInTheDocument();
@@ -262,6 +268,35 @@ describe('UserGamesWatchedTeam', () => {
     expect(screen.getByLabelText('0 watched games shown')).toHaveTextContent('0');
     expect(screen.getByText('No watched games.')).toBeInTheDocument();
     expect(screen.queryByText('Watched team not found.')).not.toBeInTheDocument();
+  });
+
+  it('applies the stuck stripe state on tablets but not phones', async () => {
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 700 });
+
+    try {
+      renderTeamPage();
+
+      const heroCard = screen.getByLabelText('Toronto Maple Leafs watched games summary')
+        .parentElement;
+      expect(heroCard).not.toHaveClass('heroCardStuck');
+
+      document.documentElement.scrollTop = 1;
+      fireEvent.scroll(document.documentElement);
+
+      await waitFor(() => expect(heroCard).toHaveClass('heroCardStuck'));
+
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 640 });
+      fireEvent.resize(window);
+
+      await waitFor(() => expect(heroCard).not.toHaveClass('heroCardStuck'));
+    } finally {
+      document.documentElement.scrollTop = 0;
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: originalWidth,
+      });
+    }
   });
 
   it('filters team games by scheduled game year while showing scheduled watch dates', () => {
