@@ -4,7 +4,7 @@ $font-stack:
   system-ui,
   -apple-system,
   BlinkMacSystemFont,
-  "Segoe UI",
+  'Segoe UI',
   Roboto,
   Helvetica,
   Arial,
@@ -136,6 +136,20 @@ button {
   justify-content: center;
   gap: 0.375rem;
   line-height: 1;
+}
+
+// Keep Tracker UI's portaled date-picker actions inside a viewport-constrained
+// dropdown. The overlay can grow slightly after its initial measurement,
+// otherwise leaving the Today / Clear buttons outside the rounded panel.
+body > [data-placement][class*='_dropdown_']:has(> [class*='_calHeader_']) {
+  overflow-y: auto;
+
+  > [class*='_footer_'] {
+    position: sticky;
+    z-index: 1;
+    bottom: 0;
+    background: var(--app-menu-bg, var(--app-surface));
+  }
 }
 
 // Tracker UI tabs default to a full-width list with equal-width items.
