@@ -138,17 +138,47 @@ button {
   line-height: 1;
 }
 
-// Keep Tracker UI's portaled date-picker actions inside a viewport-constrained
-// dropdown. The overlay can grow slightly after its initial measurement,
-// otherwise leaving the Today / Clear buttons outside the rounded panel.
+// Keep Tracker UI's portaled date picker as a single, non-scrolling panel.
 body > [data-placement][class*='_dropdown_']:has(> [class*='_calHeader_']) {
-  overflow-y: auto;
+  // Tracker UI applies overflow inline when space is tight.
+  overflow-y: hidden !important;
+}
 
-  > [class*='_footer_'] {
-    position: sticky;
-    z-index: 1;
-    bottom: 0;
-    background: var(--app-menu-bg, var(--app-surface));
+@media (max-height: 420px) {
+  body > [data-placement][class*='_dropdown_']:has(> [class*='_calHeader_']) {
+    padding: 0.75rem;
+
+    > [class*='_calHeader_'] {
+      margin-bottom: 0.5rem;
+    }
+
+    > [class*='_footer_'] {
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+    }
+  }
+}
+
+@media (max-height: 340px) {
+  body > [data-placement][class*='_dropdown_']:has(> [class*='_calHeader_']) {
+    padding-block: 0.5rem;
+
+    > [class*='_calHeader_'] {
+      margin-bottom: 0.25rem;
+    }
+
+    [class*='_dayName_'] {
+      padding-block: 0.125rem 0.25rem;
+    }
+
+    [class*='_day_'] {
+      padding-block: 0.125rem;
+    }
+
+    > [class*='_footer_'] {
+      margin-top: 0.375rem;
+      padding-top: 0.375rem;
+    }
   }
 }
 

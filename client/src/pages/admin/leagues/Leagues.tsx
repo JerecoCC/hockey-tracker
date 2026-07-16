@@ -93,15 +93,10 @@ const LeaguesPage = () => {
                   }}
                   primaryColor={league.primary_color}
                   textColor={league.text_color}
-                  href={leagueHref}
+                  onClick={() => navigate(leagueHref)}
+                  ariaLabel={`View ${league.name}`}
                   actions={
                     [
-                      {
-                        icon: 'open_in_new',
-                        intent: 'neutral',
-                        tooltip: 'View league',
-                        onClick: () => navigate(leagueHref),
-                      },
                       {
                         icon: 'edit',
                         intent: 'accent',
