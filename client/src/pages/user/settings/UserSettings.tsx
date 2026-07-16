@@ -22,6 +22,7 @@ import styles from './UserSettings.module.scss';
 interface TeamCardProps {
   team: TeamRecord;
   favorited: boolean;
+  fullWidth?: boolean;
   showFavoriteIndicator?: boolean;
   onToggle: () => void;
 }
@@ -44,8 +45,15 @@ const getUserNameParts = (name: string) => {
   };
 };
 
-const TeamCard = ({ team, favorited, showFavoriteIndicator = false, onToggle }: TeamCardProps) => (
+const TeamCard = ({
+  team,
+  favorited,
+  fullWidth,
+  showFavoriteIndicator = false,
+  onToggle,
+}: TeamCardProps) => (
   <ListItem
+    fullWidth={fullWidth}
     className={favorited && showFavoriteIndicator ? styles.teamItemFavorited : undefined}
     image={team.logo}
     imageDark={team.logo_dark}
@@ -244,6 +252,7 @@ const UserSettings = () => {
                     key={team.id}
                     team={team}
                     favorited
+                    fullWidth
                     onToggle={() => toggle(team.id)}
                   />
                 ))}

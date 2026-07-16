@@ -1618,6 +1618,7 @@ const ManualMovementReportSection = ({
       {report?.draft && (
         <ResponsiveList className={styles.stintHistoryList}>
           <ListItem
+            fullWidth
             hideImage
             name={report.draft.teamName ?? report.draft.teamCode ?? 'Unknown team'}
             subtitle={`Draft Year: ${report.draft.year} | Round: ${report.draft.round}`}
@@ -1631,6 +1632,7 @@ const ManualMovementReportSection = ({
           <h4>Player Status</h4>
           <ResponsiveList className={styles.stintHistoryList}>
             <ListItem
+              fullWidth
               hideImage
               name={PLAYER_STATUS_LABELS[report.playerStatus.status]}
               subtitle={`Date: ${formatDate(report.playerStatus.date) ?? '-'}`}
@@ -3625,6 +3627,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                 {group.awards.map((award) => (
                   <ListItem
                     key={award.id}
+                    fullWidth
                     variant="plain"
                     image={award.team_logo}
                     imageDark={award.team_logo_dark}

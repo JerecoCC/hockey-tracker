@@ -233,6 +233,7 @@ const TeamAwardsTab = ({ teamId, mode = 'admin' }: Props) => {
                 {group.awards.map((award) => (
                   <ListItem
                     key={award.id}
+                    fullWidth
                     variant="plain"
                     image={award.team_logo}
                     imageDark={award.team_logo_dark}

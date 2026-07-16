@@ -109,4 +109,101 @@ describe('ListItem keyboard navigation', () => {
 
     expect(screen.getByRole('heading', { name: 'League details' })).toBeInTheDocument();
   });
+
+  it('uses slide-in actions for a full-width row', () => {
+    render(
+      <MemoryRouter>
+        <ul>
+          <ListItem
+            fullWidth
+            name="National Hockey League"
+            actions={[
+              {
+                icon: 'edit',
+                tooltip: 'Edit league',
+                onClick: jest.fn(),
+              },
+              {
+                icon: 'delete',
+                tooltip: 'Delete league',
+                onClick: jest.fn(),
+              },
+            ]}
+          />
+        </ul>
+      </MemoryRouter>,
+    );
+
+    const item = screen.getByText('National Hockey League').closest('li');
+    expect(item).toHaveClass('itemSlideInActions', 'actionCount2');
+  });
+
+  it('uses overlay actions when fullWidth is not provided', () => {
+    render(
+      <MemoryRouter>
+        <ul>
+          <ListItem
+            name="National Hockey League"
+            actions={[
+              {
+                icon: 'edit',
+                tooltip: 'Edit league',
+                onClick: jest.fn(),
+              },
+            ]}
+          />
+        </ul>
+      </MemoryRouter>,
+    );
+
+    const item = screen.getByText('National Hockey League').closest('li');
+    expect(item).not.toHaveClass('itemSlideInActions');
+  });
+
+  it('allows actionDisplay to override a full-width row', () => {
+    render(
+      <MemoryRouter>
+        <ul>
+          <ListItem
+            fullWidth
+            actionDisplay="overlay"
+            name="National Hockey League"
+            actions={[
+              {
+                icon: 'edit',
+                tooltip: 'Edit league',
+                onClick: jest.fn(),
+              },
+            ]}
+          />
+        </ul>
+      </MemoryRouter>,
+    );
+
+    const item = screen.getByText('National Hockey League').closest('li');
+    expect(item).not.toHaveClass('itemSlideInActions');
+  });
+
+  it('allows actionDisplay to enable slide-in actions for a compact row', () => {
+    render(
+      <MemoryRouter>
+        <ul>
+          <ListItem
+            actionDisplay="slide-in"
+            name="National Hockey League"
+            actions={[
+              {
+                icon: 'edit',
+                tooltip: 'Edit league',
+                onClick: jest.fn(),
+              },
+            ]}
+          />
+        </ul>
+      </MemoryRouter>,
+    );
+
+    const item = screen.getByText('National Hockey League').closest('li');
+    expect(item).toHaveClass('itemSlideInActions', 'actionCount1');
+  });
 });

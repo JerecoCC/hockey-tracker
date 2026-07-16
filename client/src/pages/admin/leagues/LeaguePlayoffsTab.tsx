@@ -135,6 +135,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
               {ruleSets.map((rs) => (
                 <ListItem
                   key={rs.id}
+                  fullWidth
                   hideImage
                   name={rs.name}
                   subtitle={describeRuleSet(rs)}
@@ -182,6 +183,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
               {qualificationFormats.map((format) => (
                 <ListItem
                   key={format.id}
+                  fullWidth
                   hideImage
                   name={format.name}
                   subtitle={describeQualificationRules(format.rules)}

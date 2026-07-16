@@ -52,6 +52,7 @@ const LeagueSeasonsCard = (props: Props) => {
           {seasons.map((s) => (
             <ListItem
               key={s.id}
+              fullWidth
               hideImage
               name={s.name}
               href={getSeasonHref(s)}

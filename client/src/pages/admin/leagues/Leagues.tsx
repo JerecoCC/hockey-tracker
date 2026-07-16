@@ -83,6 +83,7 @@ const LeaguesPage = () => {
               return (
                 <ListItem
                   key={league.id}
+                  fullWidth
                   image={league.logo}
                   placeholder={league.code.slice(0, 3)}
                   eyebrow={league.code}

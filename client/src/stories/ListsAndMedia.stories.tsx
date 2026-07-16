@@ -66,6 +66,7 @@ export const Lists = {
           {samplePlayers.map((player) => (
             <ListItem
               key={player.id}
+              fullWidth
               leadingImage={player.team.logo}
               leadingImagePrimaryColor={player.team.primary_color}
               leadingImageTextColor={player.team.text_color}
@@ -139,6 +140,7 @@ export const SearchAndDetails = {
               {players.map((player) => (
                 <ListItem
                   key={player.id}
+                  fullWidth
                   image_shape="circle"
                   placeholder={player.name
                     .split(' ')
@@ -253,6 +255,7 @@ export const HeadersAndBreadcrumbs = {
       </StoryPanel>
       <StoryPanel>
         <ListItem
+          fullWidth
           image={minLogo}
           name="Minnesota Frost"
           subtitle="Media row with right-side code"

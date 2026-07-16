@@ -251,6 +251,7 @@ const GameLineupsTab = ({
             return (
               <ListItem
                 key={e.id}
+                fullWidth
                 className={styles.lineupPlayerItem}
                 variant="plain"
                 image={e.photo}

@@ -258,6 +258,7 @@ const GoalieStatsCard = ({
               return (
                 <ListItem
                   key={row.id}
+                  fullWidth
                   leadingImage={row.teamLogo}
                   leadingImageDark={row.teamLogoDark}
                   leadingImageLight={row.teamLogoLight}

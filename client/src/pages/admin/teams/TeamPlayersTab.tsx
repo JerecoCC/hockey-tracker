@@ -232,6 +232,7 @@ const TeamPlayersTab = ({
     return (
       <ListItem
         key={p.id}
+        fullWidth
         imageNode={
           <PlayerAvatar
             photo={p.photo}

@@ -237,6 +237,7 @@ const TeamHistoryTab = ({
               return (
                 <ListItem
                   key={iter.id}
+                  fullWidth
                   image={iter.logo}
                   imageDark={iter.logo_dark}
                   imageLight={iter.logo_light}

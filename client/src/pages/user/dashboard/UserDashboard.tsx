@@ -205,6 +205,7 @@ const WatchedTeamItem = ({
 
   return (
     <ListItem
+      fullWidth
       image={team.logo}
       imageDark={team.logo_dark}
       imageLight={team.logo_light}

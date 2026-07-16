@@ -565,6 +565,7 @@ const AlignmentGroupNode = ({
           {group.teams.map((team) => (
             <ListItem
               key={team.id}
+              fullWidth
               image={team.logo}
               imageDark={team.logo_dark}
               imageLight={team.logo_light}
@@ -1021,6 +1022,7 @@ const AlignmentPanel = ({
             {flatTeams.map((team) => (
               <ListItem
                 key={team.id}
+                fullWidth
                 image={team.logo}
                 imageDark={team.logo_dark}
                 imageLight={team.logo_light}
@@ -1070,6 +1072,7 @@ const AlignmentPanel = ({
   return (
     <>
       <ListItem
+        fullWidth
         hideImage
         name={alignmentSet.name}
         subtitle={headerMeta}
@@ -1403,6 +1406,7 @@ const CreateAlignmentModal = ({
                 {draftDetails.teams.map((team) => (
                   <ListItem
                     key={team.id}
+                    fullWidth
                     image={team.logo}
                     imageDark={team.logo_dark}
                     imageLight={team.logo_light}

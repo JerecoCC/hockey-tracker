@@ -285,6 +285,7 @@ export const LeaguePlayersListSection = ({
                       return (
                         <ListItem
                           key={p.id}
+                          fullWidth
                           leadingImage={p.team_logo}
                           leadingImageDark={p.team_logo_dark}
                           leadingImageLight={p.team_logo_light}
