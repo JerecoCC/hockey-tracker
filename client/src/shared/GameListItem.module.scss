@@ -16,12 +16,17 @@
     background $transition-fast,
     border-color $transition-fast;
 
-  &:hover {
+  &:hover,
+  &:focus-within {
     background: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
 
     .actions {
       opacity: 1;
       pointer-events: auto;
+      max-width: 12rem;
+      margin-left: 0;
+      padding-right: 2px;
+      transform: translateX(0);
     }
   }
 }
@@ -163,8 +168,28 @@
 }
 
 // ── Hover-revealed actions slot ───────────────────────────────────────────────
-// Structural styles (position, opacity, gradient) live in ActionOverlay.module.scss.
+// Collapse the slot without reserving the row gap, then reveal it beside the status tag.
 
 .actions {
+  position: static;
+  inset: auto;
   z-index: 1;
+  flex-shrink: 0;
+  min-width: 0;
+  max-width: 0;
+  margin-left: -$space-lg;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  border-radius: 0;
+  transform: translateX($space-sm);
+  transition:
+    max-width $transition-fast,
+    margin-left $transition-fast,
+    opacity $transition-fast,
+    transform $transition-fast;
+
+  &::before {
+    content: none;
+  }
 }
