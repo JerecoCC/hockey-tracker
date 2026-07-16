@@ -138,6 +138,17 @@ button {
   line-height: 1;
 }
 
+// Tracker UI tabs default to a full-width list with equal-width items.
+[role='tablist'] {
+  width: fit-content;
+  max-width: 100%;
+}
+
+[role='tab'] {
+  flex: 0 0 auto;
+  width: fit-content;
+}
+
 @media (max-width: 768px) {
   :root {
     --app-list-gap: 0.5rem;

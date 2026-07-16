@@ -168,13 +168,18 @@ const PageHeader = ({ onMenuToggle, mobileTitleLeftRef }: PageHeaderProps) => {
 
       {/* ── Mobile tab strip (below title row) ── */}
       {mobileTabs && (
-        <div className={styles.mobileTabBar}>
+        <div
+          className={styles.mobileTabBar}
+          role="tablist"
+        >
           {mobileTabs.tabs.map((label, i) => {
             const iconName = mobileTabs.icons[i];
             return (
               <button
                 key={label}
+                role="tab"
                 aria-label={label}
+                aria-selected={mobileTabs.activeIndex === i}
                 className={[
                   styles.mobileTab,
                   mobileTabs.activeIndex === i ? styles.mobileTabActive : '',
