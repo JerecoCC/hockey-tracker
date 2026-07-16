@@ -105,8 +105,8 @@ const renderCard = (overrides: Partial<ComponentProps<typeof ScoringCard>>) =>
 describe('ScoringCard shootout End Game', () => {
   it('offers End Game on a decided shootout that is still in progress (even as admin)', () => {
     // isEditMode is true on the admin route; End Game must still appear during live play.
-    const { getAllByText } = renderCard({});
-    expect(getAllByText('End Game').length).toBeGreaterThan(0);
+    const { getAllByRole } = renderCard({});
+    expect(getAllByRole('button', { name: 'End Game' }).length).toBeGreaterThan(0);
   });
 
   it('does not offer End Game once the game is no longer in progress', () => {

@@ -79,6 +79,8 @@ $_active-period-light-border: color.mix($accent, #fff, 48%);
 
 .goal {
   &List {
+    --app-list-gap: 0;
+
     list-style: none;
     margin: 0;
     padding: 0;
@@ -102,15 +104,16 @@ $_active-period-light-border: color.mix($accent, #fff, 48%);
       border-bottom: none;
     }
 
-    &:hover {
-      --goal-actions-bg: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
-      --goal-actions-base-bg: var(--app-surface, #{$bg-card});
-
+    &:hover,
+    &:focus-within {
       background: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
 
       .goalActions {
         opacity: 1;
         pointer-events: auto;
+        max-width: 5rem;
+        margin-left: 0;
+        transform: translateX(0);
       }
     }
   }
@@ -216,13 +219,24 @@ $_active-period-light-border: color.mix($accent, #fff, 48%);
 }
 
 .goalActions {
-  background:
-    linear-gradient(var(--goal-actions-bg, transparent), var(--goal-actions-bg, transparent)),
-    var(--goal-actions-base-bg, var(--app-surface, #{$bg-card}));
+  position: static;
+  inset: auto;
+  flex-shrink: 0;
+  min-width: 0;
+  max-width: 0;
+  margin-left: -$space-sm;
+  padding: 0;
+  overflow: hidden;
+  background: transparent;
+  border-radius: 0;
+  transform: translateX($space-sm);
+  transition:
+    max-width $transition-fast,
+    margin-left $transition-fast,
+    opacity $transition-fast,
+    transform $transition-fast;
 
   &::before {
-    background:
-      linear-gradient(to right, transparent, var(--goal-actions-bg, transparent)),
-      linear-gradient(to right, transparent, var(--goal-actions-base-bg, var(--app-surface, #{$bg-card})));
+    content: none;
   }
 }
