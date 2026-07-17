@@ -318,6 +318,7 @@ const GameCardVariant = ({
   const awayDim = showScore && game.away_score < game.home_score;
   const homeDim = showScore && game.home_score < game.away_score;
   const isWatched = !!game.watched_by_user;
+  const hasTypeIndicator = showTypeIndicator || game.skipped_by_user;
   const isOpenable = canOpen ?? (!!href || isWatched);
   const timeLabel =
     timeLabelProp === undefined
@@ -341,6 +342,7 @@ const GameCardVariant = ({
       data-game-card-variant="card"
       className={[
         styles.card,
+        hasTypeIndicator ? styles.withTypeIndicator : '',
         showTypeIndicator ? GAME_TYPE_CLASS[game.game_type] : '',
         useLeagueColors ? styles.leagueColors : '',
         game.status === 'in_progress' ? styles.live : '',
@@ -386,23 +388,31 @@ const GameCardVariant = ({
           />
         </span>
       )}
-      <div className={styles.gameMeta}>
-        <span>{primaryMetaLabel}</span>
-      </div>
-      <TeamLine
-        team={game.away_team}
-        score={awayScore}
-        dim={awayDim}
-      />
-      <TeamLine
-        team={game.home_team}
-        score={homeScore}
-        dim={homeDim}
-      />
-      {bottomLabel && <div className={styles.bottomLabel}>{bottomLabel}</div>}
-      <div className={styles.gameFooter}>
-        <span>{getStatusLabel(game)}</span>
-        {playoffMetaLabel && <span>{playoffMetaLabel}</span>}
+      {hasTypeIndicator && (
+        <span
+          className={styles.typeIndicator}
+          aria-hidden="true"
+        />
+      )}
+      <div className={styles.cardContent}>
+        <div className={styles.gameMeta}>
+          <span>{primaryMetaLabel}</span>
+        </div>
+        <TeamLine
+          team={game.away_team}
+          score={awayScore}
+          dim={awayDim}
+        />
+        <TeamLine
+          team={game.home_team}
+          score={homeScore}
+          dim={homeDim}
+        />
+        {bottomLabel && <div className={styles.bottomLabel}>{bottomLabel}</div>}
+        <div className={styles.gameFooter}>
+          <span>{getStatusLabel(game)}</span>
+          {playoffMetaLabel && <span>{playoffMetaLabel}</span>}
+        </div>
       </div>
     </Card>
   );
