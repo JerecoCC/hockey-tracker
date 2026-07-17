@@ -9,6 +9,7 @@ jest.mock('../middleware/auth', () => ({
   verifyGoogleCalendarState: jest.fn(() => ({
     userId: 'user-1',
     nonce: 'nonce-1',
+    timeZone: 'Asia/Manila',
   })),
 }));
 
@@ -29,10 +30,12 @@ jest.mock('../services/googleCalendar', () => {
       configured: true,
       connected: false,
       calendar_name: null,
+      time_zone: null,
       connected_at: null,
       last_synced_at: null,
       last_sync_error: null,
     }),
+    normalizeGoogleCalendarTimeZone: jest.fn((value) => value || 'America/New_York'),
     syncAllScheduledGamesForUser: jest
       .fn()
       .mockResolvedValue({ status: 'synced', synced: 2, removed: 1 }),
@@ -48,6 +51,7 @@ const {
   disconnectGoogleCalendar,
   getGoogleCalendarAuthorizationUrl,
   getGoogleCalendarStatus,
+  normalizeGoogleCalendarTimeZone,
   syncAllScheduledGamesForUser,
 } = require('../services/googleCalendar');
 const googleCalendarRouter = require('./google-calendar');
@@ -69,7 +73,9 @@ describe('Google Calendar routes', () => {
   });
 
   it('starts a cookie-bound OAuth flow', async () => {
-    const res = await request(app).post('/api/user/calendar/google/connect');
+    const res = await request(app)
+      .post('/api/user/calendar/google/connect')
+      .send({ time_zone: 'Asia/Manila' });
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
@@ -78,7 +84,9 @@ describe('Google Calendar routes', () => {
     expect(signGoogleCalendarState).toHaveBeenCalledWith({
       userId: 'user-1',
       nonce: expect.any(String),
+      timeZone: 'Asia/Manila',
     });
+    expect(normalizeGoogleCalendarTimeZone).toHaveBeenCalledWith('Asia/Manila');
     expect(getGoogleCalendarAuthorizationUrl).toHaveBeenCalledWith({
       state: 'signed-state',
       loginHint: 'fan@example.com',
@@ -99,6 +107,7 @@ describe('Google Calendar routes', () => {
     expect(connectGoogleCalendar).toHaveBeenCalledWith({
       userId: 'user-1',
       code: 'oauth-code',
+      timeZone: 'Asia/Manila',
     });
   });
 
@@ -134,6 +143,7 @@ describe('Google Calendar routes', () => {
 
     const res = await request(app)
       .post('/api/user/calendar/google/sync')
+      .send({ time_zone: 'Asia/Manila' })
       .set('Accept', 'application/x-ndjson');
 
     expect(res.status).toBe(200);
@@ -154,6 +164,7 @@ describe('Google Calendar routes', () => {
       },
     ]);
     expect(syncAllScheduledGamesForUser).toHaveBeenCalledWith('user-1', {
+      timeZone: 'Asia/Manila',
       onProgress: expect.any(Function),
     });
   });

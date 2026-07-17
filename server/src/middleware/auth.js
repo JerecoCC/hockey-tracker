@@ -12,12 +12,16 @@ function signToken(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 }
 
-function signGoogleCalendarState({ userId, nonce }) {
-  return jwt.sign({ userId, nonce, purpose: GOOGLE_CALENDAR_STATE_AUDIENCE }, JWT_SECRET, {
-    expiresIn: '10m',
-    audience: GOOGLE_CALENDAR_STATE_AUDIENCE,
-    issuer: TOKEN_ISSUER,
-  });
+function signGoogleCalendarState({ userId, nonce, timeZone }) {
+  return jwt.sign(
+    { userId, nonce, timeZone, purpose: GOOGLE_CALENDAR_STATE_AUDIENCE },
+    JWT_SECRET,
+    {
+      expiresIn: '10m',
+      audience: GOOGLE_CALENDAR_STATE_AUDIENCE,
+      issuer: TOKEN_ISSUER,
+    },
+  );
 }
 
 function verifyGoogleCalendarState(state) {

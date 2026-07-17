@@ -52,11 +52,13 @@ describe('Google Calendar OAuth state', () => {
     const state = signGoogleCalendarState({
       userId: 'user-1',
       nonce: 'nonce-1',
+      timeZone: 'Asia/Manila',
     });
 
     expect(verifyGoogleCalendarState(state)).toMatchObject({
       userId: 'user-1',
       nonce: 'nonce-1',
+      timeZone: 'Asia/Manila',
       purpose: 'google-calendar-connect',
     });
   });

@@ -2189,12 +2189,17 @@ async function initSchema() {
       user_id                 UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       calendar_id             TEXT NOT NULL,
       calendar_name           TEXT NOT NULL DEFAULT 'Hockey Tracker',
+      time_zone               TEXT NOT NULL DEFAULT 'America/New_York',
       refresh_token_encrypted TEXT NOT NULL,
       connected_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       last_synced_at          TIMESTAMPTZ,
       last_sync_error         TEXT
     )
+  `;
+  await sql`
+    ALTER TABLE user_google_calendar_connections
+    ADD COLUMN IF NOT EXISTS time_zone TEXT NOT NULL DEFAULT 'America/New_York'
   `;
 
   // ── Helper functions: displayable player avatars ─────────────────────────

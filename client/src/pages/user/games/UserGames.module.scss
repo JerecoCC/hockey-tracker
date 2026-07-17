@@ -38,6 +38,16 @@
     background: $success;
     content: '';
   }
+
+  &[data-syncing='true'] {
+    &::after {
+      display: none;
+    }
+
+    .googleCalendarIcon {
+      opacity: 0.15;
+    }
+  }
 }
 
 .googleCalendarIcon {
@@ -45,6 +55,27 @@
   width: 1.125rem;
   height: 1.125rem;
   flex: 0 0 auto;
+}
+
+.googleCalendarSyncOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  background: rgba($bg-card, 0.82);
+  backdrop-filter: blur(1px);
+  pointer-events: none;
+}
+
+.googleCalendarSyncSpinner {
+  margin: 0;
+
+  p {
+    display: none;
+  }
 }
 
 .googleCalendarProgressBar.googleCalendarProgressBar {

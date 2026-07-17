@@ -6,6 +6,7 @@ const { sql } = require('../db');
 
 const {
   getGoogleCalendarAuthorizationUrl,
+  normalizeGoogleCalendarTimeZone,
   syncAllScheduledGamesForUser,
   _private: {
     decryptRefreshToken,
@@ -137,6 +138,53 @@ describe('Google Calendar service helpers', () => {
     expect(event.end.dateTime).toBe('2027-01-01T02:30:00');
   });
 
+  it('converts the original game instant to the user timezone', () => {
+    const event = eventForGame({
+      userId: 'user-1',
+      timeZone: 'Asia/Manila',
+      game: {
+        id: 'game-1',
+        game_date: '2026-12-31',
+        calendar_date: '2026-12-31',
+        scheduled_time: '19:30',
+      },
+    });
+
+    expect(event.start).toEqual({
+      dateTime: '2027-01-01T08:30:00',
+      timeZone: 'Asia/Manila',
+    });
+    expect(event.end).toEqual({
+      dateTime: '2027-01-01T11:30:00',
+      timeZone: 'Asia/Manila',
+    });
+  });
+
+  it('keeps a moved watch date on the chosen user-local day', () => {
+    const event = eventForGame({
+      userId: 'user-1',
+      timeZone: 'Asia/Manila',
+      game: {
+        id: 'game-1',
+        game_date: '2026-12-31',
+        calendar_date: '2027-01-05',
+        scheduled_for: '2027-01-05',
+        scheduled_time: '19:30',
+      },
+    });
+
+    expect(event.start).toEqual({
+      dateTime: '2027-01-05T08:30:00',
+      timeZone: 'Asia/Manila',
+    });
+  });
+
+  it('rejects invalid IANA timezones', () => {
+    expect(() => normalizeGoogleCalendarTimeZone('Mars/Olympus_Mons')).toThrow(
+      'Invalid calendar time zone',
+    );
+  });
+
   it('keeps games without a known scheduled time as all-day events', () => {
     const event = eventForGame({
       userId: 'user-1',
@@ -166,6 +214,8 @@ describe('Google Calendar service helpers', () => {
     expect(queryText).toContain('g.season_id = (SELECT id FROM closest_open_season)');
     expect(queryText).toContain('FROM user_favorite_teams uft');
     expect(queryText).toContain('COALESCE( uwg.scheduled_for');
+    expect(queryText).toContain('END::text AS game_date');
+    expect(queryText).toContain('uwg.scheduled_for::text AS scheduled_for');
     expect(queryText).toContain("g.scheduled_at AT TIME ZONE 'America/New_York'");
     expect(queryText).toContain("NULLIF(BTRIM(g.scheduled_time), '')");
     expect(queryText).toContain(

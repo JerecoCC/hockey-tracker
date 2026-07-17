@@ -21,6 +21,7 @@ import GameCard from '@/shared/GameCard/GameCard';
 import GoogleLogo from '@/shared/GoogleLogo/GoogleLogo';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
+import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
 import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
 import MultiSelect, {
   type MultiSelectOption,
@@ -48,6 +49,7 @@ import { type GameRecord } from '@/hooks/useGames';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import { buildUserGameDetailsPath } from '@/lib/routeSlugs';
 import {
+  getUserTimeZone,
   syncGoogleCalendarWithProgress,
   type GoogleCalendarSyncProgress,
   type GoogleCalendarSyncResult,
@@ -176,6 +178,7 @@ interface GoogleCalendarStatus {
   configured: boolean;
   connected: boolean;
   calendar_name: string | null;
+  time_zone: string | null;
   connected_at: string | null;
   last_synced_at: string | null;
   last_sync_error: string | null;
@@ -826,7 +829,7 @@ const GoogleCalendarModal = ({
           <>
             <p>
               Games from the nearest season that is not marked done, filtered to your favorite
-              teams, sync as timed events using each game&apos;s scheduled start time in your{' '}
+              teams, sync as timed events converted to your local timezone in your{' '}
               <strong>{status?.calendar_name || 'Hockey Tracker'}</strong> calendar. A scheduled
               watch date moves the event; clearing that date moves it back to the original game
               date, and skipping the game removes it.
@@ -1370,7 +1373,7 @@ const UserGames = () => {
     try {
       const { data } = await axios.post<{ authorization_url: string }>(
         `${API}/user/calendar/google/connect`,
-        {},
+        { time_zone: getUserTimeZone() },
         { headers: authHeaders(), withCredentials: true },
       );
       window.location.assign(data.authorization_url);
@@ -1384,11 +1387,13 @@ const UserGames = () => {
   const syncGoogleCalendar = async () => {
     if (googleCalendarBusy) return;
     setGoogleCalendarBusy(true);
+    setGoogleCalendarOpen(false);
     const progressToast = startGoogleCalendarSyncProgressToast();
     try {
       const data = await syncGoogleCalendarWithProgress({
         endpoint: `${API}/user/calendar/google/sync`,
         headers: authHeaders(),
+        timeZone: getUserTimeZone(),
         onProgress: progressToast.update,
       });
       await queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
@@ -1752,15 +1757,34 @@ const UserGames = () => {
                 type="button"
                 className={styles.googleCalendarIconButton}
                 data-connected={googleCalendarStatus?.connected ? 'true' : 'false'}
-                aria-label="Google Calendar sync settings"
-                tooltip={
-                  googleCalendarStatus?.connected
-                    ? 'Google Calendar connected'
-                    : 'Connect Google Calendar'
+                data-syncing={googleCalendarBusy ? 'true' : 'false'}
+                aria-label={
+                  googleCalendarBusy
+                    ? 'Google Calendar sync in progress'
+                    : 'Google Calendar sync settings'
                 }
-                onClick={() => setGoogleCalendarOpen(true)}
+                tooltip={
+                  googleCalendarBusy
+                    ? 'Syncing Google Calendar'
+                    : googleCalendarStatus?.connected
+                      ? 'Google Calendar connected'
+                      : 'Connect Google Calendar'
+                }
+                onClick={() => {
+                  if (!googleCalendarBusy) setGoogleCalendarOpen(true);
+                }}
               >
                 <GoogleLogo className={styles.googleCalendarIcon} />
+                {googleCalendarBusy && (
+                  <span className={styles.googleCalendarSyncOverlay}>
+                    <LoadingSpinner
+                      message="Syncing Google Calendar"
+                      layout="inline"
+                      size="sm"
+                      className={styles.googleCalendarSyncSpinner}
+                    />
+                  </span>
+                )}
               </Button>
               <Button
                 variant="outlined"

@@ -8,6 +8,7 @@ const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.app.crea
 const DEFAULT_CALENDAR_NAME = 'Hockey Tracker';
 const DEFAULT_GAME_DURATION_MINUTES = 180;
 const GAME_TIME_ZONE = 'America/New_York';
+const dateTimeFormatters = new Map();
 
 class GoogleCalendarError extends Error {
   constructor(message, { status = 500, code = 'google_calendar_error', details = null } = {}) {
@@ -200,6 +201,76 @@ const addOneDay = (dateKey) => {
   return next.toISOString().slice(0, 10);
 };
 
+const normalizeGoogleCalendarTimeZone = (value) => {
+  const timeZone = typeof value === 'string' && value.trim() ? value.trim() : GAME_TIME_ZONE;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date(0));
+  } catch {
+    throw new GoogleCalendarError('Invalid calendar time zone', {
+      status: 400,
+      code: 'invalid_time_zone',
+    });
+  }
+  return timeZone;
+};
+
+const getDateTimeFormatter = (timeZone) => {
+  if (!dateTimeFormatters.has(timeZone)) {
+    dateTimeFormatters.set(
+      timeZone,
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hourCycle: 'h23',
+      }),
+    );
+  }
+  return dateTimeFormatters.get(timeZone);
+};
+
+const dateTimePartsInZone = (instant, timeZone) => {
+  const parts = Object.fromEntries(
+    getDateTimeFormatter(timeZone)
+      .formatToParts(instant)
+      .filter(({ type }) => ['year', 'month', 'day', 'hour', 'minute', 'second'].includes(type))
+      .map(({ type, value }) => [type, value]),
+  );
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    time: `${parts.hour}:${parts.minute}:${parts.second}`,
+    values: parts,
+  };
+};
+
+const timeZoneOffsetMilliseconds = (instant, timeZone) => {
+  const { values } = dateTimePartsInZone(instant, timeZone);
+  const renderedUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second),
+  );
+  return renderedUtc - Math.floor(instant.getTime() / 1000) * 1000;
+};
+
+const zonedDateTimeToInstant = (dateKey, time, timeZone) => {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const [hour, minute, second] = time.split(':').map(Number);
+  const wallClockUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+  let instant = new Date(wallClockUtc);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    instant = new Date(wallClockUtc - timeZoneOffsetMilliseconds(instant, timeZone));
+  }
+  return instant;
+};
+
 const normalizeCalendarTime = (value) => {
   const match = String(value || '')
     .trim()
@@ -208,34 +279,35 @@ const normalizeCalendarTime = (value) => {
   return `${match[1]}:${match[2]}:${match[3] || '00'}`;
 };
 
-const addMinutesToCalendarDateTime = (dateKey, time, minutes) => {
-  const [year, month, day] = dateKey.split('-').map(Number);
-  const [hour, minute, second] = time.split(':').map(Number);
-  const next = new Date(Date.UTC(year, month - 1, day, hour, minute + minutes, second));
-  return next.toISOString().slice(0, 19);
-};
-
-const eventTimeForGame = (game) => {
+const eventTimeForGame = (game, requestedTimeZone) => {
+  const timeZone = normalizeGoogleCalendarTimeZone(requestedTimeZone);
   const calendarTime = normalizeCalendarTime(game.scheduled_time);
   if (!calendarTime) {
+    const calendarDate = game.scheduled_for || game.calendar_date;
     return {
-      start: { date: game.calendar_date },
-      end: { date: addOneDay(game.calendar_date) },
+      start: { date: calendarDate },
+      end: { date: addOneDay(calendarDate) },
     };
   }
 
+  const gameDate = game.game_date || game.calendar_date;
+  const scheduledInstant = zonedDateTimeToInstant(gameDate, calendarTime, GAME_TIME_ZONE);
+  const scheduledInUserZone = dateTimePartsInZone(scheduledInstant, timeZone);
+  const startInstant = game.scheduled_for
+    ? zonedDateTimeToInstant(game.scheduled_for, scheduledInUserZone.time, timeZone)
+    : scheduledInstant;
+  const endInstant = new Date(startInstant.getTime() + DEFAULT_GAME_DURATION_MINUTES * 60_000);
+  const start = dateTimePartsInZone(startInstant, timeZone);
+  const end = dateTimePartsInZone(endInstant, timeZone);
+
   return {
     start: {
-      dateTime: `${game.calendar_date}T${calendarTime}`,
-      timeZone: GAME_TIME_ZONE,
+      dateTime: `${start.date}T${start.time}`,
+      timeZone,
     },
     end: {
-      dateTime: addMinutesToCalendarDateTime(
-        game.calendar_date,
-        calendarTime,
-        DEFAULT_GAME_DURATION_MINUTES,
-      ),
-      timeZone: GAME_TIME_ZONE,
+      dateTime: `${end.date}T${end.time}`,
+      timeZone,
     },
   };
 };
@@ -243,10 +315,10 @@ const eventTimeForGame = (game) => {
 const eventIdForGame = (userId, gameId) =>
   `ht${crypto.createHash('sha256').update(`${userId}:${gameId}`, 'utf8').digest('hex')}`;
 
-const eventForGame = ({ userId, game }) => {
+const eventForGame = ({ userId, game, timeZone }) => {
   const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').trim().replace(/\/$/, '');
   const matchup = `${game.away_code || 'Away'} @ ${game.home_code || 'Home'}`;
-  const eventTime = eventTimeForGame(game);
+  const eventTime = eventTimeForGame(game, timeZone);
   return {
     id: eventIdForGame(userId, game.id),
     status: 'confirmed',
@@ -270,13 +342,14 @@ const eventForGame = ({ userId, game }) => {
 const calendarUrl = (calendarId, suffix = '') =>
   `${GOOGLE_CALENDAR_API}/calendars/${encodeURIComponent(calendarId)}${suffix}`;
 
-const createAppCalendar = async (accessToken) =>
+const createAppCalendar = async (accessToken, timeZone) =>
   googleRequest(`${GOOGLE_CALENDAR_API}/calendars`, {
     accessToken,
     method: 'POST',
     body: {
       summary: DEFAULT_CALENDAR_NAME,
       description: 'Watch dates synced from Hockey Tracker.',
+      timeZone,
     },
   });
 
@@ -292,8 +365,8 @@ const calendarIsAccessible = async (accessToken, calendarId) => {
   }
 };
 
-const upsertGameEvent = async ({ accessToken, calendarId, userId, game }) => {
-  const event = eventForGame({ userId, game });
+const upsertGameEvent = async ({ accessToken, calendarId, userId, game, timeZone }) => {
+  const event = eventForGame({ userId, game, timeZone });
   const eventUrl = calendarUrl(calendarId, `/events/${encodeURIComponent(event.id)}`);
   try {
     // Google keeps deleted organizer events as cancelled tombstones. GET still
@@ -357,6 +430,7 @@ const getConnection = async (userId) => {
     SELECT
       calendar_id,
       calendar_name,
+      time_zone,
       refresh_token_encrypted,
       connected_at,
       updated_at,
@@ -374,6 +448,7 @@ const getGoogleCalendarStatus = async (userId) => {
     configured: isGoogleCalendarConfigured(),
     connected: Boolean(connection),
     calendar_name: connection?.calendar_name || null,
+    time_zone: connection?.time_zone || null,
     connected_at: connection?.connected_at || null,
     last_synced_at: connection?.last_synced_at || null,
     last_sync_error: connection?.last_sync_error || null,
@@ -383,6 +458,12 @@ const getGoogleCalendarStatus = async (userId) => {
 const markSyncSuccess = (userId) => sql`
   UPDATE user_google_calendar_connections
   SET last_synced_at = NOW(), last_sync_error = NULL, updated_at = NOW()
+  WHERE user_id = ${userId}
+`;
+
+const updateConnectionTimeZone = (userId, timeZone) => sql`
+  UPDATE user_google_calendar_connections
+  SET time_zone = ${timeZone}, updated_at = NOW()
   WHERE user_id = ${userId}
 `;
 
@@ -434,6 +515,12 @@ const calendarGameSelect = (userId, gameId = null) => sql`
   )
   SELECT
     g.id,
+    CASE
+      WHEN (g.scheduled_at AT TIME ZONE 'UTC')::time = TIME '00:00:00'
+        THEN (g.scheduled_at AT TIME ZONE 'UTC')::date
+      ELSE (g.scheduled_at AT TIME ZONE 'America/New_York')::date
+    END::text AS game_date,
+    uwg.scheduled_for::text AS scheduled_for,
     COALESCE(
       uwg.scheduled_for,
       CASE
@@ -495,6 +582,7 @@ const syncScheduledGameToGoogleCalendar = async ({ userId, gameId }) => {
   if (!connection) return { status: 'not_connected' };
 
   try {
+    const timeZone = normalizeGoogleCalendarTimeZone(connection.time_zone);
     const accessToken = await refreshAccessToken(connection.refresh_token_encrypted);
     const games = await calendarGameSelect(userId, gameId);
     if (games[0]) {
@@ -503,6 +591,7 @@ const syncScheduledGameToGoogleCalendar = async ({ userId, gameId }) => {
         calendarId: connection.calendar_id,
         userId,
         game: games[0],
+        timeZone,
       });
     } else {
       await deleteGameEvent({
@@ -534,6 +623,11 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
   };
 
   try {
+    const timeZone = normalizeGoogleCalendarTimeZone(context.timeZone || connection.time_zone);
+    if (context.timeZone && timeZone !== connection.time_zone) {
+      await updateConnectionTimeZone(userId, timeZone);
+      connection.time_zone = timeZone;
+    }
     reportProgress({
       step: 'prepare',
       message: 'Preparing scheduled games...',
@@ -578,6 +672,7 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
         calendarId: connection.calendar_id,
         userId,
         game,
+        timeZone,
       });
       completed += 1;
       reportProgress({
@@ -620,8 +715,9 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
   }
 };
 
-const connectGoogleCalendar = async ({ userId, code }) => {
+const connectGoogleCalendar = async ({ userId, code, timeZone: requestedTimeZone }) => {
   requireGoogleCalendarConfig();
+  const timeZone = normalizeGoogleCalendarTimeZone(requestedTimeZone);
   const tokens = await exchangeAuthorizationCode(code);
   if (!tokens.access_token) {
     throw new GoogleCalendarError('Google did not return an access token', {
@@ -648,7 +744,7 @@ const connectGoogleCalendar = async ({ userId, code }) => {
     calendarId = null;
   }
   if (!calendarId) {
-    const calendar = await createAppCalendar(tokens.access_token);
+    const calendar = await createAppCalendar(tokens.access_token, timeZone);
     calendarId = calendar?.id;
   }
   if (!calendarId) {
@@ -661,16 +757,17 @@ const connectGoogleCalendar = async ({ userId, code }) => {
   const encryptedRefreshToken = encryptRefreshToken(refreshToken);
   const [connection] = await sql`
     INSERT INTO user_google_calendar_connections (
-      user_id, calendar_id, calendar_name, refresh_token_encrypted, connected_at, updated_at,
+      user_id, calendar_id, calendar_name, time_zone, refresh_token_encrypted, connected_at, updated_at,
       last_sync_error
     )
     VALUES (
-      ${userId}, ${calendarId}, ${DEFAULT_CALENDAR_NAME}, ${encryptedRefreshToken}, NOW(), NOW(), NULL
+      ${userId}, ${calendarId}, ${DEFAULT_CALENDAR_NAME}, ${timeZone}, ${encryptedRefreshToken}, NOW(), NOW(), NULL
     )
     ON CONFLICT (user_id)
     DO UPDATE SET
       calendar_id = EXCLUDED.calendar_id,
       calendar_name = EXCLUDED.calendar_name,
+      time_zone = EXCLUDED.time_zone,
       refresh_token_encrypted = EXCLUDED.refresh_token_encrypted,
       connected_at = NOW(),
       updated_at = NOW(),
@@ -678,6 +775,7 @@ const connectGoogleCalendar = async ({ userId, code }) => {
     RETURNING
       calendar_id,
       calendar_name,
+      time_zone,
       refresh_token_encrypted,
       connected_at,
       updated_at,
@@ -726,6 +824,7 @@ module.exports = {
   getGoogleCalendarAuthorizationUrl,
   getGoogleCalendarStatus,
   isGoogleCalendarConfigured,
+  normalizeGoogleCalendarTimeZone,
   syncAllScheduledGamesForUser,
   syncScheduledGameToGoogleCalendar,
   _private: {
@@ -735,6 +834,7 @@ module.exports = {
     encryptRefreshToken,
     eventForGame,
     eventIdForGame,
+    eventTimeForGame,
     googleRequest,
     upsertGameEvent,
   },

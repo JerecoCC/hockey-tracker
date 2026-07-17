@@ -11,6 +11,7 @@ const {
   disconnectGoogleCalendar,
   getGoogleCalendarAuthorizationUrl,
   getGoogleCalendarStatus,
+  normalizeGoogleCalendarTimeZone,
   syncAllScheduledGamesForUser,
 } = require('../services/googleCalendar');
 
@@ -63,7 +64,11 @@ router.get('/callback', async (req, res) => {
     if (!safeEqual(state.nonce, stateCookie)) {
       return redirectToGames(res, 'error', 'state_mismatch');
     }
-    await connectGoogleCalendar({ userId: state.userId, code: req.query.code });
+    await connectGoogleCalendar({
+      userId: state.userId,
+      code: req.query.code,
+      timeZone: normalizeGoogleCalendarTimeZone(state.timeZone),
+    });
     return redirectToGames(res, 'connected');
   } catch (err) {
     console.error('Google Calendar callback error:', err);
@@ -86,7 +91,8 @@ router.get('/', async (req, res) => {
 router.post('/connect', async (req, res) => {
   try {
     const nonce = crypto.randomBytes(32).toString('base64url');
-    const state = signGoogleCalendarState({ userId: req.user.id, nonce });
+    const timeZone = normalizeGoogleCalendarTimeZone(req.body?.time_zone);
+    const state = signGoogleCalendarState({ userId: req.user.id, nonce, timeZone });
     const authorizationUrl = getGoogleCalendarAuthorizationUrl({
       state,
       loginHint: req.user.email,
@@ -112,6 +118,10 @@ router.post('/sync', async (req, res) => {
   };
 
   try {
+    const requestedTimeZone = req.body?.time_zone;
+    const timeZone = requestedTimeZone
+      ? normalizeGoogleCalendarTimeZone(requestedTimeZone)
+      : undefined;
     if (streamProgress) {
       res.set({
         'Content-Type': 'application/x-ndjson; charset=utf-8',
@@ -120,11 +130,17 @@ router.post('/sync', async (req, res) => {
       });
     }
 
-    const result = streamProgress
-      ? await syncAllScheduledGamesForUser(req.user.id, {
-          onProgress: (progress) => writeStreamItem({ type: 'progress', progress }),
-        })
-      : await syncAllScheduledGamesForUser(req.user.id);
+    let result;
+    if (streamProgress) {
+      result = await syncAllScheduledGamesForUser(req.user.id, {
+        ...(timeZone ? { timeZone } : {}),
+        onProgress: (progress) => writeStreamItem({ type: 'progress', progress }),
+      });
+    } else {
+      result = timeZone
+        ? await syncAllScheduledGamesForUser(req.user.id, { timeZone })
+        : await syncAllScheduledGamesForUser(req.user.id);
+    }
     if (result.status === 'not_connected') {
       return res.status(409).json({ error: 'Google Calendar is not connected' });
     }

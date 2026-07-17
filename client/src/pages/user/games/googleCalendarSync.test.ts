@@ -1,4 +1,4 @@
-import { syncGoogleCalendarWithProgress } from './googleCalendarSync';
+import { getUserTimeZone, syncGoogleCalendarWithProgress } from './googleCalendarSync';
 
 const originalFetch = globalThis.fetch;
 
@@ -23,6 +23,10 @@ afterEach(() => {
 });
 
 describe('Google Calendar progress sync client', () => {
+  it('reads the browser IANA timezone', () => {
+    expect(getUserTimeZone()).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+  });
+
   it('reads chunked progress records and returns the final result', async () => {
     const onProgress = jest.fn();
     globalThis.fetch = jest.fn().mockResolvedValue({
@@ -37,6 +41,7 @@ describe('Google Calendar progress sync client', () => {
       syncGoogleCalendarWithProgress({
         endpoint: '/api/user/calendar/google/sync',
         headers: { Authorization: 'Bearer token' },
+        timeZone: 'Asia/Manila',
         onProgress,
       }),
     ).resolves.toEqual({ status: 'synced', synced: 2, removed: 0 });
@@ -46,7 +51,9 @@ describe('Google Calendar progress sync client', () => {
       headers: {
         Authorization: 'Bearer token',
         Accept: 'application/x-ndjson',
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({ time_zone: 'Asia/Manila' }),
     });
     expect(onProgress).toHaveBeenCalledWith({
       step: 'sync',
@@ -63,7 +70,10 @@ describe('Google Calendar progress sync client', () => {
     });
 
     await expect(
-      syncGoogleCalendarWithProgress({ endpoint: '/api/user/calendar/google/sync' }),
+      syncGoogleCalendarWithProgress({
+        endpoint: '/api/user/calendar/google/sync',
+        timeZone: 'Asia/Manila',
+      }),
     ).rejects.toThrow('Calendar API unavailable');
   });
 });

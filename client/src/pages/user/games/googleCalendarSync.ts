@@ -19,8 +19,11 @@ type GoogleCalendarSyncStreamItem =
 interface GoogleCalendarSyncOptions {
   endpoint: string;
   headers?: Record<string, string>;
+  timeZone: string;
   onProgress?: (progress: GoogleCalendarSyncProgress) => void;
 }
+
+export const getUserTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
 const errorMessageFromResponse = async (response: Response) => {
   try {
@@ -44,6 +47,7 @@ const isSyncResult = (value: unknown): value is GoogleCalendarSyncResult => {
 export const syncGoogleCalendarWithProgress = async ({
   endpoint,
   headers,
+  timeZone,
   onProgress,
 }: GoogleCalendarSyncOptions): Promise<GoogleCalendarSyncResult> => {
   const response = await fetch(endpoint, {
@@ -51,7 +55,9 @@ export const syncGoogleCalendarWithProgress = async ({
     headers: {
       ...headers,
       Accept: 'application/x-ndjson',
+      'Content-Type': 'application/json',
     },
+    body: JSON.stringify({ time_zone: timeZone }),
   });
 
   if (!response.ok) throw new Error(await errorMessageFromResponse(response));

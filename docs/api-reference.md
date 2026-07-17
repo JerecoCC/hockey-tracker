@@ -964,25 +964,25 @@ List seasons, optionally filtered by `?league_id=`.
 
 ### `GET /api/user/calendar/google`
 
-Returns whether Google Calendar sync is configured and connected, plus the calendar name and last sync status.
+Returns whether Google Calendar sync is configured and connected, plus the calendar name, stored IANA `time_zone`, and last sync status.
 
 ---
 
 ### `POST /api/user/calendar/google/connect`
 
-Starts the OAuth consent flow. The response contains `{ authorization_url }`; open it in the browser. This endpoint also sets the short-lived HttpOnly state cookie required by the callback.
+Starts the OAuth consent flow. Send the browser IANA timezone as `{ "time_zone": "Asia/Manila" }`. The response contains `{ authorization_url }`; open it in the browser. This endpoint also sets the short-lived HttpOnly state cookie required by the callback.
 
 ---
 
 ### `GET /api/user/calendar/google/callback`
 
-Public Google OAuth redirect target. It validates the signed state and matching state cookie, creates or reconnects the app-owned `Hockey Tracker` secondary calendar, performs an initial reconciliation, then redirects to `/games`.
+Public Google OAuth redirect target. It validates the signed state and matching state cookie, stores the signed browser timezone, creates or reconnects the app-owned `Hockey Tracker` secondary calendar, performs an initial reconciliation, then redirects to `/games`.
 
 ---
 
 ### `POST /api/user/calendar/google/sync`
 
-Reconciles non-skipped games from the nearest season whose `is_ended` flag is false and which contains games for the user's favorite teams, with the app-created Google calendar and removes stale managed events. An active date range wins; otherwise the nearest season boundary is used, with the latest start date breaking ties. Only games involving a favorite team are eligible. Events use the game's scheduled Eastern start time and a three-hour duration; games without a known time remain all-day events. A personal `scheduled_for` date moves the event while retaining that scheduled time, and clearing it restores the original date.
+Reconciles non-skipped games from the nearest season whose `is_ended` flag is false and which contains games for the user's favorite teams, with the app-created Google calendar and removes stale managed events. An active date range wins; otherwise the nearest season boundary is used, with the latest start date breaking ties. Only games involving a favorite team are eligible. Send `{ "time_zone": "Asia/Manila" }` to update the connection's IANA timezone. Events convert the game's scheduled Eastern instant into that timezone and use a three-hour duration; games without a known time remain all-day events. A personal `scheduled_for` date stays on the selected local day while retaining the converted local start time, and clearing it restores the original game instant.
 
 By default the endpoint returns `{ status: "synced", synced, removed }`. Send `Accept: application/x-ndjson` to receive newline-delimited `{ type: "progress", progress }` records during reconciliation followed by a `{ type: "result", result }` record. Progress includes a message and, once the reconciliation plan is known, `completed` and `total` operation counts.
 

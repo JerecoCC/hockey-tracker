@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -30,6 +30,7 @@ jest.mock('react-router-dom', () => ({
 }));
 jest.mock('axios');
 jest.mock('./googleCalendarSync', () => ({
+  getUserTimeZone: jest.fn(() => 'Asia/Manila'),
   syncGoogleCalendarWithProgress: jest.fn(),
 }));
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn(), useQueryClient: jest.fn() }));
@@ -712,6 +713,9 @@ describe('UserGames schedule views', () => {
 
   it('shows determinate progress while syncing a connected Google Calendar', async () => {
     const user = userEvent.setup();
+    let resolveSync:
+      | ((result: { status: 'synced'; synced: number; removed: number }) => void)
+      | null = null;
     mockUseQuery.mockImplementation(({ queryKey }: any) => {
       if (queryKey[0] === 'user-leagues')
         return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
@@ -732,14 +736,16 @@ describe('UserGames schedule views', () => {
       if (queryKey[0] === 'user-games') return { data: games, isLoading: false };
       return { data: [], isLoading: false };
     });
-    mockSyncGoogleCalendarWithProgress.mockImplementationOnce(async ({ onProgress }) => {
+    mockSyncGoogleCalendarWithProgress.mockImplementationOnce(({ onProgress }) => {
       onProgress?.({
         step: 'sync',
         message: 'Synced AWY @ HOM',
         completed: 1,
         total: 2,
       });
-      return { status: 'synced', synced: 2, removed: 0 };
+      return new Promise((resolve) => {
+        resolveSync = resolve;
+      });
     });
 
     render(<UserGames />);
@@ -749,6 +755,17 @@ describe('UserGames schedule views', () => {
       }),
     );
     await user.click(screen.getByRole('button', { name: 'Sync Now' }));
+
+    expect(screen.queryByText('Google Calendar Sync')).not.toBeInTheDocument();
+    const syncingButton = screen.getByRole('button', {
+      name: 'Google Calendar sync in progress',
+    });
+    expect(
+      within(syncingButton).getByRole('status', { name: 'Syncing Google Calendar' }),
+    ).toBeInTheDocument();
+    expect(mockSyncGoogleCalendarWithProgress).toHaveBeenCalledWith(
+      expect.objectContaining({ timeZone: 'Asia/Manila' }),
+    );
 
     await waitFor(() =>
       expect(toast.update).toHaveBeenCalledWith(
@@ -760,6 +777,9 @@ describe('UserGames schedule views', () => {
         }),
       ),
     );
+    await act(async () => {
+      resolveSync?.({ status: 'synced', synced: 2, removed: 0 });
+    });
     expect(toast.update).toHaveBeenCalledWith(
       'google-sync-toast',
       expect.objectContaining({
@@ -768,6 +788,7 @@ describe('UserGames schedule views', () => {
         progress: 1,
       }),
     );
+    expect(screen.getByRole('button', { name: 'Google Calendar sync settings' })).toBeEnabled();
   });
 
   it('shows schedule skeletons for calendar and Week views', async () => {
