@@ -2,6 +2,7 @@ import {
   type ChangeEvent,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -751,11 +752,6 @@ const ScoreImageModal = ({
     awayWinsInRange,
     homeWinsInRange,
     playoffWinsTotalMatchesGame,
-    numVals.awayScore,
-    numVals.homeScore,
-    numVals.playoffGameNum,
-    numVals.awayWins,
-    numVals.homeWins,
   ]);
   const isDownloadDisabled = generating || !scoreCardFormValidation.isValid;
   const shouldShowScoreCardError = (field: ScoreCardValidationField) =>
@@ -909,7 +905,6 @@ const ScoreImageModal = ({
     formLeague,
     formSeason,
     formIsPlayoff,
-    formLastPeriod,
     formGamesToWin,
     numVals.homeWins,
     numVals.awayWins,
@@ -930,11 +925,11 @@ const ScoreImageModal = ({
     containerH: number;
   } | null>(null);
 
-  const resetCrop = () => {
+  const resetCrop = useCallback(() => {
     setCropX(50);
     setCropY(50);
     setCropZoom(1);
-  };
+  }, []);
 
   // Clear hero image, crop, and form fields whenever the modal closes
   useEffect(() => {
@@ -965,7 +960,7 @@ const ScoreImageModal = ({
       setScoreCardValidationAttempted(false);
       resetNums();
     }
-  }, [open]);
+  }, [open, resetCrop, resetNums]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -975,7 +970,7 @@ const ScoreImageModal = ({
 
   // ── Clipboard paste support ───────────────────────────────────────────────────
 
-  const applyImageFile = async (file: File) => {
+  const applyImageFile = useCallback(async (file: File) => {
     setHeroPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
@@ -985,7 +980,7 @@ const ScoreImageModal = ({
     setHeroFile(file);
     resetCrop();
     setHeroExportUrl(await readFileAsDataUrl(file));
-  };
+  }, [resetCrop]);
 
   useEffect(() => {
     if (!open) return;
@@ -1005,7 +1000,7 @@ const ScoreImageModal = ({
     };
     document.addEventListener('paste', handlePaste);
     return () => document.removeEventListener('paste', handlePaste);
-  }, [open]);
+  }, [applyImageFile, open]);
 
   const handleClear = () => {
     setHeroPreviewUrl((prev) => {

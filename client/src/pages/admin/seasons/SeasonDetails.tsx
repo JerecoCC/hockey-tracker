@@ -235,14 +235,16 @@ const SeasonDetailsPage = () => {
     detailsLoading ||
     (!isLegacyLeagueRoute && leaguesLoading) ||
     (!isLegacySeasonRoute && leagueDetailsLoading);
+  const seasonLeagueCode = season?.league_code;
+  const seasonName = season?.name;
 
   useEffect(() => {
-    if (!season) return;
-    document.title = [season.league_code, season.name].filter(Boolean).join(' · ');
+    if (!seasonLeagueCode && !seasonName) return;
+    document.title = [seasonLeagueCode, seasonName].filter(Boolean).join(' · ');
     return () => {
       document.title = 'Hockey Tracker';
     };
-  }, [season?.league_code, season?.name]);
+  }, [seasonLeagueCode, seasonName]);
 
   const {
     skaters,

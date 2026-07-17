@@ -85,6 +85,31 @@ export default [
     },
   },
   {
+    files: ['src/context/ThemeProvider.tsx', 'src/stories/**/*.{ts,tsx}'],
+    rules: {
+      // Adapter re-exports and Storybook fixtures are not application refresh boundaries.
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    files: ['src/pages/admin/players/PlayerDetails.tsx'],
+    rules: {
+      // These tested builders intentionally close over the page's styled table
+      // cells. They are pure exports and do not carry React refresh state.
+      'react-refresh/only-export-components': [
+        'warn',
+        {
+          allowConstantExport: true,
+          allowExportNames: [
+            'buildManualMovementStintImport',
+            'buildCareerStatColumns',
+            'buildGameLogColumns',
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['**/*.test.{ts,tsx,js,jsx}', '**/*.spec.{ts,tsx,js,jsx}'],
     rules: {
       // Test doubles intentionally use loose inputs and anonymous components to
