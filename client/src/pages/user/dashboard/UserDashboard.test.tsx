@@ -1,4 +1,3 @@
-/* eslint-disable react/display-name, @typescript-eslint/no-explicit-any */
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';

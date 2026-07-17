@@ -18,10 +18,8 @@ import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
 import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
 import GameCard from '@/shared/GameCard/GameCard';
-import GoogleLogo from '@/shared/GoogleLogo/GoogleLogo';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
-import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
 import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
 import MultiSelect, {
   type MultiSelectOption,
@@ -46,20 +44,28 @@ import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Selec
 import ToggleButton from '@jerecocc/tracker-ui/components/ToggleButton/ToggleButton';
 import PeriodPicker from '@jerecocc/tracker-ui/components/PeriodPicker/PeriodPicker';
 import { type GameRecord } from '@/hooks/useGames';
+import {
+  DATE_ONLY_RE,
+  dateKeyToDate,
+  getOriginalGameDateKey,
+  getScheduledWatchDateKey,
+  isInvalidWatchScheduleDate,
+  type GameTimezone,
+} from '@/lib/gameSchedule';
+import {
+  canMarkGameWatched,
+  getGameMatchupLabel,
+  getOvertimeSuffix,
+  getScoreCardGame,
+} from '@/lib/gamePresentation';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import { buildUserGameDetailsPath } from '@/lib/routeSlugs';
-import {
-  getUserTimeZone,
-  syncGoogleCalendarWithProgress,
-  type GoogleCalendarSyncProgress,
-  type GoogleCalendarSyncResult,
-} from './googleCalendarSync';
+import GoogleCalendarSyncControl from './GoogleCalendarSyncControl';
 import styles from './UserGames.module.scss';
 
 const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/ScoreImageModal'));
 
-const API = import.meta.env.VITE_API_URL || '/api';
-const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+import { API, authHeaders } from '@/lib/apiClient';
 const WEEK_STORAGE_KEY = 'user-games-week-start';
 const CALENDAR_MONTH_STORAGE_KEY = 'user-games-calendar-month';
 const USER_WEEK_SUMMARY_STICKY_TOP = '52px';
@@ -67,98 +73,6 @@ const USER_WEEK_SUMMARY_STICKY_TOP_PX = 52;
 const USER_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX = 8;
 const USER_WEEK_SUMMARY_AUTO_SCROLL_START_GRACE_MS = 700;
 const USER_WEEK_SUMMARY_AUTO_SCROLL_IDLE_MS = 160;
-
-const googleCalendarConnectErrorMessage = (reason: string | null) => {
-  switch (reason) {
-    case 'access_denied':
-      return 'Google Calendar connection was cancelled';
-    case 'calendar_api_disabled':
-      return 'Google Calendar API is disabled for this OAuth project. Enable it in Google Cloud, then try again.';
-    case 'PERMISSION_DENIED':
-      return 'Google Calendar denied access. Verify the Calendar API is enabled in the OAuth project, then try again.';
-    case 'insufficient_calendar_scope':
-      return 'Google did not grant the required Calendar permission. Reconnect and approve Calendar access.';
-    case 'state_mismatch':
-      return 'Google Calendar connection expired or its browser cookie was unavailable. Try connecting again.';
-    case 'invalid_grant':
-      return 'Google authorization expired before it could be completed. Try connecting again.';
-    case 'missing_refresh_token':
-      return 'Google did not grant offline Calendar access. Remove the app from your Google connections, then reconnect.';
-    default:
-      return 'Failed to connect Google Calendar';
-  }
-};
-
-const googleCalendarLoadingToastOptions = {
-  autoClose: false,
-  closeButton: false,
-  closeOnClick: false,
-  draggable: false,
-  hideProgressBar: false,
-  pauseOnHover: false,
-  progressClassName: styles.googleCalendarProgressBar,
-};
-
-const startGoogleCalendarSyncProgressToast = () => {
-  let progressValue = 0;
-  const toastId = toast.loading('Syncing Google Calendar: preparing scheduled games...', {
-    ...googleCalendarLoadingToastOptions,
-    progress: progressValue,
-  });
-
-  return {
-    update: (progress: GoogleCalendarSyncProgress) => {
-      if (
-        typeof progress.completed === 'number' &&
-        typeof progress.total === 'number' &&
-        progress.total > 0
-      ) {
-        progressValue = Math.max(
-          progressValue,
-          Math.min(Math.max(progress.completed / progress.total, 0), 0.98),
-        );
-      } else {
-        progressValue = Math.max(progressValue, Math.min(progressValue + 0.08, 0.9));
-      }
-      toast.update(toastId, {
-        render: `Syncing Google Calendar: ${progress.message}`,
-        isLoading: true,
-        ...googleCalendarLoadingToastOptions,
-        progress: progressValue,
-      });
-    },
-    finish: (result: GoogleCalendarSyncResult) => {
-      toast.update(toastId, {
-        render: `Google Calendar synced: ${result.synced} ${result.synced === 1 ? 'game' : 'games'}, ${result.removed} removed`,
-        type: 'success',
-        isLoading: false,
-        autoClose: 4000,
-        closeButton: true,
-        closeOnClick: true,
-        draggable: true,
-        hideProgressBar: true,
-        pauseOnHover: true,
-        progress: 1,
-        progressClassName: styles.googleCalendarProgressBar,
-      });
-    },
-    fail: () => {
-      toast.update(toastId, {
-        render: 'Failed to sync Google Calendar',
-        type: 'error',
-        isLoading: false,
-        autoClose: 12000,
-        closeButton: true,
-        closeOnClick: true,
-        draggable: true,
-        hideProgressBar: true,
-        pauseOnHover: true,
-        progress: 1,
-        progressClassName: styles.googleCalendarProgressBar,
-      });
-    },
-  };
-};
 
 const getUserWeekSummaryActiveMarker = (summaryCard: HTMLDivElement | null): number =>
   (summaryCard?.getBoundingClientRect().bottom ?? USER_WEEK_SUMMARY_STICKY_TOP_PX) +
@@ -172,16 +86,6 @@ interface UserTeamOptionRecord {
   code: string | null;
   logo: string | null;
   league_id: string | null;
-}
-
-interface GoogleCalendarStatus {
-  configured: boolean;
-  connected: boolean;
-  calendar_name: string | null;
-  time_zone: string | null;
-  connected_at: string | null;
-  last_synced_at: string | null;
-  last_sync_error: string | null;
 }
 
 const STATUS_OPTIONS: SelectOption[] = [
@@ -202,36 +106,7 @@ const stableStringArray = (current: string[], next: string[]) =>
 const toDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
 
-const toLocalDateKey = (iso: string) => {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
-const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
 const MONTH_ONLY_RE = /^[0-9]{4}-[0-9]{2}$/;
-const ISO_DATE_PREFIX_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
-const ISO_MIDNIGHT_RE = /[T ]00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}(?::?[0-9]{2})?)?$/;
-
-const toDateKeyInZone = (date: Date, timeZone?: string) => {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date);
-
-  const year = parts.find((part) => part.type === 'year')?.value;
-  const month = parts.find((part) => part.type === 'month')?.value;
-  const day = parts.find((part) => part.type === 'day')?.value;
-  return year && month && day ? `${year}-${month}-${day}` : null;
-};
-
-const getRawDateKey = (value: string | null) => value?.match(ISO_DATE_PREFIX_RE)?.[1] ?? null;
-
-const dateKeyToDate = (key: string) => {
-  const [year, month, day] = key.split('-').map(Number);
-  return new Date(year, month - 1, day);
-};
 
 const fmtDayHeading = (key: string) => {
   const [y, mo, d] = key.split('-').map(Number);
@@ -340,93 +215,20 @@ const getStoredCalendarMonth = () => {
   return stored && MONTH_ONLY_RE.test(stored) ? fromMonthPickerValue(stored) : null;
 };
 
-type TzPref = 'ET' | 'local';
+const USER_TIMEZONE: GameTimezone = 'local';
 
-const USER_TIMEZONE: TzPref = 'local';
-
-/** Returns 'EST' or 'EDT' for the America/New_York timezone on the given game date. */
-const getEtAbbrForDateKey = (dateKey: string): string => {
-  return (
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York',
-      timeZoneName: 'short',
-    })
-      .formatToParts(new Date(`${dateKey}T17:00:00Z`))
-      .find((p) => p.type === 'timeZoneName')?.value ?? 'ET'
-  );
-};
-
-const getEtDateKey = (scheduledAt: string | null, scheduledTime: string | null) => {
-  if (!scheduledAt) return null;
-  if (DATE_ONLY_RE.test(scheduledAt)) return scheduledAt;
-  const rawDateKey = getRawDateKey(scheduledAt);
-  const isMidnightPlaceholder =
-    !!scheduledTime &&
-    scheduledTime !== '00:00' &&
-    !!rawDateKey &&
-    ISO_MIDNIGHT_RE.test(scheduledAt);
-  if (isMidnightPlaceholder) return rawDateKey;
-  const base = new Date(scheduledAt);
-  if (Number.isNaN(base.getTime())) return rawDateKey;
-  return toDateKeyInZone(base, 'America/New_York');
-};
-
-const getScheduledInstant = (scheduledAt: string | null, scheduledTime: string | null) => {
-  if (!scheduledAt) return null;
-
-  const direct = new Date(scheduledAt);
-  const hasDirectInstant = !Number.isNaN(direct.getTime());
-
-  if (!scheduledTime) {
-    if (DATE_ONLY_RE.test(scheduledAt)) return new Date(`${scheduledAt}T17:00:00Z`);
-    return hasDirectInstant ? direct : null;
-  }
-
-  const etDatePart =
-    getEtDateKey(scheduledAt, scheduledTime) ??
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
-  const offset = getEtAbbrForDateKey(etDatePart) === 'EDT' ? '-04:00' : '-05:00';
-  return new Date(`${etDatePart}T${scheduledTime}:00${offset}`);
-};
-
-const getOriginalGameDateKey = (game: GameRecord, tzPref: TzPref) => {
-  if (game.scheduled_at && !game.scheduled_time) {
-    if (DATE_ONLY_RE.test(game.scheduled_at)) return game.scheduled_at;
-    const rawDateKey = getRawDateKey(game.scheduled_at);
-    if (rawDateKey && ISO_MIDNIGHT_RE.test(game.scheduled_at)) return rawDateKey;
-  }
-  const instant = getScheduledInstant(game.scheduled_at, game.scheduled_time);
-  if (!instant) return null;
-  return tzPref === 'ET'
-    ? (getEtDateKey(game.scheduled_at, game.scheduled_time) ??
-        toDateKeyInZone(instant, 'America/New_York'))
-    : toDateKeyInZone(instant);
-};
-
-const isInvalidWatchScheduleDate = (
+const canDropGameOnCalendarDate = (
   game: GameRecord,
-  scheduledFor: string | null | undefined,
-  tzPref: TzPref,
+  dateKey: string,
+  timezone: GameTimezone,
 ) => {
-  const watchDateKey = getScheduledWatchDateKey(scheduledFor);
-  if (!watchDateKey) return false;
-  const gameDateKey = getOriginalGameDateKey(game, tzPref);
-  return !!gameDateKey && watchDateKey <= gameDateKey;
-};
-
-const canDropGameOnCalendarDate = (game: GameRecord, dateKey: string, tzPref: TzPref) => {
-  const originalDateKey = getOriginalGameDateKey(game, tzPref);
+  const originalDateKey = getOriginalGameDateKey(game, timezone);
   if (originalDateKey === dateKey) return true;
-  return !isInvalidWatchScheduleDate(game, dateKey, tzPref);
+  return !isInvalidWatchScheduleDate(game, dateKey, timezone);
 };
 
-const getScheduledWatchDateKey = (value: string | null | undefined) => {
-  if (!value) return null;
-  return getRawDateKey(value) ?? toLocalDateKey(value);
-};
-
-const getEffectiveUserDateKey = (game: GameRecord, tzPref: TzPref) =>
-  getScheduledWatchDateKey(game.scheduled_for) ?? getOriginalGameDateKey(game, tzPref);
+const getEffectiveUserDateKey = (game: GameRecord, timezone: GameTimezone) =>
+  getScheduledWatchDateKey(game.scheduled_for) ?? getOriginalGameDateKey(game, timezone);
 
 interface UserGamesCacheQuery {
   statusFilter: string;
@@ -470,7 +272,7 @@ const isDateKeyInMonthQueryWindow = (dateKey: string, monthKey: string) => {
 const userGameMatchesCachedQuery = (
   game: GameRecord,
   query: UserGamesCacheQuery,
-  tzPref: TzPref,
+  tzPref: GameTimezone,
 ) => {
   if (query.statusFilter !== 'all' && game.status !== query.statusFilter) return false;
   if (query.leagueId !== 'all' && game.league_id !== query.leagueId) return false;
@@ -493,7 +295,7 @@ const updateScheduledGameCache = (
   existing: GameRecord[] | undefined,
   queryKey: readonly unknown[],
   updatedGame: GameRecord,
-  tzPref: TzPref,
+  tzPref: GameTimezone,
 ) => {
   if (!Array.isArray(existing)) return existing;
 
@@ -607,7 +409,7 @@ const ORIGINAL_GAME_DATE_FMT = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
-const getOriginalGameDateLabel = (game: GameRecord, tzPref: TzPref) => {
+const getOriginalGameDateLabel = (game: GameRecord, tzPref: GameTimezone) => {
   if (!getScheduledWatchDateKey(game.scheduled_for)) return null;
   const originalDateKey = getOriginalGameDateKey(game, tzPref);
   return originalDateKey ? ORIGINAL_GAME_DATE_FMT.format(dateKeyToDate(originalDateKey)) : null;
@@ -616,38 +418,14 @@ const getOriginalGameDateLabel = (game: GameRecord, tzPref: TzPref) => {
 const shouldShowWatchedScore = (game: GameRecord) =>
   !!game.watched_by_user && (game.status === 'final' || game.status === 'in_progress');
 
-const getOvertimeSuffix = (game: GameRecord) => {
-  if (game.shootout || game.period_scores.some((ps) => ps.period === 'SO')) return '/SO';
-  if ((game.overtime_periods ?? 0) > 0 || game.period_scores.some((ps) => ps.period === 'OT')) {
-    return '/OT';
-  }
-  return '';
-};
-
-const getScoreCardGame = (game: GameRecord): GameRecord => ({
-  ...game,
-  series_home_wins: game.series_home_wins_at_game ?? null,
-  series_away_wins: game.series_away_wins_at_game ?? null,
-});
-
 const SCHEDULE_TOAST_DATE_FMT = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
   year: 'numeric',
 });
 
-const getGameActionLabel = (game: GameRecord) => `${game.away_team.code} @ ${game.home_team.code}`;
 const formatScheduleToastDate = (dateKey: string) =>
   SCHEDULE_TOAST_DATE_FMT.format(dateKeyToDate(dateKey));
-const canMarkGameWatched = (game: GameRecord) => game.status === 'final';
-
-const formatCalendarSyncTime = (value: string | null) =>
-  value
-    ? new Date(value).toLocaleString('en-US', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      })
-    : null;
 
 // ── Playoff series markers ───────────────────────────────────────────────────
 
@@ -767,97 +545,6 @@ const ScheduleWatchModal = ({
   );
 };
 
-const GoogleCalendarModal = ({
-  open,
-  status,
-  busy,
-  onClose,
-  onConnect,
-  onSync,
-  onDisconnect,
-}: {
-  open: boolean;
-  status: GoogleCalendarStatus | undefined;
-  busy: boolean;
-  onClose: () => void;
-  onConnect: () => void;
-  onSync: () => void;
-  onDisconnect: () => void;
-}) => {
-  const connected = !!status?.connected;
-  const configured = !!status?.configured;
-  const lastSyncedAt = formatCalendarSyncTime(status?.last_synced_at ?? null);
-
-  return (
-    <Modal
-      open={open}
-      title="Google Calendar Sync"
-      onClose={onClose}
-      onConfirm={connected ? onSync : onConnect}
-      confirmLabel={
-        busy
-          ? connected
-            ? 'Syncing…'
-            : 'Connecting…'
-          : connected
-            ? 'Sync Now'
-            : 'Connect Google Calendar'
-      }
-      confirmDisabled={busy || !configured}
-      busy={busy}
-      footerStart={
-        connected ? (
-          <Button
-            type="button"
-            variant="ghost"
-            intent="neutral"
-            onClick={onDisconnect}
-            disabled={busy}
-          >
-            Disconnect &amp; Remove Calendar
-          </Button>
-        ) : undefined
-      }
-    >
-      <div className={styles.googleCalendarModalBody}>
-        {!configured ? (
-          <p>
-            Google Calendar sync is unavailable until the server OAuth callback and token secret are
-            configured.
-          </p>
-        ) : connected ? (
-          <>
-            <p>
-              Games from the nearest season that is not marked done, filtered to your favorite
-              teams, sync as timed events converted to your local timezone in your{' '}
-              <strong>{status?.calendar_name || 'Hockey Tracker'}</strong> calendar. A scheduled
-              watch date moves the event; clearing that date moves it back to the original game
-              date, and skipping the game removes it.
-            </p>
-            <p className={styles.googleCalendarStatus}>
-              {lastSyncedAt ? `Last synced ${lastSyncedAt}` : 'Connected — not synced yet'}
-            </p>
-            {status?.last_sync_error && (
-              <p className={styles.googleCalendarError}>
-                The last sync failed. Use Sync Now to retry.
-              </p>
-            )}
-            <p className={styles.googleCalendarDisconnectNote}>
-              Disconnecting also removes the app-created calendar and its synced events.
-            </p>
-          </>
-        ) : (
-          <p>
-            Connect Google Calendar to mirror games from the nearest season that is not marked done,
-            filtered to your favorite teams. Hockey Tracker creates a separate calendar and can only
-            manage events inside that calendar.
-          </p>
-        )}
-      </div>
-    </Modal>
-  );
-};
-
 // ── Calendar game card ────────────────────────────────────────────────────────
 
 const CalendarGameCard = ({
@@ -876,7 +563,7 @@ const CalendarGameCard = ({
   busy,
 }: {
   game: GameRecord;
-  tzPref: TzPref;
+  tzPref: GameTimezone;
   onOpen: () => void;
   onDownloadScoreCard: () => void;
   onMarkWatched: () => Promise<void>;
@@ -1022,8 +709,6 @@ const UserGames = () => {
   const [scoreImageOpen, setScoreImageOpen] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
-  const [googleCalendarOpen, setGoogleCalendarOpen] = useState(false);
-  const [googleCalendarBusy, setGoogleCalendarBusy] = useState(false);
   const [calendarDownloadBusy, setCalendarDownloadBusy] = useState(false);
   const seededTeamFilterLeagueRef = useRef<string | null>(null);
   const calendarGridRef = useRef<HTMLDivElement>(null);
@@ -1037,38 +722,6 @@ const UserGames = () => {
   useEffect(() => {
     sessionStorage.setItem(CALENDAR_MONTH_STORAGE_KEY, toMonthPickerValue(calendarMonth));
   }, [calendarMonth]);
-
-  const { data: googleCalendarStatus } = useQuery<GoogleCalendarStatus>({
-    queryKey: ['google-calendar-status'],
-    queryFn: async () => {
-      const { data } = await axios.get<GoogleCalendarStatus>(`${API}/user/calendar/google`, {
-        headers: authHeaders(),
-      });
-      return data;
-    },
-  });
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const result = params.get('google_calendar');
-    if (!result) return;
-
-    if (result === 'connected') {
-      toast.success('Google Calendar connected and synced');
-      void queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
-    } else {
-      toast.error(googleCalendarConnectErrorMessage(params.get('reason')));
-    }
-
-    params.delete('google_calendar');
-    params.delete('reason');
-    const search = params.toString();
-    window.history.replaceState(
-      {},
-      '',
-      `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`,
-    );
-  }, [queryClient]);
 
   const gamesPeriodParams = useMemo<{ week?: string; month?: string }>(() => {
     if (view === 'calendar') {
@@ -1367,59 +1020,6 @@ const UserGames = () => {
     setScheduleDate(getScheduledWatchDateKey(game.scheduled_for) ?? '');
   };
 
-  const connectGoogleCalendar = async () => {
-    if (googleCalendarBusy) return;
-    setGoogleCalendarBusy(true);
-    try {
-      const { data } = await axios.post<{ authorization_url: string }>(
-        `${API}/user/calendar/google/connect`,
-        { time_zone: getUserTimeZone() },
-        { headers: authHeaders(), withCredentials: true },
-      );
-      window.location.assign(data.authorization_url);
-    } catch {
-      toast.error('Failed to start Google Calendar connection');
-    } finally {
-      setGoogleCalendarBusy(false);
-    }
-  };
-
-  const syncGoogleCalendar = async () => {
-    if (googleCalendarBusy) return;
-    setGoogleCalendarBusy(true);
-    setGoogleCalendarOpen(false);
-    const progressToast = startGoogleCalendarSyncProgressToast();
-    try {
-      const data = await syncGoogleCalendarWithProgress({
-        endpoint: `${API}/user/calendar/google/sync`,
-        headers: authHeaders(),
-        timeZone: getUserTimeZone(),
-        onProgress: progressToast.update,
-      });
-      await queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
-      progressToast.finish(data);
-    } catch {
-      progressToast.fail();
-    } finally {
-      setGoogleCalendarBusy(false);
-    }
-  };
-
-  const disconnectGoogleCalendar = async () => {
-    if (googleCalendarBusy) return;
-    setGoogleCalendarBusy(true);
-    try {
-      await axios.delete(`${API}/user/calendar/google`, { headers: authHeaders() });
-      await queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
-      setGoogleCalendarOpen(false);
-      toast.success('Google Calendar disconnected');
-    } catch {
-      toast.error('Failed to disconnect Google Calendar');
-    } finally {
-      setGoogleCalendarBusy(false);
-    }
-  };
-
   const saveScheduleForGame = async (game: GameRecord, scheduledFor: string | null) => {
     const gameId = game.id;
     if (actionGameId === gameId || scheduleBusy) return false;
@@ -1446,8 +1046,8 @@ const UserGames = () => {
       }
       toast.success(
         scheduledFor
-          ? `${getGameActionLabel(game)} scheduled for ${formatScheduleToastDate(scheduledFor)}`
-          : `${getGameActionLabel(game)} watch schedule cleared`,
+          ? `${getGameMatchupLabel(game)} scheduled for ${formatScheduleToastDate(scheduledFor)}`
+          : `${getGameMatchupLabel(game)} watch schedule cleared`,
       );
       return true;
     } catch {
@@ -1484,7 +1084,7 @@ const UserGames = () => {
           );
         },
       );
-      toast.success(`${getGameActionLabel(game)} marked as watched`);
+      toast.success(`${getGameMatchupLabel(game)} marked as watched`);
     } catch {
       toast.error('Failed to mark game as watched');
     } finally {
@@ -1517,7 +1117,7 @@ const UserGames = () => {
             : existing.filter((game) => game.id !== gameId);
         },
       );
-      toast.success(`${getGameActionLabel(game)} skipped`);
+      toast.success(`${getGameMatchupLabel(game)} skipped`);
     } catch {
       toast.error('Failed to skip game');
     } finally {
@@ -1549,8 +1149,8 @@ const UserGames = () => {
       );
       toast.success(
         action === 'undo-skip'
-          ? `${getGameActionLabel(game)} restored`
-          : `${getGameActionLabel(game)} marked as unwatched`,
+          ? `${getGameMatchupLabel(game)} restored`
+          : `${getGameMatchupLabel(game)} marked as unwatched`,
       );
     } catch {
       toast.error(action === 'undo-skip' ? 'Failed to undo skip' : 'Failed to unwatch game');
@@ -1751,41 +1351,7 @@ const UserGames = () => {
         action={
           <ScheduleGamesActions>
             <div className={styles.viewFilterControls}>
-              <Button
-                variant="outlined"
-                intent="neutral"
-                type="button"
-                className={styles.googleCalendarIconButton}
-                data-connected={googleCalendarStatus?.connected ? 'true' : 'false'}
-                data-syncing={googleCalendarBusy ? 'true' : 'false'}
-                aria-label={
-                  googleCalendarBusy
-                    ? 'Google Calendar sync in progress'
-                    : 'Google Calendar sync settings'
-                }
-                tooltip={
-                  googleCalendarBusy
-                    ? 'Syncing Google Calendar'
-                    : googleCalendarStatus?.connected
-                      ? 'Google Calendar connected'
-                      : 'Connect Google Calendar'
-                }
-                onClick={() => {
-                  if (!googleCalendarBusy) setGoogleCalendarOpen(true);
-                }}
-              >
-                <GoogleLogo className={styles.googleCalendarIcon} />
-                {googleCalendarBusy && (
-                  <span className={styles.googleCalendarSyncOverlay}>
-                    <LoadingSpinner
-                      message="Syncing Google Calendar"
-                      layout="inline"
-                      size="sm"
-                      className={styles.googleCalendarSyncSpinner}
-                    />
-                  </span>
-                )}
-              </Button>
+              <GoogleCalendarSyncControl />
               <Button
                 variant="outlined"
                 intent="neutral"
@@ -1974,18 +1540,6 @@ const UserGames = () => {
           </ScheduleCalendarCard>
         </div>
       )}
-
-      <GoogleCalendarModal
-        open={googleCalendarOpen}
-        status={googleCalendarStatus}
-        busy={googleCalendarBusy}
-        onClose={() => {
-          if (!googleCalendarBusy) setGoogleCalendarOpen(false);
-        }}
-        onConnect={connectGoogleCalendar}
-        onSync={syncGoogleCalendar}
-        onDisconnect={disconnectGoogleCalendar}
-      />
 
       {scheduleTarget && (
         <ScheduleWatchModal

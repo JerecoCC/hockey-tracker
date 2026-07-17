@@ -21,10 +21,9 @@ import {
 import { buildUserWatchedTeamPath } from '@/lib/routeSlugs';
 import styles from './UserGamesWatched.module.scss';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders } from '@/lib/apiClient';
 const ALL_YEARS = 'all';
 
-const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
 const YOUR_RECORD_TOOLTIP = 'Wins-Losses-OT Losses';
 

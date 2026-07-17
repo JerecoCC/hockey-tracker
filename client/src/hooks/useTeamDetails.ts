@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 import type { AwardCompetitionScope } from '@/lib/awardDefinitions';
 import { type CreateTeamData } from './useTeams';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders, getApiErrorMessage as apiError } from '@/lib/apiClient';
 
 export interface TeamDetailRecord {
   id: string;
@@ -63,15 +63,6 @@ export interface TeamAwardRecord {
   team_text_color: string | null;
 }
 
-const authHeaders = () => {
-  const token = localStorage.getItem('token');
-  return { Authorization: `Bearer ${token}` };
-};
-
-const apiError = (err: unknown, fallback: string) => {
-  const e = err as AxiosError<{ error?: string }>;
-  return e.response?.data?.error ?? fallback;
-};
 
 type TeamDetailsMode = 'admin' | 'user';
 

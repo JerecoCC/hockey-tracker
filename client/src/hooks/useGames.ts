@@ -3,11 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 
-const API = import.meta.env.VITE_API_URL || '/api';
-
-const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
-const apiError = (err: unknown, fallback: string) =>
-  (err as AxiosError<{ error?: string }>).response?.data?.error ?? fallback;
+import { API, authHeaders, getApiErrorMessage as apiError } from '@/lib/apiClient';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

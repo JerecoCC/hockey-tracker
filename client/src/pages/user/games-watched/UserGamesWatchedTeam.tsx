@@ -28,12 +28,11 @@ import {
 } from '@/lib/watchedTeams';
 import styles from './UserGamesWatchedTeam.module.scss';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders } from '@/lib/apiClient';
 const ALL_YEARS = 'all';
 const PHONE_MAX_WIDTH = 640;
 const TABLET_MAX_WIDTH = 768;
 const HERO_STICKY_TOP = 52;
-const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
 const getScrollContainer = (element: HTMLElement) => {
   let parent = element.parentElement;

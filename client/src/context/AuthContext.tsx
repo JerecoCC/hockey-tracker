@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import axios from 'axios';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API } from '@/lib/apiClient';
 
 export interface User {
   id: string;

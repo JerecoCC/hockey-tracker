@@ -1,17 +1,12 @@
 import { useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 import { type PlayerStatus } from '@/lib/playerStatus';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders, getApiErrorMessage as apiError } from '@/lib/apiClient';
 
-const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem('token')}`,
-});
 
-const apiError = (err: unknown, fallback: string): string =>
-  (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
 export type PlayerPosition = 'C' | 'LW' | 'RW' | 'F' | 'D' | 'LD' | 'RD' | 'G';
 export type PlayerShoots = 'L' | 'R';

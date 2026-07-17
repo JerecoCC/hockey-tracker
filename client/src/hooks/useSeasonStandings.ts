@@ -2,8 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-const API = import.meta.env.VITE_API_URL || '/api';
-const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+import { API, authHeaders } from '@/lib/apiClient';
 
 export interface TeamStandingRecord {
   team_id: string;

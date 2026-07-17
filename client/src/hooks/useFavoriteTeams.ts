@@ -3,12 +3,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders } from '@/lib/apiClient';
 
-const authHeaders = () => {
-  const token = localStorage.getItem('token');
-  return { Authorization: `Bearer ${token}` };
-};
 
 const QUERY_KEY = ['user-favorites'];
 

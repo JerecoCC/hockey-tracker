@@ -4,11 +4,8 @@ import { toast } from 'react-toastify';
 import type { AwardCompetitionScope } from '@/lib/awardDefinitions';
 import { type PlayerRecord } from './useLeaguePlayers';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders } from '@/lib/apiClient';
 
-const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem('token')}`,
-});
 
 type PlayerDetailsMode = 'admin' | 'user';
 

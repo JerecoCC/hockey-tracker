@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders, getApiErrorMessage as apiError } from '@/lib/apiClient';
 
 export interface TeamIteration {
   id: string;
@@ -50,15 +50,6 @@ export interface UpdateIterationPayload {
   end_date?: string | null;
 }
 
-const authHeaders = () => {
-  const token = localStorage.getItem('token');
-  return { Authorization: `Bearer ${token}` };
-};
-
-const apiError = (err: unknown, fallback: string) => {
-  const e = err as AxiosError<{ error?: string }>;
-  return e.response?.data?.error ?? fallback;
-};
 
 const useTeamHistory = (teamId: string | undefined) => {
   const queryClient = useQueryClient();

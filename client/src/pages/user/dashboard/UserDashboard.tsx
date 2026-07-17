@@ -18,6 +18,17 @@ import { useAuth } from '@/context/AuthContext';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
 import { type GameRecord } from '@/hooks/useGames';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
+import {
+  DATE_ONLY_RE,
+  getScheduledWatchDateKey,
+  isInvalidWatchScheduleDate,
+  type GameTimezone,
+} from '@/lib/gameSchedule';
+import {
+  canMarkGameWatched,
+  getOvertimeSuffix,
+  getScoreCardGame,
+} from '@/lib/gamePresentation';
 import { buildUserWatchedTeamPath } from '@/lib/routeSlugs';
 import { getWatchedTeamSummaries, type TeamWatchSummary } from '@/lib/watchedTeams';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
@@ -25,40 +36,13 @@ import styles from './UserDashboard.module.scss';
 
 const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/ScoreImageModal'));
 
-const API = import.meta.env.VITE_API_URL || '/api';
-const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+import { API, authHeaders } from '@/lib/apiClient';
 // Admin-only testing aid: overrides the dashboard's notion of "today".
 const ADMIN_DATE_OVERRIDE_KEY = 'admin-dashboard-date-override';
-const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
-const ISO_DATE_PREFIX_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
-const ISO_MIDNIGHT_RE = /[T ]00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}(?::?[0-9]{2})?)?$/;
-
-type TzPref = 'ET' | 'local';
-const USER_TIMEZONE: TzPref = 'local';
+const USER_TIMEZONE: GameTimezone = 'local';
 
 const dateToISO = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-const toLocalDateKey = (iso: string) => {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-};
-
-const toDateKeyInZone = (date: Date, timeZone?: string) => {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date);
-
-  const year = parts.find((part) => part.type === 'year')?.value;
-  const month = parts.find((part) => part.type === 'month')?.value;
-  const day = parts.find((part) => part.type === 'day')?.value;
-  return year && month && day ? `${year}-${month}-${day}` : null;
-};
-
-const getRawDateKey = (value: string | null) => value?.match(ISO_DATE_PREFIX_RE)?.[1] ?? null;
 
 const fmtDayHeading = (key: string) => {
   const [year, month, day] = key.split('-').map(Number);
@@ -70,99 +54,12 @@ const fmtDayHeading = (key: string) => {
   });
 };
 
-const getEtAbbrForDateKey = (dateKey: string): string =>
-  new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    timeZoneName: 'short',
-  })
-    .formatToParts(new Date(`${dateKey}T17:00:00Z`))
-    .find((part) => part.type === 'timeZoneName')?.value ?? 'ET';
-
-const getEtDateKey = (scheduledAt: string | null, scheduledTime: string | null) => {
-  if (!scheduledAt) return null;
-  if (DATE_ONLY_RE.test(scheduledAt)) return scheduledAt;
-  const rawDateKey = getRawDateKey(scheduledAt);
-  const isMidnightPlaceholder =
-    !!scheduledTime &&
-    scheduledTime !== '00:00' &&
-    !!rawDateKey &&
-    ISO_MIDNIGHT_RE.test(scheduledAt);
-  if (isMidnightPlaceholder) return rawDateKey;
-  const base = new Date(scheduledAt);
-  if (Number.isNaN(base.getTime())) return rawDateKey;
-  return toDateKeyInZone(base, 'America/New_York');
-};
-
-const getScheduledInstant = (scheduledAt: string | null, scheduledTime: string | null) => {
-  if (!scheduledAt) return null;
-
-  const direct = new Date(scheduledAt);
-  const hasDirectInstant = !Number.isNaN(direct.getTime());
-
-  if (!scheduledTime) {
-    if (DATE_ONLY_RE.test(scheduledAt)) return new Date(`${scheduledAt}T17:00:00Z`);
-    return hasDirectInstant ? direct : null;
-  }
-
-  const etDatePart =
-    getEtDateKey(scheduledAt, scheduledTime) ?? toDateKeyInZone(new Date(), 'America/New_York');
-  if (!etDatePart) return null;
-  const offset = getEtAbbrForDateKey(etDatePart) === 'EDT' ? '-04:00' : '-05:00';
-  return new Date(`${etDatePart}T${scheduledTime}:00${offset}`);
-};
-
-const getScheduledWatchDateKey = (value: string | null | undefined) => {
-  if (!value) return null;
-  return getRawDateKey(value) ?? toLocalDateKey(value);
-};
-
-const getOriginalGameDateKey = (game: GameRecord, tzPref: TzPref) => {
-  if (game.scheduled_at && !game.scheduled_time) {
-    if (DATE_ONLY_RE.test(game.scheduled_at)) return game.scheduled_at;
-    const rawDateKey = getRawDateKey(game.scheduled_at);
-    if (rawDateKey && ISO_MIDNIGHT_RE.test(game.scheduled_at)) return rawDateKey;
-  }
-  const instant = getScheduledInstant(game.scheduled_at, game.scheduled_time);
-  if (!instant) return null;
-  return tzPref === 'ET'
-    ? (getEtDateKey(game.scheduled_at, game.scheduled_time) ??
-        toDateKeyInZone(instant, 'America/New_York'))
-    : toDateKeyInZone(instant);
-};
-
-const isInvalidWatchScheduleDate = (
-  game: GameRecord,
-  scheduledFor: string | null | undefined,
-  tzPref: TzPref,
-) => {
-  const watchDateKey = getScheduledWatchDateKey(scheduledFor);
-  if (!watchDateKey) return false;
-  const gameDateKey = getOriginalGameDateKey(game, tzPref);
-  return !!gameDateKey && watchDateKey <= gameDateKey;
-};
-
 const sortGamesByTime = (a: GameRecord, b: GameRecord) => {
   if (!a.scheduled_time && !b.scheduled_time) return 0;
   if (!a.scheduled_time) return 1;
   if (!b.scheduled_time) return -1;
   return a.scheduled_time.localeCompare(b.scheduled_time);
 };
-
-const getOvertimeSuffix = (game: GameRecord) => {
-  if (game.shootout || game.period_scores.some((ps) => ps.period === 'SO')) return '/SO';
-  if ((game.overtime_periods ?? 0) > 0 || game.period_scores.some((ps) => ps.period === 'OT')) {
-    return '/OT';
-  }
-  return '';
-};
-
-const getScoreCardGame = (game: GameRecord): GameRecord => ({
-  ...game,
-  series_home_wins: game.series_home_wins_at_game ?? null,
-  series_away_wins: game.series_away_wins_at_game ?? null,
-});
-
-const canMarkGameWatched = (game: GameRecord) => game.status === 'final';
 
 const sortWatchedTeamSummaries = (a: TeamWatchSummary, b: TeamWatchSummary) => {
   if (b.count !== a.count) return b.count - a.count;

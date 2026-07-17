@@ -1,9 +1,9 @@
 ﻿import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders, getApiErrorMessage as apiError } from '@/lib/apiClient';
 
 /** One rule in the playoff qualification format. Evaluated in order. */
 export interface PlayoffFormatRule {
@@ -56,13 +56,7 @@ export interface CreateLeagueData {
   playoff_format?: PlayoffFormatRule[] | null;
 }
 
-const authHeaders = () => {
-  const token = localStorage.getItem('token');
-  return { Authorization: `Bearer ${token}` };
-};
 
-const apiError = (err: unknown, fallback: string): string =>
-  (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
 type LeagueDataMode = 'admin' | 'user';
 

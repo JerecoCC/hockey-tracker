@@ -1,19 +1,14 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 import { type SeasonRecord, type CreateSeasonData } from './useSeasons';
 import { type GroupTeamRecord } from './useLeagueGroups';
 import useGroupAlignmentSets from './useGroupAlignmentSets';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders, getApiErrorMessage as apiError } from '@/lib/apiClient';
 
-const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem('token')}`,
-});
 
-const apiError = (err: unknown, fallback: string): string =>
-  (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

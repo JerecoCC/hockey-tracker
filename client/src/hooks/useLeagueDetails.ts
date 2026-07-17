@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 import { type LeagueRecord, type CreateLeagueData } from './useLeagues';
 import { type TeamRecord, type CreateTeamData } from './useTeams';
 import { type CreateSeasonData } from './useSeasons';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders, getApiErrorMessage as apiError } from '@/lib/apiClient';
 
 /** Full league shape returned by the details endpoint (superset of the list record). */
 export interface LeagueFullRecord extends LeagueRecord {
@@ -30,13 +30,7 @@ export interface LeagueDetailsRecord extends LeagueFullRecord {
   seasons: LeagueSeasonRecord[];
 }
 
-const authHeaders = () => {
-  const token = localStorage.getItem('token');
-  return { Authorization: `Bearer ${token}` };
-};
 
-const apiError = (err: unknown, fallback: string): string =>
-  (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
 type LeagueDetailsMode = 'admin' | 'user';
 
@@ -64,10 +58,13 @@ const useLeagueDetails = (id: string | undefined, options: { mode?: LeagueDetail
 
   const teams: TeamRecord[] = data?.teams ?? [];
   const seasons: LeagueSeasonRecord[] = data?.seasons ?? [];
-  const league: LeagueFullRecord | null = useMemo(
-    () => (data ? (({ teams: _t, seasons: _s, ...rest }) => rest as LeagueFullRecord)(data) : null),
-    [data],
-  );
+  const league: LeagueFullRecord | null = useMemo(() => {
+    if (!data) return null;
+    const leagueData = { ...data } as Record<string, unknown>;
+    delete leagueData.teams;
+    delete leagueData.seasons;
+    return leagueData as unknown as LeagueFullRecord;
+  }, [data]);
 
   const uploadLogo = async (file: File): Promise<string | null> => {
     const formData = new FormData();

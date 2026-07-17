@@ -1,0 +1,90 @@
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
+
+.iconButton.iconButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  padding: 0.625rem;
+  line-height: 1;
+
+  &[data-connected='true']::after {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 6px;
+    height: 6px;
+    border: 1px solid var(--app-surface, #{$bg-card});
+    border-radius: 50%;
+    background: $success;
+    content: '';
+  }
+
+  &[data-syncing='true'] {
+    &::after {
+      display: none;
+    }
+
+    .icon {
+      opacity: 0.15;
+    }
+  }
+}
+
+.icon {
+  display: block;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: 0 0 auto;
+}
+
+.syncOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  background: rgba($bg-card, 0.82);
+  backdrop-filter: blur(1px);
+  pointer-events: none;
+}
+
+.syncSpinner {
+  margin: 0;
+
+  p {
+    display: none;
+  }
+}
+
+.progressBar.progressBar {
+  background: $accent !important;
+  background-color: $accent !important;
+}
+
+.modalBody {
+  display: grid;
+  gap: $space-sm;
+
+  p {
+    margin: 0;
+  }
+}
+
+.status {
+  color: var(--app-text-subtle, #{$text-light});
+  font-size: 0.9rem;
+}
+
+.error {
+  color: $danger;
+}
+
+.disconnectNote {
+  color: var(--app-text-subtle, #{$text-light});
+  font-size: 0.85rem;
+}
