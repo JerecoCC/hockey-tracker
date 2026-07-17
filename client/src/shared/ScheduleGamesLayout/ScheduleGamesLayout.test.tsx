@@ -1,6 +1,15 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ScheduleCalendarDayCount, ScheduleWeekList } from './ScheduleGamesLayout';
+import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
+import {
+  ScheduleCalendarDayCount,
+  ScheduleWeekList,
+  ScheduleWeekSummary,
+} from './ScheduleGamesLayout';
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 const renderWeekList = () =>
   render(
@@ -67,6 +76,24 @@ describe('ScheduleCalendarDayCount', () => {
 
 });
 
+describe('MonthCalendar', () => {
+  it('marks the current day with an accessible default indicator', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 2, 28, 12));
+
+    render(
+      <MonthCalendar
+        month={new Date(2026, 2, 1)}
+        renderDayContent={() => null}
+      />,
+    );
+
+    const currentDay = screen.getByText('28').closest('[aria-current="date"]');
+    expect(currentDay).toHaveClass('today');
+    expect(currentDay).not.toHaveTextContent('Today');
+  });
+});
+
 describe('ScheduleWeekList', () => {
   it('renders day titles as real links when a day title link is provided', () => {
     renderWeekList();
@@ -80,5 +107,36 @@ describe('ScheduleWeekList', () => {
     const { container } = renderWeekList();
 
     expect(container.querySelector('.dayTitleLinkIndicator svg')).toBeInTheDocument();
+  });
+
+  it('marks the current day card with the shared indicator', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 2, 28, 12));
+
+    renderWeekList();
+
+    expect(screen.getByText('Today').closest('[aria-current="date"]')).toBeInTheDocument();
+  });
+
+  it('marks the current day in the compact week summary', () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date(2026, 2, 28, 12));
+
+    render(
+      <ScheduleWeekSummary
+        days={[['2026-03-28', [{ id: 'game-1' }]]]}
+        loading={false}
+        onSelectDate={jest.fn()}
+        formatDate={() => 'Mar 28'}
+        formatWeekday={() => 'Saturday'}
+        formatHeading={() => 'Saturday, March 28'}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /Jump to Saturday, March 28/i })).toHaveAttribute(
+      'aria-current',
+      'date',
+    );
+    expect(screen.getByText('Today')).toBeInTheDocument();
   });
 });

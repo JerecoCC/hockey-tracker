@@ -368,6 +368,18 @@ describe('TeamGamesTab', () => {
     );
   });
 
+  it('uses the home team color pair for the date chip', () => {
+    renderTeamGamesTab();
+
+    const homeGameButton = screen.getByLabelText('Open game vs Away Team');
+    const homeGameDay = homeGameButton.closest('.calendarDayGameCell');
+
+    expect(homeGameDay).toHaveStyle('--month-calendar-day-number-bg: #123456');
+    expect(homeGameDay).toHaveStyle(
+      '--month-calendar-day-number-border: color-mix(in srgb, #ffffff 40%, #123456)',
+    );
+  });
+
   it('uses the reusable calendar loading grid in month view', () => {
     mockUseGames.mockReturnValue({
       games: [],

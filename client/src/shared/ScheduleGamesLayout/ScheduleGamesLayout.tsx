@@ -14,6 +14,13 @@ export type ScheduleDayGroup<T> = readonly [dateKey: string, items: T[]];
 const WEEK_SUMMARY_MOBILE_BREAKPOINT = 768;
 const DEFAULT_WEEK_SUMMARY_STICKY_TOP_PX = 52;
 
+const getTodayDateKey = () => {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
+    today.getDate(),
+  ).padStart(2, '0')}`;
+};
+
 const getScheduleScrollParent = (el: HTMLElement): HTMLElement => {
   let parent = el.parentElement;
   while (parent) {
@@ -202,14 +209,20 @@ export const ScheduleWeekSummary = <T,>({
     <div className={styles.weekSummaryGrid}>
       {days.map(([dateKey, dayGames]) => {
         const isActive = activeDateKey === dateKey;
+        const isToday = dateKey === getTodayDateKey();
         return (
           <button
             key={dateKey}
             type="button"
-            className={[styles.weekSummaryDay, isActive && styles.weekSummaryDayActive]
+            className={[
+              styles.weekSummaryDay,
+              isActive && styles.weekSummaryDayActive,
+              isToday && styles.weekSummaryDayToday,
+            ]
               .filter(Boolean)
               .join(' ')}
             onClick={() => onSelectDate(dateKey)}
+            aria-current={isToday ? 'date' : undefined}
             aria-label={
               loading
                 ? `Loading games for ${formatHeading(dateKey)}`
@@ -218,7 +231,14 @@ export const ScheduleWeekSummary = <T,>({
           >
             <span className={styles.weekSummaryDayRow}>
               <span className={styles.weekSummaryDate}>{formatDate(dateKey)}</span>
-              <span className={styles.weekSummaryWeekday}>{formatWeekday(dateKey)}</span>
+              {isToday ? (
+                <Badge
+                  value="Today"
+                  className={styles.dayTodayIndicator}
+                />
+              ) : (
+                <span className={styles.weekSummaryWeekday}>{formatWeekday(dateKey)}</span>
+              )}
             </span>
             <span
               className={[styles.weekSummaryDayRow, styles.weekSummaryCountRow]
@@ -286,6 +306,7 @@ export const ScheduleWeekList = <T,>({
   <div className={styles.dayList}>
     {days.map(([dateKey, dayGames]) => {
       const heading = formatHeading(dateKey);
+      const isToday = dateKey === getTodayDateKey();
       const titleLink = getDayTitleLink?.(dateKey, dayGames);
       const title = titleLink ? (
         <Link
@@ -318,7 +339,16 @@ export const ScheduleWeekList = <T,>({
         >
           <Section
             title={title}
+            titleAccessory={
+              isToday ? (
+                <Badge
+                  value="Today"
+                  className={styles.dayTodayIndicator}
+                />
+              ) : undefined
+            }
             action={renderDayAction?.(dateKey, dayGames)}
+            aria-current={isToday ? 'date' : undefined}
           >
             {loading ? (
               (renderLoading?.(dateKey) ?? <ScheduleWeekDaySkeletons dateLabel={heading} />)

@@ -131,6 +131,20 @@
   }
 }
 
+.dayTodayIndicator.dayTodayIndicator {
+  --badge-bg: color-mix(in srgb, #{$accent} 16%, transparent);
+  --badge-border-color: #{$accent};
+  --badge-value-color: var(--app-accent-light, #93c5fd);
+  --badge-min-height: 1.35rem;
+  --badge-padding: 0.1rem 0.45rem;
+  --badge-font-size: 0.625rem;
+
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 .list {
   list-style: none;
   padding: 0;
@@ -234,6 +248,11 @@
   &DayActive {
     border-color: $accent;
     background: rgba($accent, 0.08);
+  }
+
+  &DayToday {
+    border-color: $accent;
+    box-shadow: inset 0 0 0 1px $accent;
   }
 
   &Date {
