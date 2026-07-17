@@ -9,7 +9,7 @@
   display: flex;
   align-items: center;
   gap: $space-lg;
-  padding: $space-md $space-lg;
+  padding: $space-md $space-lg $space-md $space-md;
   border-radius: $radius-md;
   border: 1px solid var(--app-border, #{$border});
   transition:
@@ -32,6 +32,19 @@
 }
 
 // ── Main column: date line + stacked team rows ────────────────────────────────
+
+.leading {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  gap: $space-md;
+}
+
+.typeIndicator {
+  flex: 0 0 0.5rem;
+  align-self: stretch;
+  border-radius: 999px;
+}
 
 .main {
   // Fixed width so the venue column always starts at the same horizontal position
@@ -140,20 +153,25 @@
   color: var(--app-text-strong, #{$text-bright});
 }
 
-// ── Game type — left accent border ───────────────────────────────────────────
-// Overrides the left side of the base 1px $border to a thicker coloured stripe.
+// ── Game type — inset line indicator ─────────────────────────────────────────
 
 .type {
   &Preseason {
-    border-left: 3px solid $text-dim; // slate — exhibition/lower stakes
+    .typeIndicator {
+      background: $text-dim;
+    }
   }
 
   &Regular {
-    border-left: 3px solid $accent-light; // blue — standard season play
+    .typeIndicator {
+      background: $accent-light;
+    }
   }
 
   &Playoff {
-    border-left: 3px solid $warning-light; // amber/gold — high stakes
+    .typeIndicator {
+      background: $warning-light;
+    }
   }
 }
 

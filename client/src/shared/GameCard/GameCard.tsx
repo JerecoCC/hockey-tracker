@@ -496,59 +496,65 @@ const GameListItemVariant = ({
           aria-hidden="true"
         />
       )}
-      <div className={listStyles.main}>
-        <span className={listStyles.dateLine}>{dateLine}</span>
-        <div
-          className={[listStyles.teamRow, awayLost ? listStyles.teamLoser : '']
-            .filter(Boolean)
-            .join(' ')}
-        >
-          <TeamLogo
-            logo={awayTeam.logo}
-            logoDark={awayTeam.logo_dark}
-            logoLight={awayTeam.logo_light}
-            code={awayTeam.code}
-            primaryColor={awayTeam.primary_color}
-            textColor={awayTeam.text_color}
-            size={24}
-            shape="circle"
-          />
-          <span className={listStyles.teamCode}>{awayTeam.code}</span>
-          {showScore && (
-            <span
-              className={[listStyles.scoreNum, awayLost ? listStyles.scoreLoser : '']
-                .filter(Boolean)
-                .join(' ')}
-            >
-              {awayScore}
-            </span>
-          )}
-        </div>
-        <div
-          className={[listStyles.teamRow, homeLost ? listStyles.teamLoser : '']
-            .filter(Boolean)
-            .join(' ')}
-        >
-          <TeamLogo
-            logo={homeTeam.logo}
-            logoDark={homeTeam.logo_dark}
-            logoLight={homeTeam.logo_light}
-            code={homeTeam.code}
-            primaryColor={homeTeam.primary_color}
-            textColor={homeTeam.text_color}
-            size={24}
-            shape="circle"
-          />
-          <span className={listStyles.teamCode}>{homeTeam.code}</span>
-          {showScore && (
-            <span
-              className={[listStyles.scoreNum, homeLost ? listStyles.scoreLoser : '']
-                .filter(Boolean)
-                .join(' ')}
-            >
-              {homeScore}
-            </span>
-          )}
+      <div className={listStyles.leading}>
+        <span
+          className={listStyles.typeIndicator}
+          aria-hidden="true"
+        />
+        <div className={listStyles.main}>
+          <span className={listStyles.dateLine}>{dateLine}</span>
+          <div
+            className={[listStyles.teamRow, awayLost ? listStyles.teamLoser : '']
+              .filter(Boolean)
+              .join(' ')}
+          >
+            <TeamLogo
+              logo={awayTeam.logo}
+              logoDark={awayTeam.logo_dark}
+              logoLight={awayTeam.logo_light}
+              code={awayTeam.code}
+              primaryColor={awayTeam.primary_color}
+              textColor={awayTeam.text_color}
+              size={24}
+              shape="circle"
+            />
+            <span className={listStyles.teamCode}>{awayTeam.code}</span>
+            {showScore && (
+              <span
+                className={[listStyles.scoreNum, awayLost ? listStyles.scoreLoser : '']
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {awayScore}
+              </span>
+            )}
+          </div>
+          <div
+            className={[listStyles.teamRow, homeLost ? listStyles.teamLoser : '']
+              .filter(Boolean)
+              .join(' ')}
+          >
+            <TeamLogo
+              logo={homeTeam.logo}
+              logoDark={homeTeam.logo_dark}
+              logoLight={homeTeam.logo_light}
+              code={homeTeam.code}
+              primaryColor={homeTeam.primary_color}
+              textColor={homeTeam.text_color}
+              size={24}
+              shape="circle"
+            />
+            <span className={listStyles.teamCode}>{homeTeam.code}</span>
+            {showScore && (
+              <span
+                className={[listStyles.scoreNum, homeLost ? listStyles.scoreLoser : '']
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {homeScore}
+              </span>
+            )}
+          </div>
         </div>
       </div>
       <div className={listStyles.middle}>
