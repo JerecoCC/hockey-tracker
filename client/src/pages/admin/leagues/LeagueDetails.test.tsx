@@ -329,7 +329,7 @@ describe('LeagueDetailsPage – loading', () => {
     expect(container.querySelectorAll('.tabSkeletonRow')).toHaveLength(15);
   });
 
-  it('keeps the static Alignments header visible while loading', () => {
+  it('keeps the static Alignments header visible while loading', async () => {
     sessionStorage.setItem('tab:league-details', '4');
     const { container } = setup({ loading: true });
 
@@ -338,8 +338,12 @@ describe('LeagueDetailsPage – loading', () => {
       'true',
     );
     expect(screen.getByRole('heading', { name: /Team Alignments/ })).toBeInTheDocument();
+    const alignmentInfo = screen.getByLabelText(
+      'Define reusable team lists and group structures for seasons.',
+    );
+    fireEvent.mouseEnter(alignmentInfo);
     expect(
-      screen.getByRole('tooltip', {
+      await screen.findByRole('tooltip', {
         name: 'Define reusable team lists and group structures for seasons.',
       }),
     ).toBeInTheDocument();
@@ -359,7 +363,7 @@ describe('LeagueDetailsPage – loading', () => {
   });
 
   it('uses the Awards tab skeleton when award definitions are loading', () => {
-    sessionStorage.setItem('tab:league-details', '6');
+    sessionStorage.setItem('tab:league-details', '7');
     setup({ league: mockLeague }, {}, null, {}, {}, { loading: true });
 
     expect(screen.getByRole('tab', { name: 'Awards' })).toHaveAttribute('aria-selected', 'true');
@@ -369,7 +373,7 @@ describe('LeagueDetailsPage – loading', () => {
   });
 
   it('closes the remove award confirmation from cancel and close controls', () => {
-    sessionStorage.setItem('tab:league-details', '6');
+    sessionStorage.setItem('tab:league-details', '7');
     const deleteAward = jest.fn(async () => true);
     const award = {
       id: 'award-1',
@@ -392,9 +396,7 @@ describe('LeagueDetailsPage – loading', () => {
     setup({ league: mockLeague }, {}, null, {}, {}, { awards: [award], deleteAward });
 
     const clickRemoveAward = () => {
-      fireEvent.click(
-        screen.getByRole('tooltip', { name: /remove award/i }).previousElementSibling as Element,
-      );
+      fireEvent.click(screen.getByRole('button', { name: 'Remove Most Valuable Player' }));
     };
 
     clickRemoveAward();
@@ -411,7 +413,7 @@ describe('LeagueDetailsPage – loading', () => {
   });
 
   it('labels award definitions by competition scope separately from recording timing', () => {
-    sessionStorage.setItem('tab:league-details', '6');
+    sessionStorage.setItem('tab:league-details', '7');
     const awards = [
       {
         id: 'award-1',
@@ -463,7 +465,7 @@ describe('LeagueDetailsPage – loading', () => {
   });
 
   it('reorders award definitions from the movable list controls', async () => {
-    sessionStorage.setItem('tab:league-details', '6');
+    sessionStorage.setItem('tab:league-details', '7');
     const reorderAwards = jest.fn(async () => true);
     const awards = [
       {
@@ -512,7 +514,7 @@ describe('LeagueDetailsPage – loading', () => {
   });
 
   it('creates player award definitions with explicit eligibility criteria', async () => {
-    sessionStorage.setItem('tab:league-details', '6');
+    sessionStorage.setItem('tab:league-details', '7');
     const createAward = jest.fn(async () => true);
     setup({ league: mockLeague }, {}, null, {}, {}, { createAward });
 
@@ -543,7 +545,7 @@ describe('LeagueDetailsPage – loading', () => {
   });
 
   it('creates team award definitions with conference eligibility criteria', async () => {
-    sessionStorage.setItem('tab:league-details', '6');
+    sessionStorage.setItem('tab:league-details', '7');
     const createAward = jest.fn(async () => true);
     setup(
       { league: mockLeague },
@@ -651,10 +653,7 @@ describe('LeagueDetailsPage – main render', () => {
 
   it('navigates back to /admin/leagues when back button is clicked', () => {
     setup({ league: mockLeague });
-    // The back button is the only icon-only button (no text, just SVG) in TitleRow
-    // Its Tooltip renders role="tooltip" with the text "Back to Leagues"
-    const tooltip = screen.getByRole('tooltip', { name: /back to leagues/i });
-    fireEvent.click(tooltip.previousElementSibling as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: /back to leagues/i }));
     expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues');
   });
 
@@ -698,6 +697,7 @@ describe('LeagueDetailsPage – tabs', () => {
       'Players',
       'Alignments',
       'Playoffs',
+      'Drafts',
       'Awards',
     ]);
   });
@@ -744,8 +744,12 @@ describe('LeagueDetailsPage – tabs', () => {
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: /Team Alignments/ })).toBeInTheDocument();
     });
+    const alignmentInfo = screen.getByLabelText(
+      'Define reusable team lists and group structures for seasons.',
+    );
+    fireEvent.mouseEnter(alignmentInfo);
     expect(
-      screen.getByRole('tooltip', {
+      await screen.findByRole('tooltip', {
         name: 'Define reusable team lists and group structures for seasons.',
       }),
     ).toBeInTheDocument();
@@ -786,8 +790,7 @@ describe('LeagueDetailsPage – tabs', () => {
     const alignmentRow = container.querySelector('.alignmentSetStack > .item');
     expect(alignmentRow).toBeInTheDocument();
     expect(alignmentRow).not.toHaveClass('alignmentCard');
-    const editTooltip = screen.getByRole('tooltip', { name: /edit alignment/i });
-    fireEvent.click(editTooltip.previousElementSibling as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: /edit alignment/i }));
 
     expect(
       await screen.findByRole('heading', { name: 'Edit Alignment - Current Groups' }),
@@ -953,8 +956,7 @@ describe('LeagueDetailsPage – tabs', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /create alignment/i })).toBeEnabled(),
     );
-    const editTooltip = screen.getByRole('tooltip', { name: /edit alignment/i });
-    fireEvent.click(editTooltip.previousElementSibling as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: /edit alignment/i }));
 
     expect(await screen.findByText('Wolves')).toBeInTheDocument();
     expect(screen.getByText('Bears')).toBeInTheDocument();
@@ -1041,8 +1043,7 @@ describe('LeagueDetailsPage – tabs', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /create alignment/i })).toBeEnabled(),
     );
-    const editTooltip = screen.getByRole('tooltip', { name: /edit alignment/i });
-    fireEvent.click(editTooltip.previousElementSibling as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: /edit alignment/i }));
 
     expect(await screen.findByText('Eastern Conference')).toBeInTheDocument();
     expect(screen.getByText('Metro Division')).toBeInTheDocument();
@@ -1615,8 +1616,7 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.getByText(/^John Smith/)).toBeInTheDocument();
     expect(container.querySelectorAll('.loadingRow')).toHaveLength(0);
 
-    const nextTooltip = screen.getByRole('tooltip', { name: /next page/i });
-    fireEvent.click(nextTooltip.previousElementSibling as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: /next page/i }));
 
     expect(screen.queryByText(/^John Smith/)).not.toBeInTheDocument();
     expect(container.querySelectorAll('.loadingRow')).toHaveLength(15);

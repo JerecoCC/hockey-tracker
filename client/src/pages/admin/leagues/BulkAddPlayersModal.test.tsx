@@ -5,7 +5,7 @@ import BulkAddPlayersModal from './BulkAddPlayersModal';
 // properly with react-hook-form, so tests can use fireEvent.change without
 // fighting the custom combobox internals.
 jest.mock('@jerecocc/tracker-ui/components/Field/Field', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
+
   const { useController } = require('react-hook-form');
   const MockField = ({
     control,

@@ -31,7 +31,7 @@ const sharedPlugins = {
 }
 
 export default [
-  { ignores: ['dist'] },
+  { ignores: ['coverage', 'dist', 'storybook-static'] },
   {
     files: ['**/*.test.{ts,tsx,js,jsx}', '**/*.spec.{ts,tsx,js,jsx}'],
     languageOptions: {
@@ -76,6 +76,25 @@ export default [
       ...sharedRules,
       ...tsPlugin.configs.recommended.rules,
       ...prettierConfig.rules,
+    },
+  },
+  {
+    files: ['.storybook/**/*.{js,ts}'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: ['**/*.test.{ts,tsx,js,jsx}', '**/*.spec.{ts,tsx,js,jsx}'],
+    rules: {
+      // Test doubles intentionally use loose inputs and anonymous components to
+      // model third-party modules without duplicating their production types.
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+      'no-undef': 'off',
+      'react/display-name': 'off',
+      'react/prop-types': 'off',
     },
   },
 ]

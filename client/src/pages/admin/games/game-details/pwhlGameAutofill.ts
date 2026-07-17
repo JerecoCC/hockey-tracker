@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import type { GameRecord, GameType } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { GoalRecord, PostGoalData } from '@/hooks/useGameGoals';
@@ -15,19 +15,16 @@ import {
   type AutofillOfficialGameMeta,
 } from './gameAutofillPreflight';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import {
+  API,
+  authHeaders,
+  getDetailedApiErrorMessage as apiError,
+} from '@/lib/apiClient';
 const PWHL_BASE_URL = 'https://lscluster.hockeytech.com/feed/index.php';
 const PWHL_APP_KEY = '446521baf8c38984';
 const PWHL_CLIENT_CODE = 'pwhl';
 const PWHL_LEAGUE_ID = '1';
 
-const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem('token')}`,
-});
-
-const apiError = (err: unknown, fallback: string): string =>
-  (err as AxiosError<{ error: string }>).response?.data?.error
-  ?? (err instanceof Error ? err.message : fallback);
 
 type TeamSide = 'away' | 'home';
 
@@ -82,6 +79,62 @@ interface PwhlGoal {
   assist2Id?: number | null;
 }
 
+type OneOrMany<T> = T | T[] | null;
+
+interface PwhlPlayerInfo {
+  id?: string | number | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  jerseyNumber?: string | number | null;
+  position?: string | null;
+}
+
+interface PwhlPlayerRow {
+  info?: PwhlPlayerInfo | null;
+  starting?: unknown;
+}
+
+interface PwhlGoalProperties {
+  isPowerPlay?: unknown;
+  isShortHanded?: unknown;
+  isEmptyNet?: unknown;
+  isPenaltyShot?: unknown;
+}
+
+interface PwhlGoalRow {
+  period?: { id?: string | number | null } | null;
+  team?: { id?: string | number | null } | null;
+  properties?: PwhlGoalProperties | null;
+  time?: string | null;
+  scoredBy?: { id?: string | number | null } | null;
+  assists?: OneOrMany<{ id?: string | number | null }>;
+}
+
+interface PwhlPeriodRow {
+  info?: { id?: string | number | null } | null;
+  goals?: OneOrMany<PwhlGoalRow>;
+  stats?: {
+    visitingShots?: string | number | null;
+    homeShots?: string | number | null;
+  } | null;
+}
+
+interface PwhlTeamRow {
+  info?: { id?: string | number | null } | null;
+  skaters?: OneOrMany<PwhlPlayerRow>;
+  goalies?: OneOrMany<PwhlGoalieLogRow>;
+  goalieLog?: OneOrMany<PwhlGoalieLogRow>;
+}
+
+interface PwhlPlayByPlayEvent {
+  event?: string | null;
+  details?: {
+    shooter?: { id?: string | number | null } | null;
+    shooterTeam?: { id?: string | number | null } | null;
+    isGoal?: unknown;
+  } | null;
+}
+
 interface PwhlAutofillSummaryMeta {
   details?: {
     gameNumber?: string | number | null;
@@ -94,11 +147,22 @@ interface PwhlAutofillSummaryMeta {
     gameType?: string | null;
     GameType?: string | null;
     type?: string | null;
+    status?: string | null;
+    GameDateISO8601?: string | null;
+    date?: string | null;
+    startTime?: string | null;
+    endTime?: string | null;
   } | null;
+  visitingTeam?: PwhlTeamRow | null;
+  homeTeam?: PwhlTeamRow | null;
+  periods?: OneOrMany<PwhlPeriodRow>;
+  hasShootout?: unknown;
+  mostValuablePlayers?: OneOrMany<{
+    player?: { info?: { id?: string | number | null } | null } | null;
+  }>;
 }
 
-interface PwhlGoalieLogRow {
-  info?: { id?: string | number | null };
+interface PwhlGoalieLogRow extends PwhlPlayerRow {
   stats?: {
     timeOnIce?: string | null;
     shotsAgainst?: unknown;
@@ -194,7 +258,9 @@ export async function autofillGameFromPwhlGamecenter(
     message: `Fetching PWHL HockeyTech data for game ${gameId}...`,
   });
 
-  const summary = await fetchPwhlJson<any>(pwhlFeedUrl('gameSummary', gameId));
+  const summary = await fetchPwhlJson<PwhlAutofillSummaryMeta>(
+    pwhlFeedUrl('gameSummary', gameId),
+  );
   const warnings: string[] = [];
 
   await emitProgress({
@@ -206,7 +272,7 @@ export async function autofillGameFromPwhlGamecenter(
   await validatePwhlAutofillPreflight(game, summary);
   const shootoutGame = isShootoutGame(summary);
   const playByPlay = shootoutGame
-    ? await fetchPwhlJson<any[]>(pwhlFeedUrl('gameCenterPlayByPlay', gameId))
+    ? await fetchPwhlJson<PwhlPlayByPlayEvent[]>(pwhlFeedUrl('gameCenterPlayByPlay', gameId))
     : [];
 
   const [existingGoals, existingShootoutAttempts] = await Promise.all([
@@ -669,7 +735,7 @@ function setLatestLeaguePlayerRow(
   map.set(key, current ? laterLeaguePlayerRow(current, player) : player);
 }
 
-function assertGameMatches(game: GameRecord, summary: any) {
+function assertGameMatches(game: GameRecord, summary: PwhlAutofillSummaryMeta) {
   const pwhlDate = gameDateOnly(summary);
   const localDates = localDateCandidates(game.scheduled_at);
   if (pwhlDate && localDates.length > 0 && !localDates.includes(pwhlDate)) {
@@ -732,7 +798,7 @@ function positiveIntegerFromText(value: string | number | null | undefined) {
   return Number.isInteger(number) && number > 0 ? number : null;
 }
 
-function getPwhlPlayers(summary: any, side: TeamSide): PwhlPlayer[] {
+function getPwhlPlayers(summary: PwhlAutofillSummaryMeta, side: TeamSide): PwhlPlayer[] {
   const team = side === 'away' ? summary?.visitingTeam : summary?.homeTeam;
   return [
     ...toArray(team?.skaters).map((row) => pwhlPlayerFromRow(row, 'skaters')),
@@ -740,7 +806,10 @@ function getPwhlPlayers(summary: any, side: TeamSide): PwhlPlayer[] {
   ].filter((player): player is PwhlPlayer => !!player);
 }
 
-function pwhlPlayerFromRow(row: any, group: PwhlPlayer['group']): PwhlPlayer | null {
+function pwhlPlayerFromRow(
+  row: PwhlPlayerRow,
+  group: PwhlPlayer['group'],
+): PwhlPlayer | null {
   const info = row?.info;
   const playerId = Number(info?.id);
   if (!Number.isFinite(playerId) || playerId <= 0) return null;
@@ -1131,7 +1200,7 @@ async function syncStartingGoalies(
   return saved;
 }
 
-function getPwhlGoals(summary: any): PwhlGoal[] {
+function getPwhlGoals(summary: PwhlAutofillSummaryMeta): PwhlGoal[] {
   const awayPwhlTeamId = Number(summary?.visitingTeam?.info?.id);
   return toArray(summary?.periods).flatMap((periodRow) =>
     toArray(periodRow?.goals).map((goal) => {
@@ -1164,7 +1233,11 @@ function groupGoalsByPeriodNumber(goals: PwhlGoal[]) {
   return grouped;
 }
 
-function getPlayedPeriodNumbers(summary: any, goals: PwhlGoal[], shootoutGame: boolean) {
+function getPlayedPeriodNumbers(
+  summary: PwhlAutofillSummaryMeta,
+  goals: PwhlGoal[],
+  shootoutGame: boolean,
+) {
   const periodNumbers = toArray(summary?.periods)
     .map((period) => Number(period?.info?.id))
     .filter((period) => Number.isFinite(period) && period > 0);
@@ -1186,7 +1259,7 @@ function gameProgressPatchForPeriod(periodNumber: number) {
   };
 }
 
-function getPeriodShots(summary: any) {
+function getPeriodShots(summary: PwhlAutofillSummaryMeta) {
   return toArray(summary?.periods).map((period) => ({
     period: pwhlPeriodToLocal(Number(period?.info?.id)),
     away_shots: Number(period?.stats?.visitingShots ?? 0),
@@ -1196,7 +1269,7 @@ function getPeriodShots(summary: any) {
 
 function buildGoalieStintPayloads(
   game: GameRecord,
-  summary: any,
+  summary: PwhlAutofillSummaryMeta,
   matched: Record<TeamSide, MatchedPlayer[]>,
 ): GoalieStintPayload[] {
   const matchedByPwhlId = new Map(
@@ -1212,7 +1285,7 @@ function buildGoalieStintPayloads(
 
 function buildTeamGoalieStints(
   game: GameRecord,
-  team: any,
+  team: PwhlTeamRow | null | undefined,
   side: TeamSide,
   matchedByPwhlId: Map<number, MatchedPlayer & { side: TeamSide }>,
 ) {
@@ -1361,7 +1434,10 @@ async function syncGoalieStints(gameId: string, desiredStints: GoalieStintPayloa
   }
 }
 
-function resolveSummaryStars(summary: any, matched: Record<TeamSide, MatchedPlayer[]>) {
+function resolveSummaryStars(
+  summary: PwhlAutofillSummaryMeta,
+  matched: Record<TeamSide, MatchedPlayer[]>,
+) {
   const matchedByPwhlId = new Map(
     [...matched.away, ...matched.home].map((player) => [player.playerId, player.localId]),
   );
@@ -1372,9 +1448,9 @@ function resolveSummaryStars(summary: any, matched: Record<TeamSide, MatchedPlay
 }
 
 function resolvePwhlShootoutAttempts(
-  playByPlay: any,
+  playByPlay: PwhlPlayByPlayEvent[],
   matched: Record<TeamSide, MatchedPlayer[]>,
-  summary: any,
+  summary: PwhlAutofillSummaryMeta,
   game: GameRecord,
 ): ShootoutAttemptPayload[] {
   const matchedByPwhlId = new Map(
@@ -1441,22 +1517,22 @@ function resolveOptionalPlayerId(
   return player.localId;
 }
 
-function pwhlGoalType(properties: any) {
+function pwhlGoalType(properties: PwhlGoalProperties) {
   if (isTruthy(properties?.isPowerPlay)) return 'power-play';
   if (isTruthy(properties?.isShortHanded)) return 'shorthanded';
   return 'even-strength';
 }
 
-function isShootoutGame(summary: any) {
+function isShootoutGame(summary: PwhlAutofillSummaryMeta) {
   return isTruthy(summary?.hasShootout) || /SO/i.test(String(summary?.details?.status ?? ''));
 }
 
-function getCurrentPeriod(summary: any) {
+function getCurrentPeriod(summary: PwhlAutofillSummaryMeta) {
   if (isShootoutGame(summary)) return 'SO';
   return getOvertimePeriods(summary) > 0 ? 'OT' : '3';
 }
 
-function getOvertimePeriods(summary: any) {
+function getOvertimePeriods(summary: PwhlAutofillSummaryMeta) {
   const maxPeriod = toArray(summary?.periods).reduce(
     (max, period) => Math.max(max, Number(period?.info?.id ?? 0)),
     0,
@@ -1465,7 +1541,7 @@ function getOvertimePeriods(summary: any) {
   return Math.max(0, maxPeriod - 3);
 }
 
-function gameDateOnly(summary: any) {
+function gameDateOnly(summary: PwhlAutofillSummaryMeta) {
   const iso = summary?.details?.GameDateISO8601;
   if (typeof iso === 'string' && /^\d{4}-\d{2}-\d{2}/.test(iso)) return iso.slice(0, 10);
   const parsed = Date.parse(String(summary?.details?.date ?? ''));
@@ -1520,7 +1596,7 @@ const REPORT_TIMEZONE_OFFSETS: Record<string, string> = {
   PST: '-08:00',
 };
 
-function inferPwhlGameTimes(summary: any) {
+function inferPwhlGameTimes(summary: PwhlAutofillSummaryMeta) {
   const date = gameDateOnly(summary);
   if (!date) return {};
   const startIso = reportClockIso(date, summary?.details?.startTime);
@@ -1590,7 +1666,7 @@ function parseToiSeconds(value: string | null | undefined) {
   return Number(match[1]) * 60 + Number(match[2]);
 }
 
-function goalieActuallyPlayed(goalie: any) {
+function goalieActuallyPlayed(goalie: PwhlGoalieLogRow) {
   return (
     parseToiSeconds(goalie?.stats?.timeOnIce) != null ||
     Number(goalie?.stats?.shotsAgainst ?? 0) > 0 ||
@@ -1703,7 +1779,7 @@ function toOptionalNumber(value: unknown) {
   return Number.isFinite(number) ? number : null;
 }
 
-function toArray<T = any>(value: T[] | T | null | undefined): T[] {
+function toArray<T = unknown>(value: T[] | T | null | undefined): T[] {
   if (Array.isArray(value)) return value;
   return value == null ? [] : [value];
 }

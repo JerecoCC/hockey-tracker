@@ -1,4 +1,3 @@
-/* eslint-disable react/display-name, @typescript-eslint/no-explicit-any */
 import { act, render, screen } from '@testing-library/react';
 import { useGameDetails, useGameRouteLookup } from '@/hooks/useGames';
 import useLeagueDetails from '@/hooks/useLeagueDetails';

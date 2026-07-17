@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import { toast, type TypeOptions } from 'react-toastify';
 import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
@@ -39,33 +39,10 @@ import { toEasternDateKey } from './seasonDateUtils';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './SeasonDayGamesPage.module.scss';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders, getAggregateErrorMessage as getErrorMessage } from '@/lib/apiClient';
 const AUTOFILL_RESULT_TOAST_MS = 4000;
 const AUTOFILL_FAILURE_TOAST_MS = 12000;
 
-const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
-
-const getErrorMessage = (err: unknown, fallback = 'Something went wrong'): string => {
-  const responseError = (err as AxiosError<{ error?: string }>).response?.data?.error;
-  if (responseError) return responseError;
-
-  const aggregateErrors = (err as { errors?: unknown[] }).errors;
-  if (Array.isArray(aggregateErrors) && aggregateErrors.length > 0) {
-    const messages = aggregateErrors.map((nested) => getErrorMessage(nested, '')).filter(Boolean);
-    if (messages.length > 0) return messages.join('; ');
-  }
-
-  if (err instanceof Error) {
-    const cause = (err as Error & { cause?: unknown }).cause;
-    const causeMessage = cause && cause !== err ? getErrorMessage(cause, '') : '';
-    if (err.message && causeMessage && !err.message.includes(causeMessage)) {
-      return `${err.message}: ${causeMessage}`;
-    }
-    return err.message || causeMessage || fallback;
-  }
-
-  return typeof err === 'string' && err ? err : fallback;
-};
 
 const STATUS_LABEL: Record<GameStatus, string> = {
   scheduled: 'Scheduled',
@@ -239,11 +216,6 @@ const formatStatusLabel = (game: GameRecord) => {
   if (game.shootout) return 'Final/SO';
   if ((game.overtime_periods ?? 0) > 0) return 'Final/OT';
   return 'Final';
-};
-
-const playoffRoundLabel = (game: GameRecord) => {
-  if (game.playoff_round == null) return null;
-  return game.playoff_round_names?.[String(game.playoff_round)] ?? null;
 };
 
 const SeasonDayGamesPage = () => {

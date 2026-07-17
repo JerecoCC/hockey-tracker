@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { toast } from 'react-toastify';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
@@ -16,10 +16,7 @@ import { formatPlayerPosition } from '@/lib/playerPosition';
 import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playerSearch';
 import styles from './LineupRosterModal.module.scss';
 
-const API = import.meta.env.VITE_API_URL || '/api';
-const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
-const apiError = (err: unknown, fallback: string): string =>
-  (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
+import { API, authHeaders, getApiErrorMessage as apiError } from '@/lib/apiClient';
 
 const playerFullName = (player: Pick<TeamPlayerRecord, 'first_name' | 'last_name'>) =>
   `${player.first_name} ${player.last_name}`.trim();

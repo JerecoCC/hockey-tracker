@@ -8,8 +8,7 @@ import { type PlayerPosition } from '@/hooks/useLeaguePlayers';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LineupCreatePlayersModal.module.scss';
 
-const API = import.meta.env.VITE_API_URL || '/api';
-const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+import { API, authHeaders } from '@/lib/apiClient';
 
 const POSITION_OPTIONS = [
   { value: 'C', label: 'Center' },

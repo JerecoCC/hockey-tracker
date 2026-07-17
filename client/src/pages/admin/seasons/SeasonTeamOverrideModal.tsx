@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Checklist from '@jerecocc/tracker-ui/components/Checklist/Checklist';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type SeasonGroupRecord, type LeagueTeam } from '@/hooks/useSeasonDetails';
@@ -43,7 +42,8 @@ const SeasonTeamOverrideModal = (props: Props) => {
   const toggle = (id: string) =>
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
 

@@ -32,8 +32,7 @@ import { formatScheduledDate } from './formatUtils';
 import { getPlayoffScoreMetaBaseLabel, getPlayoffScoreMetaLabel } from './playoffScoreMeta';
 import styles from './ScoreImageModal.module.scss';
 
-const API = import.meta.env.VITE_API_URL || '/api';
-const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+import { API, authHeaders } from '@/lib/apiClient';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -2100,6 +2099,7 @@ const ScoreImageModal = ({
                     className={`${styles.scoreCardResultBadge}${
                       hasOvertimeBadge ? ` ${styles.scoreCardResultBadgeOvertime}` : ''
                     }`}
+                    aria-label={scoreBadgeTitle}
                   >
                     {scoreBadgeLabel && (
                       <span className={styles.scoreCardResultLabel}>

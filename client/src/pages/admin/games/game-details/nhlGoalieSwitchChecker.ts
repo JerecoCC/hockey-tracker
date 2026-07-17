@@ -72,6 +72,58 @@ interface NhlShiftChartRow {
   duration?: string;
 }
 
+interface NhlGoalieFeedRow {
+  playerId?: unknown;
+  goalieId?: unknown;
+  id?: unknown;
+  firstName?: unknown;
+  lastName?: unknown;
+  name?: unknown;
+  teamId?: unknown;
+  teamAbbrev?: unknown;
+  toi?: unknown;
+  shotsAgainst?: unknown;
+  saves?: unknown;
+  goalsAgainst?: unknown;
+  starter?: unknown;
+}
+
+interface NhlTeamFeed {
+  id?: unknown;
+  abbrev?: unknown;
+  goalies?: unknown;
+}
+
+interface NhlPlayerByGameStats {
+  awayTeam?: { goalies?: unknown } | null;
+  homeTeam?: { goalies?: unknown } | null;
+}
+
+interface NhlLandingFeed {
+  boxscore?: { playerByGameStats?: NhlPlayerByGameStats | null } | null;
+  playerByGameStats?: NhlPlayerByGameStats | null;
+  summary?: { playerByGameStats?: NhlPlayerByGameStats | null } | null;
+  awayTeam?: NhlTeamFeed | null;
+  homeTeam?: NhlTeamFeed | null;
+  startTimeUTC?: string | null;
+}
+
+interface NhlPlay {
+  periodDescriptor?: { number?: unknown } | null;
+  timeInPeriod?: unknown;
+  sortOrder?: unknown;
+  typeDescKey?: unknown;
+  [key: string]: unknown;
+}
+
+interface NhlPlayByPlayFeed {
+  plays?: NhlPlay[] | null;
+}
+
+interface NhlShiftChartFeed {
+  data?: NhlShiftChartRow[] | null;
+}
+
 interface HtmlGoalieShift {
   goalie: Goalie;
   teamSide: TeamSide;
@@ -87,7 +139,7 @@ export interface NhlGameIdContext {
   gameType?: string | null;
 }
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders } from '@/lib/apiClient';
 const NHL_GAMECENTER_RE = /\/gamecenter\/(\d+)(?:\/|$)/i;
 const NHL_FULL_GAME_ID_RE = /^\d{10}$/;
 const NHL_SHORT_GAME_NUMBER_RE = /^\d{1,4}$/;
@@ -100,9 +152,6 @@ const NHL_GAME_TYPE_CODE: Record<string, string> = {
 const SWITCH_EVENT_RE = /\b(goalie|keeper)\b/i;
 const SWITCH_ACTION_RE =
   /\b(change|changed|enter|entered|left|leave|pulled|pull|returned|return|replace|reliev)/i;
-const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem('token')}`,
-});
 export function extractGameIdFromNhlUrl(url: string): string | null {
   return url.match(NHL_GAMECENTER_RE)?.[1] ?? null;
 }
@@ -145,7 +194,7 @@ export function formatEasternStartTime(startTimeUTC: string): string {
   }).format(date);
 }
 
-export function getGoaliesFromLanding(landing: any): GoaliesByTeam {
+export function getGoaliesFromLanding(landing: NhlLandingFeed): GoaliesByTeam {
   const stats =
     landing?.boxscore?.playerByGameStats ??
     landing?.playerByGameStats ??
@@ -174,7 +223,10 @@ export function detectGoalieSwitch(goalies: Goalie[]): boolean {
   return goalies.filter(goalieActuallyPlayed).length > 1;
 }
 
-export function buildGoalieStints(playByPlay: any, goaliesByTeam: GoaliesByTeam): GoalieStint[] {
+export function buildGoalieStints(
+  playByPlay: NhlPlayByPlayFeed,
+  goaliesByTeam: GoaliesByTeam,
+): GoalieStint[] {
   const teamGoalies = {
     away: playableGoalies(goaliesByTeam.away),
     home: playableGoalies(goaliesByTeam.home),
@@ -237,7 +289,7 @@ async function fetchJson(url: string) {
   try {
         const { data } =  await axios.get(`${API}/admin/games/nhl-api?url=${encodeURIComponent(url)}`, { headers: authHeaders() });
         return data;
-      } catch (err) {
+      } catch {
         toast.error('API Error');
         return [];
       }
@@ -253,12 +305,6 @@ async function fetchOptionalJson(url: string) {
   } catch {
     return null;
   }
-}
-
-async function fetchShiftChart(gameId: string) {
-  return fetchOptionalJson(
-    `https://api.nhle.com/stats/rest/en/shiftcharts?cayenneExp=gameId=${gameId}`,
-  );
 }
 
 async function fetchToiHtmlReports(gameId: string) {
@@ -312,18 +358,18 @@ function buildTeamReport(
   };
 }
 
-function getTeamMeta(source: any, side: TeamSide): TeamMeta {
-  const team = source?.[`${side}Team`];
+function getTeamMeta(source: NhlLandingFeed, side: TeamSide): TeamMeta {
+  const team = side === 'away' ? source.awayTeam : source.homeTeam;
   return {
     id: toOptionalNumber(team?.id),
     abbrev: readLocalizedText(team?.abbrev) ?? team?.abbrev ?? side.toUpperCase(),
   };
 }
 
-function normalizeGoalies(rawGoalies: any, teamMeta: TeamMeta): Goalie[] {
+function normalizeGoalies(rawGoalies: unknown, teamMeta: TeamMeta): Goalie[] {
   if (!Array.isArray(rawGoalies)) return [];
 
-  return rawGoalies
+  return (rawGoalies as NhlGoalieFeedRow[])
     .map((raw) => {
       const playerId = toOptionalNumber(raw?.playerId ?? raw?.goalieId ?? raw?.id);
       if (playerId == null) return null;
@@ -347,13 +393,19 @@ function normalizeGoalies(rawGoalies: any, teamMeta: TeamMeta): Goalie[] {
     .filter((goalie): goalie is Goalie => !!goalie);
 }
 
-function readLocalizedText(value: any): string | undefined {
+function readLocalizedText(value: unknown): string | undefined {
   if (typeof value === 'string') return value;
-  if (typeof value?.default === 'string') return value.default;
+  if (
+    value &&
+    typeof value === 'object' &&
+    typeof (value as { default?: unknown }).default === 'string'
+  ) {
+    return (value as { default: string }).default;
+  }
   return undefined;
 }
 
-function toOptionalNumber(value: any): number | undefined {
+function toOptionalNumber(value: unknown): number | undefined {
   if (value == null || value === '') return undefined;
   const num = Number(value);
   return Number.isFinite(num) ? num : undefined;
@@ -375,7 +427,7 @@ function buildGoalieTeamMap(goaliesByTeam: GoaliesByTeam) {
 }
 
 function extractExplicitGoalieObservations(
-  playByPlay: any,
+  playByPlay: NhlPlayByPlayFeed,
   goalieTeamById: Map<number, { side: TeamSide; goalie: Goalie }>,
 ): GoalieObservation[] {
   return getPlays(playByPlay).flatMap((play) => {
@@ -389,7 +441,7 @@ function extractExplicitGoalieObservations(
 }
 
 function extractOnIceGoalieObservations(
-  playByPlay: any,
+  playByPlay: NhlPlayByPlayFeed,
   goalieTeamById: Map<number, { side: TeamSide; goalie: Goalie }>,
 ): GoalieObservation[] {
   return getPlays(playByPlay).flatMap((play) =>
@@ -487,7 +539,7 @@ function extractHtmlGoalieShifts(html: string, goaliesByTeam: GoaliesByTeam): Ht
 }
 
 export function buildGoalieStintsFromShiftChart(
-  shiftChart: any,
+  shiftChart: NhlShiftChartFeed,
   goaliesByTeam: GoaliesByTeam,
 ): GoalieStint[] {
   const rows = Array.isArray(shiftChart?.data) ? shiftChart.data : [];
@@ -634,11 +686,11 @@ function nextGoalieEntryAfterStint(stint: GoalieStint): { period: string; time: 
   return { period: stint.exitedPeriod, time: normalizeClock(stint.exitedTime) };
 }
 
-function getPlays(playByPlay: any): any[] {
+function getPlays(playByPlay: NhlPlayByPlayFeed): NhlPlay[] {
   return Array.isArray(playByPlay?.plays) ? playByPlay.plays : [];
 }
 
-function collectStringValues(value: any): string[] {
+function collectStringValues(value: unknown): string[] {
   if (!value || typeof value !== 'object') return [];
   const values: string[] = [];
   for (const [key, child] of Object.entries(value)) {
@@ -649,12 +701,12 @@ function collectStringValues(value: any): string[] {
 }
 
 function collectGoalieIds(
-  value: any,
+  value: unknown,
   goalieTeamById: Map<number, { side: TeamSide; goalie: Goalie }>,
 ): number[] {
   const ids = new Set<number>();
 
-  const visit = (node: any, keyPath = '') => {
+  const visit = (node: unknown, keyPath = '') => {
     if (!node || typeof node !== 'object') return;
 
     for (const [key, child] of Object.entries(node)) {
@@ -672,7 +724,7 @@ function collectGoalieIds(
   return [...ids];
 }
 
-function toObservation(play: any, goalieId: number, side: TeamSide): GoalieObservation {
+function toObservation(play: NhlPlay, goalieId: number, side: TeamSide): GoalieObservation {
   const period = toOptionalNumber(play?.periodDescriptor?.number) ?? 1;
   return {
     teamSide: side,

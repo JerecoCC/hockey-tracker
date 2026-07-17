@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import type { GameRecord, GameType } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { GoalRecord, PostGoalData } from '@/hooks/useGameGoals';
@@ -24,20 +24,17 @@ import {
   type AutofillOfficialGameMeta,
 } from './gameAutofillPreflight';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import {
+  API,
+  authHeaders,
+  getDetailedApiErrorMessage as apiError,
+} from '@/lib/apiClient';
 const NHL_GAME_TYPE_BY_CODE: Record<string, GameType> = {
   '01': 'preseason',
   '02': 'regular',
   '03': 'playoff',
 };
 
-const authHeaders = () => ({
-  Authorization: `Bearer ${localStorage.getItem('token')}`,
-});
-
-const apiError = (err: unknown, fallback: string): string =>
-  (err as AxiosError<{ error: string }>).response?.data?.error
-  ?? (err instanceof Error ? err.message : fallback);
 
 type TeamSide = 'away' | 'home';
 
@@ -145,6 +142,72 @@ interface NhlGoal {
   assist2Id?: number | null;
 }
 
+interface NhlBoxscorePlayer {
+  playerId?: unknown;
+  sweaterNumber?: unknown;
+  name?: unknown;
+  firstName?: unknown;
+  lastName?: unknown;
+  toi?: unknown;
+  shotsAgainst?: unknown;
+  saves?: unknown;
+  goalsAgainst?: unknown;
+  [key: string]: unknown;
+}
+
+interface NhlTeamPlayerStats {
+  forwards?: NhlBoxscorePlayer[] | null;
+  defense?: NhlBoxscorePlayer[] | null;
+  goalies?: NhlBoxscorePlayer[] | null;
+}
+
+interface NhlBoxscoreTeam {
+  id?: unknown;
+  abbrev?: unknown;
+  score?: unknown;
+  goalies?: unknown;
+}
+
+interface NhlBoxscoreFeed {
+  gameDate?: string | null;
+  startTimeUTC?: string | null;
+  venue?: unknown;
+  awayTeam?: NhlBoxscoreTeam | null;
+  homeTeam?: NhlBoxscoreTeam | null;
+  gameOutcome?: { lastPeriodType?: unknown } | null;
+  periodDescriptor?: { number?: unknown; periodType?: unknown } | null;
+  playerByGameStats?: {
+    awayTeam?: NhlTeamPlayerStats | null;
+    homeTeam?: NhlTeamPlayerStats | null;
+  } | null;
+}
+
+interface NhlPlayDetails {
+  eventOwnerTeamId?: unknown;
+  scoringPlayerId?: unknown;
+  shootingPlayerId?: unknown;
+  assist1PlayerId?: unknown;
+  assist2PlayerId?: unknown;
+  penaltyShot?: unknown;
+  emptyNet?: unknown;
+  goalieInNetId?: unknown;
+  [key: string]: unknown;
+}
+
+interface NhlPlay {
+  typeDescKey?: unknown;
+  details?: NhlPlayDetails | null;
+  periodDescriptor?: { number?: unknown; periodType?: unknown } | null;
+  timeInPeriod?: unknown;
+  situationCode?: unknown;
+  sortOrder?: unknown;
+  [key: string]: unknown;
+}
+
+interface NhlPlayByPlayFeed {
+  plays?: NhlPlay[] | null;
+}
+
 interface FillSummary {
   gameId: string;
   goalsCreated: number;
@@ -226,7 +289,7 @@ export async function autofillGameFromNhlGamecenter(
   const gameSummaryReportUrl = buildGameSummaryReportUrl(gamecenterId);
   const shootoutReportUrl = buildShootoutReportUrl(gamecenterId);
   const goalieToiReportUrls = buildGoalieToiReportUrls(gamecenterId);
-  const boxscore = await fetchNhlJson(`${base}/boxscore`);
+  const boxscore = await fetchNhlJson<NhlBoxscoreFeed>(`${base}/boxscore`);
   const warnings: string[] = [];
 
   await emitProgress({
@@ -238,7 +301,7 @@ export async function autofillGameFromNhlGamecenter(
   await validateNhlAutofillPreflight(game, gamecenterId);
 
   const [playByPlay, rosterReport, gameSummaryReport, shootoutReport, goalieToiReports] = await Promise.all([
-    fetchNhlJson(`${base}/play-by-play`),
+    fetchNhlJson<NhlPlayByPlayFeed>(`${base}/play-by-play`),
     fetchOptionalRosterReport(rosterReportUrl),
     fetchOptionalGameSummaryReport(gameSummaryReportUrl),
     fetchOptionalShootoutReport(shootoutReportUrl),
@@ -639,8 +702,8 @@ export async function autofillGameFromNhlGamecenter(
   };
 }
 
-async function fetchNhlJson(url: string) {
-  const { data } = await axios.get(`${API}/admin/games/nhl-api`, {
+async function fetchNhlJson<T>(url: string): Promise<T> {
+  const { data } = await axios.get<T>(`${API}/admin/games/nhl-api`, {
     headers: authHeaders(),
     params: { url },
   });
@@ -1420,7 +1483,7 @@ function nhlPlayerGroupToLocalPosition(group: NhlPlayer['group']) {
   return 'F';
 }
 
-function assertGameMatches(game: GameRecord, boxscore: any) {
+function assertGameMatches(game: GameRecord, boxscore: NhlBoxscoreFeed) {
   const nhlDate = typeof boxscore?.gameDate === 'string' ? boxscore.gameDate.slice(0, 10) : null;
   const localDates = nhlLocalDateCandidates(game.scheduled_at);
   if (nhlDate && localDates.length > 0 && !localDates.includes(nhlDate)) {
@@ -1470,18 +1533,18 @@ function nhlLocalDateCandidates(value: string | null | undefined) {
   );
 }
 
-function isShootoutGame(boxscore: any) {
+function isShootoutGame(boxscore: NhlBoxscoreFeed) {
   return (
     String(boxscore?.gameOutcome?.lastPeriodType ?? '').toUpperCase() === 'SO' ||
     String(boxscore?.periodDescriptor?.periodType ?? '').toUpperCase() === 'SO'
   );
 }
 
-function getNhlPlayers(boxscore: any, side: TeamSide): NhlPlayer[] {
+function getNhlPlayers(boxscore: NhlBoxscoreFeed, side: TeamSide): NhlPlayer[] {
   const stats = boxscore?.playerByGameStats?.[`${side}Team`] ?? {};
   return (['forwards', 'defense', 'goalies'] as const).flatMap((group) =>
     Array.isArray(stats[group])
-      ? stats[group].map((player: any) => ({
+      ? stats[group].map((player) => ({
           playerId: Number(player.playerId),
           sweaterNumber: Number(player.sweaterNumber),
           // NHL boxscores now expose a single `name` ({default}); fall back to the
@@ -2225,7 +2288,7 @@ function buildStartingGoalieSlot(players: MatchedRosterPlayer[]) {
   return [{ position_slot: 'G' as const, player_id: goalies[0].localId }];
 }
 
-function getNhlGoals(playByPlay: any, boxscore: any): NhlGoal[] {
+function getNhlGoals(playByPlay: NhlPlayByPlayFeed, boxscore: NhlBoxscoreFeed): NhlGoal[] {
   return getPlays(playByPlay)
     .filter((play) => play.typeDescKey === 'goal' && !isShootoutPlay(play))
     .map((play) => {
@@ -2236,8 +2299,8 @@ function getNhlGoals(playByPlay: any, boxscore: any): NhlGoal[] {
         teamSide,
         periodNumber,
         period: nhlPeriodToLocal(periodNumber),
-        periodTime: play.timeInPeriod,
-        goalType: goalTypeFromSituation(play.situationCode, teamSide),
+        periodTime: String(play.timeInPeriod ?? '00:00'),
+        goalType: goalTypeFromSituation(readText(play.situationCode), teamSide),
         emptyNet: isEmptyNetGoal(play, teamSide),
         penaltyShot: !!play.details?.penaltyShot,
         scorerId: Number(play.details?.scoringPlayerId),
@@ -2257,7 +2320,11 @@ function groupGoalsByPeriodNumber(goals: NhlGoal[]) {
   return grouped;
 }
 
-function getPlayedPeriodNumbers(boxscore: any, goals: NhlGoal[], shootoutGame: boolean) {
+function getPlayedPeriodNumbers(
+  boxscore: NhlBoxscoreFeed,
+  goals: NhlGoal[],
+  shootoutGame: boolean,
+) {
   const maxGoalPeriod = goals.reduce((max, goal) => Math.max(max, goal.periodNumber), 0);
   const finalPeriod = Number(boxscore?.periodDescriptor?.number ?? (maxGoalPeriod || 3));
   if (shootoutGame) return [1, 2, 3, 4];
@@ -2278,7 +2345,7 @@ function gameProgressPatchForPeriod(periodNumber: number) {
   };
 }
 
-function getPeriodShots(playByPlay: any, boxscore: any) {
+function getPeriodShots(playByPlay: NhlPlayByPlayFeed, boxscore: NhlBoxscoreFeed) {
   const shots = new Map<string, { period: string; away_shots: number; home_shots: number }>();
   getPlays(playByPlay)
     .filter((play) => !isShootoutPlay(play) && (play.typeDescKey === 'goal' || play.typeDescKey === 'shot-on-goal'))
@@ -2295,15 +2362,15 @@ function getPeriodShots(playByPlay: any, boxscore: any) {
 
 function getGoalieStats(
   game: GameRecord,
-  boxscore: any,
+  boxscore: NhlBoxscoreFeed,
   matched: Record<TeamSide, MatchedPlayer[]>,
 ): UpsertGoalieStatData[] {
   return (['away', 'home'] as const).flatMap((side) => {
     const teamStats = boxscore?.playerByGameStats?.[`${side}Team`]?.goalies ?? [];
     const matchedByNhlId = new Map(matched[side].map((player) => [player.playerId, player]));
     return teamStats
-      .filter((goalie: any) => goalieActuallyPlayed(goalie))
-      .map((goalie: any) => ({
+      .filter((goalie) => goalieActuallyPlayed(goalie))
+      .map((goalie) => ({
         goalie_id: matchedByNhlId.get(Number(goalie.playerId))!.localId,
         team_id: side === 'away' ? game.away_team.id : game.home_team.id,
         shots_against: Number(goalie.shotsAgainst ?? 0),
@@ -2314,8 +2381,8 @@ function getGoalieStats(
 
 function buildGoalieStintPayloads(
   game: GameRecord,
-  boxscore: any,
-  playByPlay: any,
+  boxscore: NhlBoxscoreFeed,
+  playByPlay: NhlPlayByPlayFeed,
   goalieToiReports: string[],
   matched: Record<TeamSide, MatchedPlayer[]>,
   goalieStats: UpsertGoalieStatData[],
@@ -2367,7 +2434,7 @@ function buildGoalieStintPayloads(
 
 function buildParsedGoalieStints(
   goalieToiReports: string[],
-  playByPlay: any,
+  playByPlay: NhlPlayByPlayFeed,
   goaliesByTeam: GoaliesByTeam,
 ) {
   const toiStints = buildGoalieStintsFromToiHtml(goalieToiReports, goaliesByTeam)
@@ -2528,7 +2595,7 @@ function nullishNumber(value: number | null | undefined) {
 }
 
 function inferStars(
-  boxscore: any,
+  boxscore: NhlBoxscoreFeed,
   goals: NhlGoal[],
   matched: Record<TeamSide, MatchedPlayer[]>,
 ): string[] {
@@ -2652,8 +2719,8 @@ function resolveShootoutAttempts(
 }
 
 function resolvePlayByPlayShootoutAttempts(
-  playByPlay: any,
-  boxscore: any,
+  playByPlay: NhlPlayByPlayFeed,
+  boxscore: NhlBoxscoreFeed,
   matched: Record<TeamSide, MatchedPlayer[]>,
   game: GameRecord,
 ): ShootoutAttemptPayload[] {
@@ -2682,11 +2749,11 @@ function resolvePlayByPlayShootoutAttempts(
     .filter((attempt): attempt is ShootoutAttemptPayload => !!attempt);
 }
 
-function isShootoutAttemptPlay(play: any) {
+function isShootoutAttemptPlay(play: NhlPlay) {
   return ['goal', 'shot-on-goal', 'missed-shot'].includes(String(play?.typeDescKey ?? ''));
 }
 
-function shootoutShooterId(play: any) {
+function shootoutShooterId(play: NhlPlay) {
   return toOptionalNumber(play.details?.scoringPlayerId ?? play.details?.shootingPlayerId);
 }
 
@@ -2698,25 +2765,25 @@ function normalizeNameKey(value: string) {
     .toUpperCase();
 }
 
-function getWinningGoalie(boxscore: any, matchedGoalies: MatchedPlayer[]) {
+function getWinningGoalie(boxscore: NhlBoxscoreFeed, matchedGoalies: MatchedPlayer[]) {
   const matchedByNhlId = new Map(matchedGoalies.map((goalie) => [goalie.playerId, goalie.localId]));
   const winningGoalies =
     Number(boxscore.awayTeam?.score ?? 0) > Number(boxscore.homeTeam?.score ?? 0)
       ? boxscore?.playerByGameStats?.awayTeam?.goalies
       : boxscore?.playerByGameStats?.homeTeam?.goalies;
   const goalie = Array.isArray(winningGoalies)
-    ? winningGoalies.find((row: any) => goalieActuallyPlayed(row))
+    ? winningGoalies.find((row) => goalieActuallyPlayed(row))
     : null;
   return goalie ? matchedByNhlId.get(Number(goalie.playerId)) : undefined;
 }
 
-function getCurrentPeriod(boxscore: any, goals: NhlGoal[]) {
+function getCurrentPeriod(boxscore: NhlBoxscoreFeed, goals: NhlGoal[]) {
   if (isShootoutGame(boxscore)) return 'SO';
   if (getOvertimePeriods(boxscore, goals) > 0) return 'OT';
   return '3';
 }
 
-function getOvertimePeriods(boxscore: any, goals: NhlGoal[]) {
+function getOvertimePeriods(boxscore: NhlBoxscoreFeed, goals: NhlGoal[]) {
   if (isShootoutGame(boxscore)) return 1;
   const maxGoalPeriod = goals.reduce((max, goal) => Math.max(max, goal.periodNumber), 0);
   const finalPeriod = Number(boxscore?.periodDescriptor?.number ?? maxGoalPeriod);
@@ -2872,7 +2939,7 @@ function goalTypeFromSituation(situationCode: string | undefined, side: TeamSide
   return 'even-strength';
 }
 
-function isEmptyNetGoal(play: any, scoringSide: TeamSide) {
+function isEmptyNetGoal(play: NhlPlay, scoringSide: TeamSide) {
   if (play.details?.emptyNet) return true;
   if (play.details?.goalieInNetId) return false;
 
@@ -2893,18 +2960,18 @@ function nhlPeriodToLocal(period: unknown) {
   return 'OT';
 }
 
-function getPlays(playByPlay: any): any[] {
+function getPlays(playByPlay: NhlPlayByPlayFeed): NhlPlay[] {
   return Array.isArray(playByPlay?.plays) ? playByPlay.plays : [];
 }
 
-function isShootoutPlay(play: any) {
+function isShootoutPlay(play: NhlPlay) {
   return (
     String(play?.periodDescriptor?.periodType ?? '').toUpperCase() === 'SO' ||
     String(play?.periodDescriptor?.periodType ?? '').toLowerCase() === 'shootout'
   );
 }
 
-function goalieActuallyPlayed(goalie: any) {
+function goalieActuallyPlayed(goalie: NhlBoxscorePlayer) {
   const toi = String(goalie?.toi ?? '').trim();
   return (
     (!!toi && toi !== '00:00' && toi !== '0:00') ||
@@ -2914,13 +2981,20 @@ function goalieActuallyPlayed(goalie: any) {
   );
 }
 
-function readText(value: any): string | undefined {
+function readText(value: unknown): string | undefined {
   if (typeof value === 'string') return value;
-  if (typeof value?.default === 'string') return value.default;
+  if (
+    value &&
+    typeof value === 'object' &&
+    'default' in value &&
+    typeof value.default === 'string'
+  ) {
+    return value.default;
+  }
   return undefined;
 }
 
-function toOptionalNumber(value: any): number | null {
+function toOptionalNumber(value: unknown): number | null {
   if (value == null || value === '') return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;

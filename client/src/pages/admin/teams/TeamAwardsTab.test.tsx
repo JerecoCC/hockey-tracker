@@ -81,10 +81,19 @@ describe('TeamAwardsTab', () => {
     expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('data-active', 'true');
     expect(screen.getByText('Presidents Trophy')).toBeInTheDocument();
     expect(screen.getByText('Walter Cup Winner')).toBeInTheDocument();
-    expect(screen.getByLabelText('Presidents Trophy award details')).toBeInTheDocument();
-    expect(screen.getByLabelText('Walter Cup Winner award details')).toBeInTheDocument();
-    expect(screen.getByText('Awarded to the top regular season team.')).toBeInTheDocument();
-    expect(screen.getByText('Awarded to the playoff champion.')).toBeInTheDocument();
+    const regularSeasonDetails = screen.getByLabelText('Presidents Trophy award details');
+    const playoffDetails = screen.getByLabelText('Walter Cup Winner award details');
+    await user.hover(regularSeasonDetails);
+    expect(
+      await screen.findByRole('tooltip', {
+        name: 'Awarded to the top regular season team.',
+      }),
+    ).toBeInTheDocument();
+    await user.unhover(regularSeasonDetails);
+    await user.hover(playoffDetails);
+    expect(
+      await screen.findByRole('tooltip', { name: 'Awarded to the playoff champion.' }),
+    ).toBeInTheDocument();
     expect(screen.getAllByLabelText('1 win')).toHaveLength(2);
     expect(screen.getByText(/Awarded Apr 20, 2026/)).toBeInTheDocument();
     expect(screen.getByText('2025-26').closest('li')).toHaveClass('itemPlain');

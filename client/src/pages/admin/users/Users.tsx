@@ -6,7 +6,6 @@ import { getUserColumns, UserRecord } from './columns';
 import UserRoleModal, { RoleConfirm } from './UserRoleModal';
 import UserDeleteModal from './UserDeleteModal';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
-import styles from './Users.module.scss';
 
 const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
   [...data].sort((a, b) => {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { toast, type TypeOptions } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
@@ -56,7 +56,7 @@ import {
 import { partitionAutofillingGames } from './seasonGamesAutofillUtils';
 import styles from './SeasonGamesTab.module.scss';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders, getAggregateErrorMessage as getErrorMessage } from '@/lib/apiClient';
 const SEASON_WEEK_SUMMARY_STICKY_TOP = '52px';
 const SEASON_WEEK_SUMMARY_STICKY_TOP_PX = 52;
 const SEASON_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX = 8;
@@ -67,29 +67,6 @@ const AUTOFILL_FAILURE_TOAST_MS = 12000;
 const getSeasonWeekSummaryActiveMarker = (summaryCard: HTMLDivElement | null): number =>
   (summaryCard?.getBoundingClientRect().bottom ?? SEASON_WEEK_SUMMARY_STICKY_TOP_PX) +
   SEASON_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX;
-
-const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
-const getErrorMessage = (err: unknown, fallback = 'Something went wrong'): string => {
-  const responseError = (err as AxiosError<{ error?: string }>).response?.data?.error;
-  if (responseError) return responseError;
-
-  const aggregateErrors = (err as { errors?: unknown[] }).errors;
-  if (Array.isArray(aggregateErrors) && aggregateErrors.length > 0) {
-    const messages = aggregateErrors.map((nested) => getErrorMessage(nested, '')).filter(Boolean);
-    if (messages.length > 0) return messages.join('; ');
-  }
-
-  if (err instanceof Error) {
-    const cause = (err as Error & { cause?: unknown }).cause;
-    const causeMessage = cause && cause !== err ? getErrorMessage(cause, '') : '';
-    if (err.message && causeMessage && !err.message.includes(causeMessage)) {
-      return `${err.message}: ${causeMessage}`;
-    }
-    return err.message || causeMessage || fallback;
-  }
-
-  return typeof err === 'string' && err ? err : fallback;
-};
 
 // ── Display helpers ───────────────────────────────────────────────────────────
 

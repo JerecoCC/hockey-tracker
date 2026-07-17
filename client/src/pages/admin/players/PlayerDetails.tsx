@@ -90,17 +90,12 @@ import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './PlayerDetails.module.scss';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
 
-const API = import.meta.env.VITE_API_URL || '/api';
+import { API, authHeaders, getApiErrorMessage as apiError } from '@/lib/apiClient';
 const PWHL_BASE_URL = 'https://lscluster.hockeytech.com/feed/index.php';
 const PWHL_APP_KEY = '446521baf8c38984';
 const PWHL_CLIENT_CODE = 'pwhl';
 const PWHL_LEAGUE_ID = '1';
 const NHL_PLAYER_PAGE_BASE_URL = 'https://www.nhl.com/utah/player';
-const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
-const apiError = (err: unknown, fallback: string): string =>
-  axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
-    ? err.response.data.error
-    : fallback;
 const GAME_LOG_PAGE_SIZE = 20;
 const AUTOFILL_RESULT_TOAST_MS = 4000;
 const AUTOFILL_FAILURE_TOAST_MS = 12000;
