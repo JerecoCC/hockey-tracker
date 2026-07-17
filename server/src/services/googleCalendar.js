@@ -6,6 +6,8 @@ const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.app.created';
 const DEFAULT_CALENDAR_NAME = 'Hockey Tracker';
+const DEFAULT_GAME_DURATION_MINUTES = 180;
+const GAME_TIME_ZONE = 'America/New_York';
 
 class GoogleCalendarError extends Error {
   constructor(message, { status = 500, code = 'google_calendar_error', details = null } = {}) {
@@ -29,8 +31,8 @@ const isGoogleCalendarConfigured = () =>
   Boolean(
     process.env.GOOGLE_CLIENT_ID?.trim() &&
     process.env.GOOGLE_CLIENT_SECRET?.trim() &&
-      getCallbackUrl() &&
-      getEncryptionSecret().length >= 32,
+    getCallbackUrl() &&
+    getEncryptionSecret().length >= 32,
   );
 
 const requireGoogleCalendarConfig = () => {
@@ -198,19 +200,59 @@ const addOneDay = (dateKey) => {
   return next.toISOString().slice(0, 10);
 };
 
+const normalizeCalendarTime = (value) => {
+  const match = String(value || '')
+    .trim()
+    .match(/^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/);
+  if (!match) return null;
+  return `${match[1]}:${match[2]}:${match[3] || '00'}`;
+};
+
+const addMinutesToCalendarDateTime = (dateKey, time, minutes) => {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const [hour, minute, second] = time.split(':').map(Number);
+  const next = new Date(Date.UTC(year, month - 1, day, hour, minute + minutes, second));
+  return next.toISOString().slice(0, 19);
+};
+
+const eventTimeForGame = (game) => {
+  const calendarTime = normalizeCalendarTime(game.scheduled_time);
+  if (!calendarTime) {
+    return {
+      start: { date: game.calendar_date },
+      end: { date: addOneDay(game.calendar_date) },
+    };
+  }
+
+  return {
+    start: {
+      dateTime: `${game.calendar_date}T${calendarTime}`,
+      timeZone: GAME_TIME_ZONE,
+    },
+    end: {
+      dateTime: addMinutesToCalendarDateTime(
+        game.calendar_date,
+        calendarTime,
+        DEFAULT_GAME_DURATION_MINUTES,
+      ),
+      timeZone: GAME_TIME_ZONE,
+    },
+  };
+};
+
 const eventIdForGame = (userId, gameId) =>
   `ht${crypto.createHash('sha256').update(`${userId}:${gameId}`, 'utf8').digest('hex')}`;
 
 const eventForGame = ({ userId, game }) => {
   const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').trim().replace(/\/$/, '');
   const matchup = `${game.away_code || 'Away'} @ ${game.home_code || 'Home'}`;
+  const eventTime = eventTimeForGame(game);
   return {
     id: eventIdForGame(userId, game.id),
     status: 'confirmed',
     summary: game.league_code ? `${matchup} · ${game.league_code}` : matchup,
     description: `Game synced from Hockey Tracker.\n\n${clientUrl}/games/${game.id}`,
-    start: { date: game.calendar_date },
-    end: { date: addOneDay(game.calendar_date) },
+    ...eventTime,
     transparency: 'transparent',
     source: {
       title: 'Hockey Tracker',
@@ -269,7 +311,11 @@ const upsertGameEvent = async ({ accessToken, calendarId, userId, game }) => {
       });
     } catch (insertErr) {
       if (!(insertErr instanceof GoogleCalendarError) || insertErr.status !== 409) throw insertErr;
-      await googleRequest(eventUrl, { accessToken, method: 'PUT', body: event });
+      await googleRequest(eventUrl, {
+        accessToken,
+        method: 'PUT',
+        body: event,
+      });
     }
   }
   return event.id;
@@ -350,6 +396,42 @@ const markSyncError = async (userId, err) => {
 };
 
 const calendarGameSelect = (userId, gameId = null) => sql`
+  WITH closest_open_season AS (
+    SELECT candidate.id
+    FROM seasons candidate
+    WHERE candidate.is_ended = FALSE
+      AND EXISTS (
+        SELECT 1
+        FROM games candidate_game
+        JOIN user_favorite_teams candidate_favorite
+          ON candidate_favorite.user_id = ${userId}
+         AND (
+           candidate_favorite.team_id = candidate_game.home_team_id
+           OR candidate_favorite.team_id = candidate_game.away_team_id
+         )
+        WHERE candidate_game.season_id = candidate.id
+      )
+    ORDER BY
+      CASE
+        WHEN candidate.start_date IS NOT NULL
+          AND candidate.start_date <= CURRENT_DATE
+          AND (candidate.end_date IS NULL OR candidate.end_date >= CURRENT_DATE)
+          THEN 0
+        WHEN candidate.start_date IS NULL THEN 2
+        ELSE 1
+      END,
+      CASE
+        WHEN candidate.start_date IS NULL THEN NULL
+        WHEN CURRENT_DATE < candidate.start_date THEN candidate.start_date - CURRENT_DATE
+        WHEN candidate.end_date IS NOT NULL AND CURRENT_DATE > candidate.end_date
+          THEN CURRENT_DATE - candidate.end_date
+        ELSE 0
+      END ASC NULLS LAST,
+      candidate.start_date DESC NULLS LAST,
+      candidate.created_at DESC,
+      candidate.id
+    LIMIT 1
+  )
   SELECT
     g.id,
     COALESCE(
@@ -360,6 +442,14 @@ const calendarGameSelect = (userId, gameId = null) => sql`
         ELSE (g.scheduled_at AT TIME ZONE 'America/New_York')::date
       END
     )::text AS calendar_date,
+    COALESCE(
+      NULLIF(BTRIM(g.scheduled_time), ''),
+      CASE
+        WHEN (g.scheduled_at AT TIME ZONE 'UTC')::time <> TIME '00:00:00'
+          THEN TO_CHAR(g.scheduled_at AT TIME ZONE 'America/New_York', 'HH24:MI')
+        ELSE NULL
+      END
+    ) AS scheduled_time,
     l.code AS league_code,
     COALESCE((
       SELECT ti.code
@@ -382,6 +472,7 @@ const calendarGameSelect = (userId, gameId = null) => sql`
   LEFT JOIN seasons s ON s.id = g.season_id
   LEFT JOIN leagues l ON l.id = s.league_id
   WHERE (${gameId}::uuid IS NULL OR g.id = ${gameId}::uuid)
+    AND g.season_id = (SELECT id FROM closest_open_season)
     AND uwg.skipped_at IS NULL
     AND COALESCE(
       uwg.scheduled_for,
@@ -391,14 +482,11 @@ const calendarGameSelect = (userId, gameId = null) => sql`
         ELSE (g.scheduled_at AT TIME ZONE 'America/New_York')::date
       END
     ) IS NOT NULL
-    AND (
-      uwg.scheduled_for IS NOT NULL
-      OR EXISTS (
-        SELECT 1
-        FROM user_favorite_teams uft
-        WHERE uft.user_id = ${userId}
-          AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
-      )
+    AND EXISTS (
+      SELECT 1
+      FROM user_favorite_teams uft
+      WHERE uft.user_id = ${userId}
+        AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
     )
 `;
 
@@ -436,11 +524,53 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
   const connection = context.connection || (await getConnection(userId));
   if (!connection) return { status: 'not_connected', synced: 0, removed: 0 };
 
+  const reportProgress = (progress) => {
+    if (typeof context.onProgress !== 'function') return;
+    try {
+      context.onProgress(progress);
+    } catch (err) {
+      console.error('Google Calendar progress callback error:', err);
+    }
+  };
+
   try {
+    reportProgress({
+      step: 'prepare',
+      message: 'Preparing scheduled games...',
+    });
     const accessToken =
       context.accessToken || (await refreshAccessToken(connection.refresh_token_encrypted));
     const games = await calendarGameSelect(userId);
     const calendarGameIds = new Set(games.map((game) => game.id));
+
+    reportProgress({
+      step: 'prepare',
+      message: 'Checking existing calendar events...',
+    });
+    const existingEvents = await listManagedEvents({
+      accessToken,
+      calendarId: connection.calendar_id,
+    });
+    const staleGameIds = [
+      ...new Set(
+        existingEvents
+          .map((event) => event.extendedProperties?.private?.hockeyTrackerGameId)
+          .filter((gameId) => gameId && !calendarGameIds.has(gameId)),
+      ),
+    ];
+    const operationCount = games.length + staleGameIds.length;
+    const progressTotal = Math.max(operationCount, 1);
+    let completed = 0;
+
+    reportProgress({
+      step: 'sync',
+      message:
+        operationCount > 0
+          ? `Syncing ${operationCount} calendar ${operationCount === 1 ? 'change' : 'changes'}...`
+          : 'Calendar is already up to date.',
+      completed,
+      total: progressTotal,
+    });
 
     for (const game of games) {
       await upsertGameEvent({
@@ -449,16 +579,17 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
         userId,
         game,
       });
+      completed += 1;
+      reportProgress({
+        step: 'sync',
+        message: `Synced ${game.away_code || 'Away'} @ ${game.home_code || 'Home'}`,
+        completed,
+        total: progressTotal,
+      });
     }
 
     let removed = 0;
-    const existingEvents = await listManagedEvents({
-      accessToken,
-      calendarId: connection.calendar_id,
-    });
-    for (const event of existingEvents) {
-      const gameId = event.extendedProperties?.private?.hockeyTrackerGameId;
-      if (!gameId || calendarGameIds.has(gameId)) continue;
+    for (const gameId of staleGameIds) {
       await deleteGameEvent({
         accessToken,
         calendarId: connection.calendar_id,
@@ -466,9 +597,22 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
         gameId,
       });
       removed += 1;
+      completed += 1;
+      reportProgress({
+        step: 'remove',
+        message: `Removed stale game ${removed}`,
+        completed,
+        total: progressTotal,
+      });
     }
 
     await markSyncSuccess(userId);
+    reportProgress({
+      step: 'complete',
+      message: 'Google Calendar is up to date.',
+      completed: progressTotal,
+      total: progressTotal,
+    });
     return { status: 'synced', synced: games.length, removed };
   } catch (err) {
     await markSyncError(userId, err);
