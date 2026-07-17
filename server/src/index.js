@@ -2,8 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const { runtimeSecret } = require('./config/env');
 const session = require('express-session');
 const passport = require('passport');
+const { errorHandler, notFoundHandler } = require('./middleware/errors');
 
 const { initSchema, sql } = require('./db');
 require('./config/passport');
@@ -47,7 +49,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || 'hockey-tracker-secret',
+    secret: runtimeSecret('SESSION_SECRET', 'hockey-tracker-secret'),
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -98,6 +100,10 @@ app.get('/api/health', async (_req, res) => {
     });
   }
 });
+
+// Keep error responses consistent for uncaught route failures and unknown APIs.
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 // ---------------------------------------------------------------------------
 // Start – run DB migrations then listen (local dev only)

@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const { runtimeSecret } = require('../config/env');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'hockey-tracker-jwt-secret';
+const JWT_SECRET = runtimeSecret('JWT_SECRET', 'hockey-tracker-jwt-secret');
 const JWT_EXPIRES_IN = '7d';
 const GOOGLE_CALENDAR_STATE_AUDIENCE = 'google-calendar-connect';
 const TOKEN_ISSUER = 'hockey-tracker';

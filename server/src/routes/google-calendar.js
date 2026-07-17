@@ -14,6 +14,7 @@ const {
   normalizeGoogleCalendarTimeZone,
   syncAllScheduledGamesForUser,
 } = require('../services/googleCalendar');
+const { HttpError, asyncRoute } = require('../middleware/errors');
 
 const CLIENT_URL = (process.env.CLIENT_URL || 'http://localhost:5173').trim();
 const STATE_COOKIE = 'google_calendar_oauth_state';
@@ -43,6 +44,18 @@ const safeEqual = (left, right) => {
     crypto.timingSafeEqual(leftBuffer, rightBuffer)
   );
 };
+
+const publicRouteError = (message, status = 500) => (error) =>
+  new HttpError(status, message, { cause: error, expose: true });
+
+const googleConnectError = (error) =>
+  new HttpError(
+    error instanceof GoogleCalendarError ? error.status : 500,
+    error instanceof GoogleCalendarError
+      ? error.message
+      : 'Failed to start Google Calendar connection',
+    { cause: error, expose: true },
+  );
 
 // Google returns to this endpoint without the app's Bearer token. The signed,
 // short-lived state plus matching HttpOnly cookie bind the callback to the user
@@ -79,17 +92,17 @@ router.get('/callback', async (req, res) => {
 
 router.use(requireAuth);
 
-router.get('/', async (req, res) => {
-  try {
-    return res.json(await getGoogleCalendarStatus(req.user.id));
-  } catch (err) {
-    console.error('Google Calendar status error:', err);
-    return res.status(500).json({ error: 'Failed to load Google Calendar status' });
-  }
-});
+router.get(
+  '/',
+  asyncRoute(
+    async (req, res) => res.json(await getGoogleCalendarStatus(req.user.id)),
+    { mapError: publicRouteError('Failed to load Google Calendar status') },
+  ),
+);
 
-router.post('/connect', async (req, res) => {
-  try {
+router.post(
+  '/connect',
+  asyncRoute(async (req, res) => {
     const nonce = crypto.randomBytes(32).toString('base64url');
     const timeZone = normalizeGoogleCalendarTimeZone(req.body?.time_zone);
     const state = signGoogleCalendarState({ userId: req.user.id, nonce, timeZone });
@@ -99,16 +112,8 @@ router.post('/connect', async (req, res) => {
     });
     res.cookie(STATE_COOKIE, nonce, stateCookieOptions());
     return res.json({ authorization_url: authorizationUrl });
-  } catch (err) {
-    console.error('Google Calendar connect error:', err);
-    const status = err instanceof GoogleCalendarError ? err.status : 500;
-    const error =
-      err instanceof GoogleCalendarError
-        ? err.message
-        : 'Failed to start Google Calendar connection';
-    return res.status(status).json({ error });
-  }
-});
+  }, { mapError: googleConnectError }),
+);
 
 router.post('/sync', async (req, res) => {
   const streamProgress = req.get('accept')?.includes('application/x-ndjson');
@@ -162,13 +167,12 @@ router.post('/sync', async (req, res) => {
   }
 });
 
-router.delete('/', async (req, res) => {
-  try {
-    return res.json(await disconnectGoogleCalendar(req.user.id));
-  } catch (err) {
-    console.error('Google Calendar disconnect error:', err);
-    return res.status(500).json({ error: 'Failed to disconnect Google Calendar' });
-  }
-});
+router.delete(
+  '/',
+  asyncRoute(
+    async (req, res) => res.json(await disconnectGoogleCalendar(req.user.id)),
+    { mapError: publicRouteError('Failed to disconnect Google Calendar') },
+  ),
+);
 
 module.exports = router;

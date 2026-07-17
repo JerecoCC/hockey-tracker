@@ -2,6 +2,7 @@ const { neon } = require('@neondatabase/serverless');
 const { drizzle } = require('drizzle-orm/neon-http');
 const schema = require('./schema');
 const { backfillAllSeasonStatsSnapshots } = require('./lib/gameStatsSnapshots');
+const { ensureMigrationLedger } = require('./db/migrations');
 
 const rawUrl = process.env.POSTGRES_URL;
 
@@ -395,6 +396,8 @@ async function backfillMissingDefaultGroupAlignmentAssignments() {
  * Run once at startup: create the users table if it doesn't exist.
  */
 async function initSchema() {
+  await ensureMigrationLedger(sql);
+
   await sql`
     CREATE TABLE IF NOT EXISTS users (
       id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -623,12 +626,6 @@ async function initSchema() {
   await sql`
     CREATE INDEX IF NOT EXISTS league_draft_dates_lookup
     ON league_draft_dates (league_id, draft_year, start_round, end_round)
-  `;
-  await sql`
-    CREATE TABLE IF NOT EXISTS _migrations (
-      name       TEXT PRIMARY KEY,
-      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
   `;
   await sql`
     DO $$
@@ -1320,12 +1317,6 @@ async function initSchema() {
     CREATE UNIQUE INDEX IF NOT EXISTS player_team_stints_import_identity_unique
       ON player_team_stints (player_id, import_source, import_key)
       WHERE import_source IS NOT NULL AND import_key IS NOT NULL
-  `;
-  await sql`
-    CREATE TABLE IF NOT EXISTS _migrations (
-      name       TEXT PRIMARY KEY,
-      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
   `;
   await sql`
     DO $$
@@ -2606,13 +2597,7 @@ async function initSchema() {
   `;
 
   // ── One-time data migration tracking ─────────────────────────────────────────
-  // Lightweight table so non-idempotent data fixes run exactly once.
-  await sql`
-    CREATE TABLE IF NOT EXISTS _migrations (
-      name       TEXT PRIMARY KEY,
-      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `;
+  // The migration ledger is initialized once at the start of initSchema.
 
   // Player acquisition type backfill
   // One-time player acquisition type backfill for older roster data.
