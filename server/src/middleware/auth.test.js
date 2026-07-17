@@ -1,7 +1,13 @@
 'use strict';
 
 const jwt = require('jsonwebtoken');
-const { signToken, requireAuth, requireAdmin } = require('./auth');
+const {
+  signToken,
+  signGoogleCalendarState,
+  verifyGoogleCalendarState,
+  requireAuth,
+  requireAdmin,
+} = require('./auth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'hockey-tracker-jwt-secret';
 
@@ -38,6 +44,27 @@ describe('signToken', () => {
     expect(decoded.role).toBe(payload.role);
     // exp should be ~7 days from now
     expect(decoded.exp - decoded.iat).toBe(7 * 24 * 60 * 60);
+  });
+});
+
+describe('Google Calendar OAuth state', () => {
+  it('round-trips a short-lived state with the expected purpose', () => {
+    const state = signGoogleCalendarState({
+      userId: 'user-1',
+      nonce: 'nonce-1',
+    });
+
+    expect(verifyGoogleCalendarState(state)).toMatchObject({
+      userId: 'user-1',
+      nonce: 'nonce-1',
+      purpose: 'google-calendar-connect',
+    });
+  });
+
+  it('rejects a normal login token as OAuth state', () => {
+    const token = signToken({ id: 'user-1' });
+
+    expect(() => verifyGoogleCalendarState(token)).toThrow();
   });
 });
 

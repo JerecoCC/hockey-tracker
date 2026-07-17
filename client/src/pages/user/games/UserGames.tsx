@@ -18,6 +18,7 @@ import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
 import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
 import GameCard from '@/shared/GameCard/GameCard';
+import GoogleLogo from '@/shared/GoogleLogo/GoogleLogo';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
@@ -58,6 +59,27 @@ const USER_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX = 8;
 const USER_WEEK_SUMMARY_AUTO_SCROLL_START_GRACE_MS = 700;
 const USER_WEEK_SUMMARY_AUTO_SCROLL_IDLE_MS = 160;
 
+const googleCalendarConnectErrorMessage = (reason: string | null) => {
+  switch (reason) {
+    case 'access_denied':
+      return 'Google Calendar connection was cancelled';
+    case 'calendar_api_disabled':
+      return 'Google Calendar API is disabled for this OAuth project. Enable it in Google Cloud, then try again.';
+    case 'PERMISSION_DENIED':
+      return 'Google Calendar denied access. Verify the Calendar API is enabled in the OAuth project, then try again.';
+    case 'insufficient_calendar_scope':
+      return 'Google did not grant the required Calendar permission. Reconnect and approve Calendar access.';
+    case 'state_mismatch':
+      return 'Google Calendar connection expired or its browser cookie was unavailable. Try connecting again.';
+    case 'invalid_grant':
+      return 'Google authorization expired before it could be completed. Try connecting again.';
+    case 'missing_refresh_token':
+      return 'Google did not grant offline Calendar access. Remove the app from your Google connections, then reconnect.';
+    default:
+      return 'Failed to connect Google Calendar';
+  }
+};
+
 const getUserWeekSummaryActiveMarker = (summaryCard: HTMLDivElement | null): number =>
   (summaryCard?.getBoundingClientRect().bottom ?? USER_WEEK_SUMMARY_STICKY_TOP_PX) +
   USER_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX;
@@ -70,6 +92,21 @@ interface UserTeamOptionRecord {
   code: string | null;
   logo: string | null;
   league_id: string | null;
+}
+
+interface GoogleCalendarStatus {
+  configured: boolean;
+  connected: boolean;
+  calendar_name: string | null;
+  connected_at: string | null;
+  last_synced_at: string | null;
+  last_sync_error: string | null;
+}
+
+interface GoogleCalendarSyncResult {
+  status: 'synced';
+  synced: number;
+  removed: number;
 }
 
 const STATUS_OPTIONS: SelectOption[] = [
@@ -529,6 +566,14 @@ const formatScheduleToastDate = (dateKey: string) =>
   SCHEDULE_TOAST_DATE_FMT.format(dateKeyToDate(dateKey));
 const canMarkGameWatched = (game: GameRecord) => game.status === 'final';
 
+const formatCalendarSyncTime = (value: string | null) =>
+  value
+    ? new Date(value).toLocaleString('en-US', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      })
+    : null;
+
 // ── Playoff series markers ───────────────────────────────────────────────────
 
 const PlayoffSeriesDots = ({ wins, total }: { wins: number; total: number }) => (
@@ -640,6 +685,95 @@ const ScheduleWatchModal = ({
         {scheduleDateInvalid && (
           <p className={styles.scheduleModalError}>
             Choose a watch date after the game&apos;s scheduled date.
+          </p>
+        )}
+      </div>
+    </Modal>
+  );
+};
+
+const GoogleCalendarModal = ({
+  open,
+  status,
+  busy,
+  onClose,
+  onConnect,
+  onSync,
+  onDisconnect,
+}: {
+  open: boolean;
+  status: GoogleCalendarStatus | undefined;
+  busy: boolean;
+  onClose: () => void;
+  onConnect: () => void;
+  onSync: () => void;
+  onDisconnect: () => void;
+}) => {
+  const connected = !!status?.connected;
+  const configured = !!status?.configured;
+  const lastSyncedAt = formatCalendarSyncTime(status?.last_synced_at ?? null);
+
+  return (
+    <Modal
+      open={open}
+      title="Google Calendar Sync"
+      onClose={onClose}
+      onConfirm={connected ? onSync : onConnect}
+      confirmLabel={
+        busy
+          ? connected
+            ? 'Syncing…'
+            : 'Connecting…'
+          : connected
+            ? 'Sync Now'
+            : 'Connect Google Calendar'
+      }
+      confirmDisabled={busy || !configured}
+      busy={busy}
+      footerStart={
+        connected ? (
+          <Button
+            type="button"
+            variant="ghost"
+            intent="neutral"
+            onClick={onDisconnect}
+            disabled={busy}
+          >
+            Disconnect &amp; Remove Calendar
+          </Button>
+        ) : undefined
+      }
+    >
+      <div className={styles.googleCalendarModalBody}>
+        {!configured ? (
+          <p>
+            Google Calendar sync is unavailable until the server OAuth callback and token secret are
+            configured.
+          </p>
+        ) : connected ? (
+          <>
+            <p>
+              Games for your favorite teams sync as all-day events in your{' '}
+              <strong>{status?.calendar_name || 'Hockey Tracker'}</strong> calendar. A scheduled
+              watch date moves the event; clearing that date moves it back to the original game
+              date, and skipping the game removes it.
+            </p>
+            <p className={styles.googleCalendarStatus}>
+              {lastSyncedAt ? `Last synced ${lastSyncedAt}` : 'Connected — not synced yet'}
+            </p>
+            {status?.last_sync_error && (
+              <p className={styles.googleCalendarError}>
+                The last sync failed. Use Sync Now to retry.
+              </p>
+            )}
+            <p className={styles.googleCalendarDisconnectNote}>
+              Disconnecting also removes the app-created calendar and its synced events.
+            </p>
+          </>
+        ) : (
+          <p>
+            Connect Google Calendar to mirror games for your favorite teams. Hockey Tracker creates
+            a separate calendar and can only manage events inside that calendar.
           </p>
         )}
       </div>
@@ -811,6 +945,8 @@ const UserGames = () => {
   const [scoreImageOpen, setScoreImageOpen] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
+  const [googleCalendarOpen, setGoogleCalendarOpen] = useState(false);
+  const [googleCalendarBusy, setGoogleCalendarBusy] = useState(false);
   const [calendarDownloadBusy, setCalendarDownloadBusy] = useState(false);
   const seededTeamFilterLeagueRef = useRef<string | null>(null);
   const calendarGridRef = useRef<HTMLDivElement>(null);
@@ -824,6 +960,38 @@ const UserGames = () => {
   useEffect(() => {
     sessionStorage.setItem(CALENDAR_MONTH_STORAGE_KEY, toMonthPickerValue(calendarMonth));
   }, [calendarMonth]);
+
+  const { data: googleCalendarStatus } = useQuery<GoogleCalendarStatus>({
+    queryKey: ['google-calendar-status'],
+    queryFn: async () => {
+      const { data } = await axios.get<GoogleCalendarStatus>(`${API}/user/calendar/google`, {
+        headers: authHeaders(),
+      });
+      return data;
+    },
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get('google_calendar');
+    if (!result) return;
+
+    if (result === 'connected') {
+      toast.success('Google Calendar connected and synced');
+      void queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
+    } else {
+      toast.error(googleCalendarConnectErrorMessage(params.get('reason')));
+    }
+
+    params.delete('google_calendar');
+    params.delete('reason');
+    const search = params.toString();
+    window.history.replaceState(
+      {},
+      '',
+      `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`,
+    );
+  }, [queryClient]);
 
   const gamesPeriodParams = useMemo<{ week?: string; month?: string }>(() => {
     if (view === 'calendar') {
@@ -1120,6 +1288,58 @@ const UserGames = () => {
   const openScheduleModal = (game: GameRecord) => {
     setScheduleTarget(game);
     setScheduleDate(getScheduledWatchDateKey(game.scheduled_for) ?? '');
+  };
+
+  const connectGoogleCalendar = async () => {
+    if (googleCalendarBusy) return;
+    setGoogleCalendarBusy(true);
+    try {
+      const { data } = await axios.post<{ authorization_url: string }>(
+        `${API}/user/calendar/google/connect`,
+        {},
+        { headers: authHeaders(), withCredentials: true },
+      );
+      window.location.assign(data.authorization_url);
+    } catch {
+      toast.error('Failed to start Google Calendar connection');
+    } finally {
+      setGoogleCalendarBusy(false);
+    }
+  };
+
+  const syncGoogleCalendar = async () => {
+    if (googleCalendarBusy) return;
+    setGoogleCalendarBusy(true);
+    try {
+      const { data } = await axios.post<GoogleCalendarSyncResult>(
+        `${API}/user/calendar/google/sync`,
+        {},
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
+      toast.success(
+        `Google Calendar synced: ${data.synced} ${data.synced === 1 ? 'game' : 'games'}, ${data.removed} removed`,
+      );
+    } catch {
+      toast.error('Failed to sync Google Calendar');
+    } finally {
+      setGoogleCalendarBusy(false);
+    }
+  };
+
+  const disconnectGoogleCalendar = async () => {
+    if (googleCalendarBusy) return;
+    setGoogleCalendarBusy(true);
+    try {
+      await axios.delete(`${API}/user/calendar/google`, { headers: authHeaders() });
+      await queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
+      setGoogleCalendarOpen(false);
+      toast.success('Google Calendar disconnected');
+    } catch {
+      toast.error('Failed to disconnect Google Calendar');
+    } finally {
+      setGoogleCalendarBusy(false);
+    }
   };
 
   const saveScheduleForGame = async (game: GameRecord, scheduledFor: string | null) => {
@@ -1456,6 +1676,22 @@ const UserGames = () => {
               <Button
                 variant="outlined"
                 intent="neutral"
+                type="button"
+                className={styles.googleCalendarIconButton}
+                data-connected={googleCalendarStatus?.connected ? 'true' : 'false'}
+                aria-label="Google Calendar sync settings"
+                tooltip={
+                  googleCalendarStatus?.connected
+                    ? 'Google Calendar connected'
+                    : 'Connect Google Calendar'
+                }
+                onClick={() => setGoogleCalendarOpen(true)}
+              >
+                <GoogleLogo className={styles.googleCalendarIcon} />
+              </Button>
+              <Button
+                variant="outlined"
+                intent="neutral"
                 icon="image"
                 iconHeight="button"
                 aria-label="Generate Score Card"
@@ -1641,6 +1877,18 @@ const UserGames = () => {
           </ScheduleCalendarCard>
         </div>
       )}
+
+      <GoogleCalendarModal
+        open={googleCalendarOpen}
+        status={googleCalendarStatus}
+        busy={googleCalendarBusy}
+        onClose={() => {
+          if (!googleCalendarBusy) setGoogleCalendarOpen(false);
+        }}
+        onConnect={connectGoogleCalendar}
+        onSync={syncGoogleCalendar}
+        onDisconnect={disconnectGoogleCalendar}
+      />
 
       {scheduleTarget && (
         <ScheduleWatchModal

@@ -21,6 +21,7 @@ const gamesRoutes = require('./routes/games');
 const bracketRuleSetsRoutes = require('./routes/bracket-rule-sets');
 const playoffQualificationFormatsRoutes = require('./routes/playoff-qualification-formats');
 const userRoutes = require('./routes/user');
+const googleCalendarRoutes = require('./routes/google-calendar');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -78,6 +79,7 @@ app.use('/api/admin/player-teams', playerTeamsRoutes);
 app.use('/api/admin/games', gamesRoutes);
 app.use('/api/admin/bracket-rule-sets', bracketRuleSetsRoutes);
 app.use('/api/admin/playoff-qualification-formats', playoffQualificationFormatsRoutes);
+app.use('/api/user/calendar/google', googleCalendarRoutes);
 app.use('/api/user', userRoutes);
 
 app.get('/api/health', async (_req, res) => {

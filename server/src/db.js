@@ -2182,6 +2182,21 @@ async function initSchema() {
     WHERE watched_on IS NULL AND watched_at IS NOT NULL
   `;
 
+  // Each user gets an app-owned secondary calendar. Refresh tokens are
+  // encrypted by the application before they reach this table.
+  await sql`
+    CREATE TABLE IF NOT EXISTS user_google_calendar_connections (
+      user_id                 UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      calendar_id             TEXT NOT NULL,
+      calendar_name           TEXT NOT NULL DEFAULT 'Hockey Tracker',
+      refresh_token_encrypted TEXT NOT NULL,
+      connected_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      last_synced_at          TIMESTAMPTZ,
+      last_sync_error         TEXT
+    )
+  `;
+
   // ── Helper functions: displayable player avatars ─────────────────────────
   // The provider helper intentionally returns only public league-sourced URLs
   // so season/team photo history can show generated rows without treating them

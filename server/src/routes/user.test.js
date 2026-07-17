@@ -7,10 +7,14 @@ jest.mock('../middleware/auth', () => ({
     next();
   },
 }));
+jest.mock('../services/googleCalendar', () => ({
+  syncScheduledGameToGoogleCalendar: jest.fn().mockResolvedValue({ status: 'synced' }),
+}));
 
 const request = require('supertest');
 const express = require('express');
 const { sql } = require('../db');
+const { syncScheduledGameToGoogleCalendar } = require('../services/googleCalendar');
 const userRouter = require('./user');
 
 const app = express();
@@ -592,6 +596,10 @@ describe('PUT /api/user/watched-games/:gameId/schedule', () => {
       game_id: 'game-1',
       scheduled_for: '2024-10-14',
     });
+    expect(syncScheduledGameToGoogleCalendar).toHaveBeenCalledWith({
+      userId: 'user-1',
+      gameId: 'game-1',
+    });
   });
 });
 
@@ -609,6 +617,10 @@ describe('DELETE /api/user/watched-games/:gameId', () => {
       scheduled_for: null,
       deleted: true,
     });
+    expect(syncScheduledGameToGoogleCalendar).toHaveBeenCalledWith({
+      userId: 'user-1',
+      gameId: 'game-1',
+    });
   });
 
   it('preserves the scheduled watch date when clearing watched state', async () => {
@@ -622,6 +634,10 @@ describe('DELETE /api/user/watched-games/:gameId', () => {
       game_id: 'game-1',
       watched_on: null,
       scheduled_for: '2024-10-14',
+    });
+    expect(syncScheduledGameToGoogleCalendar).toHaveBeenCalledWith({
+      userId: 'user-1',
+      gameId: 'game-1',
     });
   });
 });
@@ -637,6 +653,10 @@ describe('POST /api/user/watched-games/:gameId/skip', () => {
       user_id: 'user-1',
       game_id: 'game-1',
       skipped: true,
+    });
+    expect(syncScheduledGameToGoogleCalendar).toHaveBeenCalledWith({
+      userId: 'user-1',
+      gameId: 'game-1',
     });
   });
 });

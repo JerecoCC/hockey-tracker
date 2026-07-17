@@ -607,6 +607,7 @@ const allTeams = [
 
 beforeEach(() => {
   jest.clearAllMocks();
+  window.history.replaceState({}, '', '/games');
   window.localStorage.clear();
   window.sessionStorage.clear();
   window.sessionStorage.setItem('user-games-week-start', localDateString(0));
@@ -636,6 +637,18 @@ beforeEach(() => {
       return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
     if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
     if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+    if (queryKey[0] === 'google-calendar-status')
+      return {
+        data: {
+          configured: true,
+          connected: false,
+          calendar_name: null,
+          connected_at: null,
+          last_synced_at: null,
+          last_sync_error: null,
+        },
+        isLoading: false,
+      };
     if (queryKey[0] === 'user-games')
       return { data: queryKey[4] ? [...games, skippedGame] : games, isLoading: false };
     return { data: [], isLoading: false };
@@ -643,6 +656,42 @@ beforeEach(() => {
 });
 
 describe('UserGames schedule views', () => {
+  it('shows an actionable error when the OAuth project has Calendar API disabled', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/games?google_calendar=error&reason=calendar_api_disabled',
+    );
+
+    render(<UserGames />);
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'Google Calendar API is disabled for this OAuth project. Enable it in Google Cloud, then try again.',
+      ),
+    );
+    expect(window.location.search).toBe('');
+  });
+
+  it('offers a least-privilege Google Calendar connection from the toolbar', async () => {
+    const user = userEvent.setup();
+    render(<UserGames />);
+
+    const googleCalendarButton = screen.getByRole('button', {
+      name: 'Google Calendar sync settings',
+    });
+    expect(googleCalendarButton).not.toHaveTextContent('Google Calendar');
+    expect(googleCalendarButton.querySelector('[data-google-logo]')).toBeInTheDocument();
+
+    await user.click(googleCalendarButton);
+
+    expect(screen.getByText('Google Calendar Sync')).toBeInTheDocument();
+    expect(
+      screen.getByText(/creates a separate calendar and can only manage events inside/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Connect Google Calendar' })).toBeEnabled();
+  });
+
   it('shows schedule skeletons for calendar and Week views', async () => {
     const user = userEvent.setup();
     mockUseQuery.mockImplementation(({ queryKey }: any) => {

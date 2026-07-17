@@ -912,7 +912,7 @@ Delete a shootout attempt. **Response `204`** (no body).
 
 ## User — `/api/user` 🔒
 
-> All `/api/user/*` routes require authentication (any role). Note: `GET /api/user/games` uses flat team fields (`home_team_name`, `home_team_code`, etc.) instead of nested objects — it has not yet been migrated.
+> All `/api/user/*` routes require authentication (any role), except the signed Google Calendar OAuth callback. Note: `GET /api/user/games` uses flat team fields (`home_team_name`, `home_team_code`, etc.) instead of nested objects — it has not yet been migrated.
 
 ### `GET /api/user/favorites`
 
@@ -959,6 +959,36 @@ List all leagues (for filter picker).
 List seasons, optionally filtered by `?league_id=`.
 
 **Response `200`** Array of `{ id, name }`
+
+---
+
+### `GET /api/user/calendar/google`
+
+Returns whether Google Calendar sync is configured and connected, plus the calendar name and last sync status.
+
+---
+
+### `POST /api/user/calendar/google/connect`
+
+Starts the OAuth consent flow. The response contains `{ authorization_url }`; open it in the browser. This endpoint also sets the short-lived HttpOnly state cookie required by the callback.
+
+---
+
+### `GET /api/user/calendar/google/callback`
+
+Public Google OAuth redirect target. It validates the signed state and matching state cookie, creates or reconnects the app-owned `Hockey Tracker` secondary calendar, performs an initial reconciliation, then redirects to `/games`.
+
+---
+
+### `POST /api/user/calendar/google/sync`
+
+Reconciles every non-skipped game for the user's favorite teams with the app-created Google calendar and removes stale managed events. Events start on the original game date; a personal `scheduled_for` date moves the event, and clearing it restores the original date.
+
+---
+
+### `DELETE /api/user/calendar/google`
+
+Disconnects Google Calendar and removes the app-created secondary calendar and its managed events.
 
 ---
 

@@ -1,6 +1,17 @@
 const router = require('express').Router();
 const { requireAuth } = require('../middleware/auth');
 const { sql } = require('../db');
+const { syncScheduledGameToGoogleCalendar } = require('../services/googleCalendar');
+
+const syncCalendarAfterUserGameChange = async (userId, gameId) => {
+  try {
+    await syncScheduledGameToGoogleCalendar({ userId, gameId });
+  } catch (err) {
+    // The local user action remains authoritative. The connection status keeps
+    // the sync error so the user can retry from the games tab.
+    console.error('Google Calendar game sync error:', err);
+  }
+};
 
 // All user routes require authentication (any role)
 router.use(requireAuth);
@@ -129,6 +140,8 @@ router.put('/watched-games/:gameId/schedule', async (req, res) => {
         skipped_at = NULL
     `;
 
+    await syncCalendarAfterUserGameChange(userId, gameId);
+
     return res.json({
       user_id: userId,
       game_id: gameId,
@@ -170,6 +183,8 @@ router.delete('/watched-games/:gameId', async (req, res) => {
         WHERE user_id = ${userId} AND game_id = ${gameId}
       `;
 
+      await syncCalendarAfterUserGameChange(userId, gameId);
+
       return res.json({
         user_id: userId,
         game_id: gameId,
@@ -182,6 +197,10 @@ router.delete('/watched-games/:gameId', async (req, res) => {
       DELETE FROM user_watched_games
       WHERE user_id = ${userId} AND game_id = ${gameId}
     `;
+
+    // Deleting a skipped row restores the favorite-team game, so restore its
+    // original-date Google event as part of the same action.
+    await syncCalendarAfterUserGameChange(userId, gameId);
 
     return res.json({
       user_id: userId,
@@ -216,6 +235,8 @@ router.post('/watched-games/:gameId/skip', async (req, res) => {
         skipped_at = NOW(),
         scheduled_for = NULL
     `;
+
+    await syncCalendarAfterUserGameChange(userId, gameId);
 
     return res.status(201).json({
       user_id: userId,
