@@ -5,7 +5,7 @@ import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import useTeams from '@/hooks/useTeams';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
-import { ACQUISITION_TYPE_OPTIONS } from '../players/StintEditModal';
+import { ACQUISITION_TYPE_OPTIONS } from '../players/stintOptions';
 import styles from './MovePlayerModal.module.scss';
 
 const POSITION_OPTIONS = [

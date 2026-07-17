@@ -25,8 +25,8 @@ import PlayerDetails, {
   buildManualMovementStintImport,
   buildCareerStatColumns,
   buildGameLogColumns,
-  collapseSameTeamStints,
 } from './PlayerDetails';
+import { collapseSameTeamStints } from './playerStintHistory';
 
 const mockNavigate = jest.fn();
 const mockUsePageBreadcrumbs = jest.fn();

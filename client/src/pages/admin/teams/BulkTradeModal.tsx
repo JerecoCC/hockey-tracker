@@ -4,7 +4,7 @@ import BulkCreateModal from '@jerecocc/tracker-ui/components/BulkCreateModal/Bul
 import Field from '@jerecocc/tracker-ui/components/Field/Field';
 import useTeams from '@/hooks/useTeams';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
-import { ACQUISITION_TYPE_OPTIONS } from '../players/StintEditModal';
+import { ACQUISITION_TYPE_OPTIONS } from '../players/stintOptions';
 import tradeStyles from './MovePlayerModal.module.scss';
 
 const EMPTY_ROW = { player_id: '', jersey_number: '' };

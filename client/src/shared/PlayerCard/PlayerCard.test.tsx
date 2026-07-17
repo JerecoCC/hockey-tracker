@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import PlayerCard, { formatPlayerPosition } from './PlayerCard';
+import { formatPlayerPosition } from '@/lib/playerPosition';
+import PlayerCard from './PlayerCard';
 
 describe('PlayerCard', () => {
   it('formats known position codes as full names', () => {

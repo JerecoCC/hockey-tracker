@@ -8,7 +8,7 @@ import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
 import { type GoalRecord } from '@/hooks/useGameGoals';
 import { type LineupEntry } from '@/hooks/useGameLineup';
-import { computeAutoSA } from './RecordShotsModal';
+import { computeAutoSA } from './shotCalculations';
 import styles from './GameDetailsPage.module.scss';
 
 type ShotsEditFormValues = { periods: Array<{ away_shots: string; home_shots: string }> };

@@ -80,7 +80,12 @@ import {
 } from '@/lib/routeSlugs';
 import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
 import MovePlayerModal from '../teams/MovePlayerModal';
-import StintEditModal, { ACQUISITION_TYPE_LABELS } from './StintEditModal';
+import StintEditModal from './StintEditModal';
+import { ACQUISITION_TYPE_LABELS } from './stintOptions';
+import {
+  collapseSameTeamStints,
+  type TeamHistoryStint,
+} from './playerStintHistory';
 import ChangeJerseyModal from './ChangeJerseyModal';
 import JerseyHistoryEditModal from './JerseyHistoryEditModal';
 import ChangePhotoModal from './ChangePhotoModal';
@@ -1831,37 +1836,6 @@ const formatStintDates = (stint: PlayerStintRecord) => {
   if (start) return `${start} - Present`;
   if (end) return `Until ${end}`;
   return 'Dates not set';
-};
-
-type TeamHistoryStint = PlayerStintRecord & {
-  collapsed_stints: PlayerStintRecord[];
-};
-
-export const collapseSameTeamStints = (stints: PlayerStintRecord[]): TeamHistoryStint[] => {
-  const groups: PlayerStintRecord[][] = [];
-
-  for (const stint of stints) {
-    const currentGroup = groups[groups.length - 1];
-    if (currentGroup?.[0]?.team_id === stint.team_id) {
-      currentGroup.push(stint);
-    } else {
-      groups.push([stint]);
-    }
-  }
-
-  return groups.map((group) => {
-    const newest = group[0];
-    const oldest = group[group.length - 1];
-
-    return {
-      ...newest,
-      start_date: oldest.start_date ?? newest.start_date,
-      end_date: newest.end_date,
-      has_stats: group.some((stint) => stint.has_stats),
-      can_delete: group.every((stint) => stint.can_delete !== false),
-      collapsed_stints: group,
-    };
-  });
 };
 
 const teamCode = (code: string | null, name: string | null) =>

@@ -45,7 +45,8 @@ import {
   playerMatchesAwardEligibility,
   teamMatchesAwardEligibility,
 } from '@/lib/awardDefinitions';
-import PlayerCard, { formatPlayerPosition } from '@/shared/PlayerCard/PlayerCard';
+import { formatPlayerPosition } from '@/lib/playerPosition';
+import PlayerCard from '@/shared/PlayerCard/PlayerCard';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './SeasonDetails.module.scss';
 

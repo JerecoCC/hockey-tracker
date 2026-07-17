@@ -12,18 +12,15 @@ import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
-import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import {
   type GoalieStatRecord,
   type UpdateGoalieStintData,
 } from '@/hooks/useGameGoalieStats';
-import { type GoalRecord } from '@/hooks/useGameGoals';
 import fieldStyles from '@/shared/trackerFieldStyles.module.scss';
 import styles from './GameDetailsPage.module.scss';
 import { PERIOD, PERIOD_TITLE_LABEL } from './constants';
 import { etHHMMtoISO, isoToETDate, isoToETHHMM, nextETDate } from './formatUtils';
 import { defaultStintToi, parseToiInput, secondsToMMSS } from './goalieTimeOnIce';
-import { shotPeriodOrdinal } from './shotPeriods';
 
 export type ShotsNextAction =
   | { type: 'advance'; label: string; next: CurrentPeriod }
@@ -42,86 +39,6 @@ const PERIOD_LABEL: Record<string, string> = {
   [PERIOD.THIRD]: '3rd',
   [PERIOD.OVERTIME]: PERIOD.OVERTIME,
   [PERIOD.SHOOTOUT]: PERIOD.SHOOTOUT,
-};
-
-/**
- * Computes the expected shots-against for a goalie in a game:
- * opposing team's total shots (for the periods the goalie played) minus empty-net goals.
- *
- * Phase 2+: when the GoalieStatRecord has a `stints` array we walk each
- * stint's window to determine which periods were covered, correctly handling
- * pull-and-return scenarios.  A period P is considered "played" by a stint
- * when: entered_period_ord ≤ p_ord AND (exited_period_ord > p_ord OR no exit).
- * Note: if a goalie exited in P (same ordinal as P), P is not counted for them
- * automatically — both goalies partially played it and the admin adjusts SA.
- *
- * Legacy fallback (no stints): uses entered_period aggregation as before.
- */
-export const computeAutoSA = (
-  goalie: GameRosterEntry,
-  goalieStats: GoalieStatRecord[],
-  game: GameRecord,
-  periodShots: { period: string; home_shots: number; away_shots: number }[],
-  goals: GoalRecord[],
-): string => {
-  const isAway = goalie.team_id === game.away_team.id;
-  const opposingTeamId = isAway ? game.home_team.id : game.away_team.id;
-
-  const thisStat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
-  const stints = thisStat?.stints;
-
-  let playedPeriod: (p: string) => boolean;
-
-  if (stints && stints.length > 0) {
-    // Phase 2+: derive from stint windows
-    playedPeriod = (p: string) => {
-      const pOrd = shotPeriodOrdinal(p);
-      if (pOrd == null) return false;
-
-      return stints.some((st) => {
-        const enterOrd = shotPeriodOrdinal(st.entered_period);
-        const exitOrd =
-          st.exited_period != null ? shotPeriodOrdinal(st.exited_period) : null;
-        if (enterOrd == null) return false;
-        return pOrd >= enterOrd && (exitOrd == null || pOrd < exitOrd);
-      });
-    };
-  } else {
-    // Legacy fallback: single entered_period on the aggregate record
-    const enteredPeriod = thisStat?.entered_period ?? null;
-    const subStat = goalieStats.find(
-      (gs) =>
-        gs.team_id === goalie.team_id &&
-        gs.goalie_id !== goalie.player_id &&
-        gs.entered_period !== null,
-    );
-    playedPeriod = (p: string) => {
-      const pOrd = shotPeriodOrdinal(p);
-      if (pOrd == null) return false;
-
-      if (enteredPeriod !== null) {
-        const enteredOrd = shotPeriodOrdinal(enteredPeriod);
-        return enteredOrd != null && pOrd >= enteredOrd;
-      }
-
-      if (subStat) {
-        const subOrd = shotPeriodOrdinal(subStat.entered_period!);
-        return subOrd != null && pOrd < subOrd;
-      }
-
-      return true;
-    };
-  }
-
-  const totalOpposingShots = periodShots
-    .filter((ps) => playedPeriod(ps.period))
-    .reduce((sum, ps) => sum + (isAway ? ps.home_shots : ps.away_shots), 0);
-
-  const emptyNetGoals = goals.filter(
-    (g) => g.team_id === opposingTeamId && g.empty_net && playedPeriod(g.period),
-  ).length;
-
-  return String(Math.max(0, totalOpposingShots - emptyNetGoals));
 };
 
 interface Props {

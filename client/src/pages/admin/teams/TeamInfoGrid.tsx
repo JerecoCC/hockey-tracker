@@ -8,19 +8,6 @@ export interface SeasonOption {
   label: string;
 }
 
-/** Derives a short label like "2024-25" from a season's start/end dates. */
-export const seasonLabel = (
-  startDate: string | null,
-  endDate: string | null,
-  name: string,
-): string => {
-  if (!startDate) return name;
-  const sy = startDate.slice(0, 4);
-  const ey = endDate?.slice(0, 4);
-  if (!ey || ey === sy) return sy;
-  return `${sy}-${ey.slice(2)}`;
-};
-
 const normalizeDescription = (html: string | null | undefined): string | null => {
   if (!html || html === '<p></p>') return null;
   return html;

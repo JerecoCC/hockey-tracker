@@ -1,4 +1,4 @@
-import { seasonLabel } from './TeamInfoGrid';
+import { seasonLabel } from './teamInfo';
 
 // seasonLabel(startDate, endDate, name) derives a short display label:
 //   - no startDate           → team name (fallback)

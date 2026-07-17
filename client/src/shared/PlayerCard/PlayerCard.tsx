@@ -3,10 +3,8 @@ import type { ReactElement, ReactNode } from 'react';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
-import { formatPlayerPosition, PLAYER_POSITION_LABELS } from '@/lib/playerPosition';
+import { formatPlayerPosition } from '@/lib/playerPosition';
 import styles from './PlayerCard.module.scss';
-
-export { formatPlayerPosition, PLAYER_POSITION_LABELS };
 
 interface Props {
   name: string;

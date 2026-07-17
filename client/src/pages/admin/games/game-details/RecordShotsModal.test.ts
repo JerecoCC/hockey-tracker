@@ -1,7 +1,7 @@
 import type { GoalieStatRecord } from '@/hooks/useGameGoalieStats';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { GameRecord } from '@/hooks/useGames';
-import { computeAutoSA } from './RecordShotsModal';
+import { computeAutoSA } from './shotCalculations';
 
 const game = {
   away_team: { id: 'tbl' },
