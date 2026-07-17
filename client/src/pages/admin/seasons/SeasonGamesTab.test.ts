@@ -1,5 +1,9 @@
 import {
+  clampDateKeyToRange,
+  clampMonthKeyToRange,
+  clampWeekStartDateKey,
   firstWeekStartForMonth,
+  isDateKeyWithinRange,
   majorityMonthForWeek,
   toEasternDateKey,
   weekBelongsToCalendarMonth,
@@ -49,6 +53,35 @@ describe('season games view date sync', () => {
 
   it('detects when the calendar month moved away from the selected week', () => {
     expect(weekBelongsToCalendarMonth(new Date(2026, 0, 28), new Date(2026, 1, 1))).toBe(false);
+  });
+});
+
+describe('season games date limits', () => {
+  const startDate = '2025-10-07';
+  const endDate = '2026-06-21';
+
+  it('includes both season boundaries and excludes dates outside them', () => {
+    expect(isDateKeyWithinRange(startDate, startDate, endDate)).toBe(true);
+    expect(isDateKeyWithinRange(endDate, startDate, endDate)).toBe(true);
+    expect(isDateKeyWithinRange('2025-10-06', startDate, endDate)).toBe(false);
+    expect(isDateKeyWithinRange('2026-06-22', startDate, endDate)).toBe(false);
+  });
+
+  it('clamps selected dates to the season boundaries', () => {
+    expect(clampDateKeyToRange('2025-09-01', startDate, endDate)).toBe(startDate);
+    expect(clampDateKeyToRange('2026-07-01', startDate, endDate)).toBe(endDate);
+    expect(clampDateKeyToRange('2026-01-15', startDate, endDate)).toBe('2026-01-15');
+  });
+
+  it('keeps the final week inside the season while still including the end date', () => {
+    expect(clampWeekStartDateKey('2026-06-21', startDate, endDate)).toBe('2026-06-15');
+    expect(clampWeekStartDateKey('2025-09-01', startDate, endDate)).toBe(startDate);
+  });
+
+  it('clamps calendar navigation to months that intersect the season', () => {
+    expect(clampMonthKeyToRange('2025-09', startDate, endDate)).toBe('2025-10');
+    expect(clampMonthKeyToRange('2026-07', startDate, endDate)).toBe('2026-06');
+    expect(clampMonthKeyToRange('2026-01', startDate, endDate)).toBe('2026-01');
   });
 });
 

@@ -9,6 +9,10 @@ import useTabState from '@/hooks/useTabState';
 import SeasonDetails from './SeasonDetails';
 
 const mockNavigate = jest.fn();
+const mockSeasonGamesTab = jest.fn((props: Record<string, unknown>) => {
+  void props;
+  return null;
+});
 const mockSeasonPlayersTab = jest.fn((_props: any) => <div>Season players tab</div>);
 const mockSeasonPlayoffsTab = jest.fn((_props: any) => null);
 const mockMoreActionsMenu = jest.fn((props: any) => (
@@ -123,7 +127,7 @@ jest.mock('@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar', () => () 
 jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => () => <span>logo</span>);
 jest.mock('./SeasonEndModal', () => () => null);
 jest.mock('./SeasonFormModal', () => () => null);
-jest.mock('./SeasonGamesTab', () => () => null);
+jest.mock('./SeasonGamesTab', () => (props: Record<string, unknown>) => mockSeasonGamesTab(props));
 jest.mock('./SeasonPlayersTab', () => (props: any) => mockSeasonPlayersTab(props));
 jest.mock('./SeasonPlayoffsTab', () => (props: any) => mockSeasonPlayoffsTab(props));
 jest.mock('./SeasonTeamsCard', () => () => null);
@@ -309,6 +313,19 @@ describe('SeasonDetails tabs', () => {
       'Playoffs',
       'Awards',
     ]);
+  });
+
+  it('passes the season date limits to the games view', () => {
+    mockUseTabState.mockReturnValue([3, jest.fn()]);
+
+    render(<SeasonDetails />);
+
+    expect(mockSeasonGamesTab).toHaveBeenCalledWith(
+      expect.objectContaining({
+        seasonStartDate: '2024-10-01',
+        seasonEndDate: '2025-06-30',
+      }),
+    );
   });
 });
 

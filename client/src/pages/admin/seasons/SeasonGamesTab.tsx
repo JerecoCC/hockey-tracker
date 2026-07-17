@@ -44,7 +44,11 @@ import GameAutofillManualMoveReportModal from '@/pages/admin/games/game-details/
 import { buildGameDetailsPath, buildSeasonDayGamesPath } from '@/lib/routeSlugs';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import {
+  clampDateKeyToRange,
+  clampMonthKeyToRange,
+  clampWeekStartDateKey,
   firstWeekStartForMonth,
+  isDateKeyWithinRange,
   majorityMonthForWeek,
   toEasternDateKey,
   weekBelongsToCalendarMonth,
@@ -332,6 +336,8 @@ interface Props {
   leagueCode: string | null | undefined;
   seasonId: string;
   seasonName: string | null | undefined;
+  seasonStartDate: string | null | undefined;
+  seasonEndDate: string | null | undefined;
   seasonTeams: SeasonTeam[];
   isEnded: boolean;
 }
@@ -343,6 +349,8 @@ const SeasonGamesTab = ({
   leagueCode,
   seasonId,
   seasonName,
+  seasonStartDate,
+  seasonEndDate,
   seasonTeams,
   isEnded,
 }: Props) => {
@@ -353,17 +361,24 @@ const SeasonGamesTab = ({
   const calendarMonthKey = `season-games-calendar-month:${seasonId}`;
   const [calendarMonth, setCalendarMonthState] = useState<Date>(() => {
     const stored = sessionStorage.getItem(`season-games-calendar-month:${seasonId}`);
-    return stored ? fromMonthPickerValue(stored) : monthStart(new Date());
+    const initialMonth = stored ?? toMonthPickerValue(monthStart(new Date()));
+    return fromMonthPickerValue(clampMonthKeyToRange(initialMonth, seasonStartDate, seasonEndDate));
   });
 
   useEffect(() => {
     const stored = sessionStorage.getItem(calendarMonthKey);
-    setCalendarMonthState(stored ? fromMonthPickerValue(stored) : monthStart(new Date()));
-  }, [calendarMonthKey]);
+    const initialMonth = stored ?? toMonthPickerValue(monthStart(new Date()));
+    const clampedMonth = clampMonthKeyToRange(initialMonth, seasonStartDate, seasonEndDate);
+    sessionStorage.setItem(calendarMonthKey, clampedMonth);
+    setCalendarMonthState(fromMonthPickerValue(clampedMonth));
+  }, [calendarMonthKey, seasonEndDate, seasonStartDate]);
 
   const setCalendarMonth = (updater: Date | ((d: Date) => Date)) => {
     setCalendarMonthState((prev) => {
-      const next = monthStart(typeof updater === 'function' ? updater(prev) : updater);
+      const requested = monthStart(typeof updater === 'function' ? updater(prev) : updater);
+      const next = fromMonthPickerValue(
+        clampMonthKeyToRange(toMonthPickerValue(requested), seasonStartDate, seasonEndDate),
+      );
       sessionStorage.setItem(calendarMonthKey, toMonthPickerValue(next));
       return next;
     });
@@ -373,13 +388,28 @@ const SeasonGamesTab = ({
   const weekKey = `season-games-week:${seasonId}`;
   const [weekStart, setWeekStartState] = useState<Date>(() => {
     const stored = sessionStorage.getItem(`season-games-week:${seasonId}`);
-    return stored ? fromISODate(stored) : toDay(new Date());
+    const initialWeek = stored ?? dateToISO(toDay(new Date()));
+    return fromISODate(clampWeekStartDateKey(initialWeek, seasonStartDate, seasonEndDate));
   });
   const weekEnd = addDays(weekStart, 6);
+  const visibleWeekEnd = fromISODate(
+    clampDateKeyToRange(dateToISO(weekEnd), seasonStartDate, seasonEndDate),
+  );
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem(weekKey);
+    const initialWeek = stored ?? dateToISO(toDay(new Date()));
+    const clampedWeek = clampWeekStartDateKey(initialWeek, seasonStartDate, seasonEndDate);
+    sessionStorage.setItem(weekKey, clampedWeek);
+    setWeekStartState(fromISODate(clampedWeek));
+  }, [seasonEndDate, seasonStartDate, weekKey]);
 
   const setWeekStart = (updater: Date | ((d: Date) => Date)) => {
     setWeekStartState((prev) => {
-      const next = typeof updater === 'function' ? updater(prev) : updater;
+      const requested = typeof updater === 'function' ? updater(prev) : updater;
+      const next = fromISODate(
+        clampWeekStartDateKey(dateToISO(requested), seasonStartDate, seasonEndDate),
+      );
       sessionStorage.setItem(weekKey, dateToISO(next));
       return next;
     });
@@ -453,6 +483,11 @@ const SeasonGamesTab = ({
     code: t.code,
   }));
 
+  const isSeasonDate = useCallback(
+    (dateKey: string) => isDateKeyWithinRange(dateKey, seasonStartDate, seasonEndDate),
+    [seasonEndDate, seasonStartDate],
+  );
+
   /** Games after the remaining multi-team filter, earliest date/time first. */
   const filteredGames = useMemo(() => {
     return [...games]
@@ -463,6 +498,7 @@ const SeasonGamesTab = ({
           !teamFilter.includes(g.away_team.id)
         )
           return false;
+        if (g.scheduled_at && !isSeasonDate(toEasternDateKey(g.scheduled_at))) return false;
         return true;
       })
       .sort((a, b) => {
@@ -474,7 +510,7 @@ const SeasonGamesTab = ({
         if (startTimeOrder !== 0) return startTimeOrder;
         return compareOptionalStringAsc(a.time_end, b.time_end);
       });
-  }, [games, teamFilter]);
+  }, [games, isSeasonDate, teamFilter]);
 
   const hasActiveFilters = !!(gameTypeFilter || statusFilter || teamFilter.length > 0);
   const gameDateKey = useCallback(
@@ -486,7 +522,8 @@ const SeasonGamesTab = ({
   const groupedByDate = useMemo(() => {
     const map = new Map<string, GameRecord[]>();
     for (let i = 0; i < 7; i++) {
-      map.set(dateToISO(addDays(weekStart, i)), []);
+      const dateKey = dateToISO(addDays(weekStart, i));
+      if (isSeasonDate(dateKey)) map.set(dateKey, []);
     }
     for (const g of filteredGames) {
       if (!g.scheduled_at) continue;
@@ -495,7 +532,7 @@ const SeasonGamesTab = ({
       map.get(key)?.push(g);
     }
     return Array.from(map.entries());
-  }, [filteredGames, gameDateKey, weekStart]);
+  }, [filteredGames, gameDateKey, isSeasonDate, weekStart]);
 
   const calendarGamesByDate = useMemo(() => {
     const map = new Map<string, GameRecord[]>();
@@ -1073,7 +1110,7 @@ const SeasonGamesTab = ({
                 view === 'list' ? (
                   <PeriodPicker
                     value={dateToISO(weekStart)}
-                    label={fmtWeekRange(weekStart, weekEnd)}
+                    label={fmtWeekRange(weekStart, visibleWeekEnd)}
                     onChange={(v) => setWeekStart(v ? fromISODate(v) : toDay(new Date()))}
                     onPrevious={() => setWeekStart((d) => addDays(d, -7))}
                     onNext={() => setWeekStart((d) => addDays(d, 7))}
@@ -1194,7 +1231,14 @@ const SeasonGamesTab = ({
               <MonthCalendar
                 month={calendarMonth}
                 loading={loading}
+                getDayClassName={({ dateKey }) =>
+                  isSeasonDate(dateKey) ? undefined : styles.outOfSeasonDay
+                }
+                getDayProps={({ dateKey }) =>
+                  isSeasonDate(dateKey) ? {} : { 'aria-disabled': true }
+                }
                 getDayLabelSuffix={({ dateKey }) => {
+                  if (!isSeasonDate(dateKey)) return undefined;
                   const gameCount = calendarGamesByDate.get(dateKey)?.length ?? 0;
                   return gameCount > 0 ? (
                     <ScheduleCalendarDayCount
@@ -1204,6 +1248,7 @@ const SeasonGamesTab = ({
                   ) : undefined;
                 }}
                 getDayNumberLink={({ dateKey }) => {
+                  if (!isSeasonDate(dateKey)) return undefined;
                   const gameCount = calendarGamesByDate.get(dateKey)?.length ?? 0;
                   return {
                     href: dayGamesPath(dateKey),
@@ -1216,7 +1261,7 @@ const SeasonGamesTab = ({
                   };
                 }}
                 getDayHeaderRight={({ dateKey }) => {
-                  if (isEnded) return undefined;
+                  if (!isSeasonDate(dateKey) || isEnded) return undefined;
 
                   const dayGames = calendarGamesByDate.get(dateKey) ?? [];
                   return (
@@ -1229,6 +1274,7 @@ const SeasonGamesTab = ({
                   );
                 }}
                 renderDayContent={({ dateKey }) => {
+                  if (!isSeasonDate(dateKey)) return null;
                   const dayGames = calendarGamesByDate.get(dateKey) ?? [];
                   return renderCalendarGameList(dateKey, dayGames);
                 }}

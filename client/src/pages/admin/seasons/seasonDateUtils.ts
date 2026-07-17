@@ -22,6 +22,62 @@ export const toEasternDateKey = (iso: string) => {
   return /^\d{4}-\d{2}-\d{2}$/.test(easternDate) ? easternDate : (rawDate ?? iso);
 };
 
+export const isDateKeyWithinRange = (
+  dateKey: string,
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+) => {
+  const startKey = rawDateKey(startDate);
+  const endKey = rawDateKey(endDate);
+  return (!startKey || dateKey >= startKey) && (!endKey || dateKey <= endKey);
+};
+
+export const clampDateKeyToRange = (
+  dateKey: string,
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+) => {
+  const startKey = rawDateKey(startDate);
+  const endKey = rawDateKey(endDate);
+  if (startKey && dateKey < startKey) return startKey;
+  if (endKey && dateKey > endKey) return endKey;
+  return dateKey;
+};
+
+const shiftDateKey = (dateKey: string, days: number) => {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, day + days));
+  return shifted.toISOString().slice(0, 10);
+};
+
+export const clampWeekStartDateKey = (
+  dateKey: string,
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+) => {
+  const startKey = rawDateKey(startDate);
+  const endKey = rawDateKey(endDate);
+  const lastFullWeekStart = endKey ? shiftDateKey(endKey, -6) : null;
+  const latestStart =
+    startKey && lastFullWeekStart && lastFullWeekStart < startKey ? startKey : lastFullWeekStart;
+
+  if (startKey && dateKey < startKey) return startKey;
+  if (latestStart && dateKey > latestStart) return latestStart;
+  return dateKey;
+};
+
+export const clampMonthKeyToRange = (
+  monthKey: string,
+  startDate: string | null | undefined,
+  endDate: string | null | undefined,
+) => {
+  const startMonth = rawDateKey(startDate)?.slice(0, 7);
+  const endMonth = rawDateKey(endDate)?.slice(0, 7);
+  if (startMonth && monthKey < startMonth) return startMonth;
+  if (endMonth && monthKey > endMonth) return endMonth;
+  return monthKey;
+};
+
 export const firstWeekStartForMonth = (month: Date) =>
   new Date(month.getFullYear(), month.getMonth(), 1);
 

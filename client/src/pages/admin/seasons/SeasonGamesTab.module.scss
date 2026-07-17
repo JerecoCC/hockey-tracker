@@ -17,6 +17,12 @@
   flex-direction: column;
 }
 
+.outOfSeasonDay {
+  opacity: 0.45;
+  filter: saturate(0.35);
+  pointer-events: none;
+}
+
 .filterVisibilitySwitch {
   --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 }
