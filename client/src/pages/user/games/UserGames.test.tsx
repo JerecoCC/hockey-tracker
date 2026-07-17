@@ -7,6 +7,7 @@ import calendarItemStyles from '@/shared/CalendarGameListItem/CalendarGameListIt
 import gameCardStyles from '@/shared/GameCard/GameCard.module.scss';
 import scheduleLayoutStyles from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout.module.scss';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
+import { syncGoogleCalendarWithProgress } from './googleCalendarSync';
 import UserGames from './UserGames';
 import styles from './UserGames.module.scss';
 
@@ -28,12 +29,17 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
 }));
 jest.mock('axios');
+jest.mock('./googleCalendarSync', () => ({
+  syncGoogleCalendarWithProgress: jest.fn(),
+}));
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn(), useQueryClient: jest.fn() }));
 jest.mock('@/lib/monthScheduleImage', () => ({ downloadMonthScheduleImage: jest.fn() }));
 jest.mock('react-toastify', () => ({
   toast: {
     success: jest.fn(),
     error: jest.fn(),
+    loading: jest.fn(() => 'google-sync-toast'),
+    update: jest.fn(),
   },
 }));
 jest.mock(
@@ -194,7 +200,9 @@ jest.mock(
       />
     ),
 );
-jest.mock('@jerecocc/tracker-ui/components/Icon/Icon', () => ({ name }: any) => <span>{name}</span>);
+jest.mock('@jerecocc/tracker-ui/components/Icon/Icon', () => ({ name }: any) => (
+  <span>{name}</span>
+));
 jest.mock('@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl', () => ({
   __esModule: true,
   default: ({ options, onChange }: any) => (
@@ -277,7 +285,9 @@ jest.mock(
       </button>
     ),
 );
-jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => ({ code }: any) => <span>{code || 'LOGO'}</span>);
+jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => ({ code }: any) => (
+  <span>{code || 'LOGO'}</span>
+));
 jest.mock('@jerecocc/tracker-ui/components/Tooltip/Tooltip', () => ({
   __esModule: true,
   default: ({ children, text }: any) => <span title={text}>{children}</span>,
@@ -359,6 +369,9 @@ jest.mock('@jerecocc/tracker-ui/components/MultiSelect/MultiSelect', () => ({
 const mockUseQuery = useQuery as jest.Mock;
 const mockUseQueryClient = useQueryClient as jest.Mock;
 const mockAxios = axios as jest.Mocked<typeof axios>;
+const mockSyncGoogleCalendarWithProgress = syncGoogleCalendarWithProgress as jest.MockedFunction<
+  typeof syncGoogleCalendarWithProgress
+>;
 const mockDownloadMonthScheduleImage = downloadMonthScheduleImage as jest.MockedFunction<
   typeof downloadMonthScheduleImage
 >;
@@ -631,6 +644,11 @@ beforeEach(() => {
   mockAxios.post.mockResolvedValue({ data: {} } as any);
   mockAxios.delete.mockResolvedValue({ data: {} } as any);
   mockAxios.put.mockResolvedValue({ data: {} } as any);
+  mockSyncGoogleCalendarWithProgress.mockResolvedValue({
+    status: 'synced',
+    synced: 0,
+    removed: 0,
+  });
   mockDownloadMonthScheduleImage.mockResolvedValue(undefined);
   mockUseQuery.mockImplementation(({ queryKey }: any) => {
     if (queryKey[0] === 'user-leagues')
@@ -690,6 +708,66 @@ describe('UserGames schedule views', () => {
       screen.getByText(/creates a separate calendar and can only manage events inside/i),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Connect Google Calendar' })).toBeEnabled();
+  });
+
+  it('shows determinate progress while syncing a connected Google Calendar', async () => {
+    const user = userEvent.setup();
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+      if (queryKey[0] === 'google-calendar-status')
+        return {
+          data: {
+            configured: true,
+            connected: true,
+            calendar_name: 'Hockey Tracker',
+            connected_at: null,
+            last_synced_at: null,
+            last_sync_error: null,
+          },
+          isLoading: false,
+        };
+      if (queryKey[0] === 'user-games') return { data: games, isLoading: false };
+      return { data: [], isLoading: false };
+    });
+    mockSyncGoogleCalendarWithProgress.mockImplementationOnce(async ({ onProgress }) => {
+      onProgress?.({
+        step: 'sync',
+        message: 'Synced AWY @ HOM',
+        completed: 1,
+        total: 2,
+      });
+      return { status: 'synced', synced: 2, removed: 0 };
+    });
+
+    render(<UserGames />);
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Google Calendar sync settings',
+      }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Sync Now' }));
+
+    await waitFor(() =>
+      expect(toast.update).toHaveBeenCalledWith(
+        'google-sync-toast',
+        expect.objectContaining({
+          render: 'Syncing Google Calendar: Synced AWY @ HOM',
+          isLoading: true,
+          progress: 0.5,
+        }),
+      ),
+    );
+    expect(toast.update).toHaveBeenCalledWith(
+      'google-sync-toast',
+      expect.objectContaining({
+        render: 'Google Calendar synced: 2 games, 0 removed',
+        type: 'success',
+        progress: 1,
+      }),
+    );
   });
 
   it('shows schedule skeletons for calendar and Week views', async () => {

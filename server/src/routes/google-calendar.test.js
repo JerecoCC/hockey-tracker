@@ -121,6 +121,43 @@ describe('Google Calendar routes', () => {
     expect(syncAllScheduledGamesForUser).toHaveBeenCalledWith('user-1');
   });
 
+  it('streams real reconciliation progress when requested', async () => {
+    syncAllScheduledGamesForUser.mockImplementationOnce(async (_userId, { onProgress }) => {
+      onProgress({
+        step: 'sync',
+        message: 'Synced AWY @ HOM',
+        completed: 1,
+        total: 2,
+      });
+      return { status: 'synced', synced: 2, removed: 0 };
+    });
+
+    const res = await request(app)
+      .post('/api/user/calendar/google/sync')
+      .set('Accept', 'application/x-ndjson');
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/x-ndjson');
+    expect(res.text.trim().split('\n').map(JSON.parse)).toEqual([
+      {
+        type: 'progress',
+        progress: {
+          step: 'sync',
+          message: 'Synced AWY @ HOM',
+          completed: 1,
+          total: 2,
+        },
+      },
+      {
+        type: 'result',
+        result: { status: 'synced', synced: 2, removed: 0 },
+      },
+    ]);
+    expect(syncAllScheduledGamesForUser).toHaveBeenCalledWith('user-1', {
+      onProgress: expect.any(Function),
+    });
+  });
+
   it('disconnects and removes the app calendar', async () => {
     const res = await request(app).delete('/api/user/calendar/google');
 

@@ -982,7 +982,9 @@ Public Google OAuth redirect target. It validates the signed state and matching 
 
 ### `POST /api/user/calendar/google/sync`
 
-Reconciles every non-skipped game for the user's favorite teams with the app-created Google calendar and removes stale managed events. Events start on the original game date; a personal `scheduled_for` date moves the event, and clearing it restores the original date.
+Reconciles non-skipped games from the nearest season whose `is_ended` flag is false and which contains games for the user's favorite teams, with the app-created Google calendar and removes stale managed events. An active date range wins; otherwise the nearest season boundary is used, with the latest start date breaking ties. Only games involving a favorite team are eligible. Events use the game's scheduled Eastern start time and a three-hour duration; games without a known time remain all-day events. A personal `scheduled_for` date moves the event while retaining that scheduled time, and clearing it restores the original date.
+
+By default the endpoint returns `{ status: "synced", synced, removed }`. Send `Accept: application/x-ndjson` to receive newline-delimited `{ type: "progress", progress }` records during reconciliation followed by a `{ type: "result", result }` record. Progress includes a message and, once the reconciliation plan is known, `completed` and `total` operation counts.
 
 ---
 

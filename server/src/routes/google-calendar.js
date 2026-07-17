@@ -105,14 +105,43 @@ router.post('/connect', async (req, res) => {
 });
 
 router.post('/sync', async (req, res) => {
+  const streamProgress = req.get('accept')?.includes('application/x-ndjson');
+  const writeStreamItem = (item) => {
+    if (res.writableEnded) return;
+    res.write(`${JSON.stringify(item)}\n`);
+  };
+
   try {
-    const result = await syncAllScheduledGamesForUser(req.user.id);
+    if (streamProgress) {
+      res.set({
+        'Content-Type': 'application/x-ndjson; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'X-Accel-Buffering': 'no',
+      });
+    }
+
+    const result = streamProgress
+      ? await syncAllScheduledGamesForUser(req.user.id, {
+          onProgress: (progress) => writeStreamItem({ type: 'progress', progress }),
+        })
+      : await syncAllScheduledGamesForUser(req.user.id);
     if (result.status === 'not_connected') {
       return res.status(409).json({ error: 'Google Calendar is not connected' });
+    }
+    if (streamProgress) {
+      writeStreamItem({ type: 'result', result });
+      return res.end();
     }
     return res.json(result);
   } catch (err) {
     console.error('Google Calendar manual sync error:', err);
+    if (streamProgress && res.headersSent) {
+      writeStreamItem({
+        type: 'error',
+        error: 'Failed to sync Google Calendar',
+      });
+      return res.end();
+    }
     return res.status(502).json({ error: 'Failed to sync Google Calendar' });
   }
 });

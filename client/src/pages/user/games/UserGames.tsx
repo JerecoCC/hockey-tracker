@@ -22,7 +22,9 @@ import GoogleLogo from '@/shared/GoogleLogo/GoogleLogo';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
-import MultiSelect, { type MultiSelectOption } from '@jerecocc/tracker-ui/components/MultiSelect/MultiSelect';
+import MultiSelect, {
+  type MultiSelectOption,
+} from '@jerecocc/tracker-ui/components/MultiSelect/MultiSelect';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import {
   ScheduleCalendarCard,
@@ -45,6 +47,11 @@ import PeriodPicker from '@jerecocc/tracker-ui/components/PeriodPicker/PeriodPic
 import { type GameRecord } from '@/hooks/useGames';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import { buildUserGameDetailsPath } from '@/lib/routeSlugs';
+import {
+  syncGoogleCalendarWithProgress,
+  type GoogleCalendarSyncProgress,
+  type GoogleCalendarSyncResult,
+} from './googleCalendarSync';
 import styles from './UserGames.module.scss';
 
 const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/ScoreImageModal'));
@@ -80,6 +87,77 @@ const googleCalendarConnectErrorMessage = (reason: string | null) => {
   }
 };
 
+const googleCalendarLoadingToastOptions = {
+  autoClose: false,
+  closeButton: false,
+  closeOnClick: false,
+  draggable: false,
+  hideProgressBar: false,
+  pauseOnHover: false,
+  progressClassName: styles.googleCalendarProgressBar,
+};
+
+const startGoogleCalendarSyncProgressToast = () => {
+  let progressValue = 0;
+  const toastId = toast.loading('Syncing Google Calendar: preparing scheduled games...', {
+    ...googleCalendarLoadingToastOptions,
+    progress: progressValue,
+  });
+
+  return {
+    update: (progress: GoogleCalendarSyncProgress) => {
+      if (
+        typeof progress.completed === 'number' &&
+        typeof progress.total === 'number' &&
+        progress.total > 0
+      ) {
+        progressValue = Math.max(
+          progressValue,
+          Math.min(Math.max(progress.completed / progress.total, 0), 0.98),
+        );
+      } else {
+        progressValue = Math.max(progressValue, Math.min(progressValue + 0.08, 0.9));
+      }
+      toast.update(toastId, {
+        render: `Syncing Google Calendar: ${progress.message}`,
+        isLoading: true,
+        ...googleCalendarLoadingToastOptions,
+        progress: progressValue,
+      });
+    },
+    finish: (result: GoogleCalendarSyncResult) => {
+      toast.update(toastId, {
+        render: `Google Calendar synced: ${result.synced} ${result.synced === 1 ? 'game' : 'games'}, ${result.removed} removed`,
+        type: 'success',
+        isLoading: false,
+        autoClose: 4000,
+        closeButton: true,
+        closeOnClick: true,
+        draggable: true,
+        hideProgressBar: true,
+        pauseOnHover: true,
+        progress: 1,
+        progressClassName: styles.googleCalendarProgressBar,
+      });
+    },
+    fail: () => {
+      toast.update(toastId, {
+        render: 'Failed to sync Google Calendar',
+        type: 'error',
+        isLoading: false,
+        autoClose: 12000,
+        closeButton: true,
+        closeOnClick: true,
+        draggable: true,
+        hideProgressBar: true,
+        pauseOnHover: true,
+        progress: 1,
+        progressClassName: styles.googleCalendarProgressBar,
+      });
+    },
+  };
+};
+
 const getUserWeekSummaryActiveMarker = (summaryCard: HTMLDivElement | null): number =>
   (summaryCard?.getBoundingClientRect().bottom ?? USER_WEEK_SUMMARY_STICKY_TOP_PX) +
   USER_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX;
@@ -101,12 +179,6 @@ interface GoogleCalendarStatus {
   connected_at: string | null;
   last_synced_at: string | null;
   last_sync_error: string | null;
-}
-
-interface GoogleCalendarSyncResult {
-  status: 'synced';
-  synced: number;
-  removed: number;
 }
 
 const STATUS_OPTIONS: SelectOption[] = [
@@ -753,7 +825,8 @@ const GoogleCalendarModal = ({
         ) : connected ? (
           <>
             <p>
-              Games for your favorite teams sync as all-day events in your{' '}
+              Games from the nearest season that is not marked done, filtered to your favorite
+              teams, sync as timed events using each game&apos;s scheduled start time in your{' '}
               <strong>{status?.calendar_name || 'Hockey Tracker'}</strong> calendar. A scheduled
               watch date moves the event; clearing that date moves it back to the original game
               date, and skipping the game removes it.
@@ -772,8 +845,9 @@ const GoogleCalendarModal = ({
           </>
         ) : (
           <p>
-            Connect Google Calendar to mirror games for your favorite teams. Hockey Tracker creates
-            a separate calendar and can only manage events inside that calendar.
+            Connect Google Calendar to mirror games from the nearest season that is not marked done,
+            filtered to your favorite teams. Hockey Tracker creates a separate calendar and can only
+            manage events inside that calendar.
           </p>
         )}
       </div>
@@ -1310,18 +1384,17 @@ const UserGames = () => {
   const syncGoogleCalendar = async () => {
     if (googleCalendarBusy) return;
     setGoogleCalendarBusy(true);
+    const progressToast = startGoogleCalendarSyncProgressToast();
     try {
-      const { data } = await axios.post<GoogleCalendarSyncResult>(
-        `${API}/user/calendar/google/sync`,
-        {},
-        { headers: authHeaders() },
-      );
+      const data = await syncGoogleCalendarWithProgress({
+        endpoint: `${API}/user/calendar/google/sync`,
+        headers: authHeaders(),
+        onProgress: progressToast.update,
+      });
       await queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
-      toast.success(
-        `Google Calendar synced: ${data.synced} ${data.synced === 1 ? 'game' : 'games'}, ${data.removed} removed`,
-      );
+      progressToast.finish(data);
     } catch {
-      toast.error('Failed to sync Google Calendar');
+      progressToast.fail();
     } finally {
       setGoogleCalendarBusy(false);
     }

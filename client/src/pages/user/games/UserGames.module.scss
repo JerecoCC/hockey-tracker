@@ -47,6 +47,11 @@
   flex: 0 0 auto;
 }
 
+.googleCalendarProgressBar.googleCalendarProgressBar {
+  background: $accent !important;
+  background-color: $accent !important;
+}
+
 .googleCalendarModalBody {
   display: grid;
   gap: $space-sm;
