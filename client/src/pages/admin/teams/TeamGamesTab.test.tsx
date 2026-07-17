@@ -309,7 +309,7 @@ beforeEach(() => {
 describe('TeamGamesTab', () => {
   it('renders a month-only calendar and navigates on game click', async () => {
     const user = userEvent.setup();
-    const { container } = renderTeamGamesTab();
+    renderTeamGamesTab();
     const currentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
 
     expect(
@@ -335,7 +335,9 @@ describe('TeamGamesTab', () => {
     expect(screen.getByText(monthLabel(currentMonth))).toBeInTheDocument();
     await user.hover(homeGameButton);
 
-    expect(container.querySelector('.tipVisible')).toHaveTextContent('Away Team');
+    await waitFor(() =>
+      expect(document.querySelector('.tipVisible')).toHaveTextContent('Away Team'),
+    );
     expect(screen.getByText('W 5-4 (OT)')).toBeInTheDocument();
     expect(screen.getByText('W 4-2')).toBeInTheDocument();
     expect(screen.getByText('W 3-2 (SO)')).toBeInTheDocument();
@@ -518,7 +520,7 @@ describe('TeamGamesTab', () => {
         return originalGetBoundingClientRect.call(this);
       });
 
-    const { container } = renderTeamGamesTab();
+    renderTeamGamesTab();
 
     const downloadButton = screen.getByRole('button', { name: 'Download monthly schedule' });
 
@@ -526,7 +528,7 @@ describe('TeamGamesTab', () => {
 
     await user.hover(downloadButton);
     await waitFor(() =>
-      expect(container.querySelector('.tipVisible')).toHaveTextContent('Download monthly schedule'),
+      expect(document.querySelector('.tipVisible')).toHaveTextContent('Download monthly schedule'),
     );
     await user.unhover(downloadButton);
 
