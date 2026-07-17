@@ -8,7 +8,7 @@ import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import Field from '@jerecocc/tracker-ui/components/Field/Field';
 import GoogleButton from '@/shared/GoogleButton/GoogleButton';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
-import styles from './Signup.module.scss';
+import styles from '@/shared/AuthPage/AuthPage.module.scss';
 
 interface SignupForm {
   name: string;
