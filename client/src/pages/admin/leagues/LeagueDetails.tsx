@@ -228,7 +228,6 @@ const LeagueDetailsPage = () => {
       deletePlayer,
       league,
       loading,
-      navigate,
       playerBusy,
       players,
       playersFetching,

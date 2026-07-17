@@ -15,7 +15,7 @@ import { missingPlayerDataIndicator } from '@/lib/playerDataStatus';
 import { formatPlayerPosition } from '@/lib/playerPosition';
 import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playerSearch';
 import { getPlayerStatus, PLAYER_STATUS_LABELS, type PlayerStatus } from '@/lib/playerStatus';
-import { useLeagueDetailsContext } from './LeagueDetailsContext';
+import { useLeagueDetailsContext } from './leagueDetailsState';
 import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';

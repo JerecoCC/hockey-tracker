@@ -35,9 +35,9 @@ import {
   ScheduleGamesTitle,
   ScheduleWeekList,
   ScheduleWeekSummary,
-  scheduleViewSegmentedControlClassName,
-  useScheduleWeekSummaryStuck,
 } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
+import { scheduleViewSegmentedControlClassName } from '@/shared/ScheduleGamesLayout/scheduleGamesLayoutStyles';
+import { useScheduleWeekSummaryStuck } from '@/shared/ScheduleGamesLayout/useScheduleWeekSummaryStuck';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';

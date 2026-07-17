@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import type { CSSProperties, MutableRefObject, ReactNode, Ref } from 'react';
 import { Link } from 'react-router-dom';
 import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
@@ -11,93 +10,11 @@ import styles from './ScheduleGamesLayout.module.scss';
 
 export type ScheduleDayGroup<T> = readonly [dateKey: string, items: T[]];
 
-const WEEK_SUMMARY_MOBILE_BREAKPOINT = 768;
-const DEFAULT_WEEK_SUMMARY_STICKY_TOP_PX = 52;
-
 const getTodayDateKey = () => {
   const today = new Date();
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
     today.getDate(),
   ).padStart(2, '0')}`;
-};
-
-const getScheduleScrollParent = (el: HTMLElement): HTMLElement => {
-  let parent = el.parentElement;
-  while (parent) {
-    const { overflowY } = window.getComputedStyle(parent);
-    if (/(auto|scroll|overlay)/.test(overflowY)) return parent;
-    parent = parent.parentElement;
-  }
-  return document.documentElement;
-};
-
-interface UseScheduleWeekSummaryStuckOptions {
-  active: boolean;
-  sentinelRef: { current: HTMLDivElement | null };
-  stickyTopPx?: number;
-}
-
-export const useScheduleWeekSummaryStuck = ({
-  active,
-  sentinelRef,
-  stickyTopPx = DEFAULT_WEEK_SUMMARY_STICKY_TOP_PX,
-}: UseScheduleWeekSummaryStuckOptions): boolean => {
-  const [stuck, setStuck] = useState(false);
-
-  useEffect(() => {
-    if (!active) {
-      setStuck(false);
-      return;
-    }
-
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const scrollEl = getScheduleScrollParent(sentinel);
-    const mediaQuery =
-      typeof window.matchMedia === 'function'
-        ? window.matchMedia(`(max-width: ${WEEK_SUMMARY_MOBILE_BREAKPOINT}px)`)
-        : null;
-    let frame = 0;
-
-    const isMobile = () =>
-      mediaQuery?.matches ?? window.innerWidth <= WEEK_SUMMARY_MOBILE_BREAKPOINT;
-
-    const update = () => {
-      frame = 0;
-      const next = !isMobile() && sentinel.getBoundingClientRect().top <= stickyTopPx;
-      setStuck((current) => (current === next ? current : next));
-    };
-
-    const scheduleUpdate = () => {
-      if (frame) return;
-      frame = requestAnimationFrame(update);
-    };
-
-    scrollEl.addEventListener('scroll', scheduleUpdate, { passive: true });
-    if (mediaQuery) {
-      if (typeof mediaQuery.addEventListener === 'function') {
-        mediaQuery.addEventListener('change', scheduleUpdate);
-      } else {
-        mediaQuery.addListener(scheduleUpdate);
-      }
-    }
-    scheduleUpdate();
-
-    return () => {
-      if (frame) cancelAnimationFrame(frame);
-      scrollEl.removeEventListener('scroll', scheduleUpdate);
-      if (mediaQuery) {
-        if (typeof mediaQuery.removeEventListener === 'function') {
-          mediaQuery.removeEventListener('change', scheduleUpdate);
-        } else {
-          mediaQuery.removeListener(scheduleUpdate);
-        }
-      }
-    };
-  }, [active, sentinelRef, stickyTopPx]);
-
-  return stuck;
 };
 
 interface ScheduleGamesTitleProps {
@@ -465,5 +382,3 @@ export const ScheduleCalendarDayCount = ({
     />
   );
 };
-
-export const scheduleViewSegmentedControlClassName = styles.viewSegmentedControl;

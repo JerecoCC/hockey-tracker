@@ -4,7 +4,7 @@ import SearchableList from '@jerecocc/tracker-ui/components/SearchableList/Searc
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import { buildTeamDetailsPath } from '@/lib/routeSlugs';
-import { useLeagueDetailsContext } from './LeagueDetailsContext';
+import { useLeagueDetailsContext } from './leagueDetailsState';
 import {
   LeagueListRowSkeleton,
   TabActionSkeleton,

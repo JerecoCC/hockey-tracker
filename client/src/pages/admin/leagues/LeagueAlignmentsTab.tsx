@@ -20,7 +20,7 @@ import useGroupAlignmentSets, {
 } from '@/hooks/useGroupAlignmentSets';
 import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type TeamRecord } from '@/hooks/useTeams';
-import { useLeagueDetailsContext } from './LeagueDetailsContext';
+import { useLeagueDetailsContext } from './leagueDetailsState';
 import {
   LeagueListRowSkeleton,
   TabActionSkeleton,

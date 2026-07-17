@@ -1,7 +1,7 @@
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
-import { useLeagueDetailsContext } from './LeagueDetailsContext';
+import { useLeagueDetailsContext } from './leagueDetailsState';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 

@@ -20,9 +20,9 @@ import {
   ScheduleGamesTitle,
   ScheduleWeekList,
   ScheduleWeekSummary,
-  scheduleViewSegmentedControlClassName,
-  useScheduleWeekSummaryStuck,
 } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
+import { scheduleViewSegmentedControlClassName } from '@/shared/ScheduleGamesLayout/scheduleGamesLayoutStyles';
+import { useScheduleWeekSummaryStuck } from '@/shared/ScheduleGamesLayout/useScheduleWeekSummaryStuck';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import useGames, { type GameRecord, type GameStatus, type GameType } from '@/hooks/useGames';
@@ -557,15 +557,15 @@ const SeasonGamesTab = ({
     });
   }, [groupedByDate, todayKey]);
 
-  const clearWeekSummaryScrollTarget = () => {
+  const clearWeekSummaryScrollTarget = useCallback(() => {
     weekSummaryScrollTargetRef.current = null;
     if (weekSummaryScrollTimeoutRef.current !== null) {
       window.clearTimeout(weekSummaryScrollTimeoutRef.current);
       weekSummaryScrollTimeoutRef.current = null;
     }
-  };
+  }, []);
 
-  const holdWeekSummaryScrollTarget = (dateKey: string) => {
+  const holdWeekSummaryScrollTarget = useCallback((dateKey: string) => {
     weekSummaryScrollTargetRef.current = dateKey;
     if (weekSummaryScrollTimeoutRef.current !== null) {
       window.clearTimeout(weekSummaryScrollTimeoutRef.current);
@@ -573,7 +573,7 @@ const SeasonGamesTab = ({
     weekSummaryScrollTimeoutRef.current = window.setTimeout(() => {
       clearWeekSummaryScrollTarget();
     }, SEASON_WEEK_SUMMARY_SCROLL_SETTLE_MS);
-  };
+  }, [clearWeekSummaryScrollTarget]);
 
   const scrollToDay = (dateKey: string) => {
     const dayNode = dayRefs.current[dateKey];
@@ -635,7 +635,13 @@ const SeasonGamesTab = ({
       scrollEl.removeEventListener('scroll', scheduleUpdate);
       window.removeEventListener('resize', scheduleUpdate);
     };
-  }, [groupedByDate, loading, view]);
+  }, [
+    clearWeekSummaryScrollTarget,
+    groupedByDate,
+    holdWeekSummaryScrollTarget,
+    loading,
+    view,
+  ]);
 
   const handleAdd = (date?: string) => {
     setEditTarget(null);
