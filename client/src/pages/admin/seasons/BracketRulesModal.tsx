@@ -19,17 +19,19 @@ import useBracketRuleSets, {
   type SaveSlotsPayload,
 } from '@/hooks/useBracketRuleSets';
 import usePlayoffQualificationFormats from '@/hooks/usePlayoffQualificationFormats';
+import {
+  SLOT_SCOPE_OPTIONS,
+  SPECIFIC_SCOPES,
+  deriveBracketStructureFromSize,
+  getRoundLabel,
+  makeSlotKey,
+  slotKeyToLabel,
+  type BracketRound,
+  type BracketStructure,
+} from './bracketRules';
 import styles from './SeasonPlayoffsTab.module.scss';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-export const SLOT_SCOPE_OPTIONS = [
-  { value: 'league', label: 'Whole League' },
-  { value: 'specific_conference', label: 'Specific Conference' },
-  { value: 'specific_division', label: 'Specific Division' },
-];
-
-export const SPECIFIC_SCOPES = new Set(['specific_conference', 'specific_division']);
 
 const RANK_OPTIONS = Array.from({ length: 16 }, (_, i) => ({
   value: String(i + 1),
@@ -63,52 +65,6 @@ const NO_QUALIFICATION_FORMAT_VALUE = '__none__';
 
 // ── Bracket structure ─────────────────────────────────────────────────────────
 
-export interface BracketRound {
-  round: number;
-  label: string;
-  series: number;
-}
-
-export interface BracketStructure {
-  totalTeams: number;
-  bracketSize: number;
-  byes: number;
-  rounds: BracketRound[];
-}
-
-export const getRoundLabel = (
-  round: number,
-  totalRounds: number,
-  roundNames?: Record<string, string> | null,
-): string => {
-  if (roundNames?.[round]) return roundNames[round];
-  if (round === totalRounds) return 'Final';
-  return `Round ${round}`;
-};
-
-export const getMatchupLabel = (
-  matchupKey: string,
-  matchupNames?: Record<string, string> | null,
-): string | null => {
-  const label = matchupNames?.[matchupKey]?.trim();
-  return label || null;
-};
-
-export const deriveBracketStructureFromSize = (totalTeams: number): BracketStructure => {
-  const bracketSize = Math.pow(2, Math.ceil(Math.log2(Math.max(totalTeams, 2))));
-  const numRounds = Math.log2(bracketSize);
-  return {
-    totalTeams,
-    bracketSize,
-    byes: bracketSize - totalTeams,
-    rounds: Array.from({ length: numRounds }, (_, i) => ({
-      round: i + 1,
-      label: getRoundLabel(i + 1, numRounds),
-      series: bracketSize / Math.pow(2, i + 1),
-    })),
-  };
-};
-
 const inferBracketSizeFromSlots = (slots: BracketSlotRule[]): number => {
   const round1Matchups = new Set(
     slots
@@ -140,16 +96,6 @@ interface BracketRulesFormValues {
   /** Custom display name per matchup, keyed by matchup slot like r3m0. Empty string = use round label. */
   matchupNames: Record<string, string>;
 }
-
-export const makeSlotKey = (round: number, matchup: number, pos: 'team1' | 'team2') =>
-  `r${round}m${matchup}${pos}`;
-
-export const slotKeyToLabel = (key: string, rounds: BracketRound[]): string => {
-  const m = key.match(/^r(\d+)m(\d+)(team1|team2)$/);
-  if (!m) return key;
-  const roundInfo = rounds.find((r) => r.round === Number(m[1]));
-  return `${roundInfo?.label ?? `Round ${m[1]}`} · Matchup ${Number(m[2]) + 1} · Team ${m[3] === 'team1' ? '1' : '2'}`;
-};
 
 const blankSlotItem = (key: string): SlotFormItem => ({
   key,

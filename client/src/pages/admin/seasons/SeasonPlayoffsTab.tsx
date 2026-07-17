@@ -26,12 +26,16 @@ import {
   getMatchupLabel,
   getRoundLabel,
   makeSlotKey,
-} from './BracketRulesModal';
+} from './bracketRules';
 import {
   getBracketSlotFooterLabel,
   getBracketSlotHeaderLabel,
 } from './seasonPlayoffBracketLabels';
 import { hasRecordedRegularSeasonGame } from './seasonPlayoffEligibility';
+import {
+  getSeasonGroupTeamIds,
+  normalizeBracketSlotRule,
+} from './seasonPlayoffRules';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './SeasonPlayoffsTab.module.scss';
 
@@ -72,37 +76,6 @@ const simulatedTeamFromStanding = (team: TeamStandingRecord): SimulatedSlotTeam 
   primaryColor: team.team_primary_color,
   textColor: team.team_text_color,
 });
-
-export const canonicalSlotKey = (key: string | null | undefined): string | null => {
-  if (!key) return null;
-  return key.replace(/away$/, 'team1').replace(/home$/, 'team2');
-};
-
-export const normalizeBracketSlotRule = (slot: BracketSlotRule): BracketSlotRule => ({
-  ...slot,
-  slot_key: canonicalSlotKey(slot.slot_key) ?? slot.slot_key,
-  choice_ref: canonicalSlotKey(slot.choice_ref),
-  matchup_ref: slot.matchup_ref ? (canonicalSlotKey(slot.matchup_ref) ?? slot.matchup_ref) : null,
-});
-
-export const getSeasonGroupTeamIds = (
-  groups: SeasonGroupRecord[],
-  groupId: string,
-): Set<string> => {
-  const ids = new Set<string>();
-  const groupMatches = (group: SeasonGroupRecord, id: string) =>
-    group.id === id || group.stable_key === `legacy:${id}`;
-  const collect = (gid: string) => {
-    const group = groups.find((candidate) => groupMatches(candidate, gid));
-    if (!group) return;
-    group.teams.forEach((team) => ids.add(team.id));
-    groups
-      .filter((candidate) => candidate.parent_id === group.id)
-      .forEach((child) => collect(child.id));
-  };
-  collect(groupId);
-  return ids;
-};
 
 // ── Bracket structure derivation ──────────────────────────────────────────────
 

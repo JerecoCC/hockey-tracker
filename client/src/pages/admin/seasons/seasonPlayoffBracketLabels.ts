@@ -1,4 +1,4 @@
-import { getMatchupLabel, getRoundLabel } from './BracketRulesModal';
+import { getMatchupLabel, getRoundLabel } from './bracketRules';
 
 interface BracketSlotHeaderLabelArgs {
   slotIndex: number;

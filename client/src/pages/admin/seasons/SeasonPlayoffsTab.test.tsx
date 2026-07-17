@@ -2,9 +2,9 @@ import {
   canonicalSlotKey,
   getSeasonGroupTeamIds,
   normalizeBracketSlotRule,
-} from './SeasonPlayoffsTab';
+} from './seasonPlayoffRules';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
-import { getMatchupLabel, getRoundLabel } from './BracketRulesModal';
+import { getMatchupLabel, getRoundLabel } from './bracketRules';
 import {
   getBracketSlotFooterLabel,
   getBracketSlotHeaderLabel,
