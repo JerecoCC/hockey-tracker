@@ -9,7 +9,6 @@ import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import GameCard from '@/shared/GameCard/GameCard';
-import type { TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
 import type { SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
@@ -49,13 +48,6 @@ const STATUS_LABEL: Record<GameStatus, string> = {
   in_progress: 'In Progress',
   final: 'Final',
   postponed: 'Postponed',
-};
-
-const STATUS_INTENT: Record<GameStatus, TagIntent> = {
-  scheduled: 'info',
-  in_progress: 'warning',
-  final: 'success',
-  postponed: 'warning',
 };
 
 interface NhlScheduleTeam {
@@ -655,7 +647,6 @@ const SeasonDayGamesPage = () => {
                   href={gameHref(game)}
                   showScore={showScore}
                   statusLabel={formatStatusLabel(game)}
-                  statusIntent={STATUS_INTENT[game.status]}
                   originalDateLabel={formatDate(game.scheduled_at)}
                   timeLabel={formatTime(game.scheduled_time, game.scheduled_at)}
                   actions={[

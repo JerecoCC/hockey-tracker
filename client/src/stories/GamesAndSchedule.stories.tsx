@@ -23,6 +23,7 @@ import TeamCalendarGameCard from '@/shared/TeamCalendarGameCard/TeamCalendarGame
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import type { GameRecord } from '@/hooks/useGames';
+import { GAME_STATUS_TAG_INTENT } from '@/lib/gamePresentation';
 import {
   noop,
   sampleGame,
@@ -121,7 +122,6 @@ export const GameCards = {
             }}
             showScore
             statusLabel="Final"
-            statusIntent="success"
             originalDateLabel="Jan 18, 2026"
             timeLabel="7:00 PM"
             actions={[{ icon: 'edit', tooltip: 'Edit game', onClick: noop }]}
@@ -200,7 +200,10 @@ export const CalendarAndSchedule = {
               <Tag label="Team: MTL" intent="info" />
             </ScheduleFilterSlot>
             <ScheduleFilterSlot wide>
-              <Tag label="Status: Final" intent="success" />
+              <Tag
+                label="Status: Final"
+                intent={GAME_STATUS_TAG_INTENT.final}
+              />
             </ScheduleFilterSlot>
           </ScheduleFilters>
           <ScheduleWeekSummary
@@ -224,7 +227,6 @@ export const CalendarAndSchedule = {
                     game={game}
                     showScore
                     statusLabel="Final"
-                    statusIntent="success"
                   />
                 ))}
               </ScheduleGameList>

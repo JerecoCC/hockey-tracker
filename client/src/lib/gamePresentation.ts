@@ -1,4 +1,12 @@
-import type { GameRecord } from '@/hooks/useGames';
+import type { TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
+import type { GameRecord, GameStatus } from '@/hooks/useGames';
+
+export const GAME_STATUS_TAG_INTENT = {
+  scheduled: 'neutral',
+  in_progress: 'info',
+  final: 'success',
+  postponed: 'warning',
+} satisfies Record<GameStatus, TagIntent>;
 
 export const getOvertimeSuffix = (game: GameRecord): '' | '/OT' | '/SO' => {
   if (game.shootout || game.period_scores.some((period) => period.period === 'SO')) return '/SO';

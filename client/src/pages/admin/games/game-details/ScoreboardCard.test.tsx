@@ -7,8 +7,23 @@ import styles from './ScoreboardCard.module.scss';
 jest.mock('@jerecocc/tracker-ui/components/Tag/Tag', () => {
   return {
     __esModule: true,
-    default: function MockTag({ label, className }: { label: string; className?: string }) {
-      return <span className={className}>{label}</span>;
+    default: function MockTag({
+      label,
+      className,
+      intent,
+    }: {
+      label: string;
+      className?: string;
+      intent?: string;
+    }) {
+      return (
+        <span
+          className={className}
+          data-intent={intent}
+        >
+          {label}
+        </span>
+      );
     },
   };
 });
@@ -107,6 +122,7 @@ describe('ScoreboardCard', () => {
 
     expect(screen.getByText('Saturday, April 18, 2026')).toBeInTheDocument();
     expect(screen.queryByText('Friday, April 17, 2026')).not.toBeInTheDocument();
+    expect(screen.getByText('Scheduled')).toHaveAttribute('data-intent', 'neutral');
   });
 
   it('renders playoff matchup meta with stable fixed-size styling', () => {
@@ -144,6 +160,7 @@ describe('ScoreboardCard', () => {
     expect(screen.getByRole('tooltip')).toHaveTextContent('Atlantic Division Semifinal · Game 5');
     expect(meta).not.toHaveStyle({ fontSize: '8px' });
     expect(meta.getAttribute('style')).toBeNull();
+    expect(screen.getByText('Final')).toHaveAttribute('data-intent', 'success');
   });
 
   it('renders playoff series dots instead of numeric scores when series score is supplied', () => {

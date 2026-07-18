@@ -10,7 +10,6 @@ import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import StickyHeroCard from '@jerecocc/tracker-ui/components/StickyHeroCard/StickyHeroCard';
-import { type TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import type { GameRecord, GameStatus } from '@/hooks/useGames';
@@ -60,13 +59,6 @@ const STATUS_LABEL: Record<GameStatus, string> = {
   in_progress: 'In Progress',
   final: 'Final',
   postponed: 'Postponed',
-};
-
-const STATUS_INTENT: Record<GameStatus, TagIntent> = {
-  scheduled: 'info',
-  in_progress: 'warning',
-  final: 'success',
-  postponed: 'warning',
 };
 
 const DATE_FMT = new Intl.DateTimeFormat('en-US', {
@@ -511,7 +503,6 @@ const UserGamesWatchedTeam = () => {
                     href={getGamePath(game)}
                     showScore={showScore}
                     statusLabel={formatStatusLabel(game)}
-                    statusIntent={STATUS_INTENT[game.status]}
                     originalDateLabel={formatDate(getGameDateValue(game))}
                     timeLabel={formatTime(game.scheduled_time)}
                     supplementalMeta={formatScheduledWatchDate(game.scheduled_for)}

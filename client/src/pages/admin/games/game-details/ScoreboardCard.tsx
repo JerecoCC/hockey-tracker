@@ -5,6 +5,7 @@ import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import StickyHeroCard from '@jerecocc/tracker-ui/components/StickyHeroCard/StickyHeroCard';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import type { GameStatus, TeamInfo } from '@/hooks/useGames';
+import { GAME_STATUS_TAG_INTENT } from '@/lib/gamePresentation';
 import { buildTeamDetailsPath, buildUserTeamDetailsPath } from '@/lib/routeSlugs';
 import {
   DATE_FMT_LONG,
@@ -22,13 +23,6 @@ const STATUS_LABEL: Record<GameStatus, string> = {
   in_progress: 'In Progress',
   final: 'Final',
   postponed: 'Postponed',
-};
-
-const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warning' | 'danger'> = {
-  scheduled: 'info',
-  in_progress: 'warning',
-  final: 'success',
-  postponed: 'warning',
 };
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -305,12 +299,12 @@ const ScoreboardCard = ({
             {isFinal ? (
               <Tag
                 label={`Final${overtimeSuffix}`}
-                intent="success"
+                intent={GAME_STATUS_TAG_INTENT.final}
               />
             ) : (
               <Tag
                 label={STATUS_LABEL[game.status]}
-                intent={STATUS_INTENT[game.status]}
+                intent={GAME_STATUS_TAG_INTENT[game.status]}
               />
             )}
             {game.scheduled_at && (

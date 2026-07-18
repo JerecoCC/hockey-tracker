@@ -14,7 +14,7 @@ import {
   getScheduledWatchDateKey,
   type GameTimezone,
 } from '@/lib/gameSchedule';
-import { getOvertimeSuffix } from '@/lib/gamePresentation';
+import { GAME_STATUS_TAG_INTENT, getOvertimeSuffix } from '@/lib/gamePresentation';
 import listStyles from '../GameListItem.module.scss';
 import styles from './GameCard.module.scss';
 
@@ -197,6 +197,8 @@ const GameCardVariant = ({
   actions,
   showScore: showScoreProp,
   timeLabel: timeLabelProp,
+  statusLabel: statusLabelProp,
+  statusIntent,
   showWatchedBanner = true,
   showTypeIndicator = false,
   onOpen,
@@ -299,7 +301,10 @@ const GameCardVariant = ({
         />
         {bottomLabel && <div className={styles.bottomLabel}>{bottomLabel}</div>}
         <div className={styles.gameFooter}>
-          <span>{getStatusLabel(game)}</span>
+          <Tag
+            label={statusLabelProp ?? getStatusLabel(game)}
+            intent={statusIntent ?? GAME_STATUS_TAG_INTENT[game.status]}
+          />
           {playoffMetaLabel && <span>{playoffMetaLabel}</span>}
         </div>
       </div>
@@ -312,13 +317,6 @@ const LIST_DATE_FMT = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
   year: 'numeric',
 });
-
-const DEFAULT_STATUS_INTENT: Record<GameRecord['status'], TagIntent> = {
-  scheduled: 'neutral',
-  in_progress: 'success',
-  final: 'info',
-  postponed: 'warning',
-};
 
 const GameListItemVariant = ({
   game,
@@ -455,7 +453,7 @@ const GameListItemVariant = ({
       </div>
       <Tag
         label={statusLabelProp ?? getStatusLabel(game)}
-        intent={statusIntent ?? DEFAULT_STATUS_INTENT[game.status]}
+        intent={statusIntent ?? GAME_STATUS_TAG_INTENT[game.status]}
       />
       {actions && (
         <ActionOverlay className={listStyles.actions}>

@@ -1,5 +1,10 @@
 import type { GameRecord } from '@/hooks/useGames';
-import { canMarkGameWatched, getOvertimeSuffix, getScoreCardGame } from './gamePresentation';
+import {
+  canMarkGameWatched,
+  GAME_STATUS_TAG_INTENT,
+  getOvertimeSuffix,
+  getScoreCardGame,
+} from './gamePresentation';
 
 const game = (overrides: Partial<GameRecord> = {}) =>
   ({
@@ -13,6 +18,15 @@ const game = (overrides: Partial<GameRecord> = {}) =>
   }) as GameRecord;
 
 describe('game presentation utilities', () => {
+  it('uses one consistent Tag intent for every game status', () => {
+    expect(GAME_STATUS_TAG_INTENT).toEqual({
+      scheduled: 'neutral',
+      in_progress: 'info',
+      final: 'success',
+      postponed: 'warning',
+    });
+  });
+
   it('prioritizes shootout over overtime status', () => {
     expect(getOvertimeSuffix(game({ shootout: true, overtime_periods: 1 }))).toBe('/SO');
     expect(getOvertimeSuffix(game({ period_scores: [{ period: 'OT' }] as never }))).toBe('/OT');
