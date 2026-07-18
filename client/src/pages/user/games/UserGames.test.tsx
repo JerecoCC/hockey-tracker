@@ -55,10 +55,21 @@ jest.mock(
       confirmLabel,
       confirmDisabled,
       footerStart,
+      hideFooter,
     }: any) =>
       open ? (
-        <div>
+        <div
+          role="dialog"
+          aria-label={title}
+        >
           <div>{title}</div>
+          <button
+            type="button"
+            aria-label={`Close ${title}`}
+            onClick={onClose}
+          >
+            Close
+          </button>
           {children}
           {footerStart}
           {onConfirm && (
@@ -69,7 +80,7 @@ jest.mock(
               {confirmLabel ?? 'Save'}
             </button>
           )}
-          <button onClick={onClose}>Cancel</button>
+          {!hideFooter && <button onClick={onClose}>Cancel</button>}
         </div>
       ) : null,
 );
@@ -202,7 +213,7 @@ jest.mock(
     ),
 );
 jest.mock('@jerecocc/tracker-ui/components/Icon/Icon', () => ({ name }: any) => (
-  <span>{name}</span>
+  <span aria-hidden="true">{name}</span>
 ));
 jest.mock('@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl', () => ({
   __esModule: true,
@@ -229,7 +240,7 @@ jest.mock('@jerecocc/tracker-ui/components/ToggleButton/ToggleButton', () => ({
     activeTooltip,
     inactiveTooltip,
     variant,
-    'aria-label': ariaLabel,
+    ariaLabel,
   }: any) => (
     <button
       type="button"
@@ -275,12 +286,27 @@ jest.mock('@jerecocc/tracker-ui/components/PeriodPicker/PeriodPicker', () => ({
 jest.mock(
   '@jerecocc/tracker-ui/components/Button/Button',
   () =>
-    ({ children, tooltip, icon, onClick, disabled, 'aria-label': ariaLabel }: any) => (
+    ({
+      children,
+      tooltip,
+      icon,
+      iconHeight,
+      iconSize,
+      className,
+      onClick,
+      disabled,
+      variant,
+      'aria-label': ariaLabel,
+    }: any) => (
       <button
         type="button"
         onClick={onClick}
         disabled={disabled}
         aria-label={ariaLabel ?? tooltip ?? icon}
+        data-variant={variant}
+        data-icon-height={iconHeight}
+        data-icon-size={iconSize}
+        className={className}
       >
         {children ?? tooltip ?? icon}
       </button>
@@ -675,6 +701,78 @@ beforeEach(() => {
 });
 
 describe('UserGames schedule views', () => {
+  it('hides the Games section title and divider on mobile', () => {
+    render(<UserGames />);
+
+    expect(
+      screen.getByText('Games', { selector: `.${scheduleLayoutStyles.mobileHiddenTitle}` }),
+    ).toBeInTheDocument();
+    expect(
+      document.querySelector(`hr.${scheduleLayoutStyles.mobileHiddenTitle}`),
+    ).toBeInTheDocument();
+  });
+
+  it('opens the filters in a modal drawer from a mobile icon button', async () => {
+    const user = userEvent.setup();
+    const originalWidth = window.innerWidth;
+    let unmount: (() => void) | undefined;
+
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 640 });
+
+    try {
+      ({ unmount } = render(<UserGames />));
+
+      expect(screen.queryByRole('switch', { name: 'Hide filters' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('dialog', { name: 'Filters' })).not.toBeInTheDocument();
+
+      const filtersButton = screen.getByRole('button', { name: 'Open filters' });
+      expect(filtersButton).toHaveAttribute('data-variant', 'outlined');
+      expect(filtersButton).toHaveAttribute('data-icon-height', 'field');
+      expect(filtersButton).toHaveClass(styles.mobileFilterButton);
+      const moreActionsButton = screen.getByRole('button', { name: 'More actions' });
+      expect(moreActionsButton).toHaveAttribute('data-icon-height', 'field');
+      expect(moreActionsButton).toHaveAttribute('data-icon-size', '1.25rem');
+      expect(filtersButton.compareDocumentPosition(moreActionsButton)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      expect(
+        screen.queryByRole('button', { name: 'Google Calendar Sync' }),
+      ).not.toBeInTheDocument();
+      await user.click(moreActionsButton);
+      expect(screen.getByRole('button', { name: 'Google Calendar Sync' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Generate Score Card' })).toBeInTheDocument();
+      await user.click(filtersButton);
+
+      const filtersDrawer = screen.getByRole('dialog', { name: 'Filters' });
+      expect(within(filtersDrawer).getByRole('combobox', { name: 'Teams' })).toBeInTheDocument();
+      const skippedGamesLabel = within(filtersDrawer).getByText('Skipped games');
+      expect(skippedGamesLabel.parentElement).toHaveClass(styles.toggleField);
+      const skippedGamesField = skippedGamesLabel.parentElement as HTMLElement;
+      const skippedGamesSubtitle = within(skippedGamesField).getByText('Show skipped games', {
+        selector: 'span',
+      });
+      const skippedGamesSwitch = within(skippedGamesField).getByRole('switch', {
+        name: 'Show skipped games',
+      });
+      expect(skippedGamesSubtitle).toHaveClass(styles.toggleFieldSubtitle);
+      expect(skippedGamesSwitch.parentElement).toBe(skippedGamesField);
+
+      await user.click(skippedGamesSwitch);
+      expect(
+        within(skippedGamesField).getByText('Hide skipped games', { selector: 'span' }),
+      ).toHaveClass(styles.toggleFieldSubtitle);
+
+      await user.click(within(filtersDrawer).getByRole('button', { name: 'Close Filters' }));
+      expect(screen.queryByRole('dialog', { name: 'Filters' })).not.toBeInTheDocument();
+    } finally {
+      unmount?.();
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: originalWidth,
+      });
+    }
+  });
+
   it('shows an actionable error when the OAuth project has Calendar API disabled', async () => {
     window.history.replaceState(
       {},
@@ -1580,6 +1678,7 @@ describe('UserGames schedule views', () => {
     expect(sourceCard).not.toBeNull();
     expect(targetCell).not.toBeNull();
     expect(sourceCard).toHaveClass(calendarItemStyles.itemDraggable);
+    expect(sourceCard?.querySelector('[data-icon="grip-lines-vertical"]')).toBeInTheDocument();
 
     fireEvent.dragStart(sourceCard as HTMLElement, { dataTransfer });
     fireEvent.dragOver(targetCell as Element, { dataTransfer });

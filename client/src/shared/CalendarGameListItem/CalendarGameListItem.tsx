@@ -1,5 +1,7 @@
 import type { CSSProperties, DragEventHandler, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { faGripLinesVertical } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import type { GameType } from '@/hooks/useGames';
@@ -104,6 +106,14 @@ const CalendarGameListItem = ({
 
   const content = (
     <>
+      {draggable && (
+        <span
+          className={styles.dragHandle}
+          aria-hidden="true"
+        >
+          <FontAwesomeIcon icon={faGripLinesVertical} />
+        </span>
+      )}
       {topLabel != null && <div className={styles.topLabel}>{topLabel}</div>}
       <div className={styles.matchup}>
         <span className={logoClassName(awayTeam.dimmed, 'away')}>

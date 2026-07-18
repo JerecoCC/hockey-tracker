@@ -17,10 +17,12 @@ import { toast } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
 import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
+import Field from '@jerecocc/tracker-ui/components/Field/Field';
 import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
+import MoreActionsMenu from '@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu';
 import MultiSelect, {
   type MultiSelectOption,
 } from '@jerecocc/tracker-ui/components/MultiSelect/MultiSelect';
@@ -68,6 +70,7 @@ const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/Scor
 import { API, authHeaders } from '@/lib/apiClient';
 const WEEK_STORAGE_KEY = 'user-games-week-start';
 const CALENDAR_MONTH_STORAGE_KEY = 'user-games-calendar-month';
+const USER_GAMES_MOBILE_MAX_WIDTH = 768;
 const USER_WEEK_SUMMARY_STICKY_TOP = '52px';
 const USER_WEEK_SUMMARY_STICKY_TOP_PX = 52;
 const USER_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX = 8;
@@ -77,6 +80,24 @@ const USER_WEEK_SUMMARY_AUTO_SCROLL_IDLE_MS = 160;
 const getUserWeekSummaryActiveMarker = (summaryCard: HTMLDivElement | null): number =>
   (summaryCard?.getBoundingClientRect().bottom ?? USER_WEEK_SUMMARY_STICKY_TOP_PX) +
   USER_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX;
+
+const isUserGamesMobileView = () =>
+  typeof window !== 'undefined' && window.innerWidth <= USER_GAMES_MOBILE_MAX_WIDTH;
+
+const useUserGamesMobileView = () => {
+  const [isMobileView, setIsMobileView] = useState(isUserGamesMobileView);
+
+  useEffect(() => {
+    const updateMobileView = () => setIsMobileView(isUserGamesMobileView());
+
+    window.addEventListener('resize', updateMobileView, { passive: true });
+    updateMobileView();
+
+    return () => window.removeEventListener('resize', updateMobileView);
+  }, []);
+
+  return isMobileView;
+};
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -688,6 +709,7 @@ const CalendarGameCard = ({
 const UserGames = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isMobileView = useUserGamesMobileView();
   const initialStoredCalendarMonth = getStoredCalendarMonth();
   const [weekStart, setWeekStart] = useState<Date>(() => getStoredWeekStart());
   const [calendarMonth, setCalendarMonth] = useState<Date>(
@@ -695,7 +717,15 @@ const UserGames = () => {
   );
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [filtersVisible, setFiltersVisible] = useState(true);
-  const [showSkippedGames, setShowSkippedGames] = useState(false);
+  const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
+  const {
+    control: filterControl,
+    setValue: setFilterValue,
+    watch: watchFilter,
+  } = useForm<{ showSkippedGames: boolean }>({
+    defaultValues: { showSkippedGames: false },
+  });
+  const showSkippedGames = watchFilter('showSkippedGames');
   const [leagueId, setLeagueId] = useState<string>('all');
   const [teamFilter, setTeamFilter] = useState<string[]>([]);
   const [appliedTeamFilter, setAppliedTeamFilter] = useState<string[]>([]);
@@ -722,6 +752,10 @@ const UserGames = () => {
   useEffect(() => {
     sessionStorage.setItem(CALENDAR_MONTH_STORAGE_KEY, toMonthPickerValue(calendarMonth));
   }, [calendarMonth]);
+
+  useEffect(() => {
+    if (!isMobileView) setFiltersDrawerOpen(false);
+  }, [isMobileView]);
 
   const gamesPeriodParams = useMemo<{ week?: string; month?: string }>(() => {
     if (view === 'calendar') {
@@ -846,6 +880,11 @@ const UserGames = () => {
 
   const applyTeamFilter = () => {
     setAppliedTeamFilter((current) => stableStringArray(current, teamFilter));
+  };
+
+  const closeFiltersDrawer = () => {
+    applyTeamFilter();
+    setFiltersDrawerOpen(false);
   };
 
   const filteredGames = useMemo(
@@ -1317,6 +1356,67 @@ const UserGames = () => {
     );
   };
 
+  const skippedGamesToggleMessage = showSkippedGames
+    ? 'Hide skipped games'
+    : 'Show skipped games';
+  const skippedGamesToggle = (
+    <ToggleButton
+      variant="switch"
+      active={showSkippedGames}
+      onClick={() => setFilterValue('showSkippedGames', !showSkippedGames)}
+      activeIcon="visibility"
+      inactiveIcon="visibility_off"
+      activeTooltip={isMobileView ? undefined : 'Hide skipped games'}
+      inactiveTooltip={isMobileView ? undefined : 'Show skipped games'}
+      ariaLabel={skippedGamesToggleMessage}
+    />
+  );
+
+  const filterControls = (
+    <>
+      <Select
+        value={leagueId}
+        options={leagueOptions}
+        onChange={setLeagueId}
+      />
+      <Select
+        value={statusFilter}
+        options={STATUS_OPTIONS}
+        onChange={setStatusFilter}
+      />
+      <ScheduleFilterSlot wide>
+        <MultiSelect
+          value={teamFilter}
+          options={teamOptions}
+          placeholder="Teams"
+          emptyMessage="No teams available"
+          onChange={setTeamFilter}
+          onExit={applyTeamFilter}
+          searchable
+        />
+      </ScheduleFilterSlot>
+      <ScheduleFilterSlot
+        fixed
+        className={styles.skippedGamesFilter}
+      >
+        {isMobileView ? (
+          <Field
+            control={filterControl}
+            label="Skipped games"
+            name="showSkippedGames"
+            type="custom"
+            wrapperClassName={styles.toggleField}
+          >
+            <span className={styles.toggleFieldSubtitle}>{skippedGamesToggleMessage}</span>
+            {skippedGamesToggle}
+          </Field>
+        ) : (
+          skippedGamesToggle
+        )}
+      </ScheduleFilterSlot>
+    </>
+  );
+
   return (
     <div className={styles.page}>
       <Section
@@ -1324,6 +1424,7 @@ const UserGames = () => {
         noHeaderMargin
         title={
           <ScheduleGamesTitle
+            hideTitleOnMobile
             picker={
               view === 'list' ? (
                 <PeriodPicker
@@ -1351,16 +1452,20 @@ const UserGames = () => {
         action={
           <ScheduleGamesActions>
             <div className={styles.viewFilterControls}>
-              <GoogleCalendarSyncControl />
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="image"
-                iconHeight="button"
-                aria-label="Generate Score Card"
-                tooltip="Generate Score Card"
-                onClick={() => setScoreImageOpen(true)}
-              />
+              {!isMobileView && (
+                <>
+                  <GoogleCalendarSyncControl />
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="image"
+                    iconHeight="button"
+                    aria-label="Generate Score Card"
+                    tooltip="Generate Score Card"
+                    onClick={() => setScoreImageOpen(true)}
+                  />
+                </>
+              )}
               <SegmentedControl
                 value={view}
                 onChange={(value) => handleViewChange(value as 'list' | 'calendar')}
@@ -1380,55 +1485,79 @@ const UserGames = () => {
                   },
                 ]}
               />
-              <ToggleButton
-                variant="switch"
-                active={filtersVisible}
-                onClick={() => setFiltersVisible((visible) => !visible)}
-                activeIcon="filter_list"
-                inactiveIcon="filter_list"
-                activeTooltip="Hide filters"
-                inactiveTooltip="Show filters"
-                className={styles.filterVisibilitySwitch}
-              />
+              {isMobileView ? (
+                <Button
+                  className={styles.mobileFilterButton}
+                  variant="outlined"
+                  intent="neutral"
+                  icon="filter_list"
+                  iconHeight="field"
+                  tooltip="Open filters"
+                  onClick={() => setFiltersDrawerOpen(true)}
+                  aria-label="Open filters"
+                  aria-haspopup="dialog"
+                  aria-expanded={filtersDrawerOpen}
+                />
+              ) : (
+                <ToggleButton
+                  variant="switch"
+                  active={filtersVisible}
+                  onClick={() => setFiltersVisible((visible) => !visible)}
+                  activeIcon="filter_list"
+                  inactiveIcon="filter_list"
+                  activeTooltip="Hide filters"
+                  inactiveTooltip="Show filters"
+                  className={styles.filterVisibilitySwitch}
+                />
+              )}
+              {isMobileView && (
+                <GoogleCalendarSyncControl
+                  renderTrigger={({ busy, openSettings }) => (
+                    <MoreActionsMenu
+                      size="medium"
+                      iconHeight="field"
+                      iconSize="1.25rem"
+                      items={[
+                        {
+                          label: 'Google Calendar Sync',
+                          icon: 'calendar_month',
+                          disabled: busy,
+                          onClick: openSettings,
+                        },
+                        {
+                          label: 'Generate Score Card',
+                          icon: 'image',
+                          onClick: () => setScoreImageOpen(true),
+                        },
+                      ]}
+                    />
+                  )}
+                />
+              )}
             </div>
           </ScheduleGamesActions>
         }
       >
-        <ScheduleFilters visible={filtersVisible}>
-          <Select
-            value={leagueId}
-            options={leagueOptions}
-            onChange={setLeagueId}
-          />
-          <Select
-            value={statusFilter}
-            options={STATUS_OPTIONS}
-            onChange={setStatusFilter}
-          />
-          <ScheduleFilterSlot wide>
-            <MultiSelect
-              value={teamFilter}
-              options={teamOptions}
-              placeholder="Teams"
-              emptyMessage="No teams available"
-              onChange={setTeamFilter}
-              onExit={applyTeamFilter}
-              searchable
-            />
-          </ScheduleFilterSlot>
-          <ScheduleFilterSlot fixed>
-            <ToggleButton
-              variant="switch"
-              active={showSkippedGames}
-              onClick={() => setShowSkippedGames((show) => !show)}
-              activeIcon="visibility"
-              inactiveIcon="visibility_off"
-              activeTooltip="Hide skipped games"
-              inactiveTooltip="Show skipped games"
-            />
-          </ScheduleFilterSlot>
-        </ScheduleFilters>
+        {!isMobileView && (
+          <ScheduleFilters visible={filtersVisible}>{filterControls}</ScheduleFilters>
+        )}
       </Section>
+
+      {isMobileView && (
+        <Modal
+          open={filtersDrawerOpen}
+          title="Filters"
+          onClose={closeFiltersDrawer}
+          hideFooter
+        >
+          <ScheduleFilters
+            visible
+            className={styles.mobileFilters}
+          >
+            {filterControls}
+          </ScheduleFilters>
+        </Modal>
+      )}
 
       {view === 'list' && (
         <>

@@ -20,16 +20,19 @@ const getTodayDateKey = () => {
 interface ScheduleGamesTitleProps {
   title?: ReactNode;
   picker?: ReactNode;
+  hideTitleOnMobile?: boolean;
 }
 
-export const ScheduleGamesTitle = ({ title = 'Games', picker }: ScheduleGamesTitleProps) => (
+export const ScheduleGamesTitle = ({
+  title = 'Games',
+  picker,
+  hideTitleOnMobile = false,
+}: ScheduleGamesTitleProps) => (
   <>
-    {title}
+    {hideTitleOnMobile ? <span className={styles.mobileHiddenTitle}>{title}</span> : title}
     {picker && (
       <>
-        <Divider
-          variant="vertical"
-        />
+        <Divider variant="vertical" className={hideTitleOnMobile ? styles.mobileHiddenTitle : undefined} />
         <span className={styles.weekNav}>{picker}</span>
       </>
     )}

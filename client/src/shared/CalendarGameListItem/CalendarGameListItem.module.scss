@@ -15,7 +15,7 @@
   --calendar-game-card-league-bg-base: #{$bg-card};
   --calendar-game-card-league-border-base: #{$border};
   --calendar-game-card-drag-bg: var(--calendar-game-card-hover-border);
-  --calendar-game-card-drag-dot: color-mix(
+  --calendar-game-card-drag-icon: color-mix(
     in srgb,
     var(--calendar-game-card-hover-border) 42%,
     #{$text-bright}
@@ -83,72 +83,13 @@
   &Draggable {
     cursor: grab;
 
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 0;
-      z-index: 3;
-      width: 0.625rem;
-      border-radius: $radius-sm 0 0 $radius-sm;
-      background:
-        radial-gradient(
-          circle at 3px calc(50% - 6px),
-          var(--calendar-game-card-drag-dot) 0.85px,
-          transparent 1.1px
-        ),
-        radial-gradient(
-          circle at 7px calc(50% - 6px),
-          var(--calendar-game-card-drag-dot) 0.85px,
-          transparent 1.1px
-        ),
-        radial-gradient(
-          circle at 3px calc(50% - 2px),
-          var(--calendar-game-card-drag-dot) 0.85px,
-          transparent 1.1px
-        ),
-        radial-gradient(
-          circle at 7px calc(50% - 2px),
-          var(--calendar-game-card-drag-dot) 0.85px,
-          transparent 1.1px
-        ),
-        radial-gradient(
-          circle at 3px calc(50% + 2px),
-          var(--calendar-game-card-drag-dot) 0.85px,
-          transparent 1.1px
-        ),
-        radial-gradient(
-          circle at 7px calc(50% + 2px),
-          var(--calendar-game-card-drag-dot) 0.85px,
-          transparent 1.1px
-        ),
-        radial-gradient(
-          circle at 3px calc(50% + 6px),
-          var(--calendar-game-card-drag-dot) 0.85px,
-          transparent 1.1px
-        ),
-        radial-gradient(
-          circle at 7px calc(50% + 6px),
-          var(--calendar-game-card-drag-dot) 0.85px,
-          transparent 1.1px
-        ),
-        var(--calendar-game-card-drag-bg);
-      opacity: 0;
-      pointer-events: none;
-      transform: translateX(-100%);
-      transition:
-        opacity $transition-fast ease,
-        transform $transition-fast ease;
-    }
-
     &:hover,
     &:focus-within {
       overflow: hidden;
     }
 
-    &:hover::before,
-    &:focus-within::before {
+    &:hover .dragHandle,
+    &:focus-within .dragHandle {
       opacity: 1;
       transform: translateX(0);
     }
@@ -160,11 +101,33 @@
     border-color: var(--calendar-game-card-hover-border);
     cursor: grabbing;
 
-    &::before {
+    .dragHandle {
       opacity: 1;
       transform: translateX(0);
     }
   }
+}
+
+.dragHandle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  border-radius: $radius-sm 0 0 $radius-sm;
+  background: var(--calendar-game-card-drag-bg);
+  color: var(--calendar-game-card-drag-icon);
+  font-size: 0.75rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-100%);
+  transition:
+    opacity $transition-fast ease,
+    transform $transition-fast ease;
 }
 
 :global(:root[data-theme='light']) .item {
@@ -184,7 +147,7 @@
   --calendar-game-card-league-bg-base: var(--app-surface, #fff);
   --calendar-game-card-league-border-base: var(--app-border, #cbd5e1);
   --calendar-game-card-drag-bg: var(--calendar-game-card-hover-border);
-  --calendar-game-card-drag-dot: color-mix(
+  --calendar-game-card-drag-icon: color-mix(
     in srgb,
     var(--calendar-game-card-hover-border) 42%,
     var(--app-surface, #f8fafc)

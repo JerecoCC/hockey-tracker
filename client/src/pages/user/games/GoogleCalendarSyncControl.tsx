@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
@@ -23,6 +23,15 @@ interface GoogleCalendarStatus {
   connected_at: string | null;
   last_synced_at: string | null;
   last_sync_error: string | null;
+}
+
+interface GoogleCalendarSyncTriggerState {
+  busy: boolean;
+  openSettings: () => void;
+}
+
+interface GoogleCalendarSyncControlProps {
+  renderTrigger?: (state: GoogleCalendarSyncTriggerState) => ReactNode;
 }
 
 const connectErrorMessage = (reason: string | null) => {
@@ -125,7 +134,7 @@ const formatSyncTime = (value: string | null) =>
       })
     : null;
 
-const GoogleCalendarSyncControl = () => {
+const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlProps) => {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -220,37 +229,46 @@ const GoogleCalendarSyncControl = () => {
 
   return (
     <>
-      <Button
-        variant="outlined"
-        intent="neutral"
-        type="button"
-        className={styles.iconButton}
-        data-connected={connected ? 'true' : 'false'}
-        data-syncing={busy ? 'true' : 'false'}
-        aria-label={busy ? 'Google Calendar sync in progress' : 'Google Calendar sync settings'}
-        tooltip={
-          busy
-            ? 'Syncing Google Calendar'
-            : connected
-              ? 'Google Calendar connected'
-              : 'Connect Google Calendar'
-        }
-        onClick={() => {
-          if (!busy) setOpen(true);
-        }}
-      >
-        <GoogleLogo className={styles.icon} />
-        {busy && (
-          <span className={styles.syncOverlay}>
-            <LoadingSpinner
-              message="Syncing Google Calendar"
-              layout="inline"
-              size="sm"
-              className={styles.syncSpinner}
-            />
-          </span>
-        )}
-      </Button>
+      {renderTrigger ? (
+        renderTrigger({
+          busy,
+          openSettings: () => {
+            if (!busy) setOpen(true);
+          },
+        })
+      ) : (
+        <Button
+          variant="outlined"
+          intent="neutral"
+          type="button"
+          className={styles.iconButton}
+          data-connected={connected ? 'true' : 'false'}
+          data-syncing={busy ? 'true' : 'false'}
+          aria-label={busy ? 'Google Calendar sync in progress' : 'Google Calendar sync settings'}
+          tooltip={
+            busy
+              ? 'Syncing Google Calendar'
+              : connected
+                ? 'Google Calendar connected'
+                : 'Connect Google Calendar'
+          }
+          onClick={() => {
+            if (!busy) setOpen(true);
+          }}
+        >
+          <GoogleLogo className={styles.icon} />
+          {busy && (
+            <span className={styles.syncOverlay}>
+              <LoadingSpinner
+                message="Syncing Google Calendar"
+                layout="inline"
+                size="sm"
+                className={styles.syncSpinner}
+              />
+            </span>
+          )}
+        </Button>
+      )}
 
       <Modal
         open={open}
