@@ -17,12 +17,14 @@ interface UseScheduleWeekSummaryStuckOptions {
   active: boolean;
   sentinelRef: { current: HTMLDivElement | null };
   stickyTopPx?: number;
+  stickyOnMobile?: boolean;
 }
 
 export const useScheduleWeekSummaryStuck = ({
   active,
   sentinelRef,
   stickyTopPx = DEFAULT_WEEK_SUMMARY_STICKY_TOP_PX,
+  stickyOnMobile = false,
 }: UseScheduleWeekSummaryStuckOptions): boolean => {
   const [stuck, setStuck] = useState(false);
 
@@ -45,7 +47,9 @@ export const useScheduleWeekSummaryStuck = ({
       mediaQuery?.matches ?? window.innerWidth <= WEEK_SUMMARY_MOBILE_BREAKPOINT;
     const update = () => {
       frame = 0;
-      const next = !isMobile() && sentinel.getBoundingClientRect().top <= stickyTopPx;
+      const next =
+        (stickyOnMobile || !isMobile()) &&
+        sentinel.getBoundingClientRect().top <= stickyTopPx;
       setStuck((current) => (current === next ? current : next));
     };
     const scheduleUpdate = () => {
@@ -74,7 +78,7 @@ export const useScheduleWeekSummaryStuck = ({
         }
       }
     };
-  }, [active, sentinelRef, stickyTopPx]);
+  }, [active, sentinelRef, stickyOnMobile, stickyTopPx]);
 
   return stuck;
 };

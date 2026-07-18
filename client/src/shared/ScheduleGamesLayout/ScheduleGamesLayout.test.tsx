@@ -139,4 +139,22 @@ describe('ScheduleWeekList', () => {
     );
     expect(screen.getByText('Today')).toBeInTheDocument();
   });
+
+  it('adds the mobile sticky modifier when requested', () => {
+    const { container } = render(
+      <ScheduleWeekSummary
+        days={[['2026-03-28', [{ id: 'game-1' }]]]}
+        loading={false}
+        stickyOnMobile
+        onSelectDate={jest.fn()}
+        formatDate={() => 'Mar 28'}
+        formatWeekday={() => 'Saturday'}
+        formatHeading={() => 'Saturday, March 28'}
+      />,
+    );
+
+    expect(container.querySelector('.weekSummaryCard')).toHaveClass(
+      'weekSummaryCardMobileSticky',
+    );
+  });
 });

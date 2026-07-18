@@ -217,16 +217,20 @@ jest.mock('@jerecocc/tracker-ui/components/Icon/Icon', () => ({ name }: any) => 
 ));
 jest.mock('@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl', () => ({
   __esModule: true,
-  default: ({ options, onChange }: any) => (
-    <div>
+  default: ({ options, onChange, fullWidth, className }: any) => (
+    <div
+      className={className}
+      data-full-width={fullWidth ? 'true' : 'false'}
+    >
       {options.map((option: any) => (
         <button
           key={option.value}
           type="button"
           aria-label={option.ariaLabel ?? option.tooltip ?? option.value}
+          data-icon-only={option.iconOnly ? 'true' : 'false'}
           onClick={() => onChange(option.value)}
         >
-          {option.ariaLabel ?? option.tooltip ?? option.value}
+          {option.label}
         </button>
       ))}
     </div>
@@ -255,10 +259,10 @@ jest.mock('@jerecocc/tracker-ui/components/ToggleButton/ToggleButton', () => ({
 }));
 jest.mock('@jerecocc/tracker-ui/components/PeriodPicker/PeriodPicker', () => ({
   __esModule: true,
-  default: ({ kind, label, onPrevious, onNext }: any) => {
+  default: ({ kind, label, onPrevious, onNext, className }: any) => {
     const period = kind === 'month' ? 'month' : 'week';
     return (
-      <div>
+      <div className={className}>
         <button
           type="button"
           aria-label={`Previous ${period}`}
@@ -701,15 +705,21 @@ beforeEach(() => {
 });
 
 describe('UserGames schedule views', () => {
-  it('hides the Games section title and divider on mobile', () => {
-    render(<UserGames />);
+  it('omits the Games section title from the mobile toolbar', () => {
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 640 });
 
-    expect(
-      screen.getByText('Games', { selector: `.${scheduleLayoutStyles.mobileHiddenTitle}` }),
-    ).toBeInTheDocument();
-    expect(
-      document.querySelector(`hr.${scheduleLayoutStyles.mobileHiddenTitle}`),
-    ).toBeInTheDocument();
+    let unmount: (() => void) | undefined;
+    try {
+      ({ unmount } = render(<UserGames />));
+      expect(screen.queryByText('Games')).not.toBeInTheDocument();
+    } finally {
+      unmount?.();
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: originalWidth,
+      });
+    }
   });
 
   it('opens the filters in a modal drawer from a mobile icon button', async () => {
@@ -729,18 +739,25 @@ describe('UserGames schedule views', () => {
       expect(filtersButton).toHaveAttribute('data-variant', 'outlined');
       expect(filtersButton).toHaveAttribute('data-icon-height', 'field');
       expect(filtersButton).toHaveClass(styles.mobileFilterButton);
-      const moreActionsButton = screen.getByRole('button', { name: 'More actions' });
-      expect(moreActionsButton).toHaveAttribute('data-icon-height', 'field');
-      expect(moreActionsButton).toHaveAttribute('data-icon-size', '1.25rem');
-      expect(filtersButton.compareDocumentPosition(moreActionsButton)).toBe(
-        Node.DOCUMENT_POSITION_FOLLOWING,
-      );
-      expect(
-        screen.queryByRole('button', { name: 'Google Calendar Sync' }),
-      ).not.toBeInTheDocument();
-      await user.click(moreActionsButton);
-      expect(screen.getByRole('button', { name: 'Google Calendar Sync' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Generate Score Card' })).toBeInTheDocument();
+      const periodPicker = screen.getByRole('button', { name: /^Select week:/ }).parentElement;
+      expect(periodPicker).toHaveClass(styles.mobilePeriodPicker);
+
+      const weekViewButton = screen.getByRole('button', { name: 'Week view' });
+      const monthViewButton = screen.getByRole('button', { name: 'Month view' });
+      const viewControl = weekViewButton.parentElement;
+      expect(viewControl).toHaveClass(styles.mobileViewSegmentedControl);
+      expect(viewControl).toHaveAttribute('data-full-width', 'true');
+      expect(weekViewButton).toHaveAttribute('data-icon-only', 'false');
+      expect(within(weekViewButton).getByText('Week view')).toBeInTheDocument();
+      expect(within(monthViewButton).getByText('Month view')).toBeInTheDocument();
+
+      const googleCalendarButton = screen.getByRole('button', { name: 'Google Calendar Sync' });
+      const scoreCardButton = screen.getByRole('button', { name: 'Generate Score Card' });
+      expect(googleCalendarButton).toHaveClass(styles.mobileToolbarAction);
+      expect(scoreCardButton).toHaveClass(styles.mobileToolbarAction);
+      expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
+      expect(filtersButton.parentElement).toHaveClass(styles.mobileToolbarActions);
+      expect(filtersButton.parentElement?.lastElementChild).toBe(filtersButton);
       await user.click(filtersButton);
 
       const filtersDrawer = screen.getByRole('dialog', { name: 'Filters' });

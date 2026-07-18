@@ -96,6 +96,7 @@ interface ScheduleWeekSummaryProps<T> {
   loading: boolean;
   activeDateKey?: string;
   stuck?: boolean;
+  stickyOnMobile?: boolean;
   onSelectDate: (dateKey: string) => void;
   formatDate: (dateKey: string) => ReactNode;
   formatWeekday: (dateKey: string) => ReactNode;
@@ -109,6 +110,7 @@ export const ScheduleWeekSummary = <T,>({
   loading,
   activeDateKey,
   stuck = false,
+  stickyOnMobile = false,
   onSelectDate,
   formatDate,
   formatWeekday,
@@ -118,7 +120,11 @@ export const ScheduleWeekSummary = <T,>({
 }: ScheduleWeekSummaryProps<T>) => (
   <Section
     ref={summaryRef}
-    className={[styles.weekSummaryCard, stuck && styles.weekSummaryCardStuck]
+    className={[
+      styles.weekSummaryCard,
+      stickyOnMobile && styles.weekSummaryCardMobileSticky,
+      stuck && styles.weekSummaryCardStuck,
+    ]
       .filter(Boolean)
       .join(' ')}
     style={

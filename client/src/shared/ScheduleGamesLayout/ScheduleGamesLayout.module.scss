@@ -355,13 +355,19 @@
       z-index: auto;
     }
 
+    &CardMobileSticky {
+      position: sticky;
+      top: var(--week-summary-sticky-top, 52px);
+      z-index: 4;
+    }
+
     &Grid {
       grid-template-columns: repeat(7, minmax(124px, 1fr));
     }
   }
 
   .dayCardAnchor {
-    scroll-margin-top: 84px;
+    scroll-margin-top: var(--week-summary-day-scroll-margin-top, 84px);
   }
 
   .calendar {
