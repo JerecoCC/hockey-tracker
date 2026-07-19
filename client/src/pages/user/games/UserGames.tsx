@@ -43,7 +43,7 @@ import { useScheduleWeekSummaryStuck } from '@/shared/ScheduleGamesLayout/useSch
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
-import ToggleButton from '@jerecocc/tracker-ui/components/ToggleButton/ToggleButton';
+import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
 import PeriodPicker from '@jerecocc/tracker-ui/components/PeriodPicker/PeriodPicker';
 import { type GameRecord } from '@/hooks/useGames';
 import {
@@ -62,6 +62,7 @@ import {
 } from '@/lib/gamePresentation';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import { buildUserGameDetailsPath } from '@/lib/routeSlugs';
+import { getScreenSize, type ScreenSize } from '@/lib/screenSize';
 import GoogleCalendarSyncControl from './GoogleCalendarSyncControl';
 import styles from './UserGames.module.scss';
 
@@ -70,8 +71,6 @@ const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/Scor
 import { API, authHeaders } from '@/lib/apiClient';
 const WEEK_STORAGE_KEY = 'user-games-week-start';
 const CALENDAR_MONTH_STORAGE_KEY = 'user-games-calendar-month';
-const USER_GAMES_MOBILE_MAX_WIDTH = 767;
-const USER_GAMES_TABLET_MAX_WIDTH = 1024;
 const USER_WEEK_SUMMARY_STICKY_TOP = '52px';
 const USER_WEEK_SUMMARY_STICKY_TOP_PX = 52;
 const USER_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX = 8;
@@ -82,17 +81,13 @@ const getUserWeekSummaryActiveMarker = (summaryCard: HTMLDivElement | null): num
   (summaryCard?.getBoundingClientRect().bottom ?? USER_WEEK_SUMMARY_STICKY_TOP_PX) +
   USER_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX;
 
-type UserGamesViewport = 'mobile' | 'tablet' | 'desktop';
-
-const getUserGamesViewport = (): UserGamesViewport => {
+const getUserGamesViewport = (): ScreenSize => {
   if (typeof window === 'undefined') return 'desktop';
-  if (window.innerWidth <= USER_GAMES_MOBILE_MAX_WIDTH) return 'mobile';
-  if (window.innerWidth <= USER_GAMES_TABLET_MAX_WIDTH) return 'tablet';
-  return 'desktop';
+  return getScreenSize(window.innerWidth);
 };
 
 const useUserGamesViewport = () => {
-  const [viewport, setViewport] = useState<UserGamesViewport>(getUserGamesViewport);
+  const [viewport, setViewport] = useState<ScreenSize>(getUserGamesViewport);
 
   useEffect(() => {
     const updateViewport = () => setViewport(getUserGamesViewport());
@@ -725,7 +720,6 @@ const UserGames = () => {
     () => initialStoredCalendarMonth ?? monthStart(new Date()),
   );
   const [view, setView] = useState<'list' | 'calendar'>('list');
-  const [filtersVisible, setFiltersVisible] = useState(true);
   const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
   const {
     control: filterControl,
@@ -1370,8 +1364,8 @@ const UserGames = () => {
     ? 'Hide skipped games'
     : 'Show skipped games';
   const skippedGamesToggle = (
-    <ToggleButton
-      mode="switch"
+    <Toggle
+      variant="toggle"
       active={showSkippedGames}
       onActiveChange={() => setFilterValue('showSkippedGames', !showSkippedGames)}
       activeIcon="visibility"
@@ -1379,6 +1373,7 @@ const UserGames = () => {
       activeTooltip={isMobileView ? undefined : 'Hide skipped games'}
       inactiveTooltip={isMobileView ? undefined : 'Show skipped games'}
       ariaLabel={skippedGamesToggleMessage}
+      className={styles.skippedGamesToggle}
     />
   );
 
@@ -1430,13 +1425,7 @@ const UserGames = () => {
   const periodPickerControl =
     view === 'list' ? (
       <PeriodPicker
-        className={
-          isMobileView
-            ? styles.mobilePeriodPicker
-            : isTabletView
-              ? styles.tabletPeriodPicker
-              : undefined
-        }
+        className={isMobileView ? styles.mobilePeriodPicker : undefined}
         value={dateToISO(weekStart)}
         label={fmtWeekRange(weekStart, weekEnd)}
         onChange={handleWeekPeriodChange}
@@ -1445,13 +1434,7 @@ const UserGames = () => {
       />
     ) : (
       <PeriodPicker
-        className={
-          isMobileView
-            ? styles.mobilePeriodPicker
-            : isTabletView
-              ? styles.tabletPeriodPicker
-              : undefined
-        }
+        className={isMobileView ? styles.mobilePeriodPicker : undefined}
         kind="month"
         value={toMonthPickerValue(calendarMonth)}
         label={MONTH_LABEL_FMT.format(calendarMonth)}
@@ -1525,7 +1508,7 @@ const UserGames = () => {
         <MoreActionsMenu
           size="medium"
           iconHeight={isMobileView ? 'field' : 'button'}
-          iconSize={isMobileView ? '1.25rem' : undefined}
+          iconSize="1.25rem"
           wrapperClassName={isMobileView ? styles.mobileMoreActions : undefined}
           items={[
             {
@@ -1548,18 +1531,6 @@ const UserGames = () => {
   const standardToolbarActions = (
     <div className={styles.viewFilterControls}>
       {viewSegmentedControl}
-      {isTabletView && (
-        <ToggleButton
-          mode="switch"
-          active={filtersVisible}
-          onActiveChange={() => setFiltersVisible((visible) => !visible)}
-          activeIcon="filter_list"
-          inactiveIcon="filter_list"
-          activeTooltip="Hide filters"
-          inactiveTooltip="Show filters"
-          className={styles.filterVisibilitySwitch}
-        />
-      )}
       {moreActionsControl}
     </div>
   );
@@ -1583,10 +1554,12 @@ const UserGames = () => {
         {isMobileView ? (
           <div className={styles.mobileToolbar}>
             <div className={styles.mobileToolbarRow}>{periodPickerControl}</div>
-            <div className={styles.mobileToolbarRow}>{viewSegmentedControl}</div>
-            <div className={styles.mobileToolbarActions}>
-              {moreActionsControl}
-              {mobileFilterButton}
+            <div className={styles.mobileToolbarViewRow}>
+              {viewSegmentedControl}
+              <div className={styles.mobileToolbarActions}>
+                {mobileFilterButton}
+                {moreActionsControl}
+              </div>
             </div>
           </div>
         ) : isTabletView ? (
@@ -1595,10 +1568,14 @@ const UserGames = () => {
               {periodPickerControl}
               {standardToolbarActions}
             </div>
-            <ScheduleFilters visible={filtersVisible}>{filterControls}</ScheduleFilters>
+            <ScheduleFilters visible className={styles.controlsFilters}>
+              {filterControls}
+            </ScheduleFilters>
           </>
         ) : (
-          <ScheduleFilters visible>{filterControls}</ScheduleFilters>
+          <ScheduleFilters visible className={styles.controlsFilters}>
+            {filterControls}
+          </ScheduleFilters>
         )}
       </Section>
 

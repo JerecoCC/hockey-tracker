@@ -27,18 +27,38 @@
   min-width: 0;
 }
 
-.tabletPeriodPicker.tabletPeriodPicker {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
 // ── Toolbar (week nav + filter selects) ───────────────────────────────
 // ── Week navigation (prev btn + date picker + next btn) ───────────────
 // ── Filter row (league · favorite teams · status · timezone) ──────────
-.filterVisibilitySwitch {
-  --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
+.controlsFilters.controlsFilters {
+  display: grid;
+  grid-template-columns:
+    minmax(110px, 1fr)
+    minmax(110px, 1fr)
+    minmax(0, 2fr)
+    auto;
+  align-items: center;
+  justify-content: stretch;
 
-  align-self: center;
+  > :first-child {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  > :not(:first-child) {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  > .skippedGamesFilter {
+    width: auto;
+    justify-self: end;
+  }
+}
+
+.skippedGamesToggle {
+  --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 }
 
 .mobileFilterButton.mobileFilterButton {
@@ -237,7 +257,7 @@
   --calendar-game-actions-bg: color-mix(in srgb, var(--app-surface, #f8fafc) 94%, transparent);
 }
 
-@media (max-width: 767px) {
+@media (max-width: $screen-mobile-max) {
   .weekSummarySentinel {
     margin-bottom: -$space-xs;
   }
@@ -256,14 +276,23 @@
     min-width: 0;
   }
 
-  .mobilePeriodPicker.mobilePeriodPicker,
-  .mobileViewSegmentedControl.mobileViewSegmentedControl {
+  .mobileToolbarViewRow {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mobilePeriodPicker.mobilePeriodPicker {
     width: 100%;
     min-width: 0;
   }
 
   .mobileViewSegmentedControl.mobileViewSegmentedControl {
-    flex: 1 1 100%;
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
   }
 
   .mobileToolbarActions {
@@ -271,7 +300,8 @@
     align-items: center;
     justify-content: flex-end;
     gap: $space-sm;
-    width: 100%;
+    flex: 0 0 auto;
+    width: auto;
     min-width: 0;
   }
 

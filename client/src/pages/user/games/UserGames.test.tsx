@@ -236,24 +236,25 @@ jest.mock('@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl', (
     </div>
   ),
 }));
-jest.mock('@jerecocc/tracker-ui/components/ToggleButton/ToggleButton', () => ({
+jest.mock('@jerecocc/tracker-ui/components/Toggle/Toggle', () => ({
   __esModule: true,
   default: ({
     active,
     onActiveChange,
-    onClick,
     activeTooltip,
     inactiveTooltip,
-    mode,
     variant,
     ariaLabel,
+    className,
   }: any) => (
     <button
       type="button"
-      role={(mode ?? variant) === 'switch' ? 'switch' : undefined}
-      aria-checked={(mode ?? variant) === 'switch' ? active : undefined}
+      role={variant === 'toggle' ? 'switch' : undefined}
+      aria-checked={variant === 'toggle' ? active : undefined}
+      aria-pressed={variant === 'button' ? active : undefined}
       aria-label={ariaLabel ?? (active ? activeTooltip : inactiveTooltip)}
-      onClick={() => (onActiveChange ? onActiveChange(!active) : onClick?.())}
+      onClick={() => onActiveChange(!active)}
+      className={className}
     >
       {ariaLabel ?? (active ? activeTooltip : inactiveTooltip)}
     </button>
@@ -709,7 +710,7 @@ beforeEach(() => {
 describe('UserGames schedule views', () => {
   it('keeps the period picker and view control on one tablet toolbar row', () => {
     const originalWidth = window.innerWidth;
-    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 768 });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 769 });
 
     let unmount: (() => void) | undefined;
     try {
@@ -719,14 +720,23 @@ describe('UserGames schedule views', () => {
       const viewControl = screen.getByRole('button', { name: 'Week view' }).parentElement;
       const tabletToolbar = periodPicker?.closest(`.${styles.tabletToolbar}`);
 
-      expect(periodPicker).toHaveClass(styles.tabletPeriodPicker);
+      expect(periodPicker).not.toHaveClass(styles.mobilePeriodPicker);
       expect(tabletToolbar).toContainElement(viewControl);
       expect(viewControl).toHaveAttribute('data-full-width', 'false');
-      expect(tabletToolbar).toContainElement(
-        screen.getByRole('button', { name: 'More actions' }),
-      );
-      expect(screen.getByRole('switch', { name: 'Hide filters' })).toBeInTheDocument();
+      const moreActionsButton = screen.getByRole('button', { name: 'More actions' });
+      expect(tabletToolbar).toContainElement(moreActionsButton);
+      expect(moreActionsButton).toHaveAttribute('data-icon-size', '1.25rem');
+      expect(screen.queryByRole('switch', { name: 'Hide filters' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Open filters' })).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('combobox', { name: 'Teams' }).closest(`.${scheduleLayoutStyles.filters}`),
+      ).toHaveClass(styles.controlsFilters);
+      expect(
+        screen.getByRole('combobox', { name: 'Teams' }).closest(`.${scheduleLayoutStyles.filters}`),
+      ).not.toHaveClass(scheduleLayoutStyles.filtersHidden);
+      expect(screen.getByRole('switch', { name: 'Show skipped games' })).toHaveClass(
+        styles.skippedGamesToggle,
+      );
     } finally {
       unmount?.();
       Object.defineProperty(window, 'innerWidth', {
@@ -746,12 +756,18 @@ describe('UserGames schedule views', () => {
       ({ unmount } = render(<UserGames />));
 
       expect(screen.queryByRole('switch', { name: 'Hide filters' })).not.toBeInTheDocument();
-      expect(screen.getByRole('combobox', { name: 'Teams' }).closest(`.${scheduleLayoutStyles.filters}`))
-        .not.toHaveClass(scheduleLayoutStyles.filtersHidden);
+      expect(
+        screen.getByRole('combobox', { name: 'Teams' }).closest(`.${scheduleLayoutStyles.filters}`),
+      ).toHaveClass(styles.controlsFilters);
+      expect(
+        screen.getByRole('combobox', { name: 'Teams' }).closest(`.${scheduleLayoutStyles.filters}`),
+      ).not.toHaveClass(scheduleLayoutStyles.filtersHidden);
       expect(screen.queryByRole('button', { name: 'Google Calendar Sync' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Generate Score Card' })).not.toBeInTheDocument();
 
-      await user.click(screen.getByRole('button', { name: 'More actions' }));
+      const moreActionsButton = screen.getByRole('button', { name: 'More actions' });
+      expect(moreActionsButton).toHaveAttribute('data-icon-size', '1.25rem');
+      await user.click(moreActionsButton);
 
       expect(screen.getByRole('button', { name: 'Google Calendar Sync' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Generate Score Card' })).toBeInTheDocument();
@@ -766,7 +782,7 @@ describe('UserGames schedule views', () => {
 
   it('omits the Games section title from the mobile toolbar', () => {
     const originalWidth = window.innerWidth;
-    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 640 });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 768 });
 
     let unmount: (() => void) | undefined;
     try {
@@ -811,12 +827,17 @@ describe('UserGames schedule views', () => {
       expect(within(monthViewButton).getByText('Month view')).toBeInTheDocument();
 
       const moreActionsButton = screen.getByRole('button', { name: 'More actions' });
+      expect(moreActionsButton).toHaveAttribute('data-icon-size', '1.25rem');
       expect(moreActionsButton.parentElement).toHaveClass(styles.mobileMoreActions);
-      expect(moreActionsButton.parentElement?.parentElement).toHaveClass(
-        styles.mobileToolbarActions,
-      );
-      expect(filtersButton.parentElement).toHaveClass(styles.mobileToolbarActions);
-      expect(filtersButton.parentElement?.lastElementChild).toBe(filtersButton);
+      const mobileActions = moreActionsButton.parentElement?.parentElement;
+      const viewRow = viewControl?.closest(`.${styles.mobileToolbarViewRow}`);
+      expect(mobileActions).toHaveClass(styles.mobileToolbarActions);
+      expect(viewRow).toContainElement(viewControl);
+      expect(viewRow).toContainElement(mobileActions as HTMLElement);
+      expect(filtersButton.parentElement).toBe(mobileActions);
+      expect(mobileActions?.firstElementChild).toBe(filtersButton);
+      expect(mobileActions?.lastElementChild).toBe(moreActionsButton.parentElement);
+      expect(viewRow?.lastElementChild).toBe(mobileActions);
 
       await user.click(moreActionsButton);
       expect(screen.getByRole('button', { name: 'Google Calendar Sync' })).toBeInTheDocument();
