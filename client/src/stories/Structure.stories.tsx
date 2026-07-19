@@ -133,10 +133,10 @@ export const TablesAndPagination = {
         <StoryPanel>
           <Table
             columns={columns}
-            data={standings}
-            rowKey={(row) => row.id}
+            rows={standings}
+            getRowKey={(row) => row.id}
             activeSortKey="points"
-            sortDir="desc"
+            sortDirection="desc"
             onSort={noop}
             onRowClick={noop}
           />
@@ -159,8 +159,8 @@ export const TablesAndPagination = {
           <StoryPanel>
             <PaginatedTable
               columns={columns}
-              data={standings}
-              rowKey={(row) => row.id}
+              rows={standings}
+              getRowKey={(row) => row.id}
               page={1}
               pageSize={2}
               total={6}

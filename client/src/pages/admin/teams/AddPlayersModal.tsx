@@ -210,7 +210,7 @@ const AddPlayersModal = ({
         placeholder="Search players..."
         autoFocus
         emptyMessage={`No unassigned ${playerLabel} are available for this league.`}
-        noResultsMessage={(searchQuery) => `No players match "${searchQuery}".`}
+        getNoResultsMessage={(searchQuery) => `No players match "${searchQuery}".`}
       />
     </Modal>
   );

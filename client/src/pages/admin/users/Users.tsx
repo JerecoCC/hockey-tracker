@@ -47,12 +47,12 @@ const UsersPage = () => {
       <Card>
         <Table
           columns={columns}
-          data={sortedUsers}
-          rowKey={(u) => u.id}
+          rows={sortedUsers}
+          getRowKey={(u) => u.id}
           loading={loading}
           emptyMessage="No users found."
           activeSortKey={sortKey}
-          sortDir={sortDir}
+          sortDirection={sortDir}
           onSort={handleSort}
         />
       </Card>

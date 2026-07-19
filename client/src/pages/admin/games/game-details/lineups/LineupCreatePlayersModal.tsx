@@ -211,7 +211,7 @@ const LineupCreatePlayersModal = ({
       }
       shouldConfirmRemove={(row) => !!(row.first_name || row.last_name || row.position)}
       getRemoveConfirmBody={() => 'This row has data. Are you sure you want to remove it?'}
-      onSubmitForm={async (data) => {
+      onSubmit={async (data) => {
         // ── Duplicate validation ──────────────────────────────────────────────────
         const errors: string[] = [];
 

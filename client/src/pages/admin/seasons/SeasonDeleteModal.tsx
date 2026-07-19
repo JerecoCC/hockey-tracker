@@ -22,7 +22,7 @@ const SeasonDeleteModal = (props: Props) => {
       }
       confirmLabel={busy === target?.id ? 'Deleting…' : 'Delete'}
       confirmIcon="delete"
-      variant="danger"
+      intent="danger"
       busy={busy === target?.id}
       onCancel={onCancel}
       onConfirm={onConfirm}

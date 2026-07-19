@@ -104,7 +104,7 @@ const LeagueDetailsPage = () => {
             {
               label: (
                 <Skeleton
-                  type="text"
+                  variant="text"
                   className={styles.breadcrumbSkeleton}
                 />
               ),
@@ -244,8 +244,8 @@ const LeagueDetailsPage = () => {
   if (leagueLoading) {
     return (
       <Tabs
-        activeIndex={activeTab}
-        onTabChange={handleTabChange}
+        selectedIndex={activeTab}
+        onSelectedIndexChange={handleTabChange}
         tabs={[
           {
             label: 'Info',
@@ -304,8 +304,8 @@ const LeagueDetailsPage = () => {
     <>
       <LeagueDetailsProvider value={leagueContextValue}>
         <Tabs
-          activeIndex={activeTab}
-          onTabChange={handleTabChange}
+          selectedIndex={activeTab}
+          onSelectedIndexChange={handleTabChange}
           tabs={[
             {
               label: 'Info',
@@ -367,7 +367,7 @@ const LeagueDetailsPage = () => {
         }
         confirmLabel="Delete"
         confirmIcon="delete"
-        variant="danger"
+        intent="danger"
         busy={busy === confirmDeleteTeam?.id}
         onCancel={() => setConfirmDeleteTeam(null)}
         onConfirm={async () => {

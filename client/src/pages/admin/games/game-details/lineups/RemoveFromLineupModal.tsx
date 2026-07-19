@@ -27,7 +27,7 @@ const RemoveFromLineupModal = ({ entry, busy, onConfirm, onCancel }: Props) => (
     }
     confirmLabel="Remove"
     confirmIcon="person_remove"
-    variant="danger"
+    intent="danger"
     busy={busy}
     onConfirm={onConfirm}
     onCancel={onCancel}

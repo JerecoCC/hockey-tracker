@@ -148,9 +148,9 @@ const UserSettings = () => {
             <div className={styles.themeControl}>
               <span className={styles.themeLabel}>Dark mode</span>
               <ToggleButton
-                variant="switch"
+                mode="switch"
                 active={isDarkMode}
-                onClick={toggleTheme}
+                onActiveChange={toggleTheme}
                 activeIcon="dark_mode"
                 inactiveIcon="light_mode"
                 activeTooltip="Switch to light mode"
@@ -167,11 +167,11 @@ const UserSettings = () => {
         <div className={styles.infoGrid}>
           <InfoItem
             label="Email"
-            data={user?.email}
+            value={user?.email}
           />
           <InfoItem
             label="Sign-in"
-            data={authProvider}
+            value={authProvider}
           />
         </div>
       </Card>
@@ -199,7 +199,7 @@ const UserSettings = () => {
                     <Accordion
                       key={league.id}
                       bodyClassName={styles.leagueBody}
-                      variant="static"
+                      mode="static"
                       label={
                         <div className={styles.leagueHeader}>
                           <TeamLogo

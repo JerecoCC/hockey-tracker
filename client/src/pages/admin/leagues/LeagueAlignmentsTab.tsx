@@ -307,7 +307,7 @@ const TeamSelectionModal = ({
         listClassName={styles.alignmentTeamModalList}
         emptyClassName={styles.alignmentTeamModalEmpty}
         emptyMessage="No teams are available."
-        noResultsMessage={(searchQuery) => `No teams match "${searchQuery}".`}
+        getNoResultsMessage={(searchQuery) => `No teams match "${searchQuery}".`}
         disabled={disabled}
       />
     </Modal>
@@ -699,7 +699,7 @@ const AlignmentGroupNode = ({
         }
         confirmLabel="Delete"
         confirmIcon="delete"
-        variant="danger"
+        intent="danger"
         busy={busy === group.id}
         onCancel={() => setConfirmDeleteOpen(false)}
         onConfirm={async () => {
@@ -1005,7 +1005,7 @@ const AlignmentPanel = ({
           {Array.from({ length: 3 }, (_, index) => (
             <Skeleton
               key={index}
-              type="text"
+              variant="text"
               className={
                 index === 2
                   ? styles.infoSkeletonDescriptionLineShort
@@ -1114,7 +1114,7 @@ const AlignmentPanel = ({
         body="Discard your unsaved alignment changes?"
         confirmLabel="Discard"
         confirmIcon="close"
-        variant="danger"
+        intent="danger"
         busy={busy === alignmentSet.id}
         onCancel={() => setConfirmCancelOpen(false)}
         onConfirm={discardEdits}
@@ -1140,7 +1140,7 @@ const AlignmentPanel = ({
         body="Changing this setting will clear the draft groups and teams for this alignment. The change is not saved until you save the alignment."
         confirmLabel="Change"
         confirmIcon="save"
-        variant="danger"
+        intent="danger"
         busy={busy === alignmentSet.id}
         onCancel={() => {
           setPendingStructureType(null);
@@ -1477,7 +1477,7 @@ const CreateAlignmentModal = ({
         body="Changing this setting will clear the draft groups and teams for this alignment."
         confirmLabel="Change"
         confirmIcon="save"
-        variant="danger"
+        intent="danger"
         busy={isSubmitting || busy}
         onCancel={() => {
           setPendingStructureType(null);
@@ -1627,7 +1627,7 @@ const LeagueAlignmentsTab = (props: Props) => {
         }
         confirmLabel="Delete"
         confirmIcon="delete"
-        variant="danger"
+        intent="danger"
         busy={alignmentBusy === confirmDelete?.id}
         onCancel={() => setConfirmDelete(null)}
         onConfirm={async () => {

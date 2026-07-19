@@ -326,7 +326,7 @@ const GroupNode = (props: GroupNodeProps) => {
         }
         confirmLabel={isDeletingTeam ? 'Deleting…' : 'Delete'}
         confirmIcon="delete"
-        variant="danger"
+        intent="danger"
         busy={isDeletingTeam}
         onCancel={() => setConfirmDeleteTeam(null)}
         onConfirm={async () => {
@@ -512,7 +512,7 @@ const LeagueGroupsCard = (props: Props) => {
         }
         confirmLabel={isDeletingUngrouped ? 'Deleting…' : 'Delete'}
         confirmIcon="delete"
-        variant="danger"
+        intent="danger"
         busy={isDeletingUngrouped}
         onCancel={() => setConfirmDeleteUngrouped(null)}
         onConfirm={async () => {

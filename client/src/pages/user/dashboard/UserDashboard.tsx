@@ -563,7 +563,7 @@ const UserDashboard = () => {
         }
         confirmLabel="Skip game"
         confirmIcon="visibility_off"
-        variant="danger"
+        intent="danger"
         busy={actionGameId === confirmSkipGame?.id}
         onCancel={() => {
           if (actionGameId === confirmSkipGame?.id) return;

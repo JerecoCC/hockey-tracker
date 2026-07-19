@@ -130,7 +130,7 @@ const PlayoffQualificationFormatModal = ({
       }
       shouldConfirmRemove={shouldConfirmRemoveRule}
       getRemoveConfirmBody={() => 'Remove this rule from the format?'}
-      onSubmitForm={(data) =>
+      onSubmit={(data) =>
         onSubmit({
           name: data.name.trim(),
           rules: data.rules.map((rule) => ({

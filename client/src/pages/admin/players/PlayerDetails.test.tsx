@@ -186,7 +186,7 @@ jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => ({ size }: 
 jest.mock('@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip', () => ({ ariaLabel, text, content }: any) => (
   <span aria-label={ariaLabel ?? text ?? 'Information'}>{content ?? text}</span>
 ));
-jest.mock('@jerecocc/tracker-ui/components/Table/Table', () => ({ columns, data, rowKey, emptyMessage, rowClassName }: any) => (
+jest.mock('@jerecocc/tracker-ui/components/Table/Table', () => ({ columns, rows, getRowKey, emptyMessage, getRowClassName }: any) => (
   <table>
     <thead>
       <tr>
@@ -196,11 +196,11 @@ jest.mock('@jerecocc/tracker-ui/components/Table/Table', () => ({ columns, data,
       </tr>
     </thead>
     <tbody>
-      {data.length > 0 ? (
-        data.map((row: any, rowIndex: number) => (
+      {rows.length > 0 ? (
+        rows.map((row: any, rowIndex: number) => (
           <tr
-            key={rowKey?.(row) ?? rowIndex}
-            className={rowClassName?.(row, rowIndex)}
+            key={getRowKey?.(row) ?? rowIndex}
+            className={getRowClassName?.(row, rowIndex)}
           >
             {columns.map((column: any, columnIndex: number) => {
               const content =
@@ -221,8 +221,8 @@ jest.mock('@jerecocc/tracker-ui/components/Table/Table', () => ({ columns, data,
     </tbody>
   </table>
 ));
-jest.mock('@jerecocc/tracker-ui/components/Tabs/Tabs', () => ({ tabs, activeIndex = 0 }: any) => (
-  <div>{tabs[activeIndex].content}</div>
+jest.mock('@jerecocc/tracker-ui/components/Tabs/Tabs', () => ({ tabs, selectedIndex = 0 }: any) => (
+  <div>{tabs[selectedIndex].content}</div>
 ));
 jest.mock('@jerecocc/tracker-ui/components/Tooltip/Tooltip', () => ({ children, className }: any) => (
   <span className={className}>{children}</span>

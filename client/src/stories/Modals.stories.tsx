@@ -54,7 +54,7 @@ export const ConfirmationModal = {
       body="Remove this award definition from the active league catalog?"
       confirmLabel="Remove"
       confirmIcon="delete"
-      variant="danger"
+      intent="danger"
       onCancel={noop}
       onConfirm={noop}
     />
@@ -67,7 +67,7 @@ export const BulkCreate = {
       open
       title="Bulk Create Teams"
       onClose={noop}
-      onSubmitForm={async () => true}
+      onSubmit={async () => true}
       createDefaultValues={() => ({ rows: [{ name: 'Montreal Victoire', code: 'MTL' }] })}
       rowArrayName="rows"
       createRow={() => ({ name: '', code: '' })}

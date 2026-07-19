@@ -1043,7 +1043,7 @@ const GameSummaryTab = ({
           body={`Delete ${game.away_team.code} @ ${game.home_team.code}? This will remove all goals, lineups, and related data. This cannot be undone.`}
           confirmLabel="Delete"
           confirmIcon="delete"
-          variant="danger"
+          intent="danger"
           busy={busy === 'deleting'}
           onCancel={() => setConfirmDeleteOpen(false)}
           onConfirm={async () => {
@@ -1083,7 +1083,7 @@ const GameSummaryTab = ({
           }? This cannot be undone.`}
           confirmLabel="Delete"
           confirmIcon="delete"
-          variant="danger"
+          intent="danger"
           busy={deletingGoal}
           onCancel={() => setConfirmDeleteGoal(null)}
           onConfirm={handleConfirmDeleteGoal}

@@ -93,7 +93,7 @@ const SeasonTeamOverrideModal = (props: Props) => {
         emptyClassName={styles.teamsEmpty}
         placeholder="Search teams…"
         emptyMessage={emptyMessage}
-        noResultsMessage={(q) => `No teams match "${q}".`}
+        getNoResultsMessage={(q) => `No teams match "${q}".`}
       />
     </Modal>
   );

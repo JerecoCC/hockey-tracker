@@ -116,7 +116,7 @@ export const FieldGallery = {
                 <CheckboxField
                   checked={checked}
                   label="Lock until playoffs start"
-                  onChange={setChecked}
+                  onCheckedChange={setChecked}
                 />
               )}
             </Stateful>

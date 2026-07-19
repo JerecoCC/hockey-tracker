@@ -156,8 +156,8 @@ const GameLineupsTab = ({
     inheritedEntries: GameRosterEntry[],
   ) => (
     <Accordion
-      variant="static"
-      headerType="light"
+      mode="static"
+      headerVariant="light"
       label={
         <span className={styles.accordionTeamLabel}>
           <TeamLogo
@@ -255,7 +255,7 @@ const GameLineupsTab = ({
                 className={styles.lineupPlayerItem}
                 variant="plain"
                 image={e.photo}
-                image_shape="circle"
+                imageShape="circle"
                 hideImage
                 primaryColor={primaryColor}
                 textColor={textColor}
@@ -531,7 +531,7 @@ const GameLineupsTab = ({
           }
           confirmLabel="Start Correction"
           confirmIcon="edit"
-          variant="info"
+          intent="info"
           onConfirm={handleConfirmFinalCorrection}
           onCancel={() => setConfirmFinalCorrection(false)}
         />

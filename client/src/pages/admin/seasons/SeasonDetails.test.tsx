@@ -107,13 +107,13 @@ jest.mock('@jerecocc/tracker-ui/components/Tabs/Tabs', () => (props: any) => (
           key={tab.label}
           type="button"
           role="tab"
-          aria-selected={(props.activeIndex ?? 0) === index}
+          aria-selected={(props.selectedIndex ?? 0) === index}
         >
           {tab.label}
         </button>
       ))}
     </div>
-    {props.tabs[props.activeIndex ?? 0].content}
+    {props.tabs[props.selectedIndex ?? 0].content}
   </div>
 ));
 jest.mock('@jerecocc/tracker-ui/components/TitleRow/TitleRow', () => (props: any) => (

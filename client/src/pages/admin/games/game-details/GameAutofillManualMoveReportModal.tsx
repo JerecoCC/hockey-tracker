@@ -195,7 +195,7 @@ const GameAutofillManualMoveReportModal = ({ open, reports, onClose }: Props) =>
               key={`${report.gameId}-${report.leagueCode}`}
               className={styles.gameAccordion}
               bodyClassName={styles.gameAccordionBody}
-              headerType="light"
+              headerVariant="light"
               defaultOpen
               label={
                 <span className={styles.gameHeader}>
@@ -213,8 +213,8 @@ const GameAutofillManualMoveReportModal = ({ open, reports, onClose }: Props) =>
                     <h4>Player moves</h4>
                     <Table
                       columns={moveColumns}
-                      data={report.moves}
-                      rowKey={(move) => getMoveRowKey(report.gameId, move)}
+                      rows={report.moves}
+                      getRowKey={(move) => getMoveRowKey(report.gameId, move)}
                       getRowHref={(move) => getMovePlayerHref(report.leagueCode, move)}
                       minWidth={640}
                     />
@@ -226,8 +226,8 @@ const GameAutofillManualMoveReportModal = ({ open, reports, onClose }: Props) =>
                     <h4>Jersey number changes</h4>
                     <Table
                       columns={jerseyColumns}
-                      data={jerseyChanges}
-                      rowKey={(change) => getJerseyChangeRowKey(report.gameId, change)}
+                      rows={jerseyChanges}
+                      getRowKey={(change) => getJerseyChangeRowKey(report.gameId, change)}
                       minWidth={720}
                     />
                   </div>

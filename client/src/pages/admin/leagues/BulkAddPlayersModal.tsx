@@ -121,7 +121,7 @@ const BulkAddPlayersModal = ({ open, onClose, bulkAddPlayers }: Props) => {
         !!(row.first_name || row.last_name || row.position || row.shoots)
       }
       getRemoveConfirmBody={() => 'Are you sure you want to remove this player from the list?'}
-      onSubmitForm={async (data) => {
+      onSubmit={async (data) => {
         const payload: BulkPlayerInput[] = data.rows.map((row) => ({
           first_name: row.first_name,
           last_name: row.last_name,

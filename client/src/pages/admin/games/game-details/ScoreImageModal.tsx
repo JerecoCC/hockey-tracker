@@ -1904,7 +1904,7 @@ const ScoreImageModal = ({
                     <CheckboxAccordion
                       checked={formIsPlayoff}
                       label="Playoff Game"
-                      onChange={(checked) => {
+                      onCheckedChange={(checked) => {
                         setFormIsPlayoff(checked);
                         setScoreCardValidationAttempted(false);
                         if (!checked) {

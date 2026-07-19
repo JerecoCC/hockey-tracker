@@ -109,44 +109,44 @@ const SeriesGamesSkeleton = ({ count }: { count: number }) => (
       >
         <div className={styles.gameSkeletonMain}>
           <Skeleton
-            type="text"
+            variant="text"
             width="5.75rem"
           />
           <div className={styles.gameSkeletonTeamRow}>
             <Skeleton
-              type="circle"
+              variant="circle"
               width="1.5rem"
               height="1.5rem"
             />
             <Skeleton
-              type="text"
+              variant="text"
               width="3rem"
             />
           </div>
           <div className={styles.gameSkeletonTeamRow}>
             <Skeleton
-              type="circle"
+              variant="circle"
               width="1.5rem"
               height="1.5rem"
             />
             <Skeleton
-              type="text"
+              variant="text"
               width="3rem"
             />
           </div>
         </div>
         <div className={styles.gameSkeletonMiddle}>
           <Skeleton
-            type="text"
+            variant="text"
             width="8rem"
           />
           <Skeleton
-            type="text"
+            variant="text"
             width="12rem"
           />
         </div>
         <Skeleton
-          type="tag"
+          variant="tag"
           className={styles.gameSkeletonStatus}
         />
       </li>

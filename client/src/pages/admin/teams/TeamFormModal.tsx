@@ -135,7 +135,7 @@ const TeamFormModal = (props: Props) => {
           label="Header Icon"
           accept="image/x-icon,image/vnd.microsoft.icon,.ico"
           hint="Upload .ico"
-          full
+          fullWidth
           previewSize="icon"
           pasteMode="focus"
           disabled={isSubmitting}

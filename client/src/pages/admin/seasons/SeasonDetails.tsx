@@ -670,7 +670,7 @@ const SeasonDetailsPage = () => {
 
   const renderStatsTableSkeleton = () => (
     <Skeleton
-      type="card"
+      variant="card"
       className={styles.statsTableCardSkeleton}
     />
   );
@@ -977,8 +977,8 @@ const SeasonDetailsPage = () => {
   return (
     <>
       <Tabs
-        activeIndex={activeTab}
-        onTabChange={handleTabChange}
+        selectedIndex={activeTab}
+        onSelectedIndexChange={handleTabChange}
         tabs={[
           {
             label: 'Info',
@@ -995,11 +995,11 @@ const SeasonDetailsPage = () => {
                   </InfoItem>
                   <InfoItem
                     label="Games Per Season"
-                    data={season.games_per_season != null ? String(season.games_per_season) : null}
+                    value={season.games_per_season != null ? String(season.games_per_season) : null}
                   />
                   <InfoItem
                     label="Shootout Rounds"
-                    data={
+                    value={
                       season.best_of_shootout != null
                         ? `${season.best_of_shootout} rounds`
                         : `${season.league_best_of_shootout} rounds (league default)`
@@ -1007,13 +1007,13 @@ const SeasonDetailsPage = () => {
                   />
                   <InfoItem
                     label="Scoring System"
-                    data={
+                    value={
                       season.scoring_system ?? `${season.league_scoring_system} (league default)`
                     }
                   />
                   <InfoItem
                     label="Goalie Min TOI"
-                    data={
+                    value={
                       season.goalie_min_regular_minutes != null
                         ? goalieMinRegularDisplay
                         : `${goalieMinRegularDisplay} (league default)`
@@ -1085,7 +1085,7 @@ const SeasonDetailsPage = () => {
                     <>
                       Statistics
                       <Divider
-                        variant="vertical"
+                        orientation="vertical"
                       />
                       <div className={styles.statsFilterField}>
                         <Select
@@ -1276,13 +1276,13 @@ const SeasonDetailsPage = () => {
                   <Card variant="filled">
                     <PaginatedTable
                       columns={skaterColumns}
-                      data={forwardStats}
-                      rowKey={(r) => r.player_id}
+                      rows={forwardStats}
+                      getRowKey={(r) => r.player_id}
                       loading={false}
                       fetching={forwardStatsFetching}
                       emptyMessage="No forward stats recorded yet."
                       activeSortKey={fwdSort.key}
-                      sortDir={fwdSort.dir}
+                      sortDirection={fwdSort.dir}
                       onSort={handleFwdSort}
                       onRowClick={navigateToPlayer}
                       page={fwdPage}
@@ -1300,13 +1300,13 @@ const SeasonDetailsPage = () => {
                   <Card variant="filled">
                     <PaginatedTable
                       columns={skaterColumns}
-                      data={defenseStats}
-                      rowKey={(r) => r.player_id}
+                      rows={defenseStats}
+                      getRowKey={(r) => r.player_id}
                       loading={false}
                       fetching={defenseStatsFetching}
                       emptyMessage="No defense stats recorded yet."
                       activeSortKey={defSort.key}
-                      sortDir={defSort.dir}
+                      sortDirection={defSort.dir}
                       onSort={handleDefSort}
                       onRowClick={navigateToPlayer}
                       page={defPage}
@@ -1324,13 +1324,13 @@ const SeasonDetailsPage = () => {
                   <Card variant="filled">
                     <PaginatedTable
                       columns={goalieColumns}
-                      data={goalieStats}
-                      rowKey={(r) => r.player_id}
+                      rows={goalieStats}
+                      getRowKey={(r) => r.player_id}
                       loading={false}
                       fetching={goalieStatsFetching}
                       emptyMessage="No goalie stats recorded yet."
                       activeSortKey={goalieSort.key}
-                      sortDir={goalieSort.dir}
+                      sortDirection={goalieSort.dir}
                       onSort={handleGoalieSort}
                       onRowClick={navigateToPlayer}
                       page={goaliePage}
@@ -1391,14 +1391,14 @@ const SeasonDetailsPage = () => {
                     ) : (
                       <Table
                         columns={standingsColumns}
-                        data={rows}
-                        rowKey={(row) => row.team_id}
+                        rows={rows}
+                        getRowKey={(row) => row.team_id}
                         loading={standingsLoading}
                         activeSortKey={standingsSort.key}
-                        sortDir={standingsSort.dir}
+                        sortDirection={standingsSort.dir}
                         onSort={(key, dir) => setStandingsSort({ key, dir })}
                         onRowClick={navigateToTeam}
-                        rowClassName={(row) =>
+                        getRowClassName={(row) =>
                           row.isQualifier ? styles.standingsQualifierRow : undefined
                         }
                       />
@@ -1528,7 +1528,7 @@ const SeasonDetailsPage = () => {
         }
         confirmLabel={busy === 'start-playoffs' ? 'Starting…' : 'Start Playoffs'}
         confirmIcon="emoji_events"
-        variant="accent"
+        intent="accent"
         busy={busy === 'start-playoffs'}
         onCancel={() => setShowStartPlayoffsConfirm(false)}
         onConfirm={async () => {

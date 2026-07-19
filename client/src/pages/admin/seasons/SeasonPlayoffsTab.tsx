@@ -1151,7 +1151,7 @@ const SeasonPlayoffsTab = ({
           intent="success"
           icon="emoji_events"
           title="Start Playoffs"
-          closeable={false}
+          dismissible={false}
           className={styles.playoffsBanner}
           actions={
             <Button
@@ -1346,7 +1346,7 @@ const SeasonPlayoffsTab = ({
                                     aria-label="Processing…"
                                   >
                                     <Skeleton
-                                      type="block"
+                                      variant="block"
                                       className={styles.slotSkeletonBar}
                                     />
                                   </div>
@@ -1505,16 +1505,16 @@ const SeasonPlayoffsTab = ({
             <div className={styles.playoffSettingsGrid}>
               <InfoItem
                 label="Playoff Rule Set"
-                data={bracketRuleSetLabel}
+                value={bracketRuleSetLabel}
               />
               <InfoItem
                 label="Series Format"
-                data={playoffSeriesFormatLabel}
+                value={playoffSeriesFormatLabel}
               />
               <InfoItem
                 type="custom"
                 label="Qualification Rules"
-                full
+                fullWidth
               >
                 {activePlayoffFormat && activePlayoffFormat.length > 0 ? (
                   <ResponsiveList className={styles.playoffSettingsQualificationList}>

@@ -998,7 +998,7 @@ const SeasonGamesTab = ({
       aria-label={`Auto-filling ${describeGame(game)}`}
     >
       <Skeleton
-        type="block"
+        variant="block"
         className={styles.calendarAutofillSkeleton}
       />
     </div>
@@ -1020,7 +1020,7 @@ const SeasonGamesTab = ({
       aria-label={`Auto-filling ${describeGame(game)}`}
     >
       <Skeleton
-        type="block"
+        variant="block"
         className={styles.weekGameSkeleton}
       />
     </div>
@@ -1151,9 +1151,9 @@ const SeasonGamesTab = ({
                 ]}
               />
               <ToggleButton
-                variant="switch"
+                mode="switch"
                 active={filtersVisible}
-                onClick={() => setFiltersVisible((v) => !v)}
+                onActiveChange={() => setFiltersVisible((v) => !v)}
                 icon="filter_list"
                 activeTooltip="Hide filters"
                 inactiveTooltip="Show filters"

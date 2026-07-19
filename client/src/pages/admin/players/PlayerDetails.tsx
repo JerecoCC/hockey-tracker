@@ -1649,9 +1649,9 @@ const ManualMovementReportSection = ({
       {report && (
         <Table
           columns={manualMovementStintColumns}
-          data={reportMovements}
-          rowKey={(movement) => movement.id}
-          rowClassName={(movement) =>
+          rows={reportMovements}
+          getRowKey={(movement) => movement.id}
+          getRowClassName={(movement) =>
             warningByMovementId.has(movement.id)
               ? styles.manualMovementWarningRow
               : undefined
@@ -1665,8 +1665,8 @@ const ManualMovementReportSection = ({
           <h4>Jersey Number Changes</h4>
           <Table
             columns={manualMovementJerseyColumns}
-            data={jerseyChanges}
-            rowKey={(change) => change.id}
+            rows={jerseyChanges}
+            getRowKey={(change) => change.id}
           />
         </>
       )}
@@ -3421,8 +3421,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     >
       <Table
         columns={recentGameColumns}
-        data={lastFiveGames}
-        rowKey={(row) => row.game_id}
+        rows={lastFiveGames}
+        getRowKey={(row) => row.game_id}
         loading={lastFiveGamesLoading}
         emptyMessage="No recent games recorded yet."
         onRowClick={(row) => navigate(buildGamePath(row))}
@@ -3464,8 +3464,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     >
       <Table
         columns={gameLogColumns}
-        data={gameLogs}
-        rowKey={(row) => row.game_id}
+        rows={gameLogs}
+        getRowKey={(row) => row.game_id}
         loading={gameLogsLoading}
         emptyMessage="No game logs found."
         onRowClick={(row) => navigate(buildGamePath(row))}
@@ -3588,7 +3588,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                 />
               }
               defaultOpen
-              headerType="light"
+              headerVariant="light"
               className={styles.awardGroup}
               bodyClassName={styles.awardAccordionBody}
             >
@@ -3601,7 +3601,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                     image={award.team_logo}
                     imageDark={award.team_logo_dark}
                     imageLight={award.team_logo_light}
-                    image_shape="square"
+                    imageShape="square"
                     name={award.team_name ?? 'Team not recorded'}
                     placeholder={teamCode(award.team_code, award.team_name)}
                     primaryColor={award.team_primary_color}
@@ -3749,8 +3749,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
 
       <div className={styles.tabsWrapper}>
         <Tabs
-          activeIndex={activeTab}
-          onTabChange={handleTabChange}
+          selectedIndex={activeTab}
+          onSelectedIndexChange={handleTabChange}
           tabs={[
             {
               label: 'Info',
@@ -3772,8 +3772,8 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                 <Section title="Career Statistics">
                   <Table
                     columns={buildCareerStatColumns(isGoalie)}
-                    data={stats}
-                    rowKey={(r) => `${r.season_id}-${r.team_id ?? 'teamless'}`}
+                    rows={stats}
+                    getRowKey={(r) => `${r.season_id}-${r.team_id ?? 'teamless'}`}
                     emptyMessage="No stats recorded yet."
                   />
                 </Section>
@@ -3871,10 +3871,10 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                                 >
                                   <Accordion
                                     defaultOpen={false}
-                                    headerType="light"
+                                    headerVariant="light"
                                     className={styles.stintAccordion}
                                     rowClassName={styles.stintHeader}
-                                    labelWrapClassName={styles.stintHeaderLabelWrap}
+                                    labelWrapperClassName={styles.stintHeaderLabelWrap}
                                     labelClassName={styles.stintHeaderAccordionLabel}
                                     bodyClassName={styles.stintBody}
                                     label={
@@ -4083,7 +4083,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             }
             confirmLabel="Delete Season Photo"
             confirmIcon="delete"
-            variant="danger"
+            intent="danger"
             busy={stintSaving}
             onConfirm={handleDeletePhotoEntry}
             onCancel={() => setDeletingPhotoEntry(null)}
@@ -4104,7 +4104,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             }
             confirmLabel="Delete Jersey Number Change"
             confirmIcon="delete"
-            variant="danger"
+            intent="danger"
             busy={stintSaving}
             onConfirm={handleDeleteJerseyHistoryEntry}
             onCancel={() => setDeletingJerseyHistoryEntry(null)}
@@ -4126,7 +4126,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             }
             confirmLabel="Delete Stint"
             confirmIcon="delete"
-            variant="danger"
+            intent="danger"
             busy={stintSaving}
             onConfirm={handleDeleteStint}
             onCancel={() => setDeletingStint(null)}

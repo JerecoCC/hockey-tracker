@@ -168,7 +168,7 @@ const BulkCreateGamesModal = ({
       }
       shouldConfirmRemove={shouldConfirmRemove}
       getRemoveConfirmBody={() => 'Remove this game from the list?'}
-      onSubmitForm={async (data) => {
+      onSubmit={async (data) => {
         const payload: CreateGameData[] = data.rows.map((row) => ({
           season_id: seasonId,
           home_team_id: row.home_team_id!,

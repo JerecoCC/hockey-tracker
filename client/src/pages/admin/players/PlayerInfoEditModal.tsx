@@ -305,7 +305,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
                       }}
                     />
                     <Divider
-                      variant="vertical"
+                      orientation="vertical"
                       className={styles.unitDivider}
                     />
                     <span className={styles.unitSuffix}>ft</span>
@@ -343,7 +343,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
                       }}
                     />
                     <Divider
-                      variant="vertical"
+                      orientation="vertical"
                       className={styles.unitDivider}
                     />
                     <span className={styles.unitSuffix}>in</span>
@@ -378,7 +378,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
                     aria-invalid={fieldState.invalid}
                   />
                   <Divider
-                    variant="vertical"
+                    orientation="vertical"
                     className={styles.unitDivider}
                   />
                   <span className={styles.unitSuffix}>lbs</span>

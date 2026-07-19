@@ -1623,8 +1623,8 @@ const SeasonAwardsTab = ({
               return (
                 <Accordion
                   key={award.award_id}
-                  variant="static"
-                  headerType="light"
+                  mode="static"
+                  headerVariant="light"
                   className={styles.awardItem}
                   rowClassName={styles.awardHeader}
                   bodyClassName={[
@@ -1707,7 +1707,7 @@ const SeasonAwardsTab = ({
         }
         confirmLabel={clearWinnersSaving ? 'Clearing...' : clearWinnersConfirmLabel}
         confirmIcon="delete"
-        variant="danger"
+        intent="danger"
         busy={clearWinnersSaving}
         onCancel={closeClearWinnersModal}
         onConfirm={confirmClearWinners}
@@ -1761,7 +1761,7 @@ const SeasonAwardsTab = ({
             listClassName={styles.awardSelectionList}
             emptyClassName={styles.awardSelectionEmpty}
             emptyMessage="No awards found."
-            noResultsMessage={() => 'No awards found.'}
+            getNoResultsMessage={() => 'No awards found.'}
           />
         </div>
       </Modal>
@@ -1825,7 +1825,7 @@ const SeasonAwardsTab = ({
             placeholder={`Search ${activeRecipientWinnerSourceLabel}...`}
             autoFocus
             emptyMessage={`No ${activeRecipientWinnerSourceLabel} are available for this award.`}
-            noResultsMessage={(query) =>
+            getNoResultsMessage={(query) =>
               `No ${activeRecipientWinnerSourceLabel} match "${query}".`
             }
             disabled={recipientWinnerSaving}
@@ -2130,7 +2130,7 @@ const AwardWinnerListSkeleton = () => (
                     <ResponsiveList className={styles.awardWinnerCards}>
     <Skeleton
       as="li"
-      type="card"
+      variant="card"
       className={[styles.awardWinnerCard, styles.awardWinnerSkeleton].join(' ')}
     />
                     </ResponsiveList>
@@ -2188,7 +2188,7 @@ const AwardPlayerList = ({
                 className={styles.awardPlayerListItem}
               />
               <Divider
-                variant="vertical"
+                orientation="vertical"
                 className={styles.awardRecipientStatListDivider}
               />
               <AwardRecipientStatCard stat={stat} />

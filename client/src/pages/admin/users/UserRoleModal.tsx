@@ -36,7 +36,7 @@ const UserRoleModal = (props: Props) => {
       }
       confirmLabel={busy === roleConfirm?.user.id ? 'Saving…' : actionLabel}
       confirmIcon={isPromote ? 'manage_accounts' : 'person_remove'}
-      variant={isPromote ? 'accent' : 'info'}
+      intent={isPromote ? 'accent' : 'info'}
       busy={busy === roleConfirm?.user.id}
       onCancel={onCancel}
       onConfirm={onConfirm}

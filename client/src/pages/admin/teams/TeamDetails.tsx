@@ -274,8 +274,8 @@ const TeamDetailsPage = ({ mode = 'admin' }: Props) => {
   return (
     <>
       <Tabs
-        activeIndex={activeTab}
-        onTabChange={handleTabChange}
+        selectedIndex={activeTab}
+        onSelectedIndexChange={handleTabChange}
         tabs={tabs}
       />
     </>

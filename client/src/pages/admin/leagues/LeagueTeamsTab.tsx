@@ -41,7 +41,7 @@ const LeagueTeamsTab = (props: Props) => {
       >
         <SearchableList
           items={teams}
-          filterFn={(t, q) =>
+          filterItem={(t, q) =>
             t.name.toLowerCase().includes(q.toLowerCase()) ||
             t.code.toLowerCase().includes(q.toLowerCase())
           }
@@ -91,7 +91,7 @@ const LeagueTeamsTab = (props: Props) => {
           )}
           placeholder="Search teams..."
           emptyMessage="No teams assigned to this league yet."
-          noResultsMessage={(q) => `No teams match "${q}".`}
+          getNoResultsMessage={(q) => `No teams match "${q}".`}
         />
       </Section>
     </div>
@@ -110,7 +110,7 @@ export const LeagueTeamsTabSkeleton = ({ className }: TabSkeletonProps) => (
     >
       <div className={styles.tabSkeletonControls}>
         <Skeleton
-          type="text"
+          variant="text"
           className={[styles.tabSkeletonSearch, styles.tabSkeletonSearchFull].join(' ')}
         />
       </div>

@@ -71,7 +71,7 @@ const renderHistorySkeletons = () => (
       <Skeleton
         as="li"
         key={`team-history-skeleton-${index}`}
-        type="card"
+        variant="card"
         className={styles.listSkeletonRow}
       />
     ))}
@@ -375,7 +375,7 @@ const TeamHistoryTab = ({
         }
         confirmLabel={busy ? 'Deleting…' : 'Delete'}
         confirmIcon="delete"
-        variant="danger"
+        intent="danger"
         busy={busy}
         onCancel={() => setDeleteTarget(null)}
         onConfirm={async () => {

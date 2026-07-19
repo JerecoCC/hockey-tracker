@@ -184,7 +184,7 @@ const BulkTradeModal = ({
           </fieldset>
         </div>
       )}
-      onSubmitForm={async (data) => {
+      onSubmit={async (data) => {
         if (!seasonId || !data.to_team_id) return false;
         const payload = data.players
           .filter((r) => r.player_id)

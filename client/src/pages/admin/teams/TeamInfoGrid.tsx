@@ -58,7 +58,7 @@ const ActiveSeasonsBadge = ({ team }: { team: TeamDetailRecord }) => {
   return (
     <InfoItem
       label="Active Seasons"
-      data={`${team.start_season_start_date?.slice(0, 4) ?? '?'} – ${team.latest_season_end_date?.slice(0, 4) ?? 'present'}`}
+      value={`${team.start_season_start_date?.slice(0, 4) ?? '?'} – ${team.latest_season_end_date?.slice(0, 4) ?? 'present'}`}
     />
   );
 };
@@ -69,18 +69,18 @@ const TeamInfoGrid = ({ team, groupLabel }: Props) => {
       <LeagueBadge team={team} />
       <InfoItem
         label="City"
-        data={team.city ?? '-'}
+        value={team.city ?? '-'}
       />
       <InfoItem
         label="Home Arena"
-        data={team.home_arena ?? '-'}
+        value={team.home_arena ?? '-'}
       />
       {groupLabel && <GroupBadge label={groupLabel} />}
       <ActiveSeasonsBadge team={team} />
       {team.location && (
         <InfoItem
           label="Location"
-          data={team.location}
+          value={team.location}
           icon="location_on"
         />
       )}
@@ -88,9 +88,9 @@ const TeamInfoGrid = ({ team, groupLabel }: Props) => {
         <InfoItem
           type="html"
           label="Description"
-          data={normalizeDescription(team.description) ? team.description : null}
+          value={normalizeDescription(team.description) ? team.description : null}
           muted="No description"
-          full
+          fullWidth
         />
       </div>
     </div>

@@ -576,8 +576,8 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
         {/* ── Tabs ── */}
         <Tabs
           className={styles.gameDetailsTabs}
-          activeIndex={activeTab}
-          onTabChange={handleTabChange}
+          selectedIndex={activeTab}
+          onSelectedIndexChange={handleTabChange}
           keepMounted={isGameInteractionLocked}
           tabs={[
             {

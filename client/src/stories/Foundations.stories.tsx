@@ -7,7 +7,7 @@ import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
 import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
 import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
-import Skeleton, { type SkeletonType } from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
+import Skeleton, { type SkeletonVariant } from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import Tag, { type TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import ToggleButton from '@jerecocc/tracker-ui/components/ToggleButton/ToggleButton';
@@ -41,7 +41,7 @@ type Story = StoryObj<typeof meta>;
 
 const buttonIntents = ['accent', 'neutral', 'success', 'warning', 'danger', 'info'] as const;
 const tagIntents: TagIntent[] = ['neutral', 'accent', 'info', 'success', 'warning', 'danger'];
-const skeletonTypes: SkeletonType[] = [
+const skeletonVariants: SkeletonVariant[] = [
   'title',
   'text',
   'subtitle',
@@ -111,7 +111,7 @@ export const ControlsAndStatus = {
                 <div className="storybook-row">
                   <ToggleButton
                     active={active}
-                    onClick={() => setActive(!active)}
+                    onActiveChange={() => setActive(!active)}
                     icon="filter_list"
                     activeTooltip="Hide filters"
                     inactiveTooltip="Show filters"
@@ -120,8 +120,8 @@ export const ControlsAndStatus = {
                   </ToggleButton>
                   <ToggleButton
                     active={active}
-                    onClick={() => setActive(!active)}
-                    variant="switch"
+                    onActiveChange={() => setActive(!active)}
+                    mode="switch"
                     activeIcon="check"
                     inactiveIcon="close"
                   />
@@ -212,12 +212,12 @@ export const ControlsAndStatus = {
       <StorySection title="Skeleton and loading states">
         <StoryGrid>
           <StoryPanel>
-            {skeletonTypes.map((type) => (
+            {skeletonVariants.map((variant) => (
               <Skeleton
-                key={type}
-                type={type}
-                width={type === 'avatar' ? 48 : '100%'}
-                height={type === 'block' ? 56 : undefined}
+                key={variant}
+                variant={variant}
+                width={variant === 'avatar' ? 48 : '100%'}
+                height={variant === 'block' ? 56 : undefined}
               />
             ))}
           </StoryPanel>

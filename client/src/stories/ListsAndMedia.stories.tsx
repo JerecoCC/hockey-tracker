@@ -70,7 +70,7 @@ export const Lists = {
               leadingImage={player.team.logo}
               leadingImagePrimaryColor={player.team.primary_color}
               leadingImageTextColor={player.team.text_color}
-              image_shape="circle"
+              imageShape="circle"
               placeholder={player.name
                 .split(' ')
                 .map((part) => part[0])
@@ -133,7 +133,7 @@ export const SearchAndDetails = {
       <StorySection title="SearchableList">
         <SearchableList
           items={samplePlayers}
-          filterFn={(player, query) => player.name.toLowerCase().includes(query.toLowerCase())}
+          filterItem={(player, query) => player.name.toLowerCase().includes(query.toLowerCase())}
           emptyMessage="No players available."
           renderItems={(players) => (
             <ul className="storybook-list">
@@ -141,7 +141,7 @@ export const SearchAndDetails = {
                 <ListItem
                   key={player.id}
                   fullWidth
-                  image_shape="circle"
+                  imageShape="circle"
                   placeholder={player.name
                     .split(' ')
                     .map((part) => part[0])
@@ -173,18 +173,18 @@ export const SearchAndDetails = {
             <InfoItem
               label="Arena"
               icon="location_on"
-              data="Place Bell"
+              value="Place Bell"
             />
             <InfoItem
               label="Founded"
               type="date"
-              data="2023-01-01T00:00:00Z"
+              value="2023-01-01T00:00:00Z"
             />
             <InfoItem
               label="Description"
               type="html"
-              full
-              data="<p>Reusable HTML content block.</p>"
+              fullWidth
+              value="<p>Reusable HTML content block.</p>"
             />
           </StoryPanel>
           <StoryPanel>

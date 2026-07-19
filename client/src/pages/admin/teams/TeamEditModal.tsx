@@ -149,7 +149,7 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
           label="Header Icon"
           accept="image/x-icon,image/vnd.microsoft.icon,.ico"
           hint="Upload .ico"
-          full
+          fullWidth
           previewSize="icon"
           pasteMode="focus"
           disabled={isSubmitting}

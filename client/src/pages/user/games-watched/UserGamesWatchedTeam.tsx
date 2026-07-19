@@ -277,7 +277,7 @@ const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
               <span className={styles.heroSeenValue}>{count}x</span>
             </div>
             <Divider
-              variant="vertical"
+              orientation="vertical"
               className={styles.heroStatsDivider}
               data-testid="team-hero-stats-divider"
             />
@@ -302,30 +302,30 @@ const UserGamesWatchedTeamSkeleton = () => (
         <div className={styles.heroContent}>
           <div className={styles.heroTeamInfo}>
             <Skeleton
-              type="picture"
+              variant="picture"
               width={60}
               height={60}
               className={styles.heroLogo}
             />
             <div className={styles.heroText}>
               <Skeleton
-                type="subtitle"
+                variant="subtitle"
                 width={92}
               />
               <Skeleton
-                type="title"
+                variant="title"
                 width={220}
                 height={28}
               />
               <Skeleton
-                type="subtitle"
+                variant="subtitle"
                 width={64}
               />
             </div>
           </div>
           <div className={styles.heroSeen}>
             <Skeleton
-              type="title"
+              variant="title"
               width={76}
               height={44}
             />
@@ -338,13 +338,13 @@ const UserGamesWatchedTeamSkeleton = () => (
       title="Watched Games"
       titleAccessory={
         <Skeleton
-          type="tag"
+          variant="tag"
           width={36}
         />
       }
       action={
         <Skeleton
-          type="block"
+          variant="block"
           width={104}
           height={36}
         />
@@ -358,7 +358,7 @@ const UserGamesWatchedTeamSkeleton = () => (
               className={styles.skeletonGameItem}
             >
               <Skeleton
-                type="card"
+                variant="card"
                 className={styles.skeletonGameCard}
               />
             </li>

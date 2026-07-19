@@ -712,7 +712,7 @@ const BracketRulesModal = ({
                     }
                     className={styles.bracketRulesMatchupToggle}
                     disabled={isSubmitting}
-                    onClick={() =>
+                    onActiveChange={() =>
                       setExpandedMatchupLabelRounds((prev) => ({
                         ...prev,
                         [r.round]: !prev[r.round],

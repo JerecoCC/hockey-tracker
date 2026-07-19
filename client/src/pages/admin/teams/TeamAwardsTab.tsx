@@ -225,7 +225,7 @@ const TeamAwardsTab = ({ teamId, mode = 'admin' }: Props) => {
                 />
               }
               defaultOpen
-              headerType="light"
+              headerVariant="light"
               className={styles.awardGroup}
               bodyClassName={styles.awardAccordionBody}
             >
@@ -238,7 +238,7 @@ const TeamAwardsTab = ({ teamId, mode = 'admin' }: Props) => {
                     image={award.team_logo}
                     imageDark={award.team_logo_dark}
                     imageLight={award.team_logo_light}
-                    image_shape="square"
+                    imageShape="square"
                     name={award.season_name}
                     placeholder={teamCode(award.team_code, award.team_name)}
                     primaryColor={award.team_primary_color}

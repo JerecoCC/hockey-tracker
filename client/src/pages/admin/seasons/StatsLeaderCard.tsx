@@ -45,14 +45,14 @@ export const StatsLeaderCardSkeleton = () => (
   <div className={styles.layout}>
     <div className={styles.previewColumn}>
       <Skeleton
-        type="card"
+        variant="card"
         className={[styles.featuredCard, styles.featuredCardSkeleton].join(' ')}
       />
 
       <Divider />
 
       <Skeleton
-        type="card"
+        variant="card"
         className={styles.statCardSkeleton}
       />
     </div>
@@ -64,7 +64,7 @@ export const StatsLeaderCardSkeleton = () => (
           className={styles.leaderItemSkeleton}
         >
           <Skeleton
-            type="card"
+            variant="card"
             className={styles.leaderItemSkeletonSurface}
           />
         </li>
@@ -137,7 +137,7 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
                 <span className={styles.rankSlot}>
                   <span className={styles.rankText}>{tieRanks[i]}</span>
                   <Divider
-                    variant="vertical"
+                    orientation="vertical"
                     className={styles.rankDivider}
                   />
                 </span>

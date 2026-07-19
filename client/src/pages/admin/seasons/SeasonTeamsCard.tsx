@@ -217,7 +217,7 @@ const GroupNode = ({
         </div>
       ) : (
         <Accordion
-          headerType="light"
+          headerVariant="light"
           className={styles.groupAccordion}
           rowClassName={styles.groupHeader}
           bodyClassName={styles.groupBody}
@@ -264,7 +264,7 @@ const SeasonTeamsSkeleton = () => (
       <Skeleton
         as="li"
         key={index}
-        type="card"
+        variant="card"
         className={styles.skeletonItem}
       />
     ))}
@@ -440,7 +440,7 @@ const SeasonTeamsCard = ({
       ) : (
         <SearchableList
           items={searchableTeams}
-          filterFn={teamMatchesSearch}
+          filterItem={teamMatchesSearch}
           renderItems={(filteredTeams) => {
             if (userRoots.length > 0) {
               const matchingTeamIds = new Set(filteredTeams.map((team) => team.id));
@@ -483,7 +483,7 @@ const SeasonTeamsCard = ({
               ? 'No teams are defined for this alignment set.'
               : 'Select an alignment set to view this season team structure.'
           }
-          noResultsMessage={(query) => `No teams match "${query}".`}
+          getNoResultsMessage={(query) => `No teams match "${query}".`}
         />
       )}
     </Section>

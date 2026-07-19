@@ -32,7 +32,7 @@ export const ScheduleGamesTitle = ({
     {hideTitleOnMobile ? <span className={styles.mobileHiddenTitle}>{title}</span> : title}
     {picker && (
       <>
-        <Divider variant="vertical" className={hideTitleOnMobile ? styles.mobileHiddenTitle : undefined} />
+        <Divider orientation="vertical" className={hideTitleOnMobile ? styles.mobileHiddenTitle : undefined} />
         <span className={styles.weekNav}>{picker}</span>
       </>
     )}
@@ -174,7 +174,7 @@ export const ScheduleWeekSummary = <T,>({
               <span className={styles.weekSummaryCount}>
                 {loading ? (
                   <Skeleton
-                    type="text"
+                    variant="text"
                     className={styles.weekSummaryCountSkeleton}
                   />
                 ) : (
@@ -302,7 +302,7 @@ export const ScheduleWeekDaySkeletons = ({ dateLabel }: ScheduleWeekDaySkeletons
     {Array.from({ length: 3 }).map((_, index) => (
       <Skeleton
         key={index}
-        type="block"
+        variant="block"
         className={styles.weekGameSkeleton}
       />
     ))}

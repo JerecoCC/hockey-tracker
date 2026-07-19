@@ -280,7 +280,7 @@ const TeamPlayersTab = ({
         <Skeleton
           as="li"
           key={`${sectionTitle}-skeleton-${index}`}
-          type="card"
+          variant="card"
           className={styles.listSkeletonRow}
         />
       ))}
@@ -336,7 +336,7 @@ const TeamPlayersTab = ({
         titleAccessory={
           leagueSeasons.length > 0 ? (
             <div className={styles.playerHeaderSeasonGroup}>
-              <Divider variant="vertical" />
+              <Divider orientation="vertical" />
               <div className={styles.playerSeasonSelect}>
                 <SeasonSelect
                   value={selectedSeasonId}
@@ -485,7 +485,7 @@ const TeamPlayersTab = ({
             }
             confirmLabel="Remove From Team"
             confirmIcon="person_remove"
-            variant="danger"
+            intent="danger"
             busy={isRemoving}
             onConfirm={handleConfirmRemove}
             onCancel={() => setConfirmRemove(null)}

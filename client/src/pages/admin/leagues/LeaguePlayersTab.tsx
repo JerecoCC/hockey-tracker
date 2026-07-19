@@ -76,7 +76,7 @@ const playerSkeletonRow = (key: number) => (
   <Skeleton
     as="li"
     key={key}
-    type="card"
+    variant="card"
     className={styles.tabSkeletonRow}
   />
 );
@@ -235,7 +235,7 @@ export const LeaguePlayersListSection = ({
             items={[...players].sort((a, b) =>
               `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`),
             )}
-            filterFn={(p, q) => {
+            filterItem={(p, q) => {
               const query = normalizePlayerSearchText(q);
               const name = `${p.first_name} ${p.last_name}`;
               const jersey = p.jersey_number != null ? String(p.jersey_number) : '';
@@ -340,13 +340,13 @@ export const LeaguePlayersListSection = ({
                 <span className={styles.playerFilterToggles}>
                   <ToggleButton
                     active={warningsOnly}
-                    variant="switch"
+                    mode="switch"
                     ariaLabel="Warnings only"
                     activeIcon="warning"
                     inactiveIcon="warning"
                     activeTooltip="Show all players"
                     inactiveTooltip="Show players with warnings"
-                    onClick={() => onWarningsOnlyChange(!warningsOnly)}
+                    onActiveChange={() => onWarningsOnlyChange(!warningsOnly)}
                   />
                 </span>
               ) : undefined
@@ -362,7 +362,7 @@ export const LeaguePlayersListSection = ({
               />
             }
             emptyMessage={emptyMessage}
-            noResultsMessage={(q) => `No players match "${q}".`}
+            getNoResultsMessage={(q) => `No players match "${q}".`}
           />
         </Section>
       </div>
@@ -385,7 +385,7 @@ export const LeaguePlayersListSection = ({
         }
         confirmLabel="Delete"
         confirmIcon="delete"
-        variant="danger"
+        intent="danger"
         busy={isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDelete(null)}
@@ -487,7 +487,7 @@ export const LeaguePlayersTabSkeleton = ({
     >
       <div className={styles.tabSkeletonControls}>
         <Skeleton
-          type="text"
+          variant="text"
           className={[styles.tabSkeletonSearch, styles.tabSkeletonSearchFull].join(' ')}
         />
       </div>

@@ -16,7 +16,7 @@ const TeamLogoUploadGroup = ({ control, disabled }: Props) => (
       control={control}
       name="logo_dark"
       label="Dark"
-      full
+      fullWidth
       pasteMode="focus"
       disabled={disabled}
     />
@@ -24,7 +24,7 @@ const TeamLogoUploadGroup = ({ control, disabled }: Props) => (
       control={control}
       name="logo_light"
       label="Light"
-      full
+      fullWidth
       pasteMode="focus"
       disabled={disabled}
     />

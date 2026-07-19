@@ -102,8 +102,8 @@ const WatchedTeamsTable = ({
   return (
     <Table
       columns={columns}
-      data={summaries}
-      rowKey={(summary) => summary.team.id}
+      rows={summaries}
+      getRowKey={(summary) => summary.team.id}
       loading={loading}
       emptyMessage="No watched games yet."
       onRowClick={onSelectTeam}

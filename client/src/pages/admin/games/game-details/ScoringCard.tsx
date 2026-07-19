@@ -182,7 +182,7 @@ const ScoringCard = ({
               <span className={styles.goalTimeGroup}>
                 <span className={styles.goalTime}>{goal.period_time ?? '—'}</span>
                 <Divider
-                  variant="vertical"
+                  orientation="vertical"
                   className={styles.goalTimeDivider}
                 />
               </span>
@@ -327,8 +327,8 @@ const ScoringCard = ({
             <Accordion
               key={num}
               ref={setAccordionRef ? setAccordionRef(periodId) : undefined}
-              variant="static"
-              headerType="light"
+              mode="static"
+              headerVariant="light"
               className={isActive ? styles.periodItemActive : undefined}
               label={<span className={styles.periodLabel}>{label}</span>}
               hoverActions={
@@ -442,8 +442,8 @@ const ScoringCard = ({
                   <Accordion
                     key={otPeriodId(otNum)}
                     ref={isLast && setAccordionRef ? setAccordionRef(PERIOD.OVERTIME) : undefined}
-                    variant="static"
-                    headerType="light"
+                    mode="static"
+                    headerVariant="light"
                     className={isThisActive ? styles.periodItemActive : undefined}
                     label={<span className={styles.periodLabel}>Overtime {otNum}</span>}
                     hoverActions={
@@ -519,8 +519,8 @@ const ScoringCard = ({
             return (
               <Accordion
                 ref={setAccordionRef ? setAccordionRef(PERIOD.OVERTIME) : undefined}
-                variant="static"
-                headerType="light"
+                mode="static"
+                headerVariant="light"
                 className={isOTActive ? styles.periodItemActive : undefined}
                 label={<span className={styles.periodLabel}>Overtime</span>}
                 hoverActions={

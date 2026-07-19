@@ -15,7 +15,7 @@ export const TabActionSkeleton = ({ width = '112px' }: { width?: string }) => (
 export const LeagueListRowSkeleton = () => (
   <Skeleton
     as="li"
-    type="card"
+    variant="card"
     className={styles.tabSkeletonRow}
   />
 );

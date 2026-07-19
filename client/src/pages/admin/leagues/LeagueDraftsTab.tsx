@@ -703,7 +703,7 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
                     ) : (
                       <Slider
                         className={styles.draftDaySlider}
-                        variant="range"
+                        type="range"
                         label="Round Range"
                         min={sliderMin}
                         max={sliderMax}
@@ -733,7 +733,7 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
           </>
         }
         confirmLabel="Remove"
-        variant="danger"
+        intent="danger"
         onConfirm={async () => {
           if (confirmDelete) await deleteDraftEvent(confirmDelete.draftYear);
           setConfirmDelete(null);

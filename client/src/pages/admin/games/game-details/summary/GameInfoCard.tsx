@@ -67,24 +67,24 @@ const GameInfoCard = ({
         <div className={styles.infoGrid}>
           <InfoItem
             label="Type"
-            data={GAME_TYPE_LABEL[game.game_type]}
-            full
+            value={GAME_TYPE_LABEL[game.game_type]}
+            fullWidth
           />
           {playoffRoundLabel && (
             <InfoItem
               label="Round"
-              data={playoffRoundLabel}
+              value={playoffRoundLabel}
             />
           )}
           {game.game_number_in_series != null && (
             <InfoItem
               label="Game in Series"
-              data={String(game.game_number_in_series)}
+              value={String(game.game_number_in_series)}
             />
           )}
           <InfoItem
             label="Scheduled Date"
-            data={
+            value={
               useLocalTimezone
                 ? formatScheduledDateLocal(game.scheduled_at, game.scheduled_time)
                 : formatScheduledDate(game.scheduled_at, DATE_FMT_SHORT)
@@ -92,7 +92,7 @@ const GameInfoCard = ({
           />
           <InfoItem
             label="Scheduled Time"
-            data={
+            value={
               useLocalTimezone
                 ? formatScheduledTimeLocal(game.scheduled_time, game.scheduled_at)
                 : game.scheduled_time
@@ -104,7 +104,7 @@ const GameInfoCard = ({
             <>
               <InfoItem
                 label="Start Time"
-                data={
+                value={
                   useLocalTimezone
                     ? formatTimestampTimeLocal(game.time_start)
                     : game.time_start
@@ -114,7 +114,7 @@ const GameInfoCard = ({
               />
               <InfoItem
                 label="End Time"
-                data={
+                value={
                   game.time_end
                     ? useLocalTimezone
                       ? formatEndTimeLocal(game.time_end, game.time_start)
@@ -126,8 +126,8 @@ const GameInfoCard = ({
           )}
           <InfoItem
             label="Venue"
-            data={game.venue ?? null}
-            full
+            value={game.venue ?? null}
+            fullWidth
           />
           {(scheduledWatchDate || leagueGameNumber) && (
             <>
@@ -138,15 +138,15 @@ const GameInfoCard = ({
               {scheduledWatchDate && (
                 <InfoItem
                   label="Scheduled Watch Date"
-                  data={scheduledWatchDate}
-                  full
+                  value={scheduledWatchDate}
+                  fullWidth
                 />
               )}
               {leagueGameNumber && (
                 <InfoItem
                   label="League Game Number"
-                  data={leagueGameNumber}
-                  full
+                  value={leagueGameNumber}
+                  fullWidth
                 />
               )}
             </>
@@ -154,8 +154,8 @@ const GameInfoCard = ({
           {game.notes && (
             <InfoItem
               label="Notes"
-              data={game.notes}
-              full
+              value={game.notes}
+              fullWidth
             />
           )}
         </div>

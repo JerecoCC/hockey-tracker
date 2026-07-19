@@ -408,9 +408,9 @@ const LineupRosterModal = ({
             searchDisabled={controlsDisabled}
             actions={
               <ToggleButton
-                variant="switch"
+                mode="switch"
                 active={showProspects}
-                onClick={() => setShowProspects((v) => !v)}
+                onActiveChange={() => setShowProspects((v) => !v)}
                 activeIcon="visibility"
                 inactiveIcon="visibility_off"
                 activeTooltip="Hide prospects"
@@ -419,7 +419,7 @@ const LineupRosterModal = ({
               />
             }
             emptyMessage="All team players are already in this lineup."
-            noResultsMessage={(searchQuery) => `No players match "${searchQuery}".`}
+            getNoResultsMessage={(searchQuery) => `No players match "${searchQuery}".`}
           />
         )}
       </div>

@@ -786,7 +786,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                           </div>
                         </div>
                         <Divider
-                          variant="horizontal"
+                          orientation="horizontal"
                           className={styles.awardDefinitionDivider}
                         />
                         <div
@@ -1075,7 +1075,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
           </>
         }
         confirmLabel="Remove"
-        variant="danger"
+        intent="danger"
         onConfirm={async () => {
           if (confirmDelete) await deleteAward(confirmDelete.id);
           setConfirmDelete(null);
