@@ -9,7 +9,7 @@
   list-style: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: $screen-mobile-max) {
   .list {
     gap: var(--app-list-gap, #{$space-sm}) !important;
   }

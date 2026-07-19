@@ -24,7 +24,7 @@
     border-radius: $radius-md;
     list-style: none;
 
-    @media (max-width: 640px) {
+    @media (max-width: $screen-phone-max) {
       align-items: stretch;
       flex-direction: column;
       gap: $space-md;
@@ -38,7 +38,7 @@
     gap: $space-sm;
     min-width: 0;
 
-    @media (max-width: 640px) {
+    @media (max-width: $screen-phone-max) {
       flex-basis: auto;
     }
   }
@@ -61,7 +61,7 @@
     flex: 0 0 4.5rem;
     height: 1.5rem;
 
-    @media (max-width: 640px) {
+    @media (max-width: $screen-phone-max) {
       flex-basis: auto;
       width: 4.5rem;
     }

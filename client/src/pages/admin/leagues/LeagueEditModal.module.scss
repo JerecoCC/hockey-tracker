@@ -20,7 +20,7 @@
   column-gap: $space-md;
   row-gap: $space-xl;
 
-  @media (max-width: 640px) {
+  @media (max-width: $screen-phone-max) {
     grid-template-columns: 1fr;
   }
 }

@@ -270,7 +270,7 @@ describe('UserGamesWatchedTeam', () => {
     expect(screen.queryByText('Watched team not found.')).not.toBeInTheDocument();
   });
 
-  it('applies the stuck stripe state on tablets but not phones', async () => {
+  it('applies the stuck stripe state on wider mobile screens but not phones', async () => {
     const originalWidth = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 700 });
 

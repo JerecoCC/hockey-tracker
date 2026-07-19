@@ -16,7 +16,7 @@
   white-space: nowrap;
 }
 
-@media (max-width: 768px) {
+@media (max-width: $screen-mobile-max) {
   .filter {
     flex: 1 1 100%;
     flex-direction: column;

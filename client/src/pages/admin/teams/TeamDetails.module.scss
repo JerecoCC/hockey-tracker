@@ -343,7 +343,7 @@
   }
 }
 
-@media (max-width: $bp-tablet) {
+@media (max-width: $screen-mobile-max) {
   .rosterToolbar {
     align-items: stretch;
   }

@@ -58,7 +58,7 @@ $bg-page: #0f172a;
   background: rgba(0, 0, 0, 0.55);
 }
 
-@media (max-width: 768px) {
+@media (max-width: $screen-mobile-max) {
   .sidebar {
     &Wrapper {
       width: 0;
@@ -80,7 +80,7 @@ $bg-page: #0f172a;
   padding: $space-4xl;
   flex: 1;
 
-  @media (max-width: 768px) {
+  @media (max-width: $screen-mobile-max) {
     --main-inline-padding: 0px;
     --main-inline-padding-offset: 0px;
 

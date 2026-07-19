@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
+import { SCREEN_BREAKPOINTS } from '@/lib/screenSize';
 
-const WEEK_SUMMARY_MOBILE_BREAKPOINT = 768;
 const DEFAULT_WEEK_SUMMARY_STICKY_TOP_PX = 52;
 
 const getScheduleScrollParent = (element: HTMLElement): HTMLElement => {
@@ -40,11 +40,11 @@ export const useScheduleWeekSummaryStuck = ({
     const scrollElement = getScheduleScrollParent(sentinel);
     const mediaQuery =
       typeof window.matchMedia === 'function'
-        ? window.matchMedia(`(max-width: ${WEEK_SUMMARY_MOBILE_BREAKPOINT}px)`)
+        ? window.matchMedia(`(max-width: ${SCREEN_BREAKPOINTS.mobileMax}px)`)
         : null;
     let frame = 0;
     const isMobile = () =>
-      mediaQuery?.matches ?? window.innerWidth <= WEEK_SUMMARY_MOBILE_BREAKPOINT;
+      mediaQuery?.matches ?? window.innerWidth <= SCREEN_BREAKPOINTS.mobileMax;
     const update = () => {
       frame = 0;
       const next =

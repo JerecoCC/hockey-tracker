@@ -46,7 +46,7 @@ $bracket-line: color-mix(
   align-items: start;
   container-type: inline-size;
 
-  @container (max-width: #{$bp-tablet}) {
+  @container (max-width: #{$screen-mobile-max}) {
     grid-template-columns: 1fr;
   }
 

@@ -9,8 +9,10 @@
 $max-content-width: 1440px;
 
 // ── Breakpoints ───────────────────────────────────────────────────────
-//   $bp-tablet  →  768px  two-column layouts collapse to single column
-$bp-tablet: 768px;
+// These mirror lib/screenSize.ts. The sidenav drawer defines the mobile boundary.
+$screen-phone-max: 640px;
+$screen-mobile-max: 768px;
+$screen-tablet-max: 1024px;
 
 // ── Spacing scale ─────────────────────────────────────────────────────
 //   $space-xs  →  4px   badge padding, list gap
@@ -107,7 +109,7 @@ $transition-layout: 0.22s;
 @mixin page-layout(
   $gap: $page-section-gap,
   $compact-gap: $space-xs,
-  $compact-breakpoint: $bp-tablet,
+  $compact-breakpoint: $screen-mobile-max,
   $container: inline-size
 ) {
   display: flex;

@@ -147,7 +147,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: $screen-mobile-max) {
   .groupHeader {
     align-items: flex-start;
     flex-direction: column;

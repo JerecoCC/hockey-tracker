@@ -331,7 +331,7 @@
   justify-self: center;
 }
 
-@media (max-width: 768px) {
+@media (max-width: $screen-mobile-max) {
   .item {
     min-height: 3.75rem;
     padding: $space-md;

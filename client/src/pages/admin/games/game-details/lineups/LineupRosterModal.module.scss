@@ -74,7 +74,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: $screen-mobile-max) {
   .footer {
     &Actions {
       flex-wrap: wrap;

@@ -867,7 +867,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: $screen-phone-max) {
   .formRow3 {
     grid-template-columns: 1fr;
   }

@@ -175,7 +175,7 @@ $nav-collapsed-width: 56px;
 }
 
 // ── Mobile slide-out ───────────────────────────────────────────────────
-@media (max-width: 768px) {
+@media (max-width: $screen-mobile-max) {
   .nav {
     position: fixed;
     top: 0;

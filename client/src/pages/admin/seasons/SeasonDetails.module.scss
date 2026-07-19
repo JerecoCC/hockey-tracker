@@ -491,7 +491,7 @@
   gap: $page-section-gap;
   align-items: start;
 
-  @media (max-width: 768px) {
+  @media (max-width: $screen-mobile-max) {
     grid-template-columns: 1fr;
   }
 }
@@ -586,7 +586,7 @@
     grid-column: 1 / -1;
   }
 
-  @media (max-width: 1024px) {
+  @media (max-width: $screen-tablet-max) {
     grid-template-columns: 1fr;
 
     // Reset the full-width override — every card is already full-width.
@@ -762,7 +762,7 @@
     gap: $space-md;
     align-items: start;
 
-    @media (max-width: 640px) {
+    @media (max-width: $screen-phone-max) {
       grid-template-columns: 1fr;
       gap: $space-xs;
     }
@@ -1166,7 +1166,7 @@
     grid-template-columns: 1fr 1fr;
     gap: $space-md;
 
-    @media (max-width: 640px) {
+    @media (max-width: $screen-phone-max) {
       grid-template-columns: 1fr;
     }
   }
@@ -1215,7 +1215,7 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: $screen-phone-max) {
   .alignmentControls {
     grid-template-columns: 1fr;
   }

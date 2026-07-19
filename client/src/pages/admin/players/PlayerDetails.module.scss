@@ -145,7 +145,7 @@
   gap: $space-2xl;
   padding: $space-2xl;
 
-  @media (max-width: 640px) {
+  @media (max-width: $screen-phone-max) {
     align-items: flex-start;
     flex-direction: column;
   }
@@ -232,7 +232,7 @@
   margin-left: auto;
   flex-shrink: 0;
 
-  @media (max-width: 640px) {
+  @media (max-width: $screen-phone-max) {
     align-self: auto;
     margin-left: 0;
   }
@@ -252,7 +252,7 @@
   color: $accent;
 }
 
-@media (max-width: 640px) {
+@media (max-width: $screen-phone-max) {
   .heroLastName {
     font-size: $font-3xl;
   }
@@ -318,7 +318,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: $space-xl;
 
-    @media (max-width: 640px) {
+    @media (max-width: $screen-phone-max) {
       grid-template-columns: 1fr;
     }
   }
@@ -759,7 +759,7 @@
     color: var(--app-text-muted, #{$text-dim});
     font-size: $font-sm;
 
-    @media (max-width: 640px) {
+    @media (max-width: $screen-phone-max) {
       align-items: stretch;
       flex-direction: column;
     }

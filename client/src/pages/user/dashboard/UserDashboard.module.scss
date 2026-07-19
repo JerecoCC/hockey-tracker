@@ -266,7 +266,7 @@
   gap: $space-2xl;
   align-items: start;
 
-  @container (max-width: #{$bp-tablet}) {
+  @container (max-width: #{$screen-mobile-max}) {
     grid-template-columns: 1fr;
     gap: $space-xs;
   }
@@ -292,7 +292,7 @@
     gap: $space-md;
     padding: $space-xs 0;
 
-    @container (max-width: 640px) {
+    @container (max-width: $screen-phone-max) {
       grid-template-columns: 1fr;
     }
   }
@@ -381,7 +381,7 @@
   }
 }
 
-@container (max-width: #{$bp-tablet}) {
+@container (max-width: #{$screen-mobile-max}) {
   .sideColumn {
     position: static;
   }
@@ -417,7 +417,7 @@
   }
 }
 
-@container (max-width: 640px) {
+@container (max-width: $screen-phone-max) {
   .hero {
     --rink-inset: #{$space-xs};
 

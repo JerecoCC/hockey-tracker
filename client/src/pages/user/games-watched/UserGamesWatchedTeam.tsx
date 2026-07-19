@@ -28,9 +28,8 @@ import {
 import styles from './UserGamesWatchedTeam.module.scss';
 
 import { API, authHeaders } from '@/lib/apiClient';
+import { SCREEN_BREAKPOINTS } from '@/lib/screenSize';
 const ALL_YEARS = 'all';
-const PHONE_MAX_WIDTH = 640;
-const TABLET_MAX_WIDTH = 768;
 const HERO_STICKY_TOP = 52;
 
 const getScrollContainer = (element: HTMLElement) => {
@@ -174,37 +173,38 @@ const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
   const { team, count, record } = summary;
   const teamName = getTeamName(team);
   const heroCardRef = useRef<HTMLDivElement>(null);
-  const [isTabletStuck, setIsTabletStuck] = useState(false);
+  const [isWideMobileStuck, setIsWideMobileStuck] = useState(false);
 
   useEffect(() => {
     const heroCard = heroCardRef.current;
     if (!heroCard) return;
 
     const scrollContainer = getScrollContainer(heroCard);
-    const updateTabletStuckState = () => {
-      const isTablet =
-        window.innerWidth > PHONE_MAX_WIDTH && window.innerWidth <= TABLET_MAX_WIDTH;
+    const updateWideMobileStuckState = () => {
+      const isWideMobile =
+        window.innerWidth > SCREEN_BREAKPOINTS.phoneMax &&
+        window.innerWidth <= SCREEN_BREAKPOINTS.mobileMax;
       const nextIsStuck =
-        isTablet &&
+        isWideMobile &&
         scrollContainer.scrollTop > 0 &&
         heroCard.getBoundingClientRect().top <= HERO_STICKY_TOP;
-      setIsTabletStuck((current) => (current === nextIsStuck ? current : nextIsStuck));
+      setIsWideMobileStuck((current) => (current === nextIsStuck ? current : nextIsStuck));
     };
 
-    scrollContainer.addEventListener('scroll', updateTabletStuckState, { passive: true });
-    window.addEventListener('resize', updateTabletStuckState, { passive: true });
-    updateTabletStuckState();
+    scrollContainer.addEventListener('scroll', updateWideMobileStuckState, { passive: true });
+    window.addEventListener('resize', updateWideMobileStuckState, { passive: true });
+    updateWideMobileStuckState();
 
     return () => {
-      scrollContainer.removeEventListener('scroll', updateTabletStuckState);
-      window.removeEventListener('resize', updateTabletStuckState);
+      scrollContainer.removeEventListener('scroll', updateWideMobileStuckState);
+      window.removeEventListener('resize', updateWideMobileStuckState);
     };
   }, []);
 
   return (
     <StickyHeroCard
       ref={heroCardRef}
-      className={`${styles.heroCard} ${isTabletStuck ? styles.heroCardStuck : ''}`}
+      className={`${styles.heroCard} ${isWideMobileStuck ? styles.heroCardStuck : ''}`}
       stuckClassName={styles.heroCardStuck}
       stickyTopPx={HERO_STICKY_TOP}
       style={

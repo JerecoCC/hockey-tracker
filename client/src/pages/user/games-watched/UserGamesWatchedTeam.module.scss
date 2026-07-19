@@ -15,14 +15,14 @@ $hero-mobile-value-size: 1.25rem;
 .heroCard {
   min-width: 0;
 
-  @media (max-width: 768px) {
+  @media (max-width: $screen-mobile-max) {
     position: sticky !important;
     top: var(--sticky-hero-top, 52px) !important;
     z-index: 4 !important;
     margin-top: -1px;
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: $screen-phone-max) {
     border-top: 0 !important;
   }
 }
@@ -35,7 +35,7 @@ $hero-mobile-value-size: 1.25rem;
   overflow: hidden;
   isolation: isolate;
 
-  @media (max-width: 768px) {
+  @media (max-width: $screen-mobile-max) {
     min-height: 88px;
   }
 }
@@ -49,7 +49,7 @@ $hero-mobile-value-size: 1.25rem;
   background: var(--team-primary);
   transition: width $hero-strip-duration ease;
 
-  @media (max-width: 640px) {
+  @media (max-width: $screen-phone-max) {
     transition: none;
   }
 }
@@ -129,13 +129,13 @@ $hero-mobile-value-size: 1.25rem;
   padding: $space-md $space-lg;
   text-align: left;
 
-  @media (max-width: 768px) {
+  @media (max-width: $screen-mobile-max) {
     gap: $space-lg;
     max-width: calc(100% - #{$space-2xl});
     text-align: center;
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: $screen-phone-max) {
     flex-direction: column;
     gap: $space-md;
   }
@@ -156,7 +156,7 @@ $hero-mobile-value-size: 1.25rem;
   width: 60px !important;
   height: 60px !important;
 
-  @media (max-width: 768px) {
+  @media (max-width: $screen-mobile-max) {
     width: 44px !important;
     height: 44px !important;
   }
@@ -177,7 +177,7 @@ $hero-mobile-value-size: 1.25rem;
   gap: $space-md;
   min-width: 0;
 
-  @media (max-width: 768px) {
+  @media (max-width: $screen-mobile-max) {
     justify-content: center;
     gap: $space-sm;
   }
@@ -219,17 +219,17 @@ $hero-mobile-value-size: 1.25rem;
   text-align: center;
   transition: color $transition-layout ease;
 
-  @media (max-width: 768px) {
+  @media (max-width: $screen-mobile-max) {
     font-size: 2rem;
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: $screen-phone-max) {
     font-size: $hero-mobile-value-size;
   }
 }
 
 .heroSeenDesktop {
-  @media (max-width: 640px) {
+  @media (max-width: $screen-phone-max) {
     display: none;
   }
 }
@@ -237,7 +237,7 @@ $hero-mobile-value-size: 1.25rem;
 .heroStats {
   display: none;
 
-  @media (max-width: 640px) {
+  @media (max-width: $screen-phone-max) {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -248,7 +248,7 @@ $hero-mobile-value-size: 1.25rem;
 .heroStatsDivider {
   display: none;
 
-  @media (max-width: 640px) {
+  @media (max-width: $screen-phone-max) {
     --divider-color: var(--app-text-muted, #{$text-dim});
     --divider-vertical-margin-block: 0;
 
@@ -258,7 +258,7 @@ $hero-mobile-value-size: 1.25rem;
 }
 
 .heroTeamMeta {
-  @media (max-width: 640px) {
+  @media (max-width: $screen-phone-max) {
     color: var(--app-text-strong, #{$text-bright});
     font-size: $hero-mobile-value-size;
     font-weight: 700;
@@ -268,12 +268,12 @@ $hero-mobile-value-size: 1.25rem;
 }
 
 .heroTeamMetaDesktop {
-  @media (max-width: 640px) {
+  @media (max-width: $screen-phone-max) {
     display: none;
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: $screen-phone-max) {
   .heroName {
     font-size: $hero-mobile-value-size;
   }
@@ -297,7 +297,7 @@ $hero-mobile-value-size: 1.25rem;
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: $screen-mobile-max) {
   .sectionTitle {
     display: none;
   }
@@ -307,7 +307,7 @@ $hero-mobile-value-size: 1.25rem;
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: $screen-phone-max) {
   .gameListItems {
     display: none;
   }

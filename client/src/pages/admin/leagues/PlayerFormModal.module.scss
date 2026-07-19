@@ -34,7 +34,7 @@
     column-gap: 0.75rem;
     row-gap: $space-md;
 
-    @media (max-width: 640px) {
+    @media (max-width: $screen-phone-max) {
       grid-template-columns: 1fr;
     }
   }
@@ -46,7 +46,7 @@
     row-gap: $space-md;
     align-items: flex-start;
 
-    @media (max-width: 640px) {
+    @media (max-width: $screen-phone-max) {
       grid-template-columns: 1fr;
     }
   }
@@ -57,7 +57,7 @@
     column-gap: 0.75rem;
     row-gap: $space-md;
 
-    @media (max-width: 640px) {
+    @media (max-width: $screen-phone-max) {
       grid-template-columns: 1fr;
     }
   }

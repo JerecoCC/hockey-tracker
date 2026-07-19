@@ -23,7 +23,7 @@
   height: 52px;
   padding: 0 var(--title-row-inline-spacing);
 
-  @media (max-width: 640px) {
+  @media (max-width: $screen-phone-max) {
     --title-row-inline-spacing: #{$space-md};
   }
 }
@@ -56,7 +56,7 @@
     display: none;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: $screen-mobile-max) {
     display: flex;
   }
 }
@@ -74,7 +74,7 @@
 
 // On mobile: hidden when tabs are present (active tab label replaces it)
 .titleHiddenMobile {
-  @media (max-width: 768px) {
+  @media (max-width: $screen-mobile-max) {
     display: none;
   }
 }
@@ -88,7 +88,7 @@
   white-space: nowrap;
   display: none;
 
-  @media (max-width: 768px) {
+  @media (max-width: $screen-mobile-max) {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -100,7 +100,7 @@
   &Bar {
     display: none;
 
-    @media (max-width: 768px) {
+    @media (max-width: $screen-mobile-max) {
       display: flex;
       overflow-x: auto;
       padding: 0 $space-lg;
@@ -171,7 +171,7 @@
     background: var(--app-hover-bg, rgba(255, 255, 255, 0.06));
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: $screen-mobile-max) {
     display: flex;
     order: 2;
   }
@@ -185,7 +185,7 @@
     align-items: center;
     gap: $space-xs;
 
-    @media (max-width: #{$bp-tablet}) {
+    @media (max-width: #{$screen-mobile-max}) {
       display: none;
     }
   }

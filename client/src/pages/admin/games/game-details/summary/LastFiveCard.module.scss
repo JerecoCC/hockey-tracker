@@ -44,7 +44,7 @@
     align-items: flex-start;
     container-type: inline-size;
 
-    @container (max-width: #{$bp-tablet}) {
+    @container (max-width: #{$screen-mobile-max}) {
       flex-direction: column;
     }
   }
