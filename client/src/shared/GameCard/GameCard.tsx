@@ -37,10 +37,21 @@ type MaybePromise = void | Promise<void>;
 export interface GameCardAction {
   icon: string;
   intent?: ButtonIntent;
-  tooltip?: string;
+  tooltip: string;
   disabled?: boolean;
   onClick: () => void;
 }
+
+const isRenderableGameCardAction = (
+  action: GameCardAction | false | null | undefined,
+): action is GameCardAction =>
+  Boolean(
+    action &&
+      typeof action.icon === 'string' &&
+      action.icon.trim().length > 0 &&
+      typeof action.tooltip === 'string' &&
+      action.tooltip.trim().length > 0,
+  );
 
 export interface GameCardProps {
   variant?: 'card' | 'list-item';
@@ -86,7 +97,7 @@ const renderActions = (actions: GameCardProps['actions']) => {
   if (!actions) return null;
   if (!isGameCardActionArray(actions)) return actions;
 
-  return actions.filter(Boolean).map((action, index) => (
+  return actions.filter(isRenderableGameCardAction).map((action, index) => (
     <Button
       key={index}
       variant="outlined"
