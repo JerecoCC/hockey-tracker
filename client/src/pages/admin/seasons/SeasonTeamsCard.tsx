@@ -217,7 +217,7 @@ const GroupNode = ({
         </div>
       ) : (
         <Accordion
-          headerVariant="light"
+          variant="light"
           className={styles.groupAccordion}
           rowClassName={styles.groupHeader}
           bodyClassName={styles.groupBody}

@@ -14,7 +14,7 @@ import axios from 'axios';
 import { toPng } from 'html-to-image';
 import { toast } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
-import CheckboxAccordion from '@jerecocc/tracker-ui/components/CheckboxAccordion/CheckboxAccordion';
+import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
 import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
 import fieldStyles from '@/shared/trackerFieldStyles.module.scss';
 import FitText from '@jerecocc/tracker-ui/components/FitText/FitText';
@@ -1901,7 +1901,8 @@ const ScoreImageModal = ({
                       </div>
                     </div>
 
-                    <CheckboxAccordion
+                    <Accordion
+                      variant="checkbox"
                       checked={formIsPlayoff}
                       label="Playoff Game"
                       onCheckedChange={(checked) => {
@@ -1976,7 +1977,7 @@ const ScoreImageModal = ({
                           onTouched={() => markScoreCardFieldTouched('homeWins')}
                         />
                       </GroupedFields>
-                    </CheckboxAccordion>
+                    </Accordion>
                   </>
                 );
               })()}

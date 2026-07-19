@@ -3588,7 +3588,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                 />
               }
               defaultOpen
-              headerVariant="light"
+              variant="light"
               className={styles.awardGroup}
               bodyClassName={styles.awardAccordionBody}
             >
@@ -3871,7 +3871,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                                 >
                                   <Accordion
                                     defaultOpen={false}
-                                    headerVariant="light"
+                                    variant="light"
                                     className={styles.stintAccordion}
                                     rowClassName={styles.stintHeader}
                                     labelWrapperClassName={styles.stintHeaderLabelWrap}

@@ -225,7 +225,7 @@ const TeamAwardsTab = ({ teamId, mode = 'admin' }: Props) => {
                 />
               }
               defaultOpen
-              headerVariant="light"
+              variant="light"
               className={styles.awardGroup}
               bodyClassName={styles.awardAccordionBody}
             >

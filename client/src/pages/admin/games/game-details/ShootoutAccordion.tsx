@@ -454,7 +454,7 @@ const ShootoutAccordion = ({
   return (
     <Accordion
       mode="static"
-      headerVariant="light"
+      variant="light"
       className={className}
       label={
         <span className={labelClassName}>
