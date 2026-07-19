@@ -705,6 +705,63 @@ beforeEach(() => {
 });
 
 describe('UserGames schedule views', () => {
+  it('keeps the period picker and view control on one tablet toolbar row', () => {
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 768 });
+
+    let unmount: (() => void) | undefined;
+    try {
+      ({ unmount } = render(<UserGames />));
+
+      const periodPicker = screen.getByRole('button', { name: /^Select week:/ }).parentElement;
+      const viewControl = screen.getByRole('button', { name: 'Week view' }).parentElement;
+      const tabletToolbar = periodPicker?.closest(`.${styles.tabletToolbar}`);
+
+      expect(periodPicker).toHaveClass(styles.tabletPeriodPicker);
+      expect(tabletToolbar).toContainElement(viewControl);
+      expect(viewControl).toHaveAttribute('data-full-width', 'false');
+      expect(tabletToolbar).toContainElement(
+        screen.getByRole('button', { name: 'More actions' }),
+      );
+      expect(screen.getByRole('switch', { name: 'Hide filters' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Open filters' })).not.toBeInTheDocument();
+    } finally {
+      unmount?.();
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: originalWidth,
+      });
+    }
+  });
+
+  it('keeps the utility actions inside More actions on desktop', async () => {
+    const user = userEvent.setup();
+    const originalWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1280 });
+
+    let unmount: (() => void) | undefined;
+    try {
+      ({ unmount } = render(<UserGames />));
+
+      expect(screen.queryByRole('switch', { name: 'Hide filters' })).not.toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Teams' }).closest(`.${scheduleLayoutStyles.filters}`))
+        .not.toHaveClass(scheduleLayoutStyles.filtersHidden);
+      expect(screen.queryByRole('button', { name: 'Google Calendar Sync' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Generate Score Card' })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'More actions' }));
+
+      expect(screen.getByRole('button', { name: 'Google Calendar Sync' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Generate Score Card' })).toBeInTheDocument();
+    } finally {
+      unmount?.();
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: originalWidth,
+      });
+    }
+  });
+
   it('omits the Games section title from the mobile toolbar', () => {
     const originalWidth = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 640 });
@@ -751,13 +808,18 @@ describe('UserGames schedule views', () => {
       expect(within(weekViewButton).getByText('Week view')).toBeInTheDocument();
       expect(within(monthViewButton).getByText('Month view')).toBeInTheDocument();
 
-      const googleCalendarButton = screen.getByRole('button', { name: 'Google Calendar Sync' });
-      const scoreCardButton = screen.getByRole('button', { name: 'Generate Score Card' });
-      expect(googleCalendarButton).toHaveClass(styles.mobileToolbarAction);
-      expect(scoreCardButton).toHaveClass(styles.mobileToolbarAction);
-      expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
+      const moreActionsButton = screen.getByRole('button', { name: 'More actions' });
+      expect(moreActionsButton.parentElement).toHaveClass(styles.mobileMoreActions);
+      expect(moreActionsButton.parentElement?.parentElement).toHaveClass(
+        styles.mobileToolbarActions,
+      );
       expect(filtersButton.parentElement).toHaveClass(styles.mobileToolbarActions);
       expect(filtersButton.parentElement?.lastElementChild).toBe(filtersButton);
+
+      await user.click(moreActionsButton);
+      expect(screen.getByRole('button', { name: 'Google Calendar Sync' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Generate Score Card' })).toBeInTheDocument();
+
       await user.click(filtersButton);
 
       const filtersDrawer = screen.getByRole('dialog', { name: 'Filters' });
@@ -811,13 +873,8 @@ describe('UserGames schedule views', () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
-    const googleCalendarButton = screen.getByRole('button', {
-      name: 'Google Calendar sync settings',
-    });
-    expect(googleCalendarButton).not.toHaveTextContent('Google Calendar');
-    expect(googleCalendarButton.querySelector('[data-google-logo]')).toBeInTheDocument();
-
-    await user.click(googleCalendarButton);
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Google Calendar Sync' }));
 
     expect(screen.getByText('Google Calendar Sync')).toBeInTheDocument();
     expect(
@@ -864,20 +921,14 @@ describe('UserGames schedule views', () => {
     });
 
     render(<UserGames />);
-    await user.click(
-      screen.getByRole('button', {
-        name: 'Google Calendar sync settings',
-      }),
-    );
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Google Calendar Sync' }));
     await user.click(screen.getByRole('button', { name: 'Sync Now' }));
 
     expect(screen.queryByText('Google Calendar Sync')).not.toBeInTheDocument();
-    const syncingButton = screen.getByRole('button', {
-      name: 'Google Calendar sync in progress',
-    });
-    expect(
-      within(syncingButton).getByRole('status', { name: 'Syncing Google Calendar' }),
-    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    expect(screen.getByRole('button', { name: 'Google Calendar Sync' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Generate Score Card' })).toBeEnabled();
     expect(mockSyncGoogleCalendarWithProgress).toHaveBeenCalledWith(
       expect.objectContaining({ timeZone: 'Asia/Manila' }),
     );
@@ -903,7 +954,7 @@ describe('UserGames schedule views', () => {
         progress: 1,
       }),
     );
-    expect(screen.getByRole('button', { name: 'Google Calendar sync settings' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Google Calendar Sync' })).toBeEnabled();
   });
 
   it('shows schedule skeletons for calendar and Week views', async () => {
@@ -1325,9 +1376,10 @@ describe('UserGames schedule views', () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
-    await user.click(screen.getByRole('button', { name: /Generate Score Card/ }));
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Generate Score Card' }));
 
-    expect(screen.getAllByText('Generate Score Card')).toHaveLength(2);
+    expect(screen.getByText('Generate Score Card')).toBeInTheDocument();
     expect(screen.getByText('Score image form')).toBeInTheDocument();
   });
 
@@ -1367,7 +1419,7 @@ describe('UserGames schedule views', () => {
 
     await user.click(screen.getByRole('button', { name: 'Download score card' }));
 
-    expect(screen.getAllByText('Generate Score Card')).toHaveLength(2);
+    expect(screen.getByText('Generate Score Card')).toBeInTheDocument();
     expect(screen.getByText('OPP @ HOM')).toBeInTheDocument();
     expect(screen.getByText('Score 1-2')).toBeInTheDocument();
     expect(screen.getByText((content) => content.startsWith('Suffix'))).toBeInTheDocument();

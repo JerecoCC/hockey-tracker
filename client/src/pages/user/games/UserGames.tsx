@@ -22,6 +22,7 @@ import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
+import MoreActionsMenu from '@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu';
 import MultiSelect, {
   type MultiSelectOption,
 } from '@jerecocc/tracker-ui/components/MultiSelect/MultiSelect';
@@ -69,7 +70,8 @@ const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/Scor
 import { API, authHeaders } from '@/lib/apiClient';
 const WEEK_STORAGE_KEY = 'user-games-week-start';
 const CALENDAR_MONTH_STORAGE_KEY = 'user-games-calendar-month';
-const USER_GAMES_MOBILE_MAX_WIDTH = 768;
+const USER_GAMES_MOBILE_MAX_WIDTH = 767;
+const USER_GAMES_TABLET_MAX_WIDTH = 1024;
 const USER_WEEK_SUMMARY_STICKY_TOP = '52px';
 const USER_WEEK_SUMMARY_STICKY_TOP_PX = 52;
 const USER_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX = 8;
@@ -80,22 +82,28 @@ const getUserWeekSummaryActiveMarker = (summaryCard: HTMLDivElement | null): num
   (summaryCard?.getBoundingClientRect().bottom ?? USER_WEEK_SUMMARY_STICKY_TOP_PX) +
   USER_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX;
 
-const isUserGamesMobileView = () =>
-  typeof window !== 'undefined' && window.innerWidth <= USER_GAMES_MOBILE_MAX_WIDTH;
+type UserGamesViewport = 'mobile' | 'tablet' | 'desktop';
 
-const useUserGamesMobileView = () => {
-  const [isMobileView, setIsMobileView] = useState(isUserGamesMobileView);
+const getUserGamesViewport = (): UserGamesViewport => {
+  if (typeof window === 'undefined') return 'desktop';
+  if (window.innerWidth <= USER_GAMES_MOBILE_MAX_WIDTH) return 'mobile';
+  if (window.innerWidth <= USER_GAMES_TABLET_MAX_WIDTH) return 'tablet';
+  return 'desktop';
+};
+
+const useUserGamesViewport = () => {
+  const [viewport, setViewport] = useState<UserGamesViewport>(getUserGamesViewport);
 
   useEffect(() => {
-    const updateMobileView = () => setIsMobileView(isUserGamesMobileView());
+    const updateViewport = () => setViewport(getUserGamesViewport());
 
-    window.addEventListener('resize', updateMobileView, { passive: true });
-    updateMobileView();
+    window.addEventListener('resize', updateViewport, { passive: true });
+    updateViewport();
 
-    return () => window.removeEventListener('resize', updateMobileView);
+    return () => window.removeEventListener('resize', updateViewport);
   }, []);
 
-  return isMobileView;
+  return viewport;
 };
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -708,7 +716,9 @@ const CalendarGameCard = ({
 const UserGames = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const isMobileView = useUserGamesMobileView();
+  const viewport = useUserGamesViewport();
+  const isMobileView = viewport === 'mobile';
+  const isTabletView = viewport === 'tablet';
   const initialStoredCalendarMonth = getStoredCalendarMonth();
   const [weekStart, setWeekStart] = useState<Date>(() => getStoredWeekStart());
   const [calendarMonth, setCalendarMonth] = useState<Date>(
@@ -1361,9 +1371,9 @@ const UserGames = () => {
     : 'Show skipped games';
   const skippedGamesToggle = (
     <ToggleButton
-      variant="switch"
+      mode="switch"
       active={showSkippedGames}
-      onClick={() => setFilterValue('showSkippedGames', !showSkippedGames)}
+      onActiveChange={() => setFilterValue('showSkippedGames', !showSkippedGames)}
       activeIcon="visibility"
       inactiveIcon="visibility_off"
       activeTooltip={isMobileView ? undefined : 'Hide skipped games'}
@@ -1420,7 +1430,13 @@ const UserGames = () => {
   const periodPickerControl =
     view === 'list' ? (
       <PeriodPicker
-        className={isMobileView ? styles.mobilePeriodPicker : undefined}
+        className={
+          isMobileView
+            ? styles.mobilePeriodPicker
+            : isTabletView
+              ? styles.tabletPeriodPicker
+              : undefined
+        }
         value={dateToISO(weekStart)}
         label={fmtWeekRange(weekStart, weekEnd)}
         onChange={handleWeekPeriodChange}
@@ -1429,7 +1445,13 @@ const UserGames = () => {
       />
     ) : (
       <PeriodPicker
-        className={isMobileView ? styles.mobilePeriodPicker : undefined}
+        className={
+          isMobileView
+            ? styles.mobilePeriodPicker
+            : isTabletView
+              ? styles.tabletPeriodPicker
+              : undefined
+        }
         kind="month"
         value={toMonthPickerValue(calendarMonth)}
         label={MONTH_LABEL_FMT.format(calendarMonth)}
@@ -1497,41 +1519,64 @@ const UserGames = () => {
     />
   );
 
+  const moreActionsControl = (
+    <GoogleCalendarSyncControl
+      renderTrigger={({ busy, openSettings }) => (
+        <MoreActionsMenu
+          size="medium"
+          iconHeight={isMobileView ? 'field' : 'button'}
+          iconSize={isMobileView ? '1.25rem' : undefined}
+          wrapperClassName={isMobileView ? styles.mobileMoreActions : undefined}
+          items={[
+            {
+              label: 'Google Calendar Sync',
+              icon: 'calendar_month',
+              disabled: busy,
+              onClick: openSettings,
+            },
+            {
+              label: 'Generate Score Card',
+              icon: 'image',
+              onClick: () => setScoreImageOpen(true),
+            },
+          ]}
+        />
+      )}
+    />
+  );
+
+  const standardToolbarActions = (
+    <div className={styles.viewFilterControls}>
+      {viewSegmentedControl}
+      {isTabletView && (
+        <ToggleButton
+          mode="switch"
+          active={filtersVisible}
+          onActiveChange={() => setFiltersVisible((visible) => !visible)}
+          activeIcon="filter_list"
+          inactiveIcon="filter_list"
+          activeTooltip="Hide filters"
+          inactiveTooltip="Show filters"
+          className={styles.filterVisibilitySwitch}
+        />
+      )}
+      {moreActionsControl}
+    </div>
+  );
+
   return (
     <div className={styles.page}>
       <Section
         className={styles.controlsCard}
         noHeaderMargin
         title={
-          isMobileView ? undefined : <ScheduleGamesTitle picker={periodPickerControl} />
+          isMobileView || isTabletView ? undefined : (
+            <ScheduleGamesTitle picker={periodPickerControl} />
+          )
         }
         action={
-          isMobileView ? undefined : (
-            <ScheduleGamesActions>
-              <div className={styles.viewFilterControls}>
-                <GoogleCalendarSyncControl />
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="image"
-                  iconHeight="button"
-                  aria-label="Generate Score Card"
-                  tooltip="Generate Score Card"
-                  onClick={() => setScoreImageOpen(true)}
-                />
-                {viewSegmentedControl}
-                <ToggleButton
-                  variant="switch"
-                  active={filtersVisible}
-                  onClick={() => setFiltersVisible((visible) => !visible)}
-                  activeIcon="filter_list"
-                  inactiveIcon="filter_list"
-                  activeTooltip="Hide filters"
-                  inactiveTooltip="Show filters"
-                  className={styles.filterVisibilitySwitch}
-                />
-              </div>
-            </ScheduleGamesActions>
+          isMobileView || isTabletView ? undefined : (
+            <ScheduleGamesActions>{standardToolbarActions}</ScheduleGamesActions>
           )
         }
       >
@@ -1540,38 +1585,20 @@ const UserGames = () => {
             <div className={styles.mobileToolbarRow}>{periodPickerControl}</div>
             <div className={styles.mobileToolbarRow}>{viewSegmentedControl}</div>
             <div className={styles.mobileToolbarActions}>
-              <GoogleCalendarSyncControl
-                renderTrigger={({ busy, openSettings }) => (
-                  <Button
-                    type="button"
-                    variant="outlined"
-                    intent="neutral"
-                    icon="calendar_month"
-                    className={styles.mobileToolbarAction}
-                    aria-label="Google Calendar Sync"
-                    disabled={busy}
-                    onClick={openSettings}
-                  >
-                    Google Calendar Sync
-                  </Button>
-                )}
-              />
-              <Button
-                type="button"
-                variant="outlined"
-                intent="neutral"
-                icon="image"
-                className={styles.mobileToolbarAction}
-                aria-label="Generate Score Card"
-                onClick={() => setScoreImageOpen(true)}
-              >
-                Generate Score Card
-              </Button>
+              {moreActionsControl}
               {mobileFilterButton}
             </div>
           </div>
+        ) : isTabletView ? (
+          <>
+            <div className={styles.tabletToolbar}>
+              {periodPickerControl}
+              {standardToolbarActions}
+            </div>
+            <ScheduleFilters visible={filtersVisible}>{filterControls}</ScheduleFilters>
+          </>
         ) : (
-          <ScheduleFilters visible={filtersVisible}>{filterControls}</ScheduleFilters>
+          <ScheduleFilters visible>{filterControls}</ScheduleFilters>
         )}
       </Section>
 

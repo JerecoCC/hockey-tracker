@@ -18,6 +18,20 @@
   flex-wrap: nowrap;
 }
 
+.tabletToolbar {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: $space-md;
+  width: 100%;
+  min-width: 0;
+}
+
+.tabletPeriodPicker.tabletPeriodPicker {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 // ── Toolbar (week nav + filter selects) ───────────────────────────────
 // ── Week navigation (prev btn + date picker + next btn) ───────────────
 // ── Filter row (league · favorite teams · status · timezone) ──────────
@@ -223,7 +237,11 @@
   --calendar-game-actions-bg: color-mix(in srgb, var(--app-surface, #f8fafc) 94%, transparent);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
+  .weekSummarySentinel {
+    margin-bottom: -$space-xs;
+  }
+
   .mobileToolbar {
     display: flex;
     flex-direction: column;
@@ -249,25 +267,20 @@
   }
 
   .mobileToolbarActions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 42px;
-    align-items: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
     gap: $space-sm;
     width: 100%;
     min-width: 0;
   }
 
-  .mobileToolbarAction.mobileToolbarAction {
-    min-width: 0;
-    min-height: 42px;
-    padding: $space-sm;
-    line-height: 1.2;
-    white-space: normal;
+  .mobileMoreActions {
+    flex: 0 0 auto;
   }
 
   .mobileToolbarActions .mobileFilterButton {
-    align-self: center;
-    justify-self: end;
+    flex: 0 0 42px;
   }
 
   .mobileFilters.mobileFilters {
