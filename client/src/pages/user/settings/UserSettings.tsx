@@ -8,7 +8,7 @@ import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAva
 import SearchField from '@jerecocc/tracker-ui/components/SearchField/SearchField';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
-import ToggleButton from '@jerecocc/tracker-ui/components/ToggleButton/ToggleButton';
+import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
@@ -147,8 +147,8 @@ const UserSettings = () => {
           <div className={styles.accountRight}>
             <div className={styles.themeControl}>
               <span className={styles.themeLabel}>Dark mode</span>
-              <ToggleButton
-                mode="switch"
+              <Toggle
+                variant="toggle"
                 active={isDarkMode}
                 onActiveChange={toggleTheme}
                 activeIcon="dark_mode"

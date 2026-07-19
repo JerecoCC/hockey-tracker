@@ -9,7 +9,7 @@ import SearchableList from '@jerecocc/tracker-ui/components/SearchableList/Searc
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
-import ToggleButton from '@jerecocc/tracker-ui/components/ToggleButton/ToggleButton';
+import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { missingPlayerDataIndicator } from '@/lib/playerDataStatus';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -338,9 +338,9 @@ export const LeaguePlayersListSection = ({
             actions={
               onWarningsOnlyChange ? (
                 <span className={styles.playerFilterToggles}>
-                  <ToggleButton
+                  <Toggle
                     active={warningsOnly}
-                    mode="switch"
+                    variant="toggle"
                     ariaLabel="Warnings only"
                     activeIcon="warning"
                     inactiveIcon="warning"

@@ -6,7 +6,7 @@ import Field from '@jerecocc/tracker-ui/components/Field/Field';
 import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Select from '@jerecocc/tracker-ui/components/Select/Select';
-import ToggleButton from '@jerecocc/tracker-ui/components/ToggleButton/ToggleButton';
+import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
 /** Minimal group shape used for scope filtering — satisfied by both SeasonGroupRecord and GroupRecord. */
 export interface GroupEntry {
   id: string;
@@ -702,15 +702,14 @@ const BracketRulesModal = ({
                   disabled={isSubmitting}
                 />
                 {r.series > 1 && (
-                  <ToggleButton
+                  <Toggle
                     active={matchupLabelsOpen}
+                    variant="button"
                     icon="account_tree"
-                    iconHeight="field"
                     activeTooltip="Hide matchup labels"
                     inactiveTooltip={
                       hasCustomMatchupLabels ? 'Edit matchup labels' : 'Add matchup labels'
                     }
-                    className={styles.bracketRulesMatchupToggle}
                     disabled={isSubmitting}
                     onActiveChange={() =>
                       setExpandedMatchupLabelRounds((prev) => ({

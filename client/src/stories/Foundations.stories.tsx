@@ -10,7 +10,7 @@ import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAva
 import Skeleton, { type SkeletonVariant } from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import Tag, { type TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
-import ToggleButton from '@jerecocc/tracker-ui/components/ToggleButton/ToggleButton';
+import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
 import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import {
   bosLogo,
@@ -103,27 +103,28 @@ export const ControlsAndStatus = {
         </StoryPanel>
       </StorySection>
 
-      <StorySection title="ToggleButton">
+      <StorySection title="Toggle">
         <StoryGrid>
           <StoryPanel>
             <Stateful initial={true}>
               {(active, setActive) => (
                 <div className="storybook-row">
-                  <ToggleButton
+                  <Toggle
                     active={active}
-                    onActiveChange={() => setActive(!active)}
-                    icon="filter_list"
+                    onActiveChange={setActive}
+                    variant="button"
+                    activeIcon="filter_list"
+                    inactiveIcon="filter_list_off"
                     activeTooltip="Hide filters"
                     inactiveTooltip="Show filters"
-                  >
-                    Filters
-                  </ToggleButton>
-                  <ToggleButton
+                  />
+                  <Toggle
                     active={active}
-                    onActiveChange={() => setActive(!active)}
-                    mode="switch"
+                    onActiveChange={setActive}
+                    variant="toggle"
                     activeIcon="check"
                     inactiveIcon="close"
+                    ariaLabel="Toggle option"
                   />
                 </div>
               )}

@@ -4,7 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { toast, type TypeOptions } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
-import ToggleButton from '@jerecocc/tracker-ui/components/ToggleButton/ToggleButton';
+import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
 import MoreActionsMenu from '@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu';
@@ -1150,8 +1150,8 @@ const SeasonGamesTab = ({
                   },
                 ]}
               />
-              <ToggleButton
-                mode="switch"
+              <Toggle
+                variant="toggle"
                 active={filtersVisible}
                 onActiveChange={() => setFiltersVisible((v) => !v)}
                 icon="filter_list"

@@ -10,7 +10,7 @@ import Field from '@jerecocc/tracker-ui/components/Field/Field';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
-import ToggleButton from '@jerecocc/tracker-ui/components/ToggleButton/ToggleButton';
+import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
 import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playerSearch';
@@ -407,8 +407,8 @@ const LineupRosterModal = ({
             placeholder="Search players..."
             searchDisabled={controlsDisabled}
             actions={
-              <ToggleButton
-                mode="switch"
+              <Toggle
+                variant="toggle"
                 active={showProspects}
                 onActiveChange={() => setShowProspects((v) => !v)}
                 activeIcon="visibility"

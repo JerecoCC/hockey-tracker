@@ -195,6 +195,7 @@ export const RowHelpers = {
               variant="outlined"
               intent="neutral"
               icon="edit"
+              tooltip="Edit"
               onClick={noop}
             />
             <Button
@@ -202,6 +203,7 @@ export const RowHelpers = {
               variant="outlined"
               intent="danger"
               icon="delete"
+              tooltip="Delete"
               onClick={noop}
             />
           </ActionOverlay>
