@@ -240,18 +240,20 @@ jest.mock('@jerecocc/tracker-ui/components/ToggleButton/ToggleButton', () => ({
   __esModule: true,
   default: ({
     active,
+    onActiveChange,
     onClick,
     activeTooltip,
     inactiveTooltip,
+    mode,
     variant,
     ariaLabel,
   }: any) => (
     <button
       type="button"
-      role={variant === 'switch' ? 'switch' : undefined}
-      aria-checked={variant === 'switch' ? active : undefined}
+      role={(mode ?? variant) === 'switch' ? 'switch' : undefined}
+      aria-checked={(mode ?? variant) === 'switch' ? active : undefined}
       aria-label={ariaLabel ?? (active ? activeTooltip : inactiveTooltip)}
-      onClick={onClick}
+      onClick={() => (onActiveChange ? onActiveChange(!active) : onClick?.())}
     >
       {ariaLabel ?? (active ? activeTooltip : inactiveTooltip)}
     </button>
