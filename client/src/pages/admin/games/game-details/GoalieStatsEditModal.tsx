@@ -688,7 +688,7 @@ const GoalieStatsEditModal = ({
               key={stat.goalie_id}
               mode="static"
               variant="light"
-              hoverRevealActions
+              actionsVisibility="hover"
               className={
                 teamGoalieCount > 1 && goalieHasStarterStint
                   ? styles.goalieStatsEditorGroupMulti
