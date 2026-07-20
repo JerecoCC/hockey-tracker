@@ -219,9 +219,11 @@ const GroupNode = ({
       ) : (
         <Accordion
           variant="light"
-          className={styles.groupAccordion}
-          rowClassName={styles.groupHeader}
-          bodyClassName={styles.groupBody}
+          className={{
+            root: styles.groupAccordion,
+            header: styles.groupHeader,
+            body: styles.groupBody,
+          }}
           label={<span className={styles.groupLabel}>{group.name}</span>}
           headerRight={
             <>

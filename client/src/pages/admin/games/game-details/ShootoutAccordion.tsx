@@ -455,8 +455,7 @@ const ShootoutAccordion = ({
     <Accordion
       mode="static"
       variant="light"
-      bodyClassName={styles.soBody}
-      className={className}
+      className={{ root: className, body: styles.soBody }}
       label={
         <span className={labelClassName}>
           Shootout

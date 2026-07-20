@@ -329,8 +329,10 @@ const ScoringCard = ({
               ref={setAccordionRef ? setAccordionRef(periodId) : undefined}
               mode="static"
               variant="light"
-              bodyClassName={styles.periodAccordionBody}
-              className={isActive ? styles.periodItemActive : undefined}
+              className={{
+                root: isActive ? styles.periodItemActive : undefined,
+                body: styles.periodAccordionBody,
+              }}
               label={<span className={styles.periodLabel}>{label}</span>}
               hoverActions={
                 isActive && onScoreGoal && onOpenShotsModal
@@ -445,8 +447,10 @@ const ScoringCard = ({
                     ref={isLast && setAccordionRef ? setAccordionRef(PERIOD.OVERTIME) : undefined}
                     mode="static"
                     variant="light"
-                    bodyClassName={styles.periodAccordionBody}
-                    className={isThisActive ? styles.periodItemActive : undefined}
+                    className={{
+                      root: isThisActive ? styles.periodItemActive : undefined,
+                      body: styles.periodAccordionBody,
+                    }}
                     label={<span className={styles.periodLabel}>Overtime {otNum}</span>}
                     hoverActions={
                       isThisActive && onScoreGoal && onOpenShotsModal
@@ -523,8 +527,10 @@ const ScoringCard = ({
                 ref={setAccordionRef ? setAccordionRef(PERIOD.OVERTIME) : undefined}
                 mode="static"
                 variant="light"
-                bodyClassName={styles.periodAccordionBody}
-                className={isOTActive ? styles.periodItemActive : undefined}
+                className={{
+                  root: isOTActive ? styles.periodItemActive : undefined,
+                  body: styles.periodAccordionBody,
+                }}
                 label={<span className={styles.periodLabel}>Overtime</span>}
                 hoverActions={
                   isOTActive && onScoreGoal && onOpenShotsModal

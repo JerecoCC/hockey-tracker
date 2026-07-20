@@ -689,12 +689,13 @@ const GoalieStatsEditModal = ({
               mode="static"
               variant="light"
               actionsVisibility="hover"
-              className={
-                teamGoalieCount > 1 && goalieHasStarterStint
-                  ? styles.goalieStatsEditorGroupMulti
-                  : undefined
-              }
-              bodyClassName={styles.goalieStatsEditorBody}
+              className={{
+                root:
+                  teamGoalieCount > 1 && goalieHasStarterStint
+                    ? styles.goalieStatsEditorGroupMulti
+                    : undefined,
+                body: styles.goalieStatsEditorBody,
+              }}
               label={
                 <span className={styles.goalieNameCell}>
                   <TeamLogo

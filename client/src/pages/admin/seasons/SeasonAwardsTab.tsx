@@ -1625,14 +1625,16 @@ const SeasonAwardsTab = ({
                   key={award.award_id}
                   mode="static"
                   variant="light"
-                  className={styles.awardItem}
-                  rowClassName={styles.awardHeader}
-                  bodyClassName={[
-                    styles.awardContent,
-                    rendersColumnList ? styles.awardContentList : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
+                  className={{
+                    root: styles.awardItem,
+                    header: styles.awardHeader,
+                    body: [
+                      styles.awardContent,
+                      rendersColumnList ? styles.awardContentList : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' '),
+                  }}
                   label={awardLabel}
                   headerRight={awardActions}
                 >

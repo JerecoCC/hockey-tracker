@@ -227,8 +227,7 @@ const TeamAwardsTab = ({ teamId, mode = 'admin' }: Props) => {
               }
               defaultOpen
               variant="light"
-              className={styles.awardGroup}
-              bodyClassName={styles.awardAccordionBody}
+              className={{ root: styles.awardGroup, body: styles.awardAccordionBody }}
             >
               <ResponsiveList className={styles.awardTeamList}>
                 {group.awards.map((award) => (

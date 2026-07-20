@@ -3590,8 +3590,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
               }
               defaultOpen
               variant="light"
-              className={styles.awardGroup}
-              bodyClassName={styles.awardAccordionBody}
+              className={{ root: styles.awardGroup, body: styles.awardAccordionBody }}
             >
               <ResponsiveList className={styles.awardTeamList}>
                 {group.awards.map((award) => (
@@ -3873,10 +3872,12 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                                   <Accordion
                                     defaultOpen={false}
                                     variant="light"
-                                    className={styles.stintAccordion}
-                                    rowClassName={styles.stintHeader}
-                                    labelWrapperClassName={styles.stintHeaderLabelWrap}
-                                    labelClassName={styles.stintHeaderAccordionLabel}
+                                    className={{
+                                      root: styles.stintAccordion,
+                                      header: styles.stintHeader,
+                                      labelWrapper: styles.stintHeaderLabelWrap,
+                                      label: styles.stintHeaderAccordionLabel,
+                                    }}
                                     label={
                                       <span className={styles.stintHeaderLabel}>
                                         <TeamLogo
