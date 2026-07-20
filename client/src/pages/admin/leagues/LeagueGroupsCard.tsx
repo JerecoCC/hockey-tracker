@@ -175,6 +175,7 @@ const GroupNode = (props: GroupNodeProps) => {
       ) : (
         <Accordion
           className={depth > 0 ? styles.groupItemChild : undefined}
+          bodyClassName={styles.groupAccordionBody}
           label={
             <span className={styles.groupLabel}>
               {group.name}

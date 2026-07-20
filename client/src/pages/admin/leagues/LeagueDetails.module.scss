@@ -1122,6 +1122,10 @@ $league-tab-list-gap: $space-md;
   border-color: rgba(255, 255, 255, 0.06);
 }
 
+.groupAccordionBody {
+  --accordion-body-padding: 0;
+}
+
 // Padding wrapper for the nested sub-group list rendered inside Accordion body.
 .groupNestedList {
   padding: $space-sm $space-md $space-md;

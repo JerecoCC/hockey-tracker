@@ -618,6 +618,7 @@
     --award-scrollbar-size: 8px;
     --award-divider-gap: #{$space-sm};
     --award-content-padding: #{$space-md};
+    --accordion-body-padding: var(--award-content-padding);
     --award-scrollbar-lane-width: var(--award-scrollbar-size);
     --award-scrollbar-thumb-inset: 0.125rem;
     --award-horizontal-scroll-padding: calc(
@@ -699,7 +700,6 @@
     min-height: var(--award-content-height);
     max-height: var(--award-content-height);
     min-width: 0;
-    padding: var(--award-content-padding);
     overflow: hidden;
   }
 

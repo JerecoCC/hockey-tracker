@@ -3876,7 +3876,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                                     rowClassName={styles.stintHeader}
                                     labelWrapperClassName={styles.stintHeaderLabelWrap}
                                     labelClassName={styles.stintHeaderAccordionLabel}
-                                    bodyClassName={styles.stintBody}
                                     label={
                                       <span className={styles.stintHeaderLabel}>
                                         <TeamLogo

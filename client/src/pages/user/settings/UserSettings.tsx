@@ -198,7 +198,6 @@ const UserSettings = () => {
                   return (
                     <Accordion
                       key={league.id}
-                      bodyClassName={styles.leagueBody}
                       mode="static"
                       label={
                         <div className={styles.leagueHeader}>
