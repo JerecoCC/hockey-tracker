@@ -61,6 +61,10 @@
   width: fit-content;
 }
 
+.lastFiveAccordionBody {
+  --accordion-body-padding: 0;
+}
+
 // ── List view ─────────────────────────────────────────────────────────────────
 
 // Container for list-mode rows inside the accordion body

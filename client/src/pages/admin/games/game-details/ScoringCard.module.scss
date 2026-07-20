@@ -12,6 +12,10 @@ $_goal-time-width: 4.25rem;
   gap: $space-sm;
 }
 
+.periodAccordionBody {
+  --accordion-body-padding: 0;
+}
+
 // Passed as className to Accordion to tint the border and label for the active period.
 $_active-period-color: color.mix($accent, $bg-card, 50%);
 $_active-period-bg: color.mix($accent, $bg-card, 18%);

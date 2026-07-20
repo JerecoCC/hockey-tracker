@@ -42,6 +42,7 @@ export default function LastTeamGamesAccordion({
     <Accordion
       mode="static"
       variant="light"
+      bodyClassName={styles.lastFiveAccordionBody}
       label={
         <span className={styles.lastFiveTeamHeader}>
           <TeamLogo

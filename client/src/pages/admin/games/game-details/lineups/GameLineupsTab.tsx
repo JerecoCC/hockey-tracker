@@ -158,6 +158,7 @@ const GameLineupsTab = ({
     <Accordion
       mode="static"
       variant="light"
+      bodyClassName={styles.lineupAccordionBody}
       label={
         <span className={styles.accordionTeamLabel}>
           <TeamLogo

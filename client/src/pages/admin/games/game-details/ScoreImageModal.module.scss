@@ -849,6 +849,7 @@
 
 .playoff {
   &Section {
+    --grouped-fields-padding: 0;
     --grouped-fields-grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr));
   }
 

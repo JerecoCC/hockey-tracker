@@ -194,7 +194,6 @@ const GameAutofillManualMoveReportModal = ({ open, reports, onClose }: Props) =>
             <Accordion
               key={`${report.gameId}-${report.leagueCode}`}
               className={styles.gameAccordion}
-              bodyClassName={styles.gameAccordionBody}
               variant="light"
               defaultOpen
               label={
