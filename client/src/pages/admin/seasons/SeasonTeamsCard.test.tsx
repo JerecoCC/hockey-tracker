@@ -132,7 +132,7 @@ describe('SeasonTeamsCard', () => {
     const subgroupAccordion = container.querySelector('.accordion');
     expect(subgroupAccordion).toHaveTextContent('Metropolitan');
     const subgroupBadge = subgroupAccordion?.querySelector('.groupTeamCount');
-    expect(subgroupBadge).toHaveClass('badge');
+    expect(subgroupBadge).toHaveClass('metricTag');
     expect(subgroupBadge).not.toHaveAttribute('title');
     expect(parentGroup?.querySelector('.groupSubgroupList')).toBeInTheDocument();
 

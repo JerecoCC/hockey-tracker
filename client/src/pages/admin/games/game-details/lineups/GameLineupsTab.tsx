@@ -4,6 +4,7 @@ import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
+import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import useTeamPlayers from '@/hooks/useTeamPlayers';
@@ -174,7 +175,9 @@ const GameLineupsTab = ({
           {teamName}
         </span>
       }
-      labelMeta={<span className={styles.accordionTeamCount}>({rosterEntries.length}/23)</span>}
+      headerRight={
+        <MetricTag value={rosterEntries.length} label="/23" position="postfix" />
+      }
       hoverActions={
         lineupActionsLocked
           ? []

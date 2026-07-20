@@ -3,6 +3,7 @@ import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
 import ActionOverlay from '@jerecocc/tracker-ui/components/ActionOverlay/ActionOverlay';
 import AddRowBar from '@jerecocc/tracker-ui/components/AddRowBar/AddRowBar';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import Pagination, { PaginatedTable } from '@jerecocc/tracker-ui/components/Pagination/Pagination';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Table, { type Column } from '@jerecocc/tracker-ui/components/Table/Table';
@@ -95,8 +96,12 @@ export const Surfaces = {
       <StorySection title="Accordion">
         <Accordion
           label="Playoff Bracket Rule"
-          labelMeta={<Tag label="3 matchups" />}
-          headerRight={<Tag label="Active" intent="success" />}
+          headerRight={
+            <>
+              <MetricTag value={3} label="matchups" position="postfix" />
+              <Tag label="Active" intent="success" />
+            </>
+          }
           hoverActions={[
             { icon: 'edit', tooltip: 'Edit', onClick: noop },
             { icon: 'delete', intent: 'danger', tooltip: 'Delete', onClick: noop },

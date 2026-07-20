@@ -5,6 +5,7 @@ import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
+import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import SearchableList from '@jerecocc/tracker-ui/components/SearchableList/SearchableList';
 import Select from '@jerecocc/tracker-ui/components/Select/Select';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
@@ -222,20 +223,21 @@ const GroupNode = ({
           rowClassName={styles.groupHeader}
           bodyClassName={styles.groupBody}
           label={<span className={styles.groupLabel}>{group.name}</span>}
-          labelMeta={
-            <Badge
-              className={styles.groupTeamCount}
-              value={teamCount}
-              label={teamCountLabel}
-            />
-          }
           headerRight={
-            roleLabel ? (
-              <Tag
-                label={roleLabel}
-                intent={group.role === 'division' ? 'success' : 'accent'}
+            <>
+              <MetricTag
+                className={styles.groupTeamCount}
+                value={teamCount}
+                label={teamCountLabel}
+                position="postfix"
               />
-            ) : null
+              {roleLabel ? (
+                <Tag
+                  label={roleLabel}
+                  intent={group.role === 'division' ? 'success' : 'accent'}
+                />
+              ) : null}
+            </>
           }
         >
           {groupBody}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
 import AwardBanner from '@/shared/AwardBanner/AwardBanner';
-import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
+import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
 import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
@@ -215,10 +215,11 @@ const TeamAwardsTab = ({ teamId, mode = 'admin' }: Props) => {
             <Accordion
               key={group.awardId}
               label={awardInfoLabel(group)}
-              labelMeta={
-                <Badge
+              headerRight={
+                <MetricTag
                   value={group.awards.length}
                   label={group.awards.length === 1 ? 'win' : 'wins'}
+                  position="postfix"
                   aria-label={`${group.awards.length} ${
                     group.awards.length === 1 ? 'win' : 'wins'
                   }`}

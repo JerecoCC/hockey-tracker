@@ -6,7 +6,7 @@ import axios from 'axios';
 import { toast, type TypeOptions } from 'react-toastify';
 import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
 import AwardBanner from '@/shared/AwardBanner/AwardBanner';
-import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
+import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import Banner from '@jerecocc/tracker-ui/components/Banner/Banner';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
@@ -3578,10 +3578,11 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             <Accordion
               key={group.awardId}
               label={awardInfoLabel(group)}
-              labelMeta={
-                <Badge
+              headerRight={
+                <MetricTag
                   value={group.awards.length}
                   label={group.awards.length === 1 ? 'win' : 'wins'}
+                  position="postfix"
                   aria-label={`${group.awards.length} ${
                     group.awards.length === 1 ? 'win' : 'wins'
                   }`}
