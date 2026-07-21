@@ -1,21 +1,15 @@
-import {
-  useState,
-  useEffect,
-  type Dispatch,
-  type FormEvent,
-  type SetStateAction,
-} from 'react';
+import { useState, useEffect, type Dispatch, type FormEvent, type SetStateAction } from 'react';
 import type { Control } from 'react-hook-form';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledInputField,
+  ControlledTimePickerField,
+} from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
-import {
-  type GoalieStatRecord,
-  type UpdateGoalieStintData,
-} from '@/hooks/useGameGoalieStats';
+import { type GoalieStatRecord, type UpdateGoalieStintData } from '@/hooks/useGameGoalieStats';
 import fieldStyles from '@/shared/trackerFieldStyles.module.scss';
 import styles from './GameDetailsPage.module.scss';
 import { PERIOD, PERIOD_TITLE_LABEL } from './constants';
@@ -319,7 +313,7 @@ const RecordShotsBody = ({
                 <span className={styles.shotsTeamName}>{row.name}</span>
               </span>
               <div className={styles.shotsFieldWrap}>
-                <Field
+                <ControlledInputField
                   type="number"
                   control={control}
                   name={row.fieldName}
@@ -335,10 +329,9 @@ const RecordShotsBody = ({
         </>
       )}
       {isEndGame && (
-        <Field
+        <ControlledTimePickerField
           label="End Time"
           required
-          type="timepicker"
           control={control}
           name="end_time"
           disabled={submitting}
@@ -419,7 +412,8 @@ const RecordShotsBody = ({
             variant="field"
             options={(['away', 'home'] as const).map((side) => {
               const logo = side === 'away' ? game.away_team.logo : game.home_team.logo;
-              const logoDark = side === 'away' ? game.away_team.logo_dark : game.home_team.logo_dark;
+              const logoDark =
+                side === 'away' ? game.away_team.logo_dark : game.home_team.logo_dark;
               const logoLight =
                 side === 'away' ? game.away_team.logo_light : game.home_team.logo_light;
               const code = side === 'away' ? game.away_team.code : game.home_team.code;

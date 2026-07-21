@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import BulkCreateModal from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField } from '@/components/form/ControlledFields';
 import ImagePreviewModal from '@jerecocc/tracker-ui/components/ImagePreviewModal/ImagePreviewModal';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { minLogo, noop, StoryPanel } from './storyData';
@@ -86,14 +86,14 @@ export const BulkCreate = {
       }
       renderRow={({ index, control, isSubmitting, autoFocus, deleteButton }) => (
         <>
-          <Field
+          <ControlledInputField
             control={control}
             name={`rows.${index}.name`}
             placeholder="Team name"
             disabled={isSubmitting}
             autoFocus={autoFocus}
           />
-          <Field
+          <ControlledInputField
             control={control}
             name={`rows.${index}.code`}
             placeholder="Code"

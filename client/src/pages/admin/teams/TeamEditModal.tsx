@@ -1,6 +1,10 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledColorPickerField,
+  ControlledInputField,
+  ControlledTextareaField,
+} from '@/components/form/ControlledFields';
 import GroupedFields from '@jerecocc/tracker-ui/components/GroupedFields/GroupedFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
@@ -159,7 +163,7 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
           disabled={isSubmitting}
         />
         <div className={styles.identityRow}>
-          <Field
+          <ControlledInputField
             label="Code"
             required
             control={control}
@@ -169,7 +173,7 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
             placeholder="TOR"
             disabled={isSubmitting}
           />
-          <Field
+          <ControlledInputField
             label="Place Name"
             control={control}
             name="place_name"
@@ -177,7 +181,7 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
             autoFocus
             disabled={isSubmitting}
           />
-          <Field
+          <ControlledInputField
             label="Team Name"
             required
             control={control}
@@ -188,14 +192,14 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
           />
         </div>
         <div className={styles.locationRow}>
-          <Field
+          <ControlledInputField
             label="City"
             control={control}
             name="city"
             placeholder="e.g. Toronto"
             disabled={isSubmitting}
           />
-          <Field
+          <ControlledInputField
             label="Home Arena"
             control={control}
             name="home_arena"
@@ -207,31 +211,27 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
           legend="Team Colors"
           className={styles.colorGroup}
         >
-          <Field
+          <ControlledColorPickerField
             label="Primary"
-            type="color"
             control={control}
             name="primary_color"
             disabled={isSubmitting}
           />
-          <Field
+          <ControlledColorPickerField
             label="Secondary"
-            type="color"
             control={control}
             name="secondary_color"
             disabled={isSubmitting}
           />
-          <Field
+          <ControlledColorPickerField
             label="Text"
-            type="color"
             control={control}
             name="text_color"
             disabled={isSubmitting}
           />
         </GroupedFields>
-        <Field
+        <ControlledTextareaField
           label="Description"
-          type="textarea"
           control={control}
           name="description"
           rows={6}

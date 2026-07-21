@@ -26,7 +26,7 @@ jest.mock('@jerecocc/tracker-ui/components/Modal/Modal', () => {
   return MockModal;
 });
 
-jest.mock('@jerecocc/tracker-ui/components/Field/Field', () => {
+jest.mock('@/components/form/ControlledFields', () => {
   const { Controller } = jest.requireActual('react-hook-form');
 
   interface MockFieldProps {
@@ -79,7 +79,15 @@ jest.mock('@jerecocc/tracker-ui/components/Field/Field', () => {
   );
 
   MockField.displayName = 'MockField';
-  return MockField;
+  return {
+    __esModule: true,
+    ControlledSelectField: (props: MockFieldProps) => (
+      <MockField
+        {...props}
+        type="select"
+      />
+    ),
+  };
 });
 
 jest.mock('@jerecocc/tracker-ui/components/LogoUpload/LogoUpload', () => {

@@ -5,7 +5,7 @@ import { useAuth } from '@/context/AuthContext';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField } from '@/components/form/ControlledFields';
 import GoogleButton from '@/shared/GoogleButton/GoogleButton';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import styles from '@/shared/AuthPage/AuthPage.module.scss';
@@ -59,7 +59,7 @@ const LoginPage = () => {
           onSubmit={handleLogin}
           className={styles.form}
         >
-          <Field
+          <ControlledInputField
             control={control}
             name="email"
             type="email"
@@ -71,7 +71,7 @@ const LoginPage = () => {
             rules={{ required: 'Email is required.' }}
           />
 
-          <Field
+          <ControlledInputField
             control={control}
             name="password"
             type="password"

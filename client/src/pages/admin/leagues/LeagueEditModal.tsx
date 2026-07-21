@@ -1,6 +1,11 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledColorPickerField,
+  ControlledInputField,
+  ControlledSelectField,
+  ControlledTextareaField,
+} from '@/components/form/ControlledFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
@@ -145,7 +150,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
           />
         </div>
         <div className={styles.nameCodeRow}>
-          <Field
+          <ControlledInputField
             label="Name"
             required
             control={control}
@@ -155,7 +160,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
             autoFocus
             disabled={isSubmitting}
           />
-          <Field
+          <ControlledInputField
             label="Code"
             required
             control={control}
@@ -167,33 +172,29 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
           />
         </div>
         <div className={styles.colorRow}>
-          <Field
+          <ControlledColorPickerField
             label="Primary Color"
-            type="color"
             control={control}
             name="primary_color"
             disabled={isSubmitting}
           />
-          <Field
+          <ControlledColorPickerField
             label="Text Color"
-            type="color"
             control={control}
             name="text_color"
             disabled={isSubmitting}
           />
         </div>
         <div className={styles.settingsGrid}>
-          <Field
+          <ControlledSelectField
             label="Playoff Series Format"
-            type="select"
             control={control}
             name="best_of_playoff"
             options={BEST_OF_OPTIONS}
             disabled={isSubmitting}
           />
-          <Field
+          <ControlledSelectField
             label="Shootout Rounds"
-            type="select"
             control={control}
             name="best_of_shootout"
             options={SHOOTOUT_OPTIONS}
@@ -202,16 +203,15 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
         </div>
         <div className={styles.scoringSettingsRow}>
           <div>
-            <Field
+            <ControlledSelectField
               label="Scoring System"
-              type="select"
               control={control}
               name="scoring_system"
               options={SCORING_SYSTEM_OPTIONS}
               disabled={isSubmitting}
             />
           </div>
-          <Field
+          <ControlledInputField
             label="Goalie Min TOI"
             type="number"
             control={control}
@@ -222,15 +222,13 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
               required: 'Goalie minimum is required',
               min: { value: 0, message: 'Must be 0 or higher' },
               max: { value: 9999, message: 'Too many minutes' },
-              validate: (value) =>
-                Number.isInteger(Number(value)) || 'Must be a whole number',
+              validate: (value) => Number.isInteger(Number(value)) || 'Must be a whole number',
             }}
             disabled={isSubmitting}
           />
         </div>
-        <Field
+        <ControlledTextareaField
           label="Description"
-          type="textarea"
           control={control}
           name="description"
           rows={6}

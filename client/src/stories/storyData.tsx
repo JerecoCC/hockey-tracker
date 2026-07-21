@@ -1,6 +1,13 @@
 import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledColorPickerField,
+  ControlledDatePickerField,
+  ControlledInputField,
+  ControlledSelectField,
+  ControlledTextareaField,
+  ControlledTimePickerField,
+} from '@/components/form/ControlledFields';
 import type { GameRecord, TeamInfo } from '@/hooks/useGames';
 
 export const noop = () => {};
@@ -194,16 +201,15 @@ export const FormFieldDemo = () => {
 
   return (
     <StoryGrid>
-      <Field
+      <ControlledInputField
         control={form.control}
         name="name"
         label="Name"
         required
       />
-      <Field
+      <ControlledSelectField
         control={form.control}
         name="team"
-        type="select"
         label="Team"
         options={[
           { value: 'mtl', label: 'Montreal Victoire', logo: vicLogo, code: 'MTL' },
@@ -212,28 +218,24 @@ export const FormFieldDemo = () => {
         ]}
         searchable
       />
-      <Field
+      <ControlledDatePickerField
         control={form.control}
         name="date"
-        type="datepicker"
         label="Date"
       />
-      <Field
+      <ControlledTimePickerField
         control={form.control}
         name="time"
-        type="timepicker"
         label="Time"
       />
-      <Field
+      <ControlledColorPickerField
         control={form.control}
         name="color"
-        type="color"
         label="Primary Color"
       />
-      <Field
+      <ControlledTextareaField
         control={form.control}
         name="description"
-        type="textarea"
         label="Description"
         rows={4}
       />

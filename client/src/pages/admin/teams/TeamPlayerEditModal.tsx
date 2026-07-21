@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
@@ -153,7 +153,7 @@ const TeamPlayerEditModal = ({
           autoFocus
         />
         <div className={styles.nameRowWithJersey}>
-          <Field
+          <ControlledInputField
             type="number"
             label="Jersey #"
             control={control}
@@ -167,7 +167,7 @@ const TeamPlayerEditModal = ({
                 !v || (Number(v) >= 0 && Number(v) <= 99 && Number.isInteger(Number(v))),
             }}
           />
-          <Field
+          <ControlledInputField
             label="First Name"
             required
             control={control}
@@ -176,7 +176,7 @@ const TeamPlayerEditModal = ({
             placeholder="e.g. Connor"
             disabled={isSubmitting}
           />
-          <Field
+          <ControlledInputField
             label="Last Name"
             required
             control={control}
@@ -187,8 +187,7 @@ const TeamPlayerEditModal = ({
           />
         </div>
         <div className={styles.row}>
-          <Field
-            type="select"
+          <ControlledSelectField
             label="Position"
             required
             control={control}

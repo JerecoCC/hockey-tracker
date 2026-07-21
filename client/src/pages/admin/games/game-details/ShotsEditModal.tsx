@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
@@ -194,7 +194,7 @@ const ShotsEditModal = ({
                   key={field.id}
                   className={styles.tdShotsInput}
                 >
-                  <Field
+                  <ControlledInputField
                     type="number"
                     control={control}
                     name={`periods.${i}.${row.fieldKey}`}

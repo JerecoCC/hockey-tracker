@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledDatePickerField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import styles from '../leagues/PlayerFormModal.module.scss';
 
@@ -70,8 +70,7 @@ const RetirePlayerModal = ({ open, playerName, busy = false, onClose, onRetire }
         onSubmit={onSubmit}
       >
         <p>Choose the retirement date for {playerName}.</p>
-        <Field
-          type="datepicker"
+        <ControlledDatePickerField
           label="Retirement Date"
           control={control}
           name="retirement_date"

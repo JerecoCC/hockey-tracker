@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledDatePickerField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import styles from './SeasonFormModal.module.scss';
 
@@ -61,9 +61,8 @@ const SeasonEndModal = ({ open, currentEndDate, busy, onClose, onConfirm }: Prop
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <Field
+        <ControlledDatePickerField
           label="End Date"
-          type="datepicker"
           control={control}
           name="end_date"
           rules={{ required: 'End date is required' }}

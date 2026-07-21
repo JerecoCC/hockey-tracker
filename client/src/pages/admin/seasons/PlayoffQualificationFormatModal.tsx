@@ -1,5 +1,5 @@
 import { useCallback, type ReactNode } from 'react';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
 import BulkCreateModal, {
   type BulkCreateRowRenderProps,
 } from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
@@ -39,21 +39,19 @@ interface RuleRowProps {
 
 const RuleRow = ({ index, control, isSubmitting, deleteButton }: RuleRowProps) => (
   <>
-    <Field
-      type="select"
+    <ControlledSelectField
       control={control}
       name={`rules.${index}.scope`}
       options={SCOPE_OPTIONS}
       disabled={isSubmitting}
     />
-    <Field
-      type="select"
+    <ControlledSelectField
       control={control}
       name={`rules.${index}.method`}
       options={METHOD_OPTIONS}
       disabled={isSubmitting}
     />
-    <Field
+    <ControlledInputField
       type="number"
       control={control}
       name={`rules.${index}.count`}
@@ -142,7 +140,7 @@ const PlayoffQualificationFormatModal = ({
       }
       renderBeforeRows={({ control, isSubmitting }) => (
         <div className={styles.nameField}>
-          <Field
+          <ControlledInputField
             label="Name"
             control={control}
             name="name"

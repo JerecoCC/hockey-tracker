@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledTimePickerField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
@@ -8,7 +8,12 @@ import { type GameRecord } from '@/hooks/useGames';
 import { type GoalieStatRecord, type UpdateGoalieStintData } from '@/hooks/useGameGoalieStats';
 import { type GoalRecord } from '@/hooks/useGameGoals';
 import styles from './GameDetailsPage.module.scss';
-import { defaultStintToi, gameMaxToiSeconds, mmssToSeconds, secondsToMMSS } from './goalieTimeOnIce';
+import {
+  defaultStintToi,
+  gameMaxToiSeconds,
+  mmssToSeconds,
+  secondsToMMSS,
+} from './goalieTimeOnIce';
 
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
@@ -53,7 +58,9 @@ const GoalieTimeOnIceModal = ({
           return {
             id: st.id,
             original: st.time_on_ice,
-            prefill: secondsToMMSS(st.time_on_ice != null ? st.time_on_ice : defaultStintToi(st, game)),
+            prefill: secondsToMMSS(
+              st.time_on_ice != null ? st.time_on_ice : defaultStintToi(st, game),
+            ),
             name: fmt(stat.goalie_first_name, stat.goalie_last_name),
             stintLabel: stat.stints.length > 1 ? `Stint ${i + 1}` : null,
             photo: stat.goalie_photo,
@@ -165,8 +172,7 @@ const GoalieTimeOnIceModal = ({
                     </span>
                   </td>
                   <td className={styles.tdShotsInput}>
-                    <Field
-                      type="timepicker"
+                    <ControlledTimePickerField
                       mode="duration"
                       maxDurationMinutes={maxMinutes}
                       control={control}

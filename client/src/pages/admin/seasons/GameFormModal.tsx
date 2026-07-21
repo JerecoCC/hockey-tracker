@@ -1,6 +1,12 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledDatePickerField,
+  ControlledFieldGroup,
+  ControlledInputField,
+  ControlledSelectField,
+  ControlledTimePickerField,
+} from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import type { SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
@@ -238,18 +244,16 @@ const GameFormModal = ({
       >
         {/* Row 1: Date | Time */}
         <div className={styles.dateTimeRow}>
-          <Field
+          <ControlledDatePickerField
             label="Date"
-            type="datepicker"
             control={control}
             name="scheduled_date"
             placeholder="Select date…"
             disabled={isStarted || isSubmitting || (!editTarget && !!defaultDate)}
             autoFocus={!defaultDate}
           />
-          <Field
+          <ControlledTimePickerField
             label="Time"
-            type="timepicker"
             control={control}
             name="scheduled_time"
             disabled={isStarted || isSubmitting}
@@ -260,9 +264,8 @@ const GameFormModal = ({
         {/* Row 2: Team choices */}
         {isTeamContextCreate ? (
           <div className={styles.teamRow}>
-            <Field
+            <ControlledFieldGroup
               label="Current Team"
-              type="custom"
               control={control}
               name="team_side"
             >
@@ -277,10 +280,9 @@ const GameFormModal = ({
                   { value: 'home', label: 'Home' },
                 ]}
               />
-            </Field>
-            <Field
+            </ControlledFieldGroup>
+            <ControlledSelectField
               label="Opponent Team"
-              type="select"
               required
               control={control}
               name="opponent_team_id"
@@ -294,9 +296,8 @@ const GameFormModal = ({
           </div>
         ) : (
           <div className={styles.teamRow}>
-            <Field
+            <ControlledSelectField
               label="Away Team"
-              type="select"
               required
               control={control}
               name="away_team_id"
@@ -306,9 +307,8 @@ const GameFormModal = ({
               disabled={isStarted || isSubmitting}
               searchable
             />
-            <Field
+            <ControlledSelectField
               label="Home Team"
-              type="select"
               required
               control={control}
               name="home_team_id"
@@ -323,7 +323,7 @@ const GameFormModal = ({
         )}
 
         {/* Row 3: Venue — full width */}
-        <Field
+        <ControlledInputField
           label="Venue"
           control={control}
           name="venue"

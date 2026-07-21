@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Checklist from '@jerecocc/tracker-ui/components/Checklist/Checklist';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { type PlayerRosterInput } from '@/hooks/useTeamPlayers';
@@ -182,7 +182,7 @@ const AddPlayersModal = ({
                 onClick={(e) => e.stopPropagation()}
               >
                 <span className={styles.jerseyLabel}>#</span>
-                <Field
+                <ControlledInputField
                   control={control}
                   name={`jerseys.${player.id}`}
                   type="number"

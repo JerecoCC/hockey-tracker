@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledColorPickerField,
+  ControlledInputField,
+  ControlledSelectField,
+} from '@/components/form/ControlledFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type CreateLeagueData, type LeagueRecord } from '@/hooks/useLeagues';
@@ -139,7 +143,7 @@ const LeagueFormModal = (props: Props) => {
           />
         </div>
         <div className={styles.nameCodeRow}>
-          <Field
+          <ControlledInputField
             label="Name"
             required
             control={control}
@@ -148,7 +152,7 @@ const LeagueFormModal = (props: Props) => {
             placeholder="e.g. National Hockey League"
             autoFocus
           />
-          <Field
+          <ControlledInputField
             label="Code"
             required
             control={control}
@@ -159,15 +163,13 @@ const LeagueFormModal = (props: Props) => {
           />
         </div>
         <div className={styles.colorRow}>
-          <Field
-            type="color"
+          <ControlledColorPickerField
             label="Primary Color"
             control={control}
             name="primary_color"
             disabled={isSubmitting}
           />
-          <Field
-            type="color"
+          <ControlledColorPickerField
             label="Text Color"
             control={control}
             name="text_color"
@@ -176,16 +178,15 @@ const LeagueFormModal = (props: Props) => {
         </div>
         <div className={styles.scoringSettingsRow}>
           <div>
-            <Field
+            <ControlledSelectField
               label="Scoring System"
-              type="select"
               control={control}
               name="scoring_system"
               options={SCORING_SYSTEM_OPTIONS}
               disabled={isSubmitting}
             />
           </div>
-          <Field
+          <ControlledInputField
             label="Goalie Min TOI"
             type="number"
             control={control}
@@ -196,8 +197,7 @@ const LeagueFormModal = (props: Props) => {
               required: 'Goalie minimum is required',
               min: { value: 0, message: 'Must be 0 or higher' },
               max: { value: 9999, message: 'Too many minutes' },
-              validate: (value) =>
-                Number.isInteger(Number(value)) || 'Must be a whole number',
+              validate: (value) => Number.isInteger(Number(value)) || 'Must be a whole number',
             }}
             disabled={isSubmitting}
           />

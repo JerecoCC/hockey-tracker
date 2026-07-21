@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import type { GameRecord } from '@/hooks/useGames';
 import {
@@ -204,7 +204,7 @@ const GameAutofillProviderModal = ({
           className={styles.nhlGoalieCheckerForm}
           onSubmit={onSubmit}
         >
-          <Field
+          <ControlledInputField
             label={provider.inputLabel}
             type="number"
             control={control}

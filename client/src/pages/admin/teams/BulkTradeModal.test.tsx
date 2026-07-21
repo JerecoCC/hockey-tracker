@@ -23,7 +23,7 @@ jest.mock('@/hooks/useTeams', () => ({
   }),
 }));
 
-jest.mock('@jerecocc/tracker-ui/components/Field/Field', () => {
+jest.mock('@/components/form/ControlledFields', () => {
   const { useController } = jest.requireActual('react-hook-form');
 
   interface MockFieldOption {
@@ -95,7 +95,17 @@ jest.mock('@jerecocc/tracker-ui/components/Field/Field', () => {
   };
 
   MockField.displayName = 'MockField';
-  return { __esModule: true, default: MockField };
+  return {
+    __esModule: true,
+    ControlledDatePickerField: MockField,
+    ControlledInputField: MockField,
+    ControlledSelectField: (props: MockFieldProps) => (
+      <MockField
+        {...props}
+        type="select"
+      />
+    ),
+  };
 });
 
 const players = [

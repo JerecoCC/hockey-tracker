@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledDatePickerField,
+  ControlledInputField,
+  ControlledSelectField,
+} from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import useTeams from '@/hooks/useTeams';
@@ -206,8 +210,7 @@ const MovePlayerModal = ({
           className={styles.form}
           onSubmit={onSubmit}
         >
-          <Field
-            type="select"
+          <ControlledSelectField
             label="Position (new team)"
             control={control}
             name="position"
@@ -216,8 +219,7 @@ const MovePlayerModal = ({
             disabled={isSubmitting}
           />
           <div className={`${styles.teamRow} ${isPostSeasonMove ? styles.teamRowSingle : ''}`}>
-            <Field
-              type="select"
+            <ControlledSelectField
               label="Move To"
               required
               control={control}
@@ -229,7 +231,7 @@ const MovePlayerModal = ({
               disabled={isSubmitting}
             />
             {!isPostSeasonMove && (
-              <Field
+              <ControlledInputField
                 type="number"
                 label="Jersey #"
                 control={control}
@@ -244,16 +246,14 @@ const MovePlayerModal = ({
           <fieldset className={styles.fieldGroup}>
             <legend className={styles.groupLabel}>MOVEMENT</legend>
             <div className={styles.movementRow}>
-              <Field
-                type="select"
+              <ControlledSelectField
                 label="Type"
                 control={control}
                 name="acquisition_type"
                 options={ACQUISITION_TYPE_OPTIONS}
                 disabled={isSubmitting}
               />
-              <Field
-                type="datepicker"
+              <ControlledDatePickerField
                 label="Date"
                 control={control}
                 name="trade_date"
@@ -263,8 +263,7 @@ const MovePlayerModal = ({
               />
             </div>
             {isPostSeasonMove && (
-              <Field
-                type="select"
+              <ControlledSelectField
                 label="Roster Season"
                 control={control}
                 name="target_season_id"

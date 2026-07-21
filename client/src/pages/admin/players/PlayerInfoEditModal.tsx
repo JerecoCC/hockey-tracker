@@ -1,7 +1,11 @@
 import { useCallback, useLayoutEffect, useMemo, type FocusEvent } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledDatePickerField,
+  ControlledInputField,
+  ControlledSelectField,
+} from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import {
@@ -202,7 +206,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
         onSubmit={onSubmit}
       >
         <div className={seasons.length > 0 ? styles.playerInfoIdentityRow : styles.fullRow}>
-          <Field
+          <ControlledInputField
             label="League Player Number"
             control={control}
             name="league_player_number"
@@ -212,8 +216,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
             disabled={isSubmitting}
           />
           {seasons.length > 0 && (
-            <Field
-              type="select"
+            <ControlledSelectField
               label="Rookie Season"
               control={control}
               name="rookie_season_id"
@@ -245,7 +248,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
         )}
         <Divider className={styles.divider} />
         <div className={styles.playerInfoBirthRow}>
-          <Field
+          <ControlledInputField
             label="Birth City"
             control={control}
             name="birth_city"
@@ -254,7 +257,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
             disabled={isSubmitting}
             onBlur={handleBirthCityBlur}
           />
-          <Field
+          <ControlledInputField
             label="Birth Country"
             control={control}
             name="birth_country"
@@ -263,8 +266,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
           />
         </div>
         <div className={styles.fullRow}>
-          <Field
-            type="datepicker"
+          <ControlledDatePickerField
             label="Date of Birth"
             control={control}
             name="date_of_birth"

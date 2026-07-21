@@ -1,6 +1,10 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledDatePickerField,
+  ControlledInputField,
+  ControlledSelectField,
+} from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import {
   type PlayerStintRecord,
@@ -191,8 +195,7 @@ const StintEditModal = ({
           className={styles.form}
           onSubmit={onSubmit}
         >
-          <Field
-            type="select"
+          <ControlledSelectField
             label="Position"
             control={control}
             name="position"
@@ -201,8 +204,7 @@ const StintEditModal = ({
             disabled={isSubmitting}
           />
           <div className={styles.teamRow}>
-            <Field
-              type="select"
+            <ControlledSelectField
               label="Team"
               control={control}
               name="team_id"
@@ -213,7 +215,7 @@ const StintEditModal = ({
               rules={{ required: true }}
               disabled={isSubmitting}
             />
-            <Field
+            <ControlledInputField
               type="number"
               label="Jersey #"
               control={control}
@@ -224,8 +226,7 @@ const StintEditModal = ({
               disabled={isSubmitting || !canEditJerseyNumber}
             />
           </div>
-          <Field
-            type="select"
+          <ControlledSelectField
             label="Acquisition Type"
             control={control}
             name="acquisition_type"
@@ -233,8 +234,7 @@ const StintEditModal = ({
             disabled={isSubmitting}
           />
           <div className={styles.dateRow}>
-            <Field
-              type="datepicker"
+            <ControlledDatePickerField
               label="Start Date"
               control={control}
               name="start_date"
@@ -243,8 +243,7 @@ const StintEditModal = ({
               rules={mode === 'create' ? { required: 'Start date is required' } : undefined}
               disabled={isSubmitting}
             />
-            <Field
-              type="datepicker"
+            <ControlledDatePickerField
               label="End Date"
               control={control}
               name="end_date"

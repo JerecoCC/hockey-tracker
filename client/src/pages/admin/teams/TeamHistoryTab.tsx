@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledDatePickerField,
+  ControlledInputField,
+  ControlledTextareaField,
+} from '@/components/form/ControlledFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
@@ -311,14 +315,14 @@ const TeamHistoryTab = ({
             />
           </div>
           <div className={styles.historyFormRow}>
-            <Field
+            <ControlledInputField
               label="Place Name"
               control={control}
               name="place_name"
               placeholder="e.g. Toronto or PWHL"
               disabled={isSubmitting}
             />
-            <Field
+            <ControlledInputField
               label="Team Name"
               required
               control={control}
@@ -328,7 +332,7 @@ const TeamHistoryTab = ({
               disabled={isSubmitting}
             />
           </div>
-          <Field
+          <ControlledInputField
             label="Code"
             control={control}
             name="code"
@@ -336,26 +340,23 @@ const TeamHistoryTab = ({
             disabled={isSubmitting}
           />
           <div className={styles.historyFormRow}>
-            <Field
+            <ControlledDatePickerField
               label="Start Date"
-              type="datepicker"
               control={control}
               name="start_date"
               placeholder="YYYY-MM-DD"
               disabled={isSubmitting}
             />
-            <Field
+            <ControlledDatePickerField
               label="End Date"
-              type="datepicker"
               control={control}
               name="end_date"
               placeholder="YYYY-MM-DD (leave blank if current)"
               disabled={isSubmitting}
             />
           </div>
-          <Field
+          <ControlledTextareaField
             label="Note"
-            type="textarea"
             control={control}
             name="note"
             placeholder="e.g. Rebranded after relocation"

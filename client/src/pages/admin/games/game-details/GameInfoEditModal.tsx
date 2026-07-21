@@ -1,6 +1,11 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledDatePickerField,
+  ControlledInputField,
+  ControlledSelectField,
+  ControlledTimePickerField,
+} from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type GameRecord, type GameType, type UpdateGameInfoData } from '@/hooks/useGames';
 import styles from './GameDetailsPage.module.scss';
@@ -138,9 +143,8 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
         onSubmit={onSubmit}
       >
         <div className={styles.formFieldFull}>
-          <Field
+          <ControlledSelectField
             label="Game Type"
-            type="select"
             control={control}
             name="game_type"
             options={GAME_TYPE_OPTIONS}
@@ -151,7 +155,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
         </div>
         {gameType === 'playoff' && (
           <>
-            <Field
+            <ControlledInputField
               label="Round"
               type="number"
               control={control}
@@ -166,7 +170,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
                     : 'Round must be between 1 and 4',
               }}
             />
-            <Field
+            <ControlledInputField
               label="Game in Series"
               type="number"
               control={control}
@@ -182,17 +186,15 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
             />
           </>
         )}
-        <Field
+        <ControlledDatePickerField
           label="Scheduled Date"
-          type="datepicker"
           control={control}
           name="scheduled_date"
           placeholder="Select date…"
           disabled={isSubmitting || disabled}
         />
-        <Field
+        <ControlledTimePickerField
           label="Scheduled Time"
-          type="timepicker"
           control={control}
           name="scheduled_time"
           disabled={isSubmitting || disabled}
@@ -204,16 +206,14 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
         />
         {game.status !== 'scheduled' && (
           <>
-            <Field
+            <ControlledTimePickerField
               label="Start Time"
-              type="timepicker"
               control={control}
               name="time_start"
               disabled={isSubmitting || disabled}
             />
-            <Field
+            <ControlledTimePickerField
               label="End Time"
-              type="timepicker"
               control={control}
               name="time_end"
               disabled={isSubmitting || disabled}
@@ -221,7 +221,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
           </>
         )}
         <div className={styles.formFieldFull}>
-          <Field
+          <ControlledInputField
             label="Venue"
             control={control}
             name="venue"
@@ -230,7 +230,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
           />
         </div>
         <div className={styles.formFieldFull}>
-          <Field
+          <ControlledInputField
             label="League Game Number"
             control={control}
             name="league_game_number"

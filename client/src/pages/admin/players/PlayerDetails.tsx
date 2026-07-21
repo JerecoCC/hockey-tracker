@@ -13,7 +13,7 @@ import Card from '@jerecocc/tracker-ui/components/Card/Card';
 import Chip from '@jerecocc/tracker-ui/components/Chip/Chip';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledTextareaField } from '@/components/form/ControlledFields';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
@@ -82,10 +82,7 @@ import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
 import MovePlayerModal from '../teams/MovePlayerModal';
 import StintEditModal from './StintEditModal';
 import { ACQUISITION_TYPE_LABELS } from './stintOptions';
-import {
-  collapseSameTeamStints,
-  type TeamHistoryStint,
-} from './playerStintHistory';
+import { collapseSameTeamStints, type TeamHistoryStint } from './playerStintHistory';
 import ChangeJerseyModal from './ChangeJerseyModal';
 import JerseyHistoryEditModal from './JerseyHistoryEditModal';
 import ChangePhotoModal from './ChangePhotoModal';
@@ -1315,7 +1312,8 @@ const buildManualMovementReport = ({
   }
 
   const movementDateCounts = visibleMovements.reduce<Map<string, number>>((counts, movement) => {
-    if (movement.startDate) counts.set(movement.startDate, (counts.get(movement.startDate) ?? 0) + 1);
+    if (movement.startDate)
+      counts.set(movement.startDate, (counts.get(movement.startDate) ?? 0) + 1);
     return counts;
   }, new Map());
   let anchoredEventSequence = 0;
@@ -1432,7 +1430,9 @@ export const buildManualMovementStintImport = (
 
       const importKey = `nhl_puckpedia:v1:${movement.id}`;
       if (importKeys.has(importKey)) {
-        issues.push(`${movement.startDate} has multiple team-changing events; review them manually.`);
+        issues.push(
+          `${movement.startDate} has multiple team-changing events; review them manually.`,
+        );
         return;
       }
       importKeys.add(importKey);
@@ -1571,7 +1571,7 @@ const ManualMovementReportSection = ({
                   ? 'Resolve unmatched teams or missing dates before applying'
                   : applyWarnings.length > 0
                     ? 'Apply eligible stints; highlighted movements require a manual move'
-                  : 'Apply reviewed team stints'
+                    : 'Apply reviewed team stints'
               }
               disabled={applyBusy || applyIssues.length > 0}
               onClick={onApply}
@@ -1652,9 +1652,7 @@ const ManualMovementReportSection = ({
           rows={reportMovements}
           getRowKey={(movement) => movement.id}
           getRowClassName={(movement) =>
-            warningByMovementId.has(movement.id)
-              ? styles.manualMovementWarningRow
-              : undefined
+            warningByMovementId.has(movement.id) ? styles.manualMovementWarningRow : undefined
           }
           emptyMessage="No team stints generated yet."
         />
@@ -1770,8 +1768,7 @@ const ManualMovementReportModal = ({
         id={MANUAL_MOVEMENT_SOURCE_FORM_ID}
         onSubmit={buildReport}
       >
-        <Field
-          type="textarea"
+        <ControlledTextareaField
           label="PuckPedia transactions text or HTML"
           control={control}
           name="sourceText"

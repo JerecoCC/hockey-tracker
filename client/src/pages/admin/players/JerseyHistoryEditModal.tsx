@@ -1,11 +1,11 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
-import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import {
-  type JerseyHistoryEntry,
-  type UpdateJerseyHistoryEntryData,
-} from '@/hooks/useTeamPlayers';
+  ControlledDatePickerField,
+  ControlledInputField,
+} from '@/components/form/ControlledFields';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import { type JerseyHistoryEntry, type UpdateJerseyHistoryEntryData } from '@/hooks/useTeamPlayers';
 import styles from '../leagues/PlayerFormModal.module.scss';
 
 interface FormValues {
@@ -23,12 +23,7 @@ interface Props {
   ) => Promise<boolean>;
 }
 
-const JerseyHistoryEditModal = ({
-  open,
-  entry,
-  onClose,
-  updateJerseyHistoryEntry,
-}: Props) => {
+const JerseyHistoryEditModal = ({ open, entry, onClose, updateJerseyHistoryEntry }: Props) => {
   const formValues = useMemo<FormValues>(
     () => ({
       jersey_number: entry?.jersey_number != null ? String(entry.jersey_number) : '',
@@ -80,7 +75,7 @@ const JerseyHistoryEditModal = ({
         onSubmit={onSubmit}
       >
         <div className={styles.jerseyDateRow}>
-          <Field
+          <ControlledInputField
             type="number"
             label="Jersey #"
             control={control}
@@ -96,8 +91,7 @@ const JerseyHistoryEditModal = ({
             }}
             disabled={isSubmitting}
           />
-          <Field
-            type="datepicker"
+          <ControlledDatePickerField
             label="Effective Date"
             control={control}
             name="effective_from"

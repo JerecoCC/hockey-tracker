@@ -1,5 +1,5 @@
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledTimePickerField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import styles from './GameDetailsPage.module.scss';
 import { etHHMMtoISO } from './formatUtils';
@@ -53,9 +53,8 @@ const StartGameModal = ({ open, scheduledAt, isStarting, disabled, onClose, onSt
         className={styles.goalForm}
         onSubmit={onSubmit}
       >
-        <Field
+        <ControlledTimePickerField
           label="Start Time"
-          type="timepicker"
           control={control}
           name="start_time"
           disabled={isStarting}

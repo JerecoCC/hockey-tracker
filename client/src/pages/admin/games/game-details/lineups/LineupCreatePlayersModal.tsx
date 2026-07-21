@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import BulkCreateModal from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import { type PlayerPosition } from '@/hooks/useLeaguePlayers';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
@@ -338,7 +338,7 @@ const LineupCreatePlayersModal = ({
 
         return (
           <>
-            <Field
+            <ControlledInputField
               control={control}
               name={`players.${index}.jersey_number`}
               placeholder="—"
@@ -348,8 +348,7 @@ const LineupCreatePlayersModal = ({
               maxLength={2}
               transform={(val) => val.replace(/[^0-9]/g, '').slice(0, 2)}
             />
-            <Field
-              type="select"
+            <ControlledSelectField
               control={control}
               name={`players.${index}.position`}
               options={positionOptions}
@@ -358,7 +357,7 @@ const LineupCreatePlayersModal = ({
               placeholder="Position"
               disabled={isSubmitting}
             />
-            <Field
+            <ControlledInputField
               control={control}
               name={`players.${index}.first_name`}
               required
@@ -366,7 +365,7 @@ const LineupCreatePlayersModal = ({
               placeholder="First name"
               disabled={isSubmitting}
             />
-            <Field
+            <ControlledInputField
               control={control}
               name={`players.${index}.last_name`}
               required
@@ -409,15 +408,15 @@ const LineupCreatePlayersModal = ({
             <p className={styles.formError}>Please fill in all required fields before saving.</p>
           )}
           {duplicateErrors.length > 0 && (
-                  <ResponsiveList className={styles.duplicateErrors}>
+            <ResponsiveList className={styles.duplicateErrors}>
               {duplicateErrors.map((msg, i) => (
                 <li key={i}>{msg}</li>
               ))}
-                  </ResponsiveList>
+            </ResponsiveList>
           )}
           {crossTeamWarnings.length > 0 && (
             <div className={styles.crossTeamWarnings}>
-                  <ResponsiveList className={styles.crossTeamWarningList}>
+              <ResponsiveList className={styles.crossTeamWarningList}>
                 {crossTeamWarnings.map((msg, i) => (
                   <li key={i}>
                     <Icon
@@ -427,7 +426,7 @@ const LineupCreatePlayersModal = ({
                     {msg}
                   </li>
                 ))}
-                  </ResponsiveList>
+              </ResponsiveList>
               <p className={styles.crossTeamWarningNote}>
                 This may be the same person. You can create a new player record or go back and add
                 the existing player from the season roster instead.

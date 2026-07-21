@@ -1,7 +1,11 @@
 import { type ReactNode, useEffect } from 'react';
 import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import BulkCreateModal from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledDatePickerField,
+  ControlledInputField,
+  ControlledSelectField,
+} from '@/components/form/ControlledFields';
 import useTeams from '@/hooks/useTeams';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { ACQUISITION_TYPE_OPTIONS } from '../players/stintOptions';
@@ -52,14 +56,13 @@ const TradeRow = ({
 
   return (
     <>
-      <Field
+      <ControlledInputField
         control={control}
         name={`players.${index}.jersey_number`}
         placeholder="#"
         disabled={isSubmitting}
       />
-      <Field
-        type="select"
+      <ControlledSelectField
         control={control}
         name={`players.${index}.player_id`}
         options={playerOptions}
@@ -148,8 +151,7 @@ const BulkTradeModal = ({
       getRemoveConfirmBody={() => 'Are you sure you want to remove this player from the list?'}
       renderBeforeRows={({ control, isSubmitting }) => (
         <div className={tradeStyles.form}>
-          <Field
-            type="select"
+          <ControlledSelectField
             label="Move To"
             required
             control={control}
@@ -163,16 +165,14 @@ const BulkTradeModal = ({
           <fieldset className={tradeStyles.fieldGroup}>
             <legend className={tradeStyles.groupLabel}>MOVEMENT</legend>
             <div className={tradeStyles.movementRow}>
-              <Field
-                type="select"
+              <ControlledSelectField
                 label="Type"
                 control={control}
                 name="acquisition_type"
                 options={ACQUISITION_TYPE_OPTIONS}
                 disabled={isSubmitting}
               />
-              <Field
-                type="datepicker"
+              <ControlledDatePickerField
                 label="Date"
                 required
                 control={control}

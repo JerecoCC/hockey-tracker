@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import Banner from '@jerecocc/tracker-ui/components/Banner/Banner';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledSelectField } from '@/components/form/ControlledFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import ReadOnlyField from '@jerecocc/tracker-ui/components/ReadOnlyField/ReadOnlyField';
-import {
-  type PlayerPhotoEntry,
-  type PlayerStintRecord,
-} from '@/hooks/useTeamPlayers';
+import { type PlayerPhotoEntry, type PlayerStintRecord } from '@/hooks/useTeamPlayers';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import styles from '../leagues/PlayerFormModal.module.scss';
 
@@ -48,19 +45,16 @@ const ChangePhotoModal = ({
   changePlayerPhoto,
 }: Props) => {
   const [inheritedBannerDismissed, setInheritedBannerDismissed] = useState(false);
-  const formValues = useMemo<FormValues>(
-    () => {
-      const seasonId = initialSeasonId ?? stint?.season_id ?? '';
-      const teamSeasonPhoto = history.find(
-        (entry) => entry.team_id === stint?.team_id && entry.season_id === seasonId,
-      );
-      return {
-        season_id: seasonId,
-        photo: teamSeasonPhoto?.photo ?? null,
-      };
-    },
-    [history, initialSeasonId, stint],
-  );
+  const formValues = useMemo<FormValues>(() => {
+    const seasonId = initialSeasonId ?? stint?.season_id ?? '';
+    const teamSeasonPhoto = history.find(
+      (entry) => entry.team_id === stint?.team_id && entry.season_id === seasonId,
+    );
+    return {
+      season_id: seasonId,
+      photo: teamSeasonPhoto?.photo ?? null,
+    };
+  }, [history, initialSeasonId, stint]);
   const {
     control,
     handleSubmit,
@@ -84,7 +78,9 @@ const ChangePhotoModal = ({
       entry.team_id !== stint?.team_id &&
       isSavedPhotoEntry(entry),
   );
-  const inheritedPhoto = !explicitPhoto ? (inheritedSeasonPhoto?.photo ?? stint?.photo ?? null) : null;
+  const inheritedPhoto = !explicitPhoto
+    ? (inheritedSeasonPhoto?.photo ?? stint?.photo ?? null)
+    : null;
   const inheritedTeamName = inheritedSeasonPhoto?.team_name ?? 'another team';
   const selectedSeasonName =
     seasons.find((season) => season.id === selectedSeasonId)?.name ??
@@ -145,8 +141,7 @@ const ChangePhotoModal = ({
             title="This photo record already belongs to this season."
           />
         ) : (
-          <Field
-            type="select"
+          <ControlledSelectField
             label="Season"
             control={control}
             name="season_id"
@@ -171,8 +166,8 @@ const ChangePhotoModal = ({
             title="Inherited photo"
             onClose={() => setInheritedBannerDismissed(true)}
           >
-            No photo is saved for {stint?.team.name ?? 'this team'} in this season. Until you
-            upload one, the player uses the latest season photo
+            No photo is saved for {stint?.team.name ?? 'this team'} in this season. Until you upload
+            one, the player uses the latest season photo
             {inheritedSeasonPhoto ? ` from ${inheritedTeamName}` : ''}.
           </Banner>
         )}

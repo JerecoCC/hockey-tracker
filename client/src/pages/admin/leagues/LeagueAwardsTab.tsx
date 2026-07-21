@@ -3,11 +3,20 @@ import { useForm } from 'react-hook-form';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledFieldGroup,
+  ControlledInputField,
+  ControlledSelectField,
+  ControlledTextareaField,
+} from '@/components/form/ControlledFields';
 import GroupedFields from '@jerecocc/tracker-ui/components/GroupedFields/GroupedFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
-import MultiSelect, { type MultiSelectOption } from '@jerecocc/tracker-ui/components/MultiSelect/MultiSelect';
-import RadioList, { type RadioListOption } from '@jerecocc/tracker-ui/components/RadioList/RadioList';
+import MultiSelect, {
+  type MultiSelectOption,
+} from '@jerecocc/tracker-ui/components/MultiSelect/MultiSelect';
+import RadioList, {
+  type RadioListOption,
+} from '@jerecocc/tracker-ui/components/RadioList/RadioList';
 import ReorderableField from '@jerecocc/tracker-ui/components/ReorderableField/ReorderableField';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
@@ -181,9 +190,7 @@ const CUSTOM_POSITION_ELIGIBILITY_OPTION = {
   hideImage: true,
 } satisfies RadioListOption;
 
-const positionGroupsToEligibilityScope = (
-  groups: AwardPlayerPositionGroup[],
-): EligibilityScope => {
+const positionGroupsToEligibilityScope = (groups: AwardPlayerPositionGroup[]): EligibilityScope => {
   if (groups.length === 0) return 'all';
   if (groups.length === 1) return groups[0];
 
@@ -556,11 +563,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
     void persistAwardOrder(reorderItems(orderedAwards, fromIndex, fromIndex + delta));
   };
 
-  const moveAwardTo = (
-    awardId: string,
-    targetAwardId: string,
-    placement: 'before' | 'after',
-  ) => {
+  const moveAwardTo = (awardId: string, targetAwardId: string, placement: 'before' | 'after') => {
     if (awardId === targetAwardId) return;
 
     const fromIndex = orderedAwards.findIndex((award) => award.id === awardId);
@@ -575,29 +578,26 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
     setLocalAwardOrder(nextAwards.map((award) => award.id));
   };
 
-  const handleAwardDragStart =
-    (awardId: string) => (event: DragEvent<HTMLDivElement>) => {
-      if (reorderingAwards) {
-        event.preventDefault();
-        return;
-      }
-      dropHandledRef.current = false;
-      setDraggingAwardId(awardId);
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/league-award-id', awardId);
-    };
-
-  const handleAwardDragOver =
-    (targetAwardId: string) => (event: DragEvent<HTMLDivElement>) => {
+  const handleAwardDragStart = (awardId: string) => (event: DragEvent<HTMLDivElement>) => {
+    if (reorderingAwards) {
       event.preventDefault();
-      const draggedAwardId =
-        draggingAwardId || event.dataTransfer.getData('text/league-award-id');
-      if (!draggedAwardId || draggedAwardId === targetAwardId) return;
+      return;
+    }
+    dropHandledRef.current = false;
+    setDraggingAwardId(awardId);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/league-award-id', awardId);
+  };
 
-      const rect = event.currentTarget.getBoundingClientRect();
-      const placement = event.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
-      moveAwardTo(draggedAwardId, targetAwardId, placement);
-    };
+  const handleAwardDragOver = (targetAwardId: string) => (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const draggedAwardId = draggingAwardId || event.dataTransfer.getData('text/league-award-id');
+    if (!draggedAwardId || draggedAwardId === targetAwardId) return;
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const placement = event.clientY > rect.top + rect.height / 2 ? 'after' : 'before';
+    moveAwardTo(draggedAwardId, targetAwardId, placement);
+  };
 
   const handleAwardDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -881,17 +881,16 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
             legend="Definition"
             fieldsClassName={styles.awardDefinitionGroupFields}
           >
-            <Field
+            <ControlledInputField
               control={form.control}
               name="name"
               label="Award Name"
               required
               rules={{ required: 'Award name is required' }}
             />
-            <Field
+            <ControlledTextareaField
               control={form.control}
               name="description"
-              type="textarea"
               label="Description"
               rows={3}
             />
@@ -901,10 +900,9 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
             legend="Selection"
             fieldsClassName={styles.awardDefinitionGroupFields}
           >
-            <Field
+            <ControlledFieldGroup
               control={form.control}
               name="recipient_type"
-              type="custom"
               label="Recipient"
             >
               <SegmentedControl
@@ -914,11 +912,10 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                 variant="field"
                 className={styles.awardDefinitionSegmented}
               />
-            </Field>
-            <Field
+            </ControlledFieldGroup>
+            <ControlledFieldGroup
               control={form.control}
               name="selection_method"
-              type="custom"
               label="Source"
             >
               <SegmentedControl
@@ -928,11 +925,10 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                 variant="field"
                 className={styles.awardDefinitionSegmented}
               />
-            </Field>
-            <Field
+            </ControlledFieldGroup>
+            <ControlledFieldGroup
               control={form.control}
               name="competition_scope"
-              type="custom"
               label="Competition"
             >
               <SegmentedControl
@@ -942,11 +938,10 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                 variant="field"
                 className={styles.awardDefinitionSegmented}
               />
-            </Field>
-            <Field
+            </ControlledFieldGroup>
+            <ControlledSelectField
               control={form.control}
               name="stat_key"
-              type="select"
               label="Stat Resolver"
               options={statOptions}
             />
@@ -956,10 +951,9 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
             legend="Result"
             fieldsClassName={styles.awardDefinitionGroupFields}
           >
-            <Field
+            <ControlledFieldGroup
               control={form.control}
               name="uses_team_selection"
-              type="custom"
               label="Winner Format"
             >
               <RadioList
@@ -969,11 +963,10 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                 ariaLabel="Winner Format"
                 disabled={recipientType === 'team'}
               />
-            </Field>
-            <Field
+            </ControlledFieldGroup>
+            <ControlledFieldGroup
               control={form.control}
               name="uses_nominees"
-              type="custom"
               label="Workflow"
             >
               <SegmentedControl
@@ -984,11 +977,10 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                 className={styles.awardDefinitionSegmented}
                 disabled={usesTeamSelection || recipientType === 'team'}
               />
-            </Field>
-            <Field
+            </ControlledFieldGroup>
+            <ControlledFieldGroup
               control={form.control}
               name="awarded_after_playoffs"
-              type="custom"
               label="Recording Availability"
             >
               <SegmentedControl
@@ -998,7 +990,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                 variant="field"
                 className={styles.awardDefinitionSegmented}
               />
-            </Field>
+            </ControlledFieldGroup>
           </GroupedFields>
 
           {recipientType === 'player' && (
@@ -1006,10 +998,9 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
               legend="Eligible Players"
               fieldsClassName={styles.awardDefinitionEligibility}
             >
-              <Field
+              <ControlledFieldGroup
                 control={form.control}
                 name="eligible_position_groups"
-                type="custom"
                 label="Position Eligibility"
               >
                 <RadioList
@@ -1018,11 +1009,10 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                   options={positionEligibilityOptions}
                   ariaLabel="Position Eligibility"
                 />
-              </Field>
-              <Field
+              </ControlledFieldGroup>
+              <ControlledFieldGroup
                 control={form.control}
                 name="rookies_only"
-                type="custom"
                 label="Rookie Eligibility"
               >
                 <RadioList
@@ -1031,7 +1021,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                   options={ROOKIE_ELIGIBILITY_OPTIONS}
                   ariaLabel="Rookie Eligibility"
                 />
-              </Field>
+              </ControlledFieldGroup>
             </GroupedFields>
           )}
 
@@ -1040,10 +1030,9 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
               legend="Eligible Teams"
               fieldsClassName={styles.awardDefinitionEligibility}
             >
-              <Field
+              <ControlledFieldGroup
                 control={form.control}
                 name="eligible_conference_names"
-                type="custom"
                 label="Conference Eligibility"
               >
                 <MultiSelect
@@ -1059,7 +1048,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                     })
                   }
                 />
-              </Field>
+              </ControlledFieldGroup>
             </GroupedFields>
           )}
         </form>
@@ -1096,11 +1085,11 @@ export const LeagueAwardsTabSkeleton = ({ className }: TabSkeletonProps) => (
       aria-busy="true"
       aria-label="Loading awards"
     >
-            <ResponsiveList className={styles.awardDefinitionList}>
+      <ResponsiveList className={styles.awardDefinitionList}>
         {Array.from({ length: 5 }, (_, index) => (
           <LeagueListRowSkeleton key={index} />
         ))}
-            </ResponsiveList>
+      </ResponsiveList>
     </Section>
   </div>
 );

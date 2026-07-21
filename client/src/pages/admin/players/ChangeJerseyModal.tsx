@@ -1,6 +1,9 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledDatePickerField,
+  ControlledInputField,
+} from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type PlayerStintRecord } from '@/hooks/useTeamPlayers';
 import styles from '../leagues/PlayerFormModal.module.scss';
@@ -51,11 +54,7 @@ const ChangeJerseyModal = ({ open, stint, onClose, changeJerseyNumber }: Props) 
   const onSubmit = handleSubmit(async (data) => {
     if (!stint) return;
     if (!data.effective_date) return;
-    const ok = await changeJerseyNumber(
-      stint,
-      Number(data.jersey_number),
-      data.effective_date,
-    );
+    const ok = await changeJerseyNumber(stint, Number(data.jersey_number), data.effective_date);
     if (ok) handleClose();
   });
 
@@ -75,7 +74,7 @@ const ChangeJerseyModal = ({ open, stint, onClose, changeJerseyNumber }: Props) 
         onSubmit={onSubmit}
       >
         <div className={styles.jerseyDateRow}>
-          <Field
+          <ControlledInputField
             type="number"
             label="Jersey #"
             control={control}
@@ -91,8 +90,7 @@ const ChangeJerseyModal = ({ open, stint, onClose, changeJerseyNumber }: Props) 
             }}
             disabled={isSubmitting}
           />
-          <Field
-            type="datepicker"
+          <ControlledDatePickerField
             label="Effective Date"
             control={control}
             name="effective_date"

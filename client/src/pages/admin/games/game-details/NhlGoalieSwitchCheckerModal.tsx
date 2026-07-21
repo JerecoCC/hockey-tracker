@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { fetchNhlGoalieSwitchReport, type NhlGoalieSwitchReport } from './nhlGoalieSwitchChecker';
 import type { GameRecord } from '@/hooks/useGames';
@@ -82,7 +82,7 @@ const NhlGoalieSwitchCheckerModal = ({
           className={styles.nhlGoalieCheckerForm}
           onSubmit={onSubmit}
         >
-          <Field
+          <ControlledInputField
             label="NHL game number"
             type="number"
             control={control}
@@ -98,11 +98,7 @@ const NhlGoalieSwitchCheckerModal = ({
           />
         </form>
 
-        {busy && (
-          <p className={styles.nhlGoalieCheckerStatus}>
-            Fetching NHL GameCenter data...
-          </p>
-        )}
+        {busy && <p className={styles.nhlGoalieCheckerStatus}>Fetching NHL GameCenter data...</p>}
       </div>
     </Modal>
   );

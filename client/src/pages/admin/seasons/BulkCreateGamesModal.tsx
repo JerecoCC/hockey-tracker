@@ -1,5 +1,9 @@
 import { type ReactNode, useCallback } from 'react';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledDatePickerField,
+  ControlledInputField,
+  ControlledSelectField,
+} from '@/components/form/ControlledFields';
 import BulkCreateModal, {
   type BulkCreateRowRenderProps,
 } from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
@@ -62,8 +66,7 @@ const GameRow = ({
 
   return (
     <>
-      <Field
-        type="datepicker"
+      <ControlledDatePickerField
         control={control}
         name={`rows.${index}.scheduled_date`}
         required
@@ -72,8 +75,7 @@ const GameRow = ({
         disabled={isSubmitting || dateDisabled}
         autoFocus={autoFocus && !dateDisabled}
       />
-      <Field
-        type="select"
+      <ControlledSelectField
         control={control}
         name={`rows.${index}.away_team_id`}
         required
@@ -83,8 +85,7 @@ const GameRow = ({
         disabled={isSubmitting}
         searchable
       />
-      <Field
-        type="select"
+      <ControlledSelectField
         control={control}
         name={`rows.${index}.home_team_id`}
         required
@@ -95,7 +96,7 @@ const GameRow = ({
         searchable
         onChange={handleHomeTeamChange}
       />
-      <Field
+      <ControlledInputField
         control={control}
         name={`rows.${index}.venue`}
         placeholder="Arena"

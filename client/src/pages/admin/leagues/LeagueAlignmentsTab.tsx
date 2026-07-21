@@ -4,7 +4,11 @@ import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Checklist from '@jerecocc/tracker-ui/components/Checklist/Checklist';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledFieldGroup,
+  ControlledInputField,
+  ControlledSelectField,
+} from '@/components/form/ControlledFields';
 import GroupedFields from '@jerecocc/tracker-ui/components/GroupedFields/GroupedFields';
 import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
 import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
@@ -183,8 +187,7 @@ const AlignmentStructureField = ({
   onChange: (value: GroupAlignmentStructureType) => void;
 }) => {
   return (
-    <Field
-      type="custom"
+    <ControlledFieldGroup
       label="Uses groups?"
       control={control}
       name="structure_type"
@@ -202,7 +205,7 @@ const AlignmentStructureField = ({
         disabled={disabled}
         onChange={(next) => onChange(next as GroupAlignmentStructureType)}
       />
-    </Field>
+    </ControlledFieldGroup>
   );
 };
 
@@ -374,7 +377,7 @@ const CreateAlignmentGroupModal = ({
       busy={isSubmitting || disabled}
     >
       <div className={styles.alignmentSetForm}>
-        <Field
+        <ControlledInputField
           label="Name"
           control={control}
           name="name"
@@ -383,8 +386,7 @@ const CreateAlignmentGroupModal = ({
           autoFocus
         />
         {!isSubgroup && (
-          <Field
-            type="select"
+          <ControlledSelectField
             label="Role"
             control={control}
             name="role"
@@ -445,7 +447,7 @@ const EditAlignmentGroupModal = ({
       busy={isSubmitting || disabled}
     >
       <div className={styles.alignmentSetForm}>
-        <Field
+        <ControlledInputField
           label="Name"
           control={control}
           name="name"
@@ -596,7 +598,9 @@ const AlignmentGroupNode = ({
       {children.length > 0 && (
         <div className={styles.alignmentGroupChildren}>
           {depth > 0 && <div className={styles.alignmentGroupChildrenLabel}>Subgroups</div>}
-          <ResponsiveList className={`${styles.alignmentGroupList} ${styles.alignmentGroupListNested}`}>
+          <ResponsiveList
+            className={`${styles.alignmentGroupList} ${styles.alignmentGroupListNested}`}
+          >
             {children.map((child) => (
               <AlignmentGroupNode
                 key={child.id}
@@ -625,8 +629,7 @@ const AlignmentGroupNode = ({
           <div className={styles.alignmentParentGroupHeader}>
             <div className={styles.alignmentParentGroupTitle}>
               <span className={styles.alignmentParentGroupName}>
-                {groupName}
-                {' '}
+                {groupName}{' '}
                 <span className={styles.alignmentGroupNameCount}>{groupCountLabel}</span>
               </span>
             </div>
@@ -646,8 +649,7 @@ const AlignmentGroupNode = ({
           legend={
             <>
               <span className={styles.alignmentGroupLegendTitle}>
-                <span>{groupName}</span>
-                {' '}
+                <span>{groupName}</span>{' '}
                 <span className={styles.alignmentGroupNameCount}>{groupCountLabel}</span>
               </span>
               <Divider className={styles.alignmentGroupLegendRule} />
@@ -956,7 +958,7 @@ const AlignmentPanel = ({
         onSubmit={onSubmit}
       >
         <div className={styles.alignmentEditNameRow}>
-          <Field
+          <ControlledInputField
             label="Name"
             control={control}
             name="name"
@@ -1350,7 +1352,7 @@ const CreateAlignmentModal = ({
             onSubmit={onSubmit}
           >
             <div className={styles.alignmentEditNameRow}>
-              <Field
+              <ControlledInputField
                 label="Name"
                 control={control}
                 name="name"

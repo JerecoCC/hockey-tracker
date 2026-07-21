@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField } from '@/components/form/ControlledFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type CreateTeamData, type TeamRecord } from '@/hooks/useTeams';
@@ -145,7 +145,7 @@ const TeamFormModal = (props: Props) => {
           disabled={isSubmitting}
         />
         <div className={styles.identityRow}>
-          <Field
+          <ControlledInputField
             label="Code"
             required
             control={control}
@@ -155,7 +155,7 @@ const TeamFormModal = (props: Props) => {
             placeholder="TOR"
             disabled={isSubmitting}
           />
-          <Field
+          <ControlledInputField
             label="Place Name"
             control={control}
             name="place_name"
@@ -163,7 +163,7 @@ const TeamFormModal = (props: Props) => {
             autoFocus
             disabled={isSubmitting}
           />
-          <Field
+          <ControlledInputField
             label="Team Name"
             required
             control={control}

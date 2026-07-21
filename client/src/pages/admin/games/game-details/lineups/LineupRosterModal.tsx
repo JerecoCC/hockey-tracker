@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Checklist from '@jerecocc/tracker-ui/components/Checklist/Checklist';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField } from '@/components/form/ControlledFields';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
@@ -301,7 +301,7 @@ const LineupRosterModal = ({
       <div className={styles.content}>
         <div className={styles.controls}>
           <div className={styles.quickAddWrap}>
-            <Field
+            <ControlledInputField
               control={control}
               name="jerseyInput"
               type="text"

@@ -17,7 +17,7 @@ import { toast } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
 import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledFieldGroup } from '@/components/form/ControlledFields';
 import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
@@ -240,11 +240,7 @@ const getStoredCalendarMonth = () => {
 
 const USER_TIMEZONE: GameTimezone = 'local';
 
-const canDropGameOnCalendarDate = (
-  game: GameRecord,
-  dateKey: string,
-  timezone: GameTimezone,
-) => {
+const canDropGameOnCalendarDate = (game: GameRecord, dateKey: string, timezone: GameTimezone) => {
   const originalDateKey = getOriginalGameDateKey(game, timezone);
   if (originalDateKey === dateKey) return true;
   return !isInvalidWatchScheduleDate(game, dateKey, timezone);
@@ -1360,9 +1356,7 @@ const UserGames = () => {
     );
   };
 
-  const skippedGamesToggleMessage = showSkippedGames
-    ? 'Hide skipped games'
-    : 'Show skipped games';
+  const skippedGamesToggleMessage = showSkippedGames ? 'Hide skipped games' : 'Show skipped games';
   const skippedGamesToggle = (
     <Toggle
       variant="toggle"
@@ -1405,16 +1399,15 @@ const UserGames = () => {
         className={styles.skippedGamesFilter}
       >
         {isMobileView ? (
-          <Field
+          <ControlledFieldGroup
             control={filterControl}
             label="Skipped games"
             name="showSkippedGames"
-            type="custom"
             wrapperClassName={styles.toggleField}
           >
             <span className={styles.toggleFieldSubtitle}>{skippedGamesToggleMessage}</span>
             {skippedGamesToggle}
-          </Field>
+          </ControlledFieldGroup>
         ) : (
           skippedGamesToggle
         )}
@@ -1568,12 +1561,18 @@ const UserGames = () => {
               {periodPickerControl}
               {standardToolbarActions}
             </div>
-            <ScheduleFilters visible className={styles.controlsFilters}>
+            <ScheduleFilters
+              visible
+              className={styles.controlsFilters}
+            >
               {filterControls}
             </ScheduleFilters>
           </>
         ) : (
-          <ScheduleFilters visible className={styles.controlsFilters}>
+          <ScheduleFilters
+            visible
+            className={styles.controlsFilters}
+          >
             {filterControls}
           </ScheduleFilters>
         )}

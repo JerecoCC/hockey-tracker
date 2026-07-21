@@ -3,7 +3,10 @@ import { useForm } from 'react-hook-form';
 import ActionOverlay from '@jerecocc/tracker-ui/components/ActionOverlay/ActionOverlay';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledDatePickerField,
+  ControlledInputField,
+} from '@/components/form/ControlledFields';
 import GroupedFields from '@jerecocc/tracker-ui/components/GroupedFields/GroupedFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
@@ -600,27 +603,25 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
           onSubmit={submit}
         >
           <div className={styles.draftFormGrid}>
-            <Field
+            <ControlledDatePickerField
               control={form.control}
               name="startDate"
-              type="datepicker"
               label="Start Date"
               placeholder="YYYY-MM-DD"
               required
               disabled={submitting}
               rules={{ required: 'Start date is required' }}
             />
-            <Field
+            <ControlledDatePickerField
               control={form.control}
               name="endDate"
-              type="datepicker"
               label="End Date"
               placeholder="YYYY-MM-DD"
               required
               disabled={submitting}
               rules={{ required: 'End date is required' }}
             />
-            <Field
+            <ControlledInputField
               control={form.control}
               name="totalRounds"
               type="number"
@@ -754,11 +755,11 @@ export const LeagueDraftsTabSkeleton = ({ className }: TabSkeletonProps) => (
       aria-busy="true"
       aria-label="Loading drafts"
     >
-              <ResponsiveList className={styles.awardDefinitionList}>
+      <ResponsiveList className={styles.awardDefinitionList}>
         {Array.from({ length: 4 }, (_, index) => (
           <LeagueListRowSkeleton key={index} />
         ))}
-              </ResponsiveList>
+      </ResponsiveList>
     </Section>
   </div>
 );

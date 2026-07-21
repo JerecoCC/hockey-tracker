@@ -7,7 +7,7 @@ jest.mock('@/hooks/useLeagueDraftDates', () => ({
   default: jest.fn(),
 }));
 
-jest.mock('@jerecocc/tracker-ui/components/Field/Field', () => {
+jest.mock('@/components/form/ControlledFields', () => {
   const { useController } = jest.requireActual<typeof import('react-hook-form')>('react-hook-form');
 
   type MockFieldProps = {
@@ -56,7 +56,8 @@ jest.mock('@jerecocc/tracker-ui/components/Field/Field', () => {
 
   return {
     __esModule: true,
-    default: MockField,
+    ControlledDatePickerField: MockField,
+    ControlledInputField: MockField,
   };
 });
 

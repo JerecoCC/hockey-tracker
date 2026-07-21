@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledSelectField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 
@@ -132,9 +132,8 @@ const ThreeStarsModal = ({
         onSubmit={onSubmit}
         style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
       >
-        <Field
+        <ControlledSelectField
           label="1st Star"
-          type="select"
           control={control}
           name="star1"
           options={allPlayerOptions}
@@ -144,9 +143,8 @@ const ThreeStarsModal = ({
           required
           rules={{ required: '1st star is required' }}
         />
-        <Field
+        <ControlledSelectField
           label="2nd Star"
-          type="select"
           control={control}
           name="star2"
           options={allPlayerOptions}
@@ -156,9 +154,8 @@ const ThreeStarsModal = ({
           required
           rules={{ required: '2nd star is required' }}
         />
-        <Field
+        <ControlledSelectField
           label="3rd Star"
-          type="select"
           control={control}
           name="star3"
           options={allPlayerOptions}

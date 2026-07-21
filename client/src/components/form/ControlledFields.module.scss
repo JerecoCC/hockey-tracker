@@ -1,0 +1,34 @@
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
+
+.fieldGroup {
+  --filter-field-background: var(--app-form-field-bg, var(--app-field-bg, #{$bg-input}));
+
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  width: 100%;
+  min-width: 0;
+}
+
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  min-width: 0;
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-sm;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.required,
+.errorMessage {
+  color: $danger-light;
+}
+
+.errorMessage {
+  font-size: $font-xs;
+  font-weight: 500;
+}

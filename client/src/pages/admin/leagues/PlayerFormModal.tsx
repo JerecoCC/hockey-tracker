@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import {
   type CreatePlayerData,
@@ -141,8 +141,7 @@ const PlayerFormModal = ({
   });
 
   const statusField = (
-    <Field
-      type="select"
+    <ControlledSelectField
       label="Status"
       required
       control={control}
@@ -170,7 +169,7 @@ const PlayerFormModal = ({
       >
         <div className={updateJerseyNumber ? styles.nameRowWithJersey : styles.row}>
           {updateJerseyNumber && (
-            <Field
+            <ControlledInputField
               type="number"
               label="Jersey #"
               control={control}
@@ -185,7 +184,7 @@ const PlayerFormModal = ({
               }}
             />
           )}
-          <Field
+          <ControlledInputField
             label="First Name"
             required
             control={control}
@@ -195,7 +194,7 @@ const PlayerFormModal = ({
             autoFocus
             disabled={isSubmitting}
           />
-          <Field
+          <ControlledInputField
             label="Last Name"
             required
             control={control}
@@ -206,8 +205,7 @@ const PlayerFormModal = ({
           />
         </div>
         <div className={styles.row}>
-          <Field
-            type="select"
+          <ControlledSelectField
             label="Position"
             required
             control={control}
@@ -217,8 +215,7 @@ const PlayerFormModal = ({
             rules={{ required: true }}
             disabled={isSubmitting}
           />
-          <Field
-            type="select"
+          <ControlledSelectField
             label="Shoots"
             control={control}
             name="shoots"
@@ -229,8 +226,7 @@ const PlayerFormModal = ({
         </div>
         <div className={seasons.length > 0 ? styles.playerInfoIdentityRow : styles.fullRow}>
           {seasons.length > 0 && (
-            <Field
-              type="select"
+            <ControlledSelectField
               label="Rookie Season"
               control={control}
               name="rookie_season_id"

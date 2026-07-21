@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import BorderedFieldset from '@jerecocc/tracker-ui/components/BorderedFieldset/BorderedFieldset';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
 import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Select from '@jerecocc/tracker-ui/components/Select/Select';
@@ -255,16 +255,14 @@ const PoolEditor = ({ control, slotIndex, groups }: PoolEditorProps) => {
             className={styles.poolSeedRow}
           >
             <div className={styles.poolSeedRank}>
-              <Field
-                type="select"
+              <ControlledSelectField
                 control={control}
                 name={`slots.${slotIndex}.pool.${i}.rank`}
                 options={RANK_OPTIONS}
               />
             </div>
             <div className={styles.poolSeedScope}>
-              <Field
-                type="select"
+              <ControlledSelectField
                 control={control}
                 name={`slots.${slotIndex}.pool.${i}.scope`}
                 options={SLOT_SCOPE_OPTIONS}
@@ -272,8 +270,7 @@ const PoolEditor = ({ control, slotIndex, groups }: PoolEditorProps) => {
             </div>
             {needsGroup && (
               <div className={styles.poolSeedScope}>
-                <Field
-                  type="select"
+                <ControlledSelectField
                   control={control}
                   name={`slots.${slotIndex}.pool.${i}.groupId`}
                   options={groupOptions}
@@ -368,8 +365,7 @@ const SingleSlotEditor = ({
       <span className={styles.bracketRulesSlotLabel}>{label}</span>
       <div className={styles.bracketRulesSlotFieldRows}>
         <div className={styles.slotTypeField}>
-          <Field
-            type="select"
+          <ControlledSelectField
             control={control}
             name={`slots.${slotIndex}.type`}
             options={ruleTypeOptions}
@@ -380,8 +376,7 @@ const SingleSlotEditor = ({
           <div className={styles.bracketRulesSlotFields}>
             {ruleType === 'winner' && (
               <div className={styles.slotScopeField}>
-                <Field
-                  type="select"
+                <ControlledSelectField
                   control={control}
                   name={`slots.${slotIndex}.matchupRef`}
                   options={prevRoundMatchupOptions}
@@ -393,16 +388,14 @@ const SingleSlotEditor = ({
             {ruleType === 'seed' && (
               <>
                 <div className={styles.slotRankField}>
-                  <Field
-                    type="select"
+                  <ControlledSelectField
                     control={control}
                     name={`slots.${slotIndex}.rank`}
                     options={RANK_OPTIONS}
                   />
                 </div>
                 <div className={styles.slotScopeField}>
-                  <Field
-                    type="select"
+                  <ControlledSelectField
                     control={control}
                     name={`slots.${slotIndex}.scope`}
                     options={SLOT_SCOPE_OPTIONS}
@@ -422,8 +415,7 @@ const SingleSlotEditor = ({
 
             {ruleType === 'unchosen' && (
               <div className={styles.slotScopeField}>
-                <Field
-                  type="select"
+                <ControlledSelectField
                   control={control}
                   name={`slots.${slotIndex}.choiceRef`}
                   options={choiceSlotOptions}
@@ -435,8 +427,7 @@ const SingleSlotEditor = ({
         )}
         {ruleType === 'seed' && needsGroup && (
           <div className={styles.bracketRulesSlotGroupField}>
-            <Field
-              type="select"
+            <ControlledSelectField
               control={control}
               name={`slots.${slotIndex}.groupId`}
               options={groupOptions}
@@ -612,44 +603,40 @@ const BracketRulesModal = ({
     [allSlots, effectiveStructure.rounds],
   );
 
-  const onSubmit = handleSubmit(async ({
-    name,
-    qualificationFormatId,
-    slots,
-    roundNames,
-    matchupNames,
-  }) => {
-    const payload = [...serializeSlots(slots), ...buildAutoWinnerSlots(effectiveStructure)];
-    // roundNames arrives as a sparse array (numeric-keyed paths → RHF array treatment),
-    // so index 0 may be undefined. Guard against that before calling .trim().
-    const roundNamesPayload = cleanLabelMap(roundNames);
-    const matchupNamesPayload = cleanLabelMap(matchupNames);
-    const qualificationFormatIdPayload =
-      qualificationFormatId === NO_QUALIFICATION_FORMAT_VALUE ? null : qualificationFormatId;
-    let savedId = ruleSetId;
-    if (ruleSetId) {
-      await updateSlots(
-        ruleSetId,
-        name || 'Bracket Rules',
-        payload,
-        roundNamesPayload,
-        matchupNamesPayload,
-        qualificationFormatIdPayload,
-      );
-    } else {
-      const created = await createRuleSet(
-        name || 'Bracket Rules',
-        payload,
-        roundNamesPayload,
-        matchupNamesPayload,
-        qualificationFormatIdPayload,
-      );
-      if (!created) return;
-      savedId = created.id;
-    }
-    if (savedId) onSave?.(savedId);
-    onClose();
-  });
+  const onSubmit = handleSubmit(
+    async ({ name, qualificationFormatId, slots, roundNames, matchupNames }) => {
+      const payload = [...serializeSlots(slots), ...buildAutoWinnerSlots(effectiveStructure)];
+      // roundNames arrives as a sparse array (numeric-keyed paths → RHF array treatment),
+      // so index 0 may be undefined. Guard against that before calling .trim().
+      const roundNamesPayload = cleanLabelMap(roundNames);
+      const matchupNamesPayload = cleanLabelMap(matchupNames);
+      const qualificationFormatIdPayload =
+        qualificationFormatId === NO_QUALIFICATION_FORMAT_VALUE ? null : qualificationFormatId;
+      let savedId = ruleSetId;
+      if (ruleSetId) {
+        await updateSlots(
+          ruleSetId,
+          name || 'Bracket Rules',
+          payload,
+          roundNamesPayload,
+          matchupNamesPayload,
+          qualificationFormatIdPayload,
+        );
+      } else {
+        const created = await createRuleSet(
+          name || 'Bracket Rules',
+          payload,
+          roundNamesPayload,
+          matchupNamesPayload,
+          qualificationFormatIdPayload,
+        );
+        if (!created) return;
+        savedId = created.id;
+      }
+      if (savedId) onSave?.(savedId);
+      onClose();
+    },
+  );
 
   const actionLabel = ruleSetId ? 'Edit Rule Set' : 'Create Rule Set';
   const confirmActionLabel = ruleSetId ? 'Save Changes' : actionLabel;
@@ -666,7 +653,7 @@ const BracketRulesModal = ({
       busy={isSubmitting}
     >
       <div className={styles.bracketRulesStack}>
-        <Field
+        <ControlledInputField
           label="Rule Set Name"
           control={control}
           name="name"
@@ -674,8 +661,7 @@ const BracketRulesModal = ({
           disabled={isSubmitting}
         />
         {/* ── Round Labels (optional) ── */}
-        <Field
-          type="select"
+        <ControlledSelectField
           label="Qualification Format"
           control={control}
           name="qualificationFormatId"
@@ -693,7 +679,7 @@ const BracketRulesModal = ({
               className={styles.bracketRulesLabelGroup}
             >
               <div className={styles.bracketRulesLabelControl}>
-                <Field
+                <ControlledInputField
                   type="text"
                   label={`${defaultLabel} Label`}
                   placeholder={`e.g. ${defaultLabel}`}
@@ -735,7 +721,7 @@ const BracketRulesModal = ({
                     {Array.from({ length: r.series }, (_, mi) => {
                       const matchupKey = `r${r.round}m${mi}`;
                       return (
-                        <Field
+                        <ControlledInputField
                           key={matchupKey}
                           type="text"
                           label={`Matchup ${mi + 1} Label`}

@@ -1,6 +1,10 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import {
+  ControlledDatePickerField,
+  ControlledInputField,
+  ControlledSelectField,
+} from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
 import { type CreateSeasonData, type SeasonRecord } from '@/hooks/useSeasons';
@@ -147,10 +151,9 @@ const SeasonFormModal = (props: Props) => {
         onSubmit={onSubmit}
       >
         {!lockedLeagueId && (
-          <Field
+          <ControlledSelectField
             label="League"
             required
-            type="select"
             control={control}
             name="league_id"
             rules={{ required: true }}
@@ -159,7 +162,7 @@ const SeasonFormModal = (props: Props) => {
             disabled={!!editTarget}
           />
         )}
-        <Field
+        <ControlledInputField
           label="Name"
           required
           type="text"
@@ -170,23 +173,21 @@ const SeasonFormModal = (props: Props) => {
           autoFocus
         />
         <div className={styles.dateRow}>
-          <Field
+          <ControlledDatePickerField
             label="Start Date"
-            type="datepicker"
             control={control}
             name="start_date"
             placeholder="Select start date…"
           />
-          <Field
+          <ControlledDatePickerField
             label="End Date"
-            type="datepicker"
             control={control}
             name="end_date"
             placeholder="Select end date…"
           />
         </div>
         {showGamesPerSeason && !showRegularSeasonSettings && (
-          <Field
+          <ControlledInputField
             label="Games Per Season"
             type="number"
             control={control}
@@ -202,7 +203,7 @@ const SeasonFormModal = (props: Props) => {
           <div className={styles.settingsGrid}>
             {showGamesPerSeason && (
               <div className={styles.settingsGridCompact}>
-                <Field
+                <ControlledInputField
                   label="Games Per Season"
                   type="number"
                   control={control}
@@ -216,9 +217,8 @@ const SeasonFormModal = (props: Props) => {
               </div>
             )}
             <div>
-              <Field
+              <ControlledSelectField
                 label="Shootout Rounds"
-                type="select"
                 control={control}
                 name="best_of_shootout"
                 options={SHOOTOUT_OPTIONS}
@@ -229,16 +229,15 @@ const SeasonFormModal = (props: Props) => {
         )}
         {showRegularSeasonSettings && (
           <div className={styles.settingsGridFull}>
-            <Field
+            <ControlledSelectField
               label="Scoring System"
-              type="select"
               control={control}
               name="scoring_system"
               options={SCORING_SYSTEM_OPTIONS}
               disabled={isSubmitting}
             />
             <div className={styles.settingsGridCompact}>
-              <Field
+              <ControlledInputField
                 label="Goalie Min TOI"
                 type="number"
                 control={control}

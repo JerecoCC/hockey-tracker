@@ -5,7 +5,7 @@ import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import InfoItem from '@jerecocc/tracker-ui/components/InfoItem/InfoItem';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
-import SearchField from '@jerecocc/tracker-ui/components/SearchField/SearchField';
+import { SearchInput } from '@jerecocc/tracker-ui';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
@@ -179,7 +179,7 @@ const UserSettings = () => {
       <div className={styles.contentGrid}>
         <div className={styles.mainColumn}>
           <Section title="Leagues">
-            <SearchField
+            <SearchInput
               value={leagueSearch}
               onChange={setLeagueSearch}
               placeholder="Search leagues or teams"

@@ -1,7 +1,7 @@
 import BulkCreateModal, {
   type BulkCreateRowRenderProps,
 } from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
-import Field from '@jerecocc/tracker-ui/components/Field/Field';
+import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
 import {
   type BulkPlayerInput,
   type PlayerPosition,
@@ -52,8 +52,7 @@ const PlayerRowFields = ({
   deleteButton,
 }: BulkCreateRowRenderProps<{ rows: RowValues[] }, RowValues>) => (
   <>
-    <Field
-      type="select"
+    <ControlledSelectField
       control={control}
       name={`rows.${index}.position`}
       options={POSITION_OPTIONS}
@@ -63,7 +62,7 @@ const PlayerRowFields = ({
       disabled={isSubmitting}
       autoFocus={autoFocus}
     />
-    <Field
+    <ControlledInputField
       control={control}
       name={`rows.${index}.first_name`}
       required
@@ -71,7 +70,7 @@ const PlayerRowFields = ({
       placeholder="First name"
       disabled={isSubmitting}
     />
-    <Field
+    <ControlledInputField
       control={control}
       name={`rows.${index}.last_name`}
       required
@@ -79,8 +78,7 @@ const PlayerRowFields = ({
       placeholder="Last name"
       disabled={isSubmitting}
     />
-    <Field
-      type="select"
+    <ControlledSelectField
       control={control}
       name={`rows.${index}.shoots`}
       options={SHOOTS_OPTIONS}

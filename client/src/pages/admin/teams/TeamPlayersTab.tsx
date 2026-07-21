@@ -7,7 +7,7 @@ import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import MoreActionsMenu from '@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu';
 import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
-import SearchField from '@jerecocc/tracker-ui/components/SearchField/SearchField';
+import { SearchInput } from '@jerecocc/tracker-ui';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/shared/SeasonSelect/SeasonSelect';
@@ -256,11 +256,7 @@ const TeamPlayersTab = ({
             : {
                 type: 'tag',
                 label:
-                  status === 'active'
-                    ? 'Active'
-                    : status === 'retired'
-                      ? 'Retired'
-                      : 'Inactive',
+                  status === 'active' ? 'Active' : status === 'retired' ? 'Retired' : 'Inactive',
                 intent: status === 'active' ? 'success' : 'neutral',
               }
         }
@@ -352,7 +348,7 @@ const TeamPlayersTab = ({
         action={playerViewControl}
       >
         <div className={styles.rosterToolbar}>
-          <SearchField
+          <SearchInput
             className={styles.rosterSearch}
             placeholder={isProspectsView ? 'Search prospects...' : 'Search players...'}
             value={query}
@@ -393,7 +389,9 @@ const TeamPlayersTab = ({
               {loading ? (
                 renderPlayerSkeletons(section.title)
               ) : sectionPlayers.length > 0 ? (
-                <ResponsiveList className={styles.rosterList}>{sectionPlayers.map(renderPlayer)}</ResponsiveList>
+                <ResponsiveList className={styles.rosterList}>
+                  {sectionPlayers.map(renderPlayer)}
+                </ResponsiveList>
               ) : (
                 <p className={styles.rosterEmpty}>
                   {players.length === 0

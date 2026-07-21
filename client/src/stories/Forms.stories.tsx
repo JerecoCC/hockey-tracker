@@ -5,10 +5,12 @@ import CheckboxField from '@jerecocc/tracker-ui/components/CheckboxField/Checkbo
 import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
 import DescriptionEditor from '@jerecocc/tracker-ui/components/DescriptionEditor/DescriptionEditor';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
-import MultiSelect, { type MultiSelectOption } from '@jerecocc/tracker-ui/components/MultiSelect/MultiSelect';
+import MultiSelect, {
+  type MultiSelectOption,
+} from '@jerecocc/tracker-ui/components/MultiSelect/MultiSelect';
 import PeriodPicker from '@jerecocc/tracker-ui/components/PeriodPicker/PeriodPicker';
 import RichTextEditor from '@jerecocc/tracker-ui/components/RichTextEditor/RichTextEditor';
-import SearchField from '@jerecocc/tracker-ui/components/SearchField/SearchField';
+import { SearchInput } from '@jerecocc/tracker-ui';
 import SeasonSelect from '@/shared/SeasonSelect/SeasonSelect';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
@@ -70,7 +72,9 @@ const LogoUploadDemo = () => {
 };
 
 const RichTextDemo = () => {
-  const [content, setContent] = useState('<p><strong>Bold scouting note</strong> with context.</p>');
+  const [content, setContent] = useState(
+    '<p><strong>Bold scouting note</strong> with context.</p>',
+  );
   return (
     <RichTextEditor
       content={content}
@@ -185,7 +189,7 @@ export const SearchAndSelection = {
       <StoryPanel>
         <Stateful initial="Taylor">
           {(value, setValue) => (
-            <SearchField
+            <SearchInput
               value={value}
               onChange={setValue}
               placeholder="Search players..."
