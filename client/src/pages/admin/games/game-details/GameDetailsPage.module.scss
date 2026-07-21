@@ -205,44 +205,6 @@
   }
 }
 
-// Square 42 × 42 icon toggle — sits inline with Goal Type select
-.emptyNetToggle {
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background: transparent;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  color: var(--app-text-muted, #{$text-dim});
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    color 0.15s,
-    background 0.15s,
-    box-shadow 0.15s;
-
-  &:hover:not(:disabled) {
-    border-color: $accent;
-    color: $accent;
-    background: rgba($accent, 0.06);
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  &On {
-    border-color: $accent;
-    color: $accent;
-    background: rgba($accent, 0.08);
-    box-shadow: inset 0 0 0 1px rgba($accent, 0.24);
-  }
-}
-
 // ── Tab content wrapper ────────────────────────────────────────────────────────
 .tabContent {
   display: flex;

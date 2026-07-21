@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Select from '@jerecocc/tracker-ui/components/Select/Select';
 import TimePicker from '@jerecocc/tracker-ui/components/TimePicker/TimePicker';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
-import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
+import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalRecord, type PostGoalData } from '@/hooks/useGameGoals';
@@ -310,48 +309,36 @@ const ScoreGoalModal = ({
           {goalType !== 'own' && !goalPenaltyShot && (
             <div className={styles.goalFormField}>
               <label className={styles.goalFormLabel}>EN</label>
-              <Tooltip text="Empty Net">
-                <button
-                  type="button"
-                  className={[styles.emptyNetToggle, goalEmptyNet ? styles.emptyNetToggleOn : '']
-                    .filter(Boolean)
-                    .join(' ')}
-                  onClick={() => setValue('goalEmptyNet', !goalEmptyNet, { shouldDirty: true })}
-                  disabled={submitting}
-                  aria-label="Empty Net"
-                  aria-pressed={goalEmptyNet}
-                >
-                  <Icon
-                    name="empty_net"
-                    size="1.1rem"
-                  />
-                </button>
-              </Tooltip>
+              <Toggle
+                variant="button"
+                active={goalEmptyNet}
+                onActiveChange={(active) =>
+                  setValue('goalEmptyNet', active, { shouldDirty: true })
+                }
+                icon="empty_net"
+                activeTooltip="Empty Net"
+                inactiveTooltip="Empty Net"
+                ariaLabel="Empty Net"
+                disabled={submitting}
+              />
             </div>
           )}
           {goalType !== 'own' && (
             <div className={styles.goalFormField}>
               <label className={styles.goalFormLabel}>PS</label>
-              <Tooltip text="Penalty Shot">
-                <button
-                  type="button"
-                  className={[styles.emptyNetToggle, goalPenaltyShot ? styles.emptyNetToggleOn : '']
-                    .filter(Boolean)
-                    .join(' ')}
-                  onClick={() => {
-                    setValue('goalPenaltyShot', !goalPenaltyShot, { shouldDirty: true });
-                    setValue('goalEmptyNet', false, { shouldDirty: true });
-                  }}
-                  disabled={submitting}
-                  aria-label="Penalty Shot"
-                  aria-pressed={goalPenaltyShot}
-                >
-                  <Icon
-                    name="penalty_shot"
-                    size="1.1rem"
-                  />
-                </button>
-              </Tooltip>
+              <Toggle
+                variant="button"
+                active={goalPenaltyShot}
+                onActiveChange={(active) => {
+                  setValue('goalPenaltyShot', active, { shouldDirty: true });
+                  setValue('goalEmptyNet', false, { shouldDirty: true });
+                }}
+                icon="penalty_shot"
+                activeTooltip="Penalty Shot"
+                inactiveTooltip="Penalty Shot"
+                ariaLabel="Penalty Shot"
+                disabled={submitting}
+              />
             </div>
           )}
         </div>
