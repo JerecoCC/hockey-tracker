@@ -1806,12 +1806,6 @@ const SeasonAwardsTab = ({
         footerStart={
           recipientUsesWinnerChecklist ? <span>{recipientWinnerCountLabel}</span> : undefined
         }
-        footerClassName={
-          recipientUsesWinnerChecklist ? styles.awardPlayerChecklistFooter : undefined
-        }
-        footerDividerClassName={
-          recipientUsesWinnerChecklist ? styles.awardPlayerChecklistFooterDivider : undefined
-        }
       >
         {activeRecipientAward && recipientUsesWinnerChecklist ? (
           <Checklist

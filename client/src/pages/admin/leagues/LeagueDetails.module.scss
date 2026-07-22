@@ -912,8 +912,6 @@ $league-tab-list-gap: $space-md;
     list-style: none;
     margin: 0;
     padding: 0;
-    max-height: min(70vh, 680px);
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -1171,14 +1169,6 @@ $league-tab-list-gap: $space-md;
   display: flex;
   flex-direction: column;
   gap: $space-xs;
-  max-height: 360px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-
-  &:hover {
-    scrollbar-color: $border transparent;
-  }
 }
 
 // ── Inline add / edit row ─────────────────────────────────────────────────

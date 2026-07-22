@@ -141,7 +141,6 @@ const AddPlayersModal = ({
       title={`Add ${titlePlayerLabel} to Roster`}
       onClose={handleClose}
       size="md"
-      bodyClassName={styles.rosterBody}
       onConfirm={handleSubmit}
       confirmLabel={submitting ? 'Adding…' : 'Add to Roster'}
       confirmIcon="group_add"

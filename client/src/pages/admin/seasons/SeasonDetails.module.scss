@@ -259,14 +259,6 @@
     display: flex;
     flex-direction: column;
     gap: $space-xs;
-    max-height: 360px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-
-    &:hover {
-      scrollbar-color: $border transparent;
-    }
   }
 
   &SelectItem {
@@ -1053,11 +1045,8 @@
     display: flex;
     flex-direction: column;
     gap: $space-xs;
-    max-height: min(52vh, 440px);
-    min-height: 0;
     margin: 0;
     padding: 0;
-    overflow-y: auto;
   }
 
   &SelectionEmpty {
@@ -1080,28 +1069,14 @@
     display: flex;
     flex-direction: column;
     gap: $space-sm;
-    max-height: min(70vh, 680px);
     margin: 0;
     padding: $space-sm 0;
-    overflow-y: auto;
     list-style: none;
-  }
-
-  &PlayerChecklistFooter {
-    border-top: 1px solid var(--app-border, #{$border});
-    padding-top: $space-xl;
-  }
-
-  &PlayerChecklistFooterDivider {
-    display: none;
   }
 
   &PlayerRadioList {
     --selectable-list-item-image-size: 48px;
     --selectable-list-item-image-font-size: #{$font-base};
-
-    max-height: min(70vh, 680px);
-    overflow-y: auto;
   }
 
   &PlayerChecklistEmpty {

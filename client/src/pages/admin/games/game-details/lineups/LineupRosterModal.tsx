@@ -259,7 +259,6 @@ const LineupRosterModal = ({
       title={`Add to ${teamName} Lineup`}
       onClose={handleClose}
       size="md"
-      bodyClassName={styles.rosterBody}
       busy={submitting}
       footer={
         <div className={styles.footerActions}>
@@ -298,131 +297,129 @@ const LineupRosterModal = ({
         </div>
       }
     >
-      <div className={styles.content}>
-        <div className={styles.controls}>
-          <div className={styles.quickAddWrap}>
-            <ControlledInputField
-              control={control}
-              name="jerseyInput"
-              type="text"
-              placeholder="Jersey numbers (e.g. 7 11 25)..."
-              onKeyDown={(e) => {
-                if (e.key !== 'Enter') return;
-                e.preventDefault();
-                handleApplyJerseys();
-              }}
-              disabled={controlsDisabled}
-              autoFocus
-            />
-            <Button
-              variant="outlined"
-              intent="info"
-              onClick={handleApplyJerseys}
-              disabled={controlsDisabled || !jerseyInput.trim()}
-            >
-              Apply
-            </Button>
-          </div>
-          {alreadyAdded.length > 0 && (
-            <p className={styles.alreadyAddedNote}>
-              <Icon
-                name="info"
-                size="0.85em"
-              />
-              Already in lineup: {alreadyAdded.map((p) => `#${p.number} ${p.name}`).join(', ')}
-            </p>
-          )}
-          {prospectMatches.length > 0 && (
-            <p className={styles.prospectNote}>
-              <Icon
-                name="info"
-                size="0.85em"
-              />
-              Prospect{prospectMatches.length !== 1 ? 's' : ''}:{' '}
-              {prospectMatches.map((p) => `#${p.number} ${p.name}`).join(', ')}
-              {' - will be moved to roster when added.'}
-            </p>
-          )}
-          {pendingMissing.length > 0 && (
-            <p className={styles.missingNote}>
-              <Icon
-                name="warning"
-                size="0.85em"
-              />
-              No match for jersey{pendingMissing.length !== 1 ? 's' : ''}{' '}
-              {pendingMissing.map((n) => `#${n}`).join(', ')} — will open Create Players on confirm.
-            </p>
-          )}
-        </div>
-
-        {loadingPlayers ? (
-          <LoadingSpinner message="Loading players..." />
-        ) : (
-          <Checklist
-            options={available.map((player) => ({
-              id: player.id,
-              player,
-              searchText: `${player.first_name} ${player.last_name} ${player.position ?? ''} ${
-                player.jersey_number ?? ''
-              }`,
-              image: player.photo,
-              imagePlaceholder: `${player.first_name[0] ?? ''}${player.last_name[0] ?? ''}`,
-              imageShape: 'circle' as const,
-              imagePrimaryColor: player.primary_color,
-              imageTextColor: player.text_color,
-              chip:
-                player.jersey_number != null
-                  ? {
-                      label: player.jersey_number,
-                      primaryColor: player.primary_color,
-                      textColor: player.text_color,
-                    }
-                  : null,
-              subtitle: formatPlayerPosition(player.position) ?? undefined,
-              name: `${player.first_name} ${player.last_name}`.trim(),
-              disabled: controlsDisabled,
-              rightContent: player.is_prospect ? <Tag label="Prospect" /> : undefined,
-              actions: [
-                player.is_prospect
-                  ? {
-                      icon: 'north',
-                      tooltip: 'Move to roster',
-                      disabled: controlsDisabled || movingPlayerId === player.id,
-                      onClick: () => updateProspectStatus(player, false),
-                    }
-                  : {
-                      icon: 'south',
-                      tooltip: 'Move to prospects',
-                      disabled: controlsDisabled || movingPlayerId === player.id,
-                      onClick: () => updateProspectStatus(player, true),
-                    },
-              ],
-            }))}
-            selectedIds={selected}
-            onToggle={(option) => toggle(option.id)}
-            searchable
-            filterOption={(option, searchQuery) => matchesPlayerSearch(option.player, searchQuery)}
-            query={query}
-            onQueryChange={(value) => setValue('query', value)}
-            placeholder="Search players..."
-            searchDisabled={controlsDisabled}
-            actions={
-              <Toggle
-                variant="toggle"
-                active={showProspects}
-                onActiveChange={() => setShowProspects((v) => !v)}
-                activeIcon="visibility"
-                inactiveIcon="visibility_off"
-                activeTooltip="Hide prospects"
-                inactiveTooltip="Show prospects"
-                disabled={controlsDisabled || !hasProspects}
-              />
-            }
-            emptyMessage="All team players are already in this lineup."
-            getNoResultsMessage={(searchQuery) => `No players match "${searchQuery}".`}
+      <div className={styles.controls}>
+        <div className={styles.quickAddWrap}>
+          <ControlledInputField
+            control={control}
+            name="jerseyInput"
+            type="text"
+            placeholder="Jersey numbers (e.g. 7 11 25)..."
+            onKeyDown={(e) => {
+              if (e.key !== 'Enter') return;
+              e.preventDefault();
+              handleApplyJerseys();
+            }}
+            disabled={controlsDisabled}
+            autoFocus
           />
+          <Button
+            variant="outlined"
+            intent="info"
+            onClick={handleApplyJerseys}
+            disabled={controlsDisabled || !jerseyInput.trim()}
+          >
+            Apply
+          </Button>
+        </div>
+        {alreadyAdded.length > 0 && (
+          <p className={styles.alreadyAddedNote}>
+            <Icon
+              name="info"
+              size="0.85em"
+            />
+            Already in lineup: {alreadyAdded.map((p) => `#${p.number} ${p.name}`).join(', ')}
+          </p>
+        )}
+        {prospectMatches.length > 0 && (
+          <p className={styles.prospectNote}>
+            <Icon
+              name="info"
+              size="0.85em"
+            />
+            Prospect{prospectMatches.length !== 1 ? 's' : ''}:{' '}
+            {prospectMatches.map((p) => `#${p.number} ${p.name}`).join(', ')}
+            {' - will be moved to roster when added.'}
+          </p>
+        )}
+        {pendingMissing.length > 0 && (
+          <p className={styles.missingNote}>
+            <Icon
+              name="warning"
+              size="0.85em"
+            />
+            No match for jersey{pendingMissing.length !== 1 ? 's' : ''}{' '}
+            {pendingMissing.map((n) => `#${n}`).join(', ')} — will open Create Players on confirm.
+          </p>
         )}
       </div>
+
+      {loadingPlayers ? (
+        <LoadingSpinner message="Loading players..." />
+      ) : (
+        <Checklist
+          options={available.map((player) => ({
+            id: player.id,
+            player,
+            searchText: `${player.first_name} ${player.last_name} ${player.position ?? ''} ${
+              player.jersey_number ?? ''
+            }`,
+            image: player.photo,
+            imagePlaceholder: `${player.first_name[0] ?? ''}${player.last_name[0] ?? ''}`,
+            imageShape: 'circle' as const,
+            imagePrimaryColor: player.primary_color,
+            imageTextColor: player.text_color,
+            chip:
+              player.jersey_number != null
+                ? {
+                    label: player.jersey_number,
+                    primaryColor: player.primary_color,
+                    textColor: player.text_color,
+                  }
+                : null,
+            subtitle: formatPlayerPosition(player.position) ?? undefined,
+            name: `${player.first_name} ${player.last_name}`.trim(),
+            disabled: controlsDisabled,
+            rightContent: player.is_prospect ? <Tag label="Prospect" /> : undefined,
+            actions: [
+              player.is_prospect
+                ? {
+                    icon: 'north',
+                    tooltip: 'Move to roster',
+                    disabled: controlsDisabled || movingPlayerId === player.id,
+                    onClick: () => updateProspectStatus(player, false),
+                  }
+                : {
+                    icon: 'south',
+                    tooltip: 'Move to prospects',
+                    disabled: controlsDisabled || movingPlayerId === player.id,
+                    onClick: () => updateProspectStatus(player, true),
+                  },
+            ],
+          }))}
+          selectedIds={selected}
+          onToggle={(option) => toggle(option.id)}
+          searchable
+          filterOption={(option, searchQuery) => matchesPlayerSearch(option.player, searchQuery)}
+          query={query}
+          onQueryChange={(value) => setValue('query', value)}
+          placeholder="Search players..."
+          searchDisabled={controlsDisabled}
+          actions={
+            <Toggle
+              variant="toggle"
+              active={showProspects}
+              onActiveChange={() => setShowProspects((v) => !v)}
+              activeIcon="visibility"
+              inactiveIcon="visibility_off"
+              activeTooltip="Hide prospects"
+              inactiveTooltip="Show prospects"
+              disabled={controlsDisabled || !hasProspects}
+            />
+          }
+          emptyMessage="All team players are already in this lineup."
+          getNoResultsMessage={(searchQuery) => `No players match "${searchQuery}".`}
+        />
+      )}
     </Modal>
   );
 };

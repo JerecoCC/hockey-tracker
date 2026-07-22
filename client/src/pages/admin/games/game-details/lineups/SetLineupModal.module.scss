@@ -1,18 +1,6 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
-.rosterBody {
-  overflow-y: hidden;
-  padding-bottom: 0;
-}
-
-.content {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-
 .groupHeader {
   display: flex;
   align-items: center;
@@ -75,47 +63,9 @@
   min-height: 42px;
 }
 
-.searchDivider {
-  --divider-color: var(--app-border, #{$border});
-
-  margin-top: $space-lg;
-  flex-shrink: 0;
-}
-
 .list {
   --selectable-list-item-image-size: 48px;
   --selectable-list-item-image-font-size: #{$font-base};
-
-  margin-bottom: $space-lg;
-  max-height: min(70vh, 680px);
-  overflow-y: auto;
-  flex: 1 1 auto;
-  min-height: 0;
-  scrollbar-width: thin;
-  scrollbar-color: var(--app-border, #{$border}) transparent;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--app-border, #{$border});
-    border-radius: $radius-md;
-    min-height: 1.5rem;
-  }
-}
-
-.modalFooter {
-  border-top: 1px solid var(--app-border, #{$border});
-  padding-top: $space-xl;
-}
-
-.modalFooterDivider {
-  display: none;
 }
 
 .empty {

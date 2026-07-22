@@ -162,29 +162,24 @@ const SetLineupModal = ({
       title={`${correctionMode ? 'Correct Final Starting Goalie' : 'Set Starting Goalie'} - ${teamName}`}
       onClose={handleClose}
       size="md"
-      bodyClassName={styles.rosterBody}
-      footerClassName={styles.modalFooter}
-      footerDividerClassName={styles.modalFooterDivider}
       busy={saving}
       onConfirm={handleSave}
       confirmLabel={saving ? 'Saving...' : correctionMode ? 'Save Correction' : 'Save'}
       confirmIcon="set_lineup"
       confirmDisabled={!canSave}
     >
-      <div className={styles.content}>
-        {sortedPlayers.length === 0 ? (
-          <p className={styles.empty}>No goalies are in this game lineup yet.</p>
-        ) : (
-          <RadioList
-            value={selectedValue}
-            onChange={selectGoalie}
-            options={goalieOptions}
-            disabled={saving}
-            ariaLabel="Starting goalie"
-            className={styles.list}
-          />
-        )}
-      </div>
+      {sortedPlayers.length === 0 ? (
+        <p className={styles.empty}>No goalies are in this game lineup yet.</p>
+      ) : (
+        <RadioList
+          value={selectedValue}
+          onChange={selectGoalie}
+          options={goalieOptions}
+          disabled={saving}
+          ariaLabel="Starting goalie"
+          className={styles.list}
+        />
+      )}
     </Modal>
   );
 };
