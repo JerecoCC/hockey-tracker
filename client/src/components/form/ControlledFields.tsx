@@ -22,6 +22,8 @@ interface ControllerBindingProps {
   rules?: RegisterOptions;
 }
 
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
 type OptionalLabelProps = {
   hideLabel?: boolean;
   label?: ReactNode;
@@ -37,7 +39,7 @@ const getLabelProps = (
 });
 
 export type ControlledInputFieldProps = ControllerBindingProps &
-  Omit<InputFieldProps, 'label' | 'value' | 'onChange' | 'onBlur' | 'invalid' | 'errorMessage'> &
+  DistributiveOmit<InputFieldProps, 'label' | 'value' | 'onChange' | 'onBlur' | 'invalid' | 'errorMessage'> &
   OptionalLabelProps & {
     onChange?: InputFieldProps['onChange'];
     onBlur?: InputFieldProps['onBlur'];
@@ -80,7 +82,7 @@ export function ControlledInputField({
 }
 
 export type ControlledTextareaFieldProps = ControllerBindingProps &
-  Omit<TextareaFieldProps, 'label' | 'value' | 'onChange' | 'onBlur' | 'invalid' | 'errorMessage'> &
+  DistributiveOmit<TextareaFieldProps, 'label' | 'value' | 'onChange' | 'onBlur' | 'invalid' | 'errorMessage'> &
   OptionalLabelProps & {
     onChange?: TextareaFieldProps['onChange'];
     onBlur?: TextareaFieldProps['onBlur'];
@@ -123,7 +125,7 @@ export function ControlledTextareaField({
 }
 
 export type ControlledSelectFieldProps = ControllerBindingProps &
-  Omit<SelectFieldProps, 'label' | 'value' | 'onChange' | 'invalid' | 'errorMessage'> &
+  DistributiveOmit<SelectFieldProps, 'label' | 'value' | 'onChange' | 'invalid' | 'errorMessage'> &
   OptionalLabelProps & {
     onChange?: SelectFieldProps['onChange'];
   };
@@ -160,7 +162,7 @@ export function ControlledSelectField({
 }
 
 export type ControlledDatePickerFieldProps = ControllerBindingProps &
-  Omit<DatePickerFieldProps, 'label' | 'value' | 'onChange' | 'invalid' | 'errorMessage'> &
+  DistributiveOmit<DatePickerFieldProps, 'label' | 'value' | 'onChange' | 'invalid' | 'errorMessage'> &
   OptionalLabelProps;
 
 export function ControlledDatePickerField({
@@ -191,7 +193,7 @@ export function ControlledDatePickerField({
 }
 
 export type ControlledTimePickerFieldProps = ControllerBindingProps &
-  Omit<TimePickerFieldProps, 'label' | 'value' | 'onChange' | 'invalid' | 'errorMessage'> &
+  DistributiveOmit<TimePickerFieldProps, 'label' | 'value' | 'onChange' | 'invalid' | 'errorMessage'> &
   OptionalLabelProps;
 
 export function ControlledTimePickerField({
@@ -222,7 +224,7 @@ export function ControlledTimePickerField({
 }
 
 export type ControlledColorPickerFieldProps = ControllerBindingProps &
-  Omit<ColorPickerFieldProps, 'label' | 'value' | 'onChange' | 'invalid' | 'errorMessage'> &
+  DistributiveOmit<ColorPickerFieldProps, 'label' | 'value' | 'onChange' | 'invalid' | 'errorMessage'> &
   OptionalLabelProps;
 
 export function ControlledColorPickerField({
