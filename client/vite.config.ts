@@ -15,7 +15,11 @@ export default defineConfig({
   },
   optimizeDeps: {
     exclude: ['@jerecocc/tracker-ui'],
-    include: ['classnames'],
+    include: [
+      'classnames',
+      '@tiptap/react > use-sync-external-store/shim/index.js',
+      '@tiptap/react > use-sync-external-store/shim/with-selector.js',
+    ],
   },
   css: {
     preprocessorOptions: {
