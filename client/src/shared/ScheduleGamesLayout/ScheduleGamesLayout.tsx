@@ -4,6 +4,7 @@ import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
+import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import styles from './ScheduleGamesLayout.module.scss';
@@ -97,6 +98,7 @@ interface ScheduleWeekSummaryProps<T> {
   activeDateKey?: string;
   stuck?: boolean;
   stickyOnMobile?: boolean;
+  fitMobileViewport?: boolean;
   onSelectDate: (dateKey: string) => void;
   formatDate: (dateKey: string) => ReactNode;
   formatWeekday: (dateKey: string) => ReactNode;
@@ -111,6 +113,7 @@ export const ScheduleWeekSummary = <T,>({
   activeDateKey,
   stuck = false,
   stickyOnMobile = false,
+  fitMobileViewport = false,
   onSelectDate,
   formatDate,
   formatWeekday,
@@ -130,6 +133,7 @@ export const ScheduleWeekSummary = <T,>({
     style={
       stickyTop ? ({ '--week-summary-sticky-top': stickyTop } as CSSProperties) : undefined
     }
+    data-mobile-layout={fitMobileViewport ? 'fit' : undefined}
     noHeaderMargin
   >
     <div className={styles.weekSummaryGrid}>
@@ -177,11 +181,22 @@ export const ScheduleWeekSummary = <T,>({
                     variant="text"
                     className={styles.weekSummaryCountSkeleton}
                   />
-                ) : (
-                  <>
-                    {dayGames.length} {dayGames.length === 1 ? 'Game' : 'Games'}
-                  </>
-                )}
+                  ) : (
+                    <>
+                      <MetricTag
+                        value={dayGames.length}
+                        label={dayGames.length === 1 ? 'Game' : 'Games'}
+                        position="postfix"
+                        aria-label={`${dayGames.length} ${dayGames.length === 1 ? 'game' : 'games'}`}
+                        className={styles.weekSummaryCountMetric}
+                      />
+                      <Badge
+                        value={dayGames.length}
+                        aria-label={`${dayGames.length} ${dayGames.length === 1 ? 'game' : 'games'}`}
+                        className={styles.weekSummaryCountBadge}
+                      />
+                    </>
+                  )}
               </span>
               {isActive && (
                 <Icon

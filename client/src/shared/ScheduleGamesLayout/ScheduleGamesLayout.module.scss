@@ -279,6 +279,13 @@
   width: 64px;
 }
 
+.weekSummaryCountBadge.weekSummaryCountBadge {
+  display: none;
+  --badge-min-height: 1.35rem;
+  --badge-padding: 0.1rem 0.35rem;
+  --badge-font-size: $font-xs;
+}
+
 .weekGameSkeletonGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -344,6 +351,10 @@
 }
 
 @media (max-width: $screen-mobile-max) {
+  .dayList {
+    gap: $space-xs;
+  }
+
   .mobileHiddenTitle {
     display: none;
   }
@@ -363,6 +374,61 @@
 
     &Grid {
       grid-template-columns: repeat(7, minmax(124px, 1fr));
+    }
+
+    @media (max-width: $screen-mobile-only-max) {
+      &Card[data-mobile-layout='fit'] {
+        .weekSummaryGrid {
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+          gap: $space-xs;
+          overflow-x: hidden;
+        }
+
+        .weekSummaryDay {
+          min-width: 0;
+          min-height: 104px;
+          align-items: stretch;
+          gap: $space-xs;
+          padding: $space-sm 2px;
+          text-align: center;
+        }
+
+        .weekSummaryDayRow {
+          flex-direction: column;
+          justify-content: center;
+          gap: $space-xs;
+        }
+
+        .weekSummaryCountRow {
+          height: auto;
+
+          .weekSummaryIcon {
+            order: -1;
+          }
+        }
+
+        .weekSummaryCount {
+          line-height: 1.2;
+          overflow-wrap: anywhere;
+        }
+
+        .weekSummaryCountMetric {
+          display: none;
+        }
+
+        .weekSummaryCountBadge.weekSummaryCountBadge {
+          display: inline-flex;
+        }
+
+        .weekSummaryCountSkeleton.weekSummaryCountSkeleton {
+          width: 100%;
+        }
+
+        .dayTodayIndicator.dayTodayIndicator {
+          --badge-padding: 0.1rem 0.2rem;
+          --badge-font-size: 0.5rem;
+        }
+      }
     }
   }
 

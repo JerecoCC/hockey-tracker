@@ -8,7 +8,7 @@ describe('useScheduleWeekSummaryStuck', () => {
     queuedFrame = null;
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,
-      value: 640,
+      value: 425,
     });
     Object.defineProperty(window, 'matchMedia', {
       configurable: true,

@@ -74,6 +74,8 @@ export interface GameCardProps {
   showWatchedBanner?: boolean;
   /** Renders a left accent stripe coloured by game type. */
   showTypeIndicator?: boolean;
+  /** Keeps actions visible in a vertical rail on the right at the mobile breakpoint. */
+  mobileActionsAside?: boolean;
 }
 
 const run = (handler: () => MaybePromise) => {
@@ -212,6 +214,7 @@ const GameCardVariant = ({
   statusIntent,
   showWatchedBanner = true,
   showTypeIndicator = false,
+  mobileActionsAside = false,
   onOpen,
 }: GameCardProps) => {
   const showScore = showScoreProp ?? shouldShowWatchedScore(game);
@@ -242,6 +245,7 @@ const GameCardVariant = ({
     <Card
       variant="border"
       data-game-card-variant="card"
+      data-mobile-actions-layout={mobileActionsAside ? 'aside' : undefined}
       className={[
         styles.card,
         hasTypeIndicator ? styles.withTypeIndicator : '',
@@ -277,7 +281,14 @@ const GameCardVariant = ({
           aria-hidden="true"
         />
       )}
-      {actions && <span className={styles.gameActions}>{renderActions(actions)}</span>}
+      {actions && (
+        <span
+          className={styles.gameActions}
+          data-game-card-actions
+        >
+          {renderActions(actions)}
+        </span>
+      )}
       {showWatchedBanner && isWatched && (
         <span
           className={styles.watchedRibbon}

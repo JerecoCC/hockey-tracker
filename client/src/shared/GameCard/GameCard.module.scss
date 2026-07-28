@@ -221,6 +221,7 @@
 }
 
 .gameFooter {
+  align-items: center;
   text-transform: uppercase;
   font-weight: 600;
 }
@@ -264,4 +265,30 @@
   letter-spacing: 0.04em;
   text-align: center;
   color: var(--app-text, #{$text-body});
+}
+
+@media (max-width: $screen-mobile-only-max) {
+  .card[data-mobile-actions-layout='aside'] {
+    .gameActions {
+      position: static;
+      inset: auto;
+      order: 3;
+      flex: 0 0 auto;
+      align-self: stretch;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      justify-content: space-around;
+      padding-left: $space-md;
+      border-left: 1px solid var(--game-card-divider);
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .watchedRibbon {
+      right: calc(42px + #{$space-md} + #{$space-lg});
+    }
+  }
 }

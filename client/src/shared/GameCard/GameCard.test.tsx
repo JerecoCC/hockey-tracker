@@ -72,4 +72,20 @@ describe('GameCard', () => {
 
     expect(screen.getByText('Under review')).toHaveClass('tag', 'solid', 'warning');
   });
+
+  it('opts into the mobile actions aside layout', () => {
+    const { container } = render(
+      <GameCard
+        game={game}
+        mobileActionsAside
+        actions={<button type="button">Action</button>}
+      />,
+    );
+
+    expect(container.querySelector('[data-game-card-variant="card"]')).toHaveAttribute(
+      'data-mobile-actions-layout',
+      'aside',
+    );
+    expect(container.querySelector('[data-game-card-actions]')).toBeInTheDocument();
+  });
 });

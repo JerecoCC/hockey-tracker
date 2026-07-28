@@ -157,4 +157,26 @@ describe('ScheduleWeekList', () => {
       'weekSummaryCardMobileSticky',
     );
   });
+
+  it('opts into fitting all week summary days within the mobile viewport', () => {
+    const { container } = render(
+      <ScheduleWeekSummary
+        days={[['2026-03-28', [{ id: 'game-1' }]]]}
+        loading={false}
+        fitMobileViewport
+        onSelectDate={jest.fn()}
+        formatDate={() => 'Mar 28'}
+        formatWeekday={() => 'Saturday'}
+        formatHeading={() => 'Saturday, March 28'}
+      />,
+    );
+
+    expect(container.querySelector('.weekSummaryCard')).toHaveAttribute(
+      'data-mobile-layout',
+      'fit',
+    );
+    expect(container.querySelector('.weekSummaryCountMetric')).toHaveClass('metricTag');
+    expect(container.querySelector('.weekSummaryCountMetric')).toHaveTextContent(/1\s*Game/);
+    expect(container.querySelector('.weekSummaryCountBadge')).toHaveTextContent('1');
+  });
 });
