@@ -1,14 +1,22 @@
 import { type ComponentProps } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import TeamPlayersTab from './TeamPlayersTab';
 
-const mockNavigate = jest.fn();
 const mockAddPlayersModal = jest.fn(() => null);
 
-jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
+jest.mock('react-router-dom', () => ({
+  Link: ({ to, children, ...props }: any) => (
+    <a
+      href={to}
+      {...props}
+    >
+      {children}
+    </a>
+  ),
+}));
 jest.mock('@/hooks/useSeasons', () => jest.fn());
 jest.mock('@/hooks/useTeamPlayers', () => jest.fn());
 jest.mock('@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu', () => {
@@ -144,13 +152,16 @@ beforeEach(() => {
 });
 
 describe('TeamPlayersTab', () => {
-  it('opens player details from the row and does not render a view player hover action', async () => {
-    const user = userEvent.setup();
+  it('links the row to player details for click and right-click navigation', () => {
     const { container } = renderTeamPlayersTab();
 
-    await user.click(screen.getByRole('button', { name: 'Open Auston Matthews' }));
+    const playerLink = container.querySelector(
+      'a[href="/admin/leagues/nhl/teams/tor/players/34-auston-matthews"]',
+    ) as HTMLAnchorElement;
+    fireEvent.contextMenu(playerLink);
 
-    expect(mockNavigate).toHaveBeenCalledWith(
+    expect(playerLink).toHaveAttribute(
+      'href',
       '/admin/leagues/nhl/teams/tor/players/34-auston-matthews',
     );
     expect(screen.queryByRole('button', { name: /view player/i })).not.toBeInTheDocument();
@@ -279,13 +290,12 @@ describe('TeamPlayersTab', () => {
 
     await user.type(screen.getByPlaceholderText('Search players...'), 'Maksim');
 
-    expect(screen.getByRole('button', { name: 'Open Maxim Tsyplakov' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Open Anders Lee' })).not.toBeInTheDocument();
+    expect(screen.getByText('Maxim Tsyplakov')).toBeInTheDocument();
+    expect(screen.queryByText('Anders Lee')).not.toBeInTheDocument();
   });
 
-  it('renders a read-only user roster without admin actions and opens the user player route', async () => {
-    const user = userEvent.setup();
-    renderTeamPlayersTab({ readOnly: true, mode: 'user' });
+  it('renders a read-only user roster without admin actions and links the user player route', () => {
+    const { container } = renderTeamPlayersTab({ readOnly: true, mode: 'user' });
 
     expect(mockUseSeasons).toHaveBeenCalledWith('league-1', { mode: 'user' });
     expect(mockUseTeamPlayers).toHaveBeenCalledWith(
@@ -294,10 +304,9 @@ describe('TeamPlayersTab', () => {
       expect.objectContaining({ mode: 'user', prospectsOnly: false }),
     );
     expect(screen.queryByText('Add Players')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open Auston Matthews' })).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: 'Open Auston Matthews' }));
-
-    expect(mockNavigate).toHaveBeenCalledWith('/leagues/nhl/teams/tor/players/34-auston-matthews');
+    expect(container.querySelector('a')).toHaveAttribute(
+      'href',
+      '/leagues/nhl/teams/tor/players/34-auston-matthews',
+    );
   });
 });

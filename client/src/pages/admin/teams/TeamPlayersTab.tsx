@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
@@ -76,7 +75,6 @@ const TeamPlayersTab = ({
   readOnly = false,
   mode = 'admin',
 }: Props) => {
-  const navigate = useNavigate();
   const { seasons: leagueSeasons } = useSeasons(leagueId, { mode });
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(defaultSeasonId ?? null);
   const [playerView, setPlayerView] = useState<PlayerView>('roster');
@@ -260,7 +258,7 @@ const TeamPlayersTab = ({
                 intent: status === 'active' ? 'success' : 'neutral',
               }
         }
-        onClick={() => navigate(playerDetailsPath)}
+        href={playerDetailsPath}
         ariaLabel={`Open ${playerName}`}
         actions={actions}
       />
