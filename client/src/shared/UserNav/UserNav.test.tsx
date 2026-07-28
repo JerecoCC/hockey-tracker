@@ -32,6 +32,13 @@ const setup = (role: 'admin' | 'user') => {
 beforeEach(() => jest.clearAllMocks());
 
 describe('UserNav', () => {
+  it('renders a supported icon for Games', () => {
+    setup('user');
+
+    const gamesButton = screen.getByRole('button', { name: 'Games' });
+    expect(gamesButton.querySelector('svg')).toHaveAttribute('data-icon', 'calendar-days');
+  });
+
   it('shows Admin Panel below Settings for admin users', () => {
     setup('admin');
 

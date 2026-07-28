@@ -12,7 +12,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: 'apps' },
-  { label: 'Games', path: '/games', icon: 'sports_hockey' },
+  { label: 'Games', path: '/games', icon: 'calendar_month' },
 ];
 
 interface UserNavProps {
