@@ -1,11 +1,11 @@
 /**
- * App-wide viewport boundaries. Mobile follows the sidenav drawer breakpoint.
+ * App-wide viewport boundaries.
  * Keep the matching Sass tokens in styles/_mixins.scss synchronized.
  */
 export const SCREEN_BREAKPOINTS = {
-  phoneMax: 640,
-  mobileMax: 768,
-  tabletMax: 1024,
+  phoneMax: 425,
+  mobileMax: 425,
+  tabletMax: 768,
 } as const;
 
 export type ScreenSize = 'mobile' | 'tablet' | 'desktop';

@@ -270,7 +270,7 @@ describe('UserGamesWatchedTeam', () => {
     expect(screen.queryByText('Watched team not found.')).not.toBeInTheDocument();
   });
 
-  it('applies the stuck stripe state on wider mobile screens but not phones', async () => {
+  it('applies the stuck stripe state on tablet screens but not mobile', async () => {
     const originalWidth = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 700 });
 
@@ -286,7 +286,7 @@ describe('UserGamesWatchedTeam', () => {
 
       await waitFor(() => expect(heroCard).toHaveClass('heroCardStuck'));
 
-      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 640 });
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: 425 });
       fireEvent.resize(window);
 
       await waitFor(() => expect(heroCard).not.toHaveClass('heroCardStuck'));

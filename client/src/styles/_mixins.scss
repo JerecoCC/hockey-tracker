@@ -9,10 +9,11 @@
 $max-content-width: 1440px;
 
 // ── Breakpoints ───────────────────────────────────────────────────────
-// These mirror lib/screenSize.ts. The sidenav drawer defines the mobile boundary.
-$screen-phone-max: 640px;
-$screen-mobile-max: 768px;
-$screen-tablet-max: 1024px;
+// Keep these synchronized with lib/screenSize.ts.
+$screen-mobile-only-max: 425px;
+$screen-phone-max: 425px;
+$screen-mobile-max: 425px;
+$screen-tablet-max: 768px;
 
 // ── Spacing scale ─────────────────────────────────────────────────────
 //   $space-xs  →  4px   badge padding, list gap

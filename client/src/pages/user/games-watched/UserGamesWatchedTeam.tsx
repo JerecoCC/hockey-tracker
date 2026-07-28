@@ -173,38 +173,38 @@ const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
   const { team, count, record } = summary;
   const teamName = getTeamName(team);
   const heroCardRef = useRef<HTMLDivElement>(null);
-  const [isWideMobileStuck, setIsWideMobileStuck] = useState(false);
+  const [isTabletStuck, setIsTabletStuck] = useState(false);
 
   useEffect(() => {
     const heroCard = heroCardRef.current;
     if (!heroCard) return;
 
     const scrollContainer = getScrollContainer(heroCard);
-    const updateWideMobileStuckState = () => {
-      const isWideMobile =
-        window.innerWidth > SCREEN_BREAKPOINTS.phoneMax &&
-        window.innerWidth <= SCREEN_BREAKPOINTS.mobileMax;
+    const updateTabletStuckState = () => {
+      const isTablet =
+        window.innerWidth > SCREEN_BREAKPOINTS.mobileMax &&
+        window.innerWidth <= SCREEN_BREAKPOINTS.tabletMax;
       const nextIsStuck =
-        isWideMobile &&
+        isTablet &&
         scrollContainer.scrollTop > 0 &&
         heroCard.getBoundingClientRect().top <= HERO_STICKY_TOP;
-      setIsWideMobileStuck((current) => (current === nextIsStuck ? current : nextIsStuck));
+      setIsTabletStuck((current) => (current === nextIsStuck ? current : nextIsStuck));
     };
 
-    scrollContainer.addEventListener('scroll', updateWideMobileStuckState, { passive: true });
-    window.addEventListener('resize', updateWideMobileStuckState, { passive: true });
-    updateWideMobileStuckState();
+    scrollContainer.addEventListener('scroll', updateTabletStuckState, { passive: true });
+    window.addEventListener('resize', updateTabletStuckState, { passive: true });
+    updateTabletStuckState();
 
     return () => {
-      scrollContainer.removeEventListener('scroll', updateWideMobileStuckState);
-      window.removeEventListener('resize', updateWideMobileStuckState);
+      scrollContainer.removeEventListener('scroll', updateTabletStuckState);
+      window.removeEventListener('resize', updateTabletStuckState);
     };
   }, []);
 
   return (
     <StickyHeroCard
       ref={heroCardRef}
-      className={`${styles.heroCard} ${isWideMobileStuck ? styles.heroCardStuck : ''}`}
+      className={`${styles.heroCard} ${isTabletStuck ? styles.heroCardStuck : ''}`}
       stuckClassName={styles.heroCardStuck}
       stickyTopPx={HERO_STICKY_TOP}
       style={
