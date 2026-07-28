@@ -248,7 +248,7 @@ const TeamPlayersTab = ({
         placeholder={`${p.first_name[0]}${p.last_name[0]}`}
         primaryColor={p.primary_color ?? undefined}
         textColor={p.text_color ?? undefined}
-        chip={p.jersey_number != null ? { label: p.jersey_number } : null}
+        chip={{ label: p.jersey_number ?? '-' }}
         subtitle={formatPlayerPosition(p.position) ?? undefined}
         rightContent={
           isProspectsView

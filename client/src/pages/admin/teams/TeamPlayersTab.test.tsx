@@ -158,6 +158,15 @@ describe('TeamPlayersTab', () => {
     expect(container.querySelector('.playerHeaderSeasonGroup .vertical')).toBeInTheDocument();
   });
 
+  it('shows a dash jersey chip when a roster player has no jersey number', () => {
+    const playersWithoutJersey = [{ ...players[0], jersey_number: null }] as TeamPlayerRecord[];
+    mockUseTeamPlayers.mockReturnValue({ ...teamPlayersState, players: playersWithoutJersey });
+
+    renderTeamPlayersTab();
+
+    expect(screen.getByText('-')).toBeInTheDocument();
+  });
+
   it('keeps toolbar add players and adds filtered bordered section actions', async () => {
     const user = userEvent.setup();
     renderTeamPlayersTab();
