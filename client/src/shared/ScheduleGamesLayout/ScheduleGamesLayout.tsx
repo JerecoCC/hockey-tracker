@@ -30,10 +30,16 @@ export const ScheduleGamesTitle = ({
   hideTitleOnMobile = false,
 }: ScheduleGamesTitleProps) => (
   <>
-    {hideTitleOnMobile ? <span className={styles.mobileHiddenTitle}>{title}</span> : title}
+    {title &&
+      (hideTitleOnMobile ? <span className={styles.mobileHiddenTitle}>{title}</span> : title)}
     {picker && (
       <>
-        <Divider orientation="vertical" className={hideTitleOnMobile ? styles.mobileHiddenTitle : undefined} />
+        {title && (
+          <Divider
+            orientation="vertical"
+            className={hideTitleOnMobile ? styles.mobileHiddenTitle : undefined}
+          />
+        )}
         <span className={styles.weekNav}>{picker}</span>
       </>
     )}

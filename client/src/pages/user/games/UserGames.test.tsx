@@ -726,6 +726,7 @@ describe('UserGames schedule views', () => {
       expect(periodPicker).not.toHaveClass(styles.mobilePeriodPicker);
       expect(controlsCard).toHaveClass(styles.tabletControlsCard);
       expect(within(controlsCard as HTMLElement).queryByRole('heading', { name: 'Games' })).not.toBeInTheDocument();
+      expect(periodPicker?.parentElement).toHaveClass(scheduleLayoutStyles.weekNav);
       expect(controlsCard).toContainElement(viewControl);
       expect(viewControl).toHaveAttribute('data-full-width', 'false');
       const moreActionsButton = screen.getByRole('button', { name: 'More actions' });

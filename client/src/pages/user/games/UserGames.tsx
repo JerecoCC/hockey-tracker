@@ -1551,7 +1551,10 @@ const UserGames = () => {
         noHeaderMargin
         title={
           isMobileView ? undefined : (
-            isTabletView ? periodPickerControl : <ScheduleGamesTitle picker={periodPickerControl} />
+            <ScheduleGamesTitle
+              title={isTabletView ? null : undefined}
+              picker={periodPickerControl}
+            />
           )
         }
         action={
