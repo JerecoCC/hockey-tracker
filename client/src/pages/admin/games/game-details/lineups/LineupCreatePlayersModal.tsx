@@ -283,7 +283,7 @@ const LineupCreatePlayersModal = ({
               const fullName = `${formRow.first_name.trim()} ${formRow.last_name.trim()}`;
               if (p.team_id === teamId) {
                 if (!sameTeamMatchedNames.has(key)) {
-                  const rosterLabel = p.is_prospect ? 'prospects' : 'roster';
+                  const rosterLabel = p.is_prospect ? 'reserves' : 'roster';
                   sameTeamErrors.push(
                     `"${fullName}" already exists on this team's ${rosterLabel}.`,
                   );
@@ -293,7 +293,7 @@ const LineupCreatePlayersModal = ({
               }
 
               if (!warningMatchedNames.has(key)) {
-                const rosterLabel = p.is_prospect ? 'prospects' : 'roster';
+                const rosterLabel = p.is_prospect ? 'reserves' : 'roster';
                 const teamLabel = p.team_name ?? 'another team';
                 warnings.push(`"${fullName}" already exists on ${teamLabel}'s ${rosterLabel}.`);
                 warningMatchedNames.add(key);

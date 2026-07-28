@@ -224,6 +224,19 @@ describe('TeamPlayersTab', () => {
     expect(screen.queryByRole('button', { name: 'Trade Players' })).not.toBeInTheDocument();
   });
 
+  it('uses reserve wording for players outside the active roster', async () => {
+    const user = userEvent.setup();
+    const reservePlayer = { ...players[0], is_prospect: true } as TeamPlayerRecord;
+    mockUseTeamPlayers.mockReturnValue({ ...teamPlayersState, players: [reservePlayer] });
+
+    renderTeamPlayersTab();
+    await user.click(screen.getByRole('button', { name: 'Reserves' }));
+
+    expect(screen.getByText('Reserve')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search reserves...')).toBeInTheDocument();
+    expect(screen.queryByText('Prospect')).not.toBeInTheDocument();
+  });
+
   it('finds players by alternate Maksim and Maxim transliterations', async () => {
     const user = userEvent.setup();
     const islandersPlayers = [

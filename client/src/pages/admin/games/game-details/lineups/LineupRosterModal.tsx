@@ -200,7 +200,7 @@ const LineupRosterModal = ({
           return next;
         });
       }
-      toast.success(isProspect ? 'Player moved to prospects' : 'Player moved to roster');
+      toast.success(isProspect ? 'Player moved to reserves' : 'Player moved to roster');
       await queryClient.invalidateQueries({ queryKey: ['players'] });
     } catch (err) {
       toast.error(apiError(err, 'Failed to update roster status'));
@@ -336,7 +336,7 @@ const LineupRosterModal = ({
               name="info"
               size="0.85em"
             />
-            Prospect{prospectMatches.length !== 1 ? 's' : ''}:{' '}
+            Reserve{prospectMatches.length !== 1 ? 's' : ''}:{' '}
             {prospectMatches.map((p) => `#${p.number} ${p.name}`).join(', ')}
             {' - will be moved to roster when added.'}
           </p>
@@ -379,7 +379,7 @@ const LineupRosterModal = ({
             subtitle: formatPlayerPosition(player.position) ?? undefined,
             name: `${player.first_name} ${player.last_name}`.trim(),
             disabled: controlsDisabled,
-            rightContent: player.is_prospect ? <Tag label="Prospect" /> : undefined,
+            rightContent: player.is_prospect ? <Tag label="Reserve" /> : undefined,
             actions: [
               player.is_prospect
                 ? {
@@ -390,7 +390,7 @@ const LineupRosterModal = ({
                   }
                 : {
                     icon: 'south',
-                    tooltip: 'Move to prospects',
+                    tooltip: 'Move to reserves',
                     disabled: controlsDisabled || movingPlayerId === player.id,
                     onClick: () => updateProspectStatus(player, true),
                   },
@@ -411,8 +411,8 @@ const LineupRosterModal = ({
               onActiveChange={() => setShowProspects((v) => !v)}
               activeIcon="visibility"
               inactiveIcon="visibility_off"
-              activeTooltip="Hide prospects"
-              inactiveTooltip="Show prospects"
+              activeTooltip="Hide reserves"
+              inactiveTooltip="Show reserves"
               disabled={controlsDisabled || !hasProspects}
             />
           }

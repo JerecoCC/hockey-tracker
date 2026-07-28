@@ -214,7 +214,7 @@ const TeamPlayersTab = ({
           {
             icon: 'south',
             intent: 'neutral',
-            tooltip: 'Move to prospects',
+            tooltip: 'Move to reserves',
             disabled: busy === p.id,
             onClick: () => updatePlayerRosterRole(p, true),
           },
@@ -252,7 +252,7 @@ const TeamPlayersTab = ({
         subtitle={formatPlayerPosition(p.position) ?? undefined}
         rightContent={
           isProspectsView
-            ? { type: 'tag', label: 'Prospect', intent: 'neutral' }
+            ? { type: 'tag', label: 'Reserve', intent: 'neutral' }
             : {
                 type: 'tag',
                 label:
@@ -291,7 +291,7 @@ const TeamPlayersTab = ({
       onChange={(value) => setPlayerView(value as PlayerView)}
       options={[
         { value: 'roster', label: 'Roster' },
-        { value: 'prospects', label: 'Prospects' },
+        { value: 'prospects', label: 'Reserves' },
       ]}
     />
   );
@@ -350,7 +350,7 @@ const TeamPlayersTab = ({
         <div className={styles.rosterToolbar}>
           <SearchInput
             className={styles.rosterSearch}
-            placeholder={isProspectsView ? 'Search prospects...' : 'Search players...'}
+            placeholder={isProspectsView ? 'Search reserves...' : 'Search players...'}
             value={query}
             onChange={setQuery}
           />
@@ -396,12 +396,12 @@ const TeamPlayersTab = ({
                 <p className={styles.rosterEmpty}>
                   {players.length === 0
                     ? isProspectsView
-                      ? 'No prospects for this season.'
+                      ? 'No reserves for this season.'
                       : 'No players on this roster yet.'
                     : normalizedQuery
                       ? `No ${section.title.toLowerCase()} match "${query}".`
                       : isProspectsView
-                        ? `No ${section.title.toLowerCase()} prospects.`
+                        ? `No ${section.title.toLowerCase()} reserves.`
                         : `No ${section.title.toLowerCase()} on this roster.`}
                 </p>
               )}

@@ -69,7 +69,7 @@ describe('LineupRosterModal jersey quick-add', () => {
     mockedAxios.get.mockReset();
   });
 
-  it('names already-added players and identifies hidden prospect jersey matches', async () => {
+  it('names already-added players and identifies hidden reserve jersey matches', async () => {
     mockedAxios.get.mockResolvedValue({
       data: [
         player({ id: 'player-1', first_name: 'John', last_name: 'Smith', jersey_number: 19 }),
@@ -90,7 +90,7 @@ describe('LineupRosterModal jersey quick-add', () => {
     await waitFor(() => expect(mockedAxios.get).toHaveBeenCalled());
 
     expect(await screen.findByPlaceholderText(/search players/i)).toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: /show prospects/i })).toHaveAttribute(
+    expect(screen.getByRole('switch', { name: /show reserves/i })).toHaveAttribute(
       'aria-checked',
       'false',
     );
@@ -104,7 +104,7 @@ describe('LineupRosterModal jersey quick-add', () => {
       'Already in lineup: #19 John Smith',
     );
     expect(screen.getByText(/#27 Jane Doe/)).toHaveTextContent(
-      'Prospect: #27 Jane Doe - will be moved to roster when added.',
+      'Reserve: #27 Jane Doe - will be moved to roster when added.',
     );
     expect(screen.getByText('1 player selected')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /clear/i })).toBeEnabled();
