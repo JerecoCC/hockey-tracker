@@ -244,6 +244,7 @@ jest.mock('@jerecocc/tracker-ui/components/Toggle/Toggle', () => ({
     activeTooltip,
     inactiveTooltip,
     variant,
+    icon,
     ariaLabel,
     className,
   }: any) => (
@@ -255,6 +256,7 @@ jest.mock('@jerecocc/tracker-ui/components/Toggle/Toggle', () => ({
       aria-label={ariaLabel ?? (active ? activeTooltip : inactiveTooltip)}
       onClick={() => onActiveChange(!active)}
       className={className}
+      data-icon={icon}
     >
       {ariaLabel ?? (active ? activeTooltip : inactiveTooltip)}
     </button>
@@ -708,9 +710,10 @@ beforeEach(() => {
 });
 
 describe('UserGames schedule views', () => {
-  it('keeps the period picker and view control on one tablet toolbar row', () => {
+  it('uses the desktop control-card header with toggleable filters on tablet', async () => {
+    const user = userEvent.setup();
     const originalWidth = window.innerWidth;
-    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 769 });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 426 });
 
     let unmount: (() => void) | undefined;
     try {
@@ -718,25 +721,43 @@ describe('UserGames schedule views', () => {
 
       const periodPicker = screen.getByRole('button', { name: /^Select week:/ }).parentElement;
       const viewControl = screen.getByRole('button', { name: 'Week view' }).parentElement;
-      const tabletToolbar = periodPicker?.closest(`.${styles.tabletToolbar}`);
+      const controlsCard = periodPicker?.closest(`.${styles.controlsCard}`);
 
       expect(periodPicker).not.toHaveClass(styles.mobilePeriodPicker);
-      expect(tabletToolbar).toContainElement(viewControl);
+      expect(controlsCard).toHaveClass(styles.tabletControlsCard);
+      expect(within(controlsCard as HTMLElement).queryByRole('heading', { name: 'Games' })).not.toBeInTheDocument();
+      expect(controlsCard).toContainElement(viewControl);
       expect(viewControl).toHaveAttribute('data-full-width', 'false');
       const moreActionsButton = screen.getByRole('button', { name: 'More actions' });
-      expect(tabletToolbar).toContainElement(moreActionsButton);
+      expect(controlsCard).toContainElement(moreActionsButton);
       expect(moreActionsButton).toHaveAttribute('data-icon-size', '1.25rem');
       expect(screen.queryByRole('switch', { name: 'Hide filters' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Open filters' })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Show filters' })).toHaveAttribute(
+        'data-icon',
+        'filter_list',
+      );
+      expect(screen.queryByRole('dialog', { name: 'Filters' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('combobox', { name: 'Teams' })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Show filters' }));
+
+      const filtersDrawer = screen.getByRole('dialog', { name: 'Filters' });
+      expect(screen.getByRole('button', { name: 'Hide filters' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
       expect(
-        screen.getByRole('combobox', { name: 'Teams' }).closest(`.${scheduleLayoutStyles.filters}`),
-      ).toHaveClass(styles.controlsFilters);
-      expect(
-        screen.getByRole('combobox', { name: 'Teams' }).closest(`.${scheduleLayoutStyles.filters}`),
-      ).not.toHaveClass(scheduleLayoutStyles.filtersHidden);
-      expect(screen.getByRole('switch', { name: 'Show skipped games' })).toHaveClass(
+        within(filtersDrawer)
+          .getByRole('combobox', { name: 'Teams' })
+          .closest(`.${scheduleLayoutStyles.filters}`),
+      ).toHaveClass(styles.drawerFilters);
+      expect(within(filtersDrawer).getByRole('switch', { name: 'Show skipped games' })).toHaveClass(
         styles.skippedGamesToggle,
       );
+
+      await user.click(within(filtersDrawer).getByRole('button', { name: 'Close Filters' }));
+      expect(screen.queryByRole('dialog', { name: 'Filters' })).not.toBeInTheDocument();
     } finally {
       unmount?.();
       Object.defineProperty(window, 'innerWidth', {
@@ -782,7 +803,7 @@ describe('UserGames schedule views', () => {
 
   it('omits the Games section title from the mobile toolbar', () => {
     const originalWidth = window.innerWidth;
-    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 768 });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 425 });
 
     let unmount: (() => void) | undefined;
     try {
@@ -802,7 +823,7 @@ describe('UserGames schedule views', () => {
     const originalWidth = window.innerWidth;
     let unmount: (() => void) | undefined;
 
-    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 640 });
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 425 });
 
     try {
       ({ unmount } = render(<UserGames />));
@@ -847,22 +868,18 @@ describe('UserGames schedule views', () => {
 
       const filtersDrawer = screen.getByRole('dialog', { name: 'Filters' });
       expect(within(filtersDrawer).getByRole('combobox', { name: 'Teams' })).toBeInTheDocument();
-      const skippedGamesLabel = within(filtersDrawer).getByText('Skipped games');
-      expect(skippedGamesLabel.parentElement).toHaveClass(styles.toggleField);
-      const skippedGamesField = skippedGamesLabel.parentElement as HTMLElement;
-      const skippedGamesSubtitle = within(skippedGamesField).getByText('Show skipped games', {
+      expect(within(filtersDrawer).getByText('Skipped games')).toBeInTheDocument();
+      expect(within(filtersDrawer).getByText('Show skipped games', {
         selector: 'span',
-      });
-      const skippedGamesSwitch = within(skippedGamesField).getByRole('switch', {
+      })).toBeInTheDocument();
+      const skippedGamesSwitch = within(filtersDrawer).getByRole('switch', {
         name: 'Show skipped games',
       });
-      expect(skippedGamesSubtitle).toHaveClass(styles.toggleFieldSubtitle);
-      expect(skippedGamesSwitch.parentElement).toBe(skippedGamesField);
 
       await user.click(skippedGamesSwitch);
       expect(
-        within(skippedGamesField).getByText('Hide skipped games', { selector: 'span' }),
-      ).toHaveClass(styles.toggleFieldSubtitle);
+        within(filtersDrawer).getByText('Hide skipped games', { selector: 'span' }),
+      ).toBeInTheDocument();
 
       await user.click(within(filtersDrawer).getByRole('button', { name: 'Close Filters' }));
       expect(screen.queryByRole('dialog', { name: 'Filters' })).not.toBeInTheDocument();

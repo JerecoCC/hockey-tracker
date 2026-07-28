@@ -10,21 +10,16 @@
   width: 100%;
 }
 
+.tabletControlsCard > :first-child {
+  margin-bottom: 0;
+}
+
 .viewFilterControls {
   display: inline-flex;
-  align-items: stretch;
+  align-items: center;
   gap: $space-sm;
   flex: 0 0 auto;
   flex-wrap: nowrap;
-}
-
-.tabletToolbar {
-  display: flex;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: $space-md;
-  width: 100%;
-  min-width: 0;
 }
 
 // ── Toolbar (week nav + filter selects) ───────────────────────────────
@@ -54,6 +49,7 @@
   > .skippedGamesFilter {
     width: auto;
     justify-self: end;
+    transform: translateY(3px);
   }
 }
 
@@ -66,6 +62,32 @@
   width: 42px;
   height: 42px;
   flex: 0 0 42px;
+}
+
+.drawerFilters.drawerFilters {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: $space-md;
+  max-height: none;
+  margin-top: 0;
+  overflow: visible;
+  opacity: 1;
+
+  > :first-child {
+    display: none;
+  }
+
+  > * {
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto !important;
+    align-self: stretch;
+  }
+
+  .skippedGamesFilter {
+    width: 100%;
+  }
 }
 
 .weekSummarySentinel {
@@ -311,64 +333,6 @@
 
   .mobileToolbarActions .mobileFilterButton {
     flex: 0 0 42px;
-  }
-
-  .mobileFilters.mobileFilters {
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: $space-md;
-    max-height: none;
-    margin-top: 0;
-    overflow: visible;
-    opacity: 1;
-
-    > :first-child {
-      display: none;
-    }
-
-    > * {
-      width: 100%;
-      max-width: none;
-      flex: 0 0 auto !important;
-      align-self: stretch;
-    }
-  }
-
-  .skippedGamesFilter {
-    width: 100%;
-  }
-
-  .toggleField {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: $space-md;
-    row-gap: $space-xs;
-    width: 100%;
-
-    > span:first-child {
-      grid-column: 1;
-      grid-row: 1;
-      min-width: 0;
-    }
-
-    > .toggleFieldSubtitle {
-      grid-column: 1;
-      grid-row: 2;
-      color: var(--app-text-muted, #64748b);
-      font-size: 0.75rem;
-      font-weight: 500;
-      line-height: 1.3;
-      letter-spacing: 0;
-      text-transform: none;
-    }
-
-    > button {
-      grid-column: 2;
-      grid-row: 1 / span 2;
-      align-self: center;
-      justify-self: end;
-    }
   }
 
   .gameActions {

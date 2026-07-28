@@ -17,7 +17,6 @@ import { toast } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
 import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
-import { ControlledFieldGroup } from '@/components/form/ControlledFields';
 import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
@@ -44,6 +43,7 @@ import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
 import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
+import ToggleField from '@jerecocc/tracker-ui/components/Toggle/ToggleField';
 import PeriodPicker from '@jerecocc/tracker-ui/components/PeriodPicker/PeriodPicker';
 import { type GameRecord } from '@/hooks/useGames';
 import {
@@ -718,7 +718,6 @@ const UserGames = () => {
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
   const {
-    control: filterControl,
     setValue: setFilterValue,
     watch: watchFilter,
   } = useForm<{ showSkippedGames: boolean }>({
@@ -753,8 +752,8 @@ const UserGames = () => {
   }, [calendarMonth]);
 
   useEffect(() => {
-    if (!isMobileView) setFiltersDrawerOpen(false);
-  }, [isMobileView]);
+    if (!isMobileView && !isTabletView) setFiltersDrawerOpen(false);
+  }, [isMobileView, isTabletView]);
 
   const gamesPeriodParams = useMemo<{ week?: string; month?: string }>(() => {
     if (view === 'calendar') {
@@ -1335,6 +1334,7 @@ const UserGames = () => {
         tzPref={tzPref}
         canOpen={canOpen}
         useLeagueColors
+        mobileActionsAside
         onOpen={() => openGame(game)}
         actions={
           <UserGameActions
@@ -1398,16 +1398,17 @@ const UserGames = () => {
         fixed
         className={styles.skippedGamesFilter}
       >
-        {isMobileView ? (
-          <ControlledFieldGroup
-            control={filterControl}
+        {isMobileView || isTabletView ? (
+          <ToggleField
             label="Skipped games"
-            name="showSkippedGames"
-            wrapperClassName={styles.toggleField}
-          >
-            <span className={styles.toggleFieldSubtitle}>{skippedGamesToggleMessage}</span>
-            {skippedGamesToggle}
-          </ControlledFieldGroup>
+            sublabel={skippedGamesToggleMessage}
+            variant="toggle"
+            active={showSkippedGames}
+            onActiveChange={() => setFilterValue('showSkippedGames', !showSkippedGames)}
+            activeIcon="visibility"
+            inactiveIcon="visibility_off"
+            ariaLabel={skippedGamesToggleMessage}
+          />
         ) : (
           skippedGamesToggle
         )}
@@ -1521,9 +1522,22 @@ const UserGames = () => {
     />
   );
 
+  const tabletFilterToggle = (
+    <Toggle
+      variant="button"
+      active={filtersDrawerOpen}
+      onActiveChange={setFiltersDrawerOpen}
+      icon="filter_list"
+      activeTooltip="Hide filters"
+      inactiveTooltip="Show filters"
+      ariaLabel={filtersDrawerOpen ? 'Hide filters' : 'Show filters'}
+    />
+  );
+
   const standardToolbarActions = (
     <div className={styles.viewFilterControls}>
       {viewSegmentedControl}
+      {isTabletView && tabletFilterToggle}
       {moreActionsControl}
     </div>
   );
@@ -1531,15 +1545,17 @@ const UserGames = () => {
   return (
     <div className={styles.page}>
       <Section
-        className={styles.controlsCard}
+        className={[styles.controlsCard, isTabletView && styles.tabletControlsCard]
+          .filter(Boolean)
+          .join(' ')}
         noHeaderMargin
         title={
-          isMobileView || isTabletView ? undefined : (
-            <ScheduleGamesTitle picker={periodPickerControl} />
+          isMobileView ? undefined : (
+            isTabletView ? periodPickerControl : <ScheduleGamesTitle picker={periodPickerControl} />
           )
         }
         action={
-          isMobileView || isTabletView ? undefined : (
+          isMobileView ? undefined : (
             <ScheduleGamesActions>{standardToolbarActions}</ScheduleGamesActions>
           )
         }
@@ -1555,30 +1571,17 @@ const UserGames = () => {
               </div>
             </div>
           </div>
-        ) : isTabletView ? (
-          <>
-            <div className={styles.tabletToolbar}>
-              {periodPickerControl}
-              {standardToolbarActions}
-            </div>
-            <ScheduleFilters
-              visible
-              className={styles.controlsFilters}
-            >
-              {filterControls}
-            </ScheduleFilters>
-          </>
-        ) : (
+        ) : !isTabletView ? (
           <ScheduleFilters
             visible
             className={styles.controlsFilters}
           >
             {filterControls}
           </ScheduleFilters>
-        )}
+        ) : null}
       </Section>
 
-      {isMobileView && (
+      {(isMobileView || isTabletView) && (
         <Modal
           open={filtersDrawerOpen}
           title="Filters"
@@ -1587,7 +1590,7 @@ const UserGames = () => {
         >
           <ScheduleFilters
             visible
-            className={styles.mobileFilters}
+            className={styles.drawerFilters}
           >
             {filterControls}
           </ScheduleFilters>
@@ -1606,6 +1609,7 @@ const UserGames = () => {
             activeDateKey={activeSummaryDay}
             stuck={isWeekSummaryStuck}
             stickyOnMobile
+            fitMobileViewport
             onSelectDate={scrollToDay}
             formatDate={fmtDaySummaryDate}
             formatWeekday={fmtDaySummaryWeekday}
