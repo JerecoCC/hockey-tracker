@@ -142,17 +142,24 @@ describe('useTeamPlayers roster updates', () => {
     expect(queryClient.getQueryData<TeamPlayerRecord[]>(season2026Key)).toEqual([]);
   });
 
-  it('updates prospect status only on the matching season roster row', async () => {
+  it('moves a reserve to the roster and invalidates cached destination lists', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const season2025Key = ['players', { team_id: 'team-1', season_id: 'season-2025' }];
-    const season2026Key = [
+    const roster2026Key = ['players', { team_id: 'team-1', season_id: 'season-2026' }];
+    const reserves2026Key = [
       'players',
       { team_id: 'team-1', season_id: 'season-2026', prospectsOnly: true },
+    ];
+    const all2026Key = [
+      'players',
+      { team_id: 'team-1', season_id: 'season-2026', includeProspects: true },
     ];
     const player2025 = { ...PLAYER, player_team_id: 'player-team-2025', is_prospect: false };
     const player2026 = { ...PLAYER, player_team_id: 'player-team-2026', is_prospect: true };
     queryClient.setQueryData(season2025Key, [player2025]);
-    queryClient.setQueryData(season2026Key, [player2026]);
+    queryClient.setQueryData(roster2026Key, []);
+    queryClient.setQueryData(reserves2026Key, [player2026]);
+    queryClient.setQueryData(all2026Key, [player2026]);
     mockedAxios.patch.mockResolvedValueOnce({});
 
     const { result } = renderHook(
@@ -165,7 +172,47 @@ describe('useTeamPlayers roster updates', () => {
     });
 
     expect(queryClient.getQueryData<TeamPlayerRecord[]>(season2025Key)).toEqual([player2025]);
-    expect(queryClient.getQueryData<TeamPlayerRecord[]>(season2026Key)).toEqual([]);
+    expect(queryClient.getQueryData<TeamPlayerRecord[]>(reserves2026Key)).toEqual([]);
+    expect(queryClient.getQueryData<TeamPlayerRecord[]>(all2026Key)?.[0]).toMatchObject({
+      player_team_id: 'player-team-2026',
+      is_prospect: false,
+    });
+    expect(queryClient.getQueryState(roster2026Key)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(reserves2026Key)?.isInvalidated).toBe(true);
+  });
+
+  it('moves a roster player to reserves and invalidates cached destination lists', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const rosterKey = ['players', { team_id: 'team-1', season_id: 'season-2026' }];
+    const reservesKey = [
+      'players',
+      { team_id: 'team-1', season_id: 'season-2026', prospectsOnly: true },
+    ];
+    const allPlayersKey = [
+      'players',
+      { team_id: 'team-1', season_id: 'season-2026', includeProspects: true },
+    ];
+    const rosterPlayer = { ...PLAYER, player_team_id: 'player-team-2026', is_prospect: false };
+    queryClient.setQueryData(rosterKey, [rosterPlayer]);
+    queryClient.setQueryData(reservesKey, []);
+    queryClient.setQueryData(allPlayersKey, [rosterPlayer]);
+    mockedAxios.patch.mockResolvedValueOnce({});
+
+    const { result } = renderHook(() => useTeamPlayers(undefined, 'season-2026'), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await result.current.updatePlayerRosterRole(rosterPlayer, true);
+    });
+
+    expect(queryClient.getQueryData<TeamPlayerRecord[]>(rosterKey)).toEqual([]);
+    expect(queryClient.getQueryData<TeamPlayerRecord[]>(allPlayersKey)?.[0]).toMatchObject({
+      player_team_id: 'player-team-2026',
+      is_prospect: true,
+    });
+    expect(queryClient.getQueryState(rosterKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(reservesKey)?.isInvalidated).toBe(true);
   });
 });
 

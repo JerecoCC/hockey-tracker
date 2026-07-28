@@ -733,7 +733,7 @@ const useTeamPlayers = (
           { headers: authHeaders() },
         );
       }
-      toast.success(isProspect ? 'Player moved to prospects' : 'Player moved to roster');
+      toast.success(isProspect ? 'Player moved to reserves' : 'Player moved to roster');
       updatePlayerCaches(queryClient, (cachedPlayer, queryKey) => {
         if (!isSameRosterRecord(cachedPlayer, player)) {
           return cachedPlayer;
@@ -745,6 +745,10 @@ const useTeamPlayers = (
         }
         return { ...cachedPlayer, is_prospect: isProspect };
       });
+      // Cached destination lists may not contain the player yet, so mapping
+      // existing rows cannot add them. Mark every player list stale so the
+      // destination roster/reserve view refetches when the user switches tabs.
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
       return true;
