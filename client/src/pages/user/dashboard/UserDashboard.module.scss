@@ -292,7 +292,7 @@
     gap: $space-md;
     padding: $space-xs 0;
 
-    @container (max-width: $screen-phone-max) {
+    @container (max-width: #{$screen-phone-max}) {
       grid-template-columns: 1fr;
     }
   }
@@ -417,7 +417,7 @@
   }
 }
 
-@container (max-width: $screen-phone-max) {
+@container (max-width: #{$screen-mobile-only-max}) {
   .hero {
     --rink-inset: #{$space-xs};
 
@@ -425,6 +425,31 @@
     padding: $space-md;
     border-right: 0;
     border-left: 0;
+
+    &::after {
+      background:
+        radial-gradient(
+          circle at 50% 50%,
+          var(--rink-blue-line) 0 4px,
+          transparent 5px 41px,
+          var(--rink-blue-line) 42px 45px,
+          transparent 46px
+        ),
+        linear-gradient(
+          90deg,
+          transparent 0 calc(8% - 2px),
+          var(--rink-blue-line) calc(8% - 2px) calc(8% + 2px),
+          transparent calc(8% + 2px) calc(50% - 2px),
+          var(--rink-red-line) calc(50% - 2px) calc(50% + 2px),
+          transparent calc(50% + 2px) calc(92% - 2px),
+          var(--rink-blue-line) calc(92% - 2px) calc(92% + 2px),
+          transparent calc(92% + 2px) 100%
+        );
+    }
+  }
+
+  .rinkCreases {
+    display: none;
   }
 
   .heroContent {
