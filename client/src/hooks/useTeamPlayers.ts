@@ -677,7 +677,11 @@ const useTeamPlayers = (
     playerId: string,
     tId: string,
     sId: string,
-    payload: { jersey_number?: number | null; photo?: string | null },
+    payload: {
+      jersey_number?: number | null;
+      effective_date?: string;
+      photo?: string | null;
+    },
   ): Promise<boolean> => {
     setBusy(playerId);
     try {

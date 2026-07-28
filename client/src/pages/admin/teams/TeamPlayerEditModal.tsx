@@ -1,6 +1,10 @@
 import { useCallback, useLayoutEffect, useMemo } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import {
+  ControlledDatePickerField,
+  ControlledInputField,
+  ControlledSelectField,
+} from '@/components/form/ControlledFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
@@ -32,6 +36,7 @@ const STATUS_OPTIONS = [
 interface FormValues {
   photo: File | string | null;
   jersey_number: string;
+  jersey_effective_date: string;
   first_name: string;
   last_name: string;
   position: PlayerPosition | null;
@@ -49,7 +54,11 @@ interface Props {
     playerId: string,
     teamId: string,
     seasonId: string,
-    payload: { jersey_number?: number | null; photo?: string | null },
+    payload: {
+      jersey_number?: number | null;
+      effective_date?: string;
+      photo?: string | null;
+    },
   ) => Promise<boolean>;
   uploadPlayerPhoto: (file: File) => Promise<string | null>;
 }
@@ -70,6 +79,7 @@ const TeamPlayerEditModal = ({
     () => ({
       photo: editTarget?.photo ?? null,
       jersey_number: editTarget?.jersey_number != null ? String(editTarget.jersey_number) : '',
+      jersey_effective_date: '',
       first_name: editTarget?.first_name ?? '',
       last_name: editTarget?.last_name ?? '',
       position: editTarget?.position ?? null,
@@ -90,6 +100,10 @@ const TeamPlayerEditModal = ({
   useLayoutEffect(() => {
     reset(formValues);
   }, [formValues, reset]);
+
+  const jerseyNumber = useWatch({ control, name: 'jersey_number' });
+  const normalizedJerseyNumber = jerseyNumber === '' ? null : Number(jerseyNumber);
+  const jerseyNumberChanged = normalizedJerseyNumber !== (editTarget?.jersey_number ?? null);
 
   const handleClose = useCallback(() => {
     reset(formValues);
@@ -116,11 +130,19 @@ const TeamPlayerEditModal = ({
     });
     if (!playerOk) return;
 
-    // Update jersey number + photo on the player_teams stint
+    // Route jersey changes through the dated history mechanism instead of
+    // silently overwriting the current player_teams value.
     if (seasonId) {
-      const jerseyNumber = data.jersey_number ? Number(data.jersey_number) : null;
+      const nextJerseyNumber = data.jersey_number ? Number(data.jersey_number) : null;
       const teamOk = await updatePlayerTeam(editTarget.id, teamId, seasonId, {
-        jersey_number: jerseyNumber,
+        ...(nextJerseyNumber !== editTarget.jersey_number
+          ? {
+              jersey_number: nextJerseyNumber,
+              ...(nextJerseyNumber != null
+                ? { effective_date: data.jersey_effective_date }
+                : {}),
+            }
+          : {}),
         photo: photoUrl,
       });
       if (!teamOk) return;
@@ -186,6 +208,18 @@ const TeamPlayerEditModal = ({
             disabled={isSubmitting}
           />
         </div>
+        {jerseyNumberChanged && normalizedJerseyNumber != null && (
+          <div className={styles.fullRow}>
+            <ControlledDatePickerField
+              label="Jersey Effective Date"
+              control={control}
+              name="jersey_effective_date"
+              required
+              rules={{ required: true }}
+              disabled={isSubmitting}
+            />
+          </div>
+        )}
         <div className={styles.row}>
           <ControlledSelectField
             label="Position"

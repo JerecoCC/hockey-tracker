@@ -131,4 +131,61 @@ describe('TeamPlayerEditModal', () => {
     expect(updatePlayer.mock.calls[0][1]).toEqual(expect.objectContaining({ first_name: 'Jane' }));
     expect(updatePlayer.mock.calls[0][1]).not.toHaveProperty('status');
   });
+
+  it('records the first jersey number assigned to a rostered player as a dated change', async () => {
+    const updatePlayer = jest.fn().mockResolvedValue(true);
+    const updatePlayerTeam = jest.fn().mockResolvedValue(true);
+
+    render(
+      <TeamPlayerEditModal
+        open
+        editTarget={{ ...player, jersey_number: null }}
+        teamId="team-1"
+        seasonId="season-1"
+        onClose={jest.fn()}
+        updatePlayer={updatePlayer}
+        updatePlayerTeam={updatePlayerTeam}
+        uploadPlayerPhoto={jest.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Jersey #'), { target: { value: '21' } });
+    expect(screen.getByLabelText(/Jersey Effective Date/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/Jersey Effective Date/), {
+      target: { value: '2026-07-28' },
+    });
+    fireEvent.submit(document.getElementById('team-player-edit-form') as HTMLFormElement);
+
+    await waitFor(() =>
+      expect(updatePlayerTeam).toHaveBeenCalledWith('player-1', 'team-1', 'season-1', {
+        jersey_number: 21,
+        effective_date: '2026-07-28',
+        photo: null,
+      }),
+    );
+  });
+
+  it('does not submit an unchanged jersey number as a history change', async () => {
+    const updatePlayer = jest.fn().mockResolvedValue(true);
+    const updatePlayerTeam = jest.fn().mockResolvedValue(true);
+
+    render(
+      <TeamPlayerEditModal
+        open
+        editTarget={player}
+        teamId="team-1"
+        seasonId="season-1"
+        onClose={jest.fn()}
+        updatePlayer={updatePlayer}
+        updatePlayerTeam={updatePlayerTeam}
+        uploadPlayerPhoto={jest.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/First Name/), { target: { value: 'Jane' } });
+    fireEvent.submit(document.getElementById('team-player-edit-form') as HTMLFormElement);
+
+    await waitFor(() => expect(updatePlayerTeam).toHaveBeenCalled());
+    expect(updatePlayerTeam.mock.calls[0][3]).toEqual({ photo: null });
+  });
 });
