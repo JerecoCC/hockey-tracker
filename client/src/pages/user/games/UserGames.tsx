@@ -1480,20 +1480,6 @@ const UserGames = () => {
     />
   );
 
-  const mobileFilterButton = (
-    <Button
-      className={styles.mobileFilterButton}
-      variant="outlined"
-      intent="neutral"
-      icon="filter_list"
-      iconHeight="field"
-      onClick={() => setFiltersDrawerOpen(true)}
-      aria-label="Open filters"
-      aria-haspopup="dialog"
-      aria-expanded={filtersDrawerOpen}
-    />
-  );
-
   const moreActionsControl = (
     <GoogleCalendarSyncControl
       renderTrigger={({ busy, openSettings }) => (
@@ -1520,7 +1506,7 @@ const UserGames = () => {
     />
   );
 
-  const tabletFilterToggle = (
+  const filterToggle = (
     <Toggle
       variant="button"
       active={filtersDrawerOpen}
@@ -1529,13 +1515,14 @@ const UserGames = () => {
       activeTooltip="Hide filters"
       inactiveTooltip="Show filters"
       ariaLabel={filtersDrawerOpen ? 'Hide filters' : 'Show filters'}
+      className={isMobileView ? styles.mobileFilterButton : undefined}
     />
   );
 
   const standardToolbarActions = (
     <div className={styles.viewFilterControls}>
       {viewSegmentedControl}
-      {isTabletView && tabletFilterToggle}
+      {isTabletView && filterToggle}
       {moreActionsControl}
     </div>
   );
@@ -1567,7 +1554,7 @@ const UserGames = () => {
             <div className={styles.mobileToolbarViewRow}>
               {viewSegmentedControl}
               <div className={styles.mobileToolbarActions}>
-                {mobileFilterButton}
+                {filterToggle}
                 {moreActionsControl}
               </div>
             </div>
