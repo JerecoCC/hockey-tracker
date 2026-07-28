@@ -157,7 +157,6 @@ export const FieldGallery = {
               {(value, setValue) => (
                 <PeriodPicker
                   value={value}
-                  label="Jan 12 - Jan 18"
                   onChange={setValue}
                   onPrevious={() => setValue('2026-01-11')}
                   onNext={() => setValue('2026-01-25')}
@@ -169,7 +168,6 @@ export const FieldGallery = {
                 <PeriodPicker
                   kind="month"
                   value={value}
-                  label="January 2026"
                   onChange={setValue}
                   onPrevious={() => setValue('2025-12')}
                   onNext={() => setValue('2026-02')}

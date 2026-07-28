@@ -1093,7 +1093,6 @@ const SeasonGamesTab = ({
                 view === 'list' ? (
                   <PeriodPicker
                     value={dateToISO(weekStart)}
-                    label={fmtWeekRange(weekStart, visibleWeekEnd)}
                     onChange={(v) => setWeekStart(v ? fromISODate(v) : toDay(new Date()))}
                     onPrevious={() => setWeekStart((d) => addDays(d, -7))}
                     onNext={() => setWeekStart((d) => addDays(d, 7))}
@@ -1102,7 +1101,6 @@ const SeasonGamesTab = ({
                   <PeriodPicker
                     kind="month"
                     value={toMonthPickerValue(calendarMonth)}
-                    label={MONTH_LABEL_FMT.format(calendarMonth)}
                     onChange={changeCalendarMonth}
                     onPrevious={goToPreviousCalendarMonth}
                     onNext={goToNextCalendarMonth}

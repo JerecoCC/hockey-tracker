@@ -1421,7 +1421,6 @@ const UserGames = () => {
       <PeriodPicker
         className={isMobileView ? styles.mobilePeriodPicker : undefined}
         value={dateToISO(weekStart)}
-        label={fmtWeekRange(weekStart, weekEnd)}
         onChange={handleWeekPeriodChange}
         onPrevious={() => handleWeekNavigate(-7)}
         onNext={() => handleWeekNavigate(7)}
@@ -1431,7 +1430,6 @@ const UserGames = () => {
         className={isMobileView ? styles.mobilePeriodPicker : undefined}
         kind="month"
         value={toMonthPickerValue(calendarMonth)}
-        label={MONTH_LABEL_FMT.format(calendarMonth)}
         onChange={(value) => value && handleCalendarMonthChange(fromMonthPickerValue(value))}
         onPrevious={() => handleCalendarMonthChange((current) => addMonths(current, -1))}
         onNext={() => handleCalendarMonthChange((current) => addMonths(current, 1))}

@@ -289,7 +289,6 @@ const TeamGamesTab = ({
             <PeriodPicker
               kind="month"
               value={toMonthPickerValue(calendarMonth)}
-              label={MONTH_LABEL_FMT.format(calendarMonth)}
               onChange={changeCalendarMonth}
               onPrevious={() => setCalendarMonth((current) => addMonths(current, -1))}
               onNext={() => setCalendarMonth((current) => addMonths(current, 1))}
