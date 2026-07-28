@@ -819,7 +819,7 @@ describe('UserGames schedule views', () => {
     }
   });
 
-  it('opens the filters in a modal drawer from a mobile icon button', async () => {
+  it('opens the filters in a modal drawer from the shared mobile filter toggle', async () => {
     const user = userEvent.setup();
     const originalWidth = window.innerWidth;
     let unmount: (() => void) | undefined;
@@ -832,9 +832,9 @@ describe('UserGames schedule views', () => {
       expect(screen.queryByRole('switch', { name: 'Hide filters' })).not.toBeInTheDocument();
       expect(screen.queryByRole('dialog', { name: 'Filters' })).not.toBeInTheDocument();
 
-      const filtersButton = screen.getByRole('button', { name: 'Open filters' });
-      expect(filtersButton).toHaveAttribute('data-variant', 'outlined');
-      expect(filtersButton).toHaveAttribute('data-icon-height', 'field');
+      const filtersButton = screen.getByRole('button', { name: 'Show filters' });
+      expect(filtersButton).toHaveAttribute('aria-pressed', 'false');
+      expect(filtersButton).toHaveAttribute('data-icon', 'filter_list');
       expect(filtersButton).toHaveClass(styles.mobileFilterButton);
       const periodPicker = screen.getByRole('button', { name: /^Select week:/ }).parentElement;
       expect(periodPicker).toHaveClass(styles.mobilePeriodPicker);
