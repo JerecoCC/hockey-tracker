@@ -108,6 +108,7 @@ jest.mock(
         aria-label={tooltip ?? (icon === 'edit' ? 'Edit' : icon)}
         data-size={size}
         data-icon-height={iconHeight ?? 'default'}
+        data-icon={icon}
         {...rest}
       >
         {children}
@@ -2099,9 +2100,11 @@ describe('PlayerDetails info tab', () => {
     const currentJerseyItem = within(stintAccordion)
       .getByText('Oct 1, 2025 - Present')
       .closest('li') as HTMLElement;
-    await user.click(
-      within(currentJerseyItem).getByRole('button', { name: 'Edit jersey number change' }),
-    );
+    const editCurrentJerseyButton = within(currentJerseyItem).getByRole('button', {
+      name: 'Edit jersey number change',
+    });
+    expect(editCurrentJerseyButton).toHaveAttribute('data-icon', 'edit');
+    await user.click(editCurrentJerseyButton);
     expect(mockJerseyHistoryEditModal).toHaveBeenLastCalledWith(
       expect.objectContaining({
         open: true,
@@ -2199,6 +2202,44 @@ describe('PlayerDetails info tab', () => {
         initialSeasonId: 'season-2',
         mode: 'set',
       }),
+    );
+  });
+
+  it('renders a supported icon for the record jersey number change action', () => {
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    mockUsePlayerTradeHistory.mockReturnValue({
+      stints: [
+        {
+          id: 'stint-1',
+          team_id: 'team-1',
+          season_id: 'season-1',
+          roster_player_team_id: 'roster-1',
+          team: {
+            id: 'team-1',
+            name: 'Toronto Maple Leafs',
+            code: 'TOR',
+            logo: null,
+            primary_color: '#003e7e',
+            text_color: '#ffffff',
+          },
+          jersey_number: 19,
+          is_prospect: false,
+          position: 'C',
+          acquisition_type: 'trade',
+          start_date: '2024-10-01',
+          end_date: null,
+          photo: null,
+          has_stats: false,
+          can_delete: true,
+        },
+      ],
+    });
+
+    render(<PlayerDetails />);
+
+    expect(screen.getByRole('button', { name: 'Record jersey number change' })).toHaveAttribute(
+      'data-icon',
+      'more_time',
     );
   });
 

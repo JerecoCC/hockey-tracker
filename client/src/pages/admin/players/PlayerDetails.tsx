@@ -106,6 +106,10 @@ const HERO_AVATAR_SIZE = 88;
 const MANUAL_MOVEMENT_START_SEASON_NAME = '2025-26';
 const MANUAL_MOVEMENT_START_FALLBACK_DATE = '2025-10-01';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const JERSEY_HISTORY_ACTION_ICONS = {
+  record: 'more_time',
+  edit: 'edit',
+} as const;
 const PLAYER_POSITION_TAG_INTENTS: Record<PlayerPosition, TagIntent> = {
   F: 'accent',
   C: 'accent',
@@ -2259,7 +2263,7 @@ const StintHistoryDetails = ({
                     entry.historyEntry
                       ? [
                           {
-                            icon: 'edit',
+                            icon: JERSEY_HISTORY_ACTION_ICONS.edit,
                             tooltip: 'Edit jersey number change',
                             onClick: () => onEditJerseyHistoryEntry(entry.historyEntry!),
                           },
@@ -3839,7 +3843,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                                   : null,
                                 !s.end_date && s.roster_player_team_id
                                   ? {
-                                      icon: 'jersey',
+                                      icon: JERSEY_HISTORY_ACTION_ICONS.record,
                                       tooltip: 'Record jersey number change',
                                       onClick: () => setChangingJerseyStint(s),
                                     }
