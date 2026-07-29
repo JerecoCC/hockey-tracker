@@ -110,6 +110,7 @@ export const FieldGallery = {
                 <MultiSelect
                   value={value}
                   options={multiTeamOptions}
+                  selectionLayout="wrap"
                   onChange={setValue}
                   searchable
                 />

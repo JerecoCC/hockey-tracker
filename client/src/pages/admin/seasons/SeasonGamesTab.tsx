@@ -1177,6 +1177,7 @@ const SeasonGamesTab = ({
                 options={teamFilterOptions}
                 placeholder="All Teams"
                 emptyMessage="No teams in this season"
+                selectionLayout="scroll"
                 onChange={setTeamFilter}
                 searchable
               />

@@ -1040,6 +1040,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                   options={conferenceOptions}
                   placeholder="All conferences"
                   emptyMessage="No conferences found"
+                  selectionLayout="wrap"
                   searchable
                   onChange={(values) =>
                     form.setValue('eligible_conference_names', values, {
