@@ -371,10 +371,11 @@ jest.mock('@jerecocc/tracker-ui/components/Select/Select', () => ({
 }));
 jest.mock('@jerecocc/tracker-ui/components/MultiSelect/MultiSelect', () => ({
   __esModule: true,
-  default: ({ value, options, onChange, onExit, placeholder }: any) => (
+  default: ({ value, options, onChange, onExit, placeholder, selectionLayout }: any) => (
     <div
       role="combobox"
       aria-label={placeholder ?? 'multi-select'}
+      data-selection-layout={selectionLayout}
     >
       {options.map((option: any) => (
         <button
@@ -744,6 +745,10 @@ describe('UserGames schedule views', () => {
       await user.click(screen.getByRole('button', { name: 'Show filters' }));
 
       const filtersDrawer = screen.getByRole('dialog', { name: 'Filters' });
+      expect(within(filtersDrawer).getByRole('combobox', { name: 'Teams' })).toHaveAttribute(
+        'data-selection-layout',
+        'wrap',
+      );
       expect(screen.getByRole('button', { name: 'Hide filters' })).toHaveAttribute(
         'aria-pressed',
         'true',
@@ -778,6 +783,10 @@ describe('UserGames schedule views', () => {
       ({ unmount } = render(<UserGames />));
 
       expect(screen.queryByRole('switch', { name: 'Hide filters' })).not.toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Teams' })).toHaveAttribute(
+        'data-selection-layout',
+        'scroll',
+      );
       expect(
         screen.getByRole('combobox', { name: 'Teams' }).closest(`.${scheduleLayoutStyles.filters}`),
       ).toHaveClass(styles.controlsFilters);
@@ -868,7 +877,10 @@ describe('UserGames schedule views', () => {
       await user.click(filtersButton);
 
       const filtersDrawer = screen.getByRole('dialog', { name: 'Filters' });
-      expect(within(filtersDrawer).getByRole('combobox', { name: 'Teams' })).toBeInTheDocument();
+      expect(within(filtersDrawer).getByRole('combobox', { name: 'Teams' })).toHaveAttribute(
+        'data-selection-layout',
+        'wrap',
+      );
       expect(within(filtersDrawer).getByText('Skipped games')).toBeInTheDocument();
       expect(within(filtersDrawer).getByText('Show skipped games', {
         selector: 'span',
