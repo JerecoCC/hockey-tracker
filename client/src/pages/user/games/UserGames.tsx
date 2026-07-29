@@ -1389,7 +1389,7 @@ const UserGames = () => {
           options={teamOptions}
           placeholder="Teams"
           emptyMessage="No teams available"
-          selectionLayout="scroll"
+          selectionLayout={isMobileView || isTabletView ? 'wrap' : 'scroll'}
           onChange={setTeamFilter}
           onExit={applyTeamFilter}
           searchable
