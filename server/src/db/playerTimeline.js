@@ -16,7 +16,6 @@ async function ensurePlayerTimelineSchema(sql) {
     CREATE TABLE IF NOT EXISTS player_jersey_stints (
       id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       player_id      UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-      team_id        UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
       jersey_number  SMALLINT NOT NULL CHECK (jersey_number BETWEEN 0 AND 99),
       start_date     DATE NOT NULL,
       end_date       DATE,
@@ -24,15 +23,6 @@ async function ensurePlayerTimelineSchema(sql) {
       CHECK (end_date IS NULL OR end_date >= start_date)
     )
   `;
-  await sql`
-    CREATE INDEX IF NOT EXISTS player_jersey_stints_lookup
-      ON player_jersey_stints (player_id, team_id, start_date DESC, end_date)
-  `;
-  await sql`
-    CREATE UNIQUE INDEX IF NOT EXISTS player_jersey_stints_effective_start_unique
-      ON player_jersey_stints (player_id, team_id, start_date)
-  `;
-
   await sql`
     CREATE TABLE IF NOT EXISTS season_projected_lineup_slots (
       id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -126,7 +116,6 @@ async function ensurePlayerTimelineSchema(sql) {
         WITH raw_events AS (
           SELECT
             pt.player_id,
-            pt.team_id,
             jnh.jersey_number,
             jnh.effective_from AS event_date,
             2 AS priority,
@@ -138,7 +127,6 @@ async function ensurePlayerTimelineSchema(sql) {
 
           SELECT
             pt.player_id,
-            pt.team_id,
             pt.jersey_number,
             COALESCE(pt.start_date, s.start_date, pt.created_at::date) AS event_date,
             1 AS priority,
@@ -148,18 +136,18 @@ async function ensurePlayerTimelineSchema(sql) {
           WHERE pt.jersey_number IS NOT NULL
         ),
         deduped AS (
-          SELECT DISTINCT ON (player_id, team_id, event_date)
-            player_id, team_id, jersey_number, event_date, created_at
+          SELECT DISTINCT ON (player_id, event_date)
+            player_id, jersey_number, event_date, created_at
           FROM raw_events
           WHERE event_date IS NOT NULL
-          ORDER BY player_id, team_id, event_date, priority DESC, created_at DESC
+          ORDER BY player_id, event_date, priority DESC, created_at DESC
         ),
         marked AS (
           SELECT
             *,
             CASE
               WHEN LAG(jersey_number) OVER (
-                PARTITION BY player_id, team_id ORDER BY event_date, created_at
+                PARTITION BY player_id ORDER BY event_date, created_at
               ) IS DISTINCT FROM jersey_number
               THEN 1 ELSE 0
             END AS starts_group
@@ -169,32 +157,122 @@ async function ensurePlayerTimelineSchema(sql) {
           SELECT
             *,
             SUM(starts_group) OVER (
-              PARTITION BY player_id, team_id ORDER BY event_date, created_at
+              PARTITION BY player_id ORDER BY event_date, created_at
             ) AS jersey_group
           FROM marked
         ),
         assignments AS (
           SELECT
             player_id,
-            team_id,
             jersey_number,
             MIN(event_date) AS start_date,
             LEAD(MIN(event_date)) OVER (
-              PARTITION BY player_id, team_id ORDER BY MIN(event_date)
+              PARTITION BY player_id ORDER BY MIN(event_date)
             ) - 1 AS end_date,
             MIN(created_at) AS created_at
           FROM grouped
-          GROUP BY player_id, team_id, jersey_number, jersey_group
+          GROUP BY player_id, jersey_number, jersey_group
         )
         INSERT INTO player_jersey_stints (
-          player_id, team_id, jersey_number, start_date, end_date, created_at
+          player_id, jersey_number, start_date, end_date, created_at
         )
-        SELECT player_id, team_id, jersey_number, start_date, end_date, created_at
+        SELECT player_id, jersey_number, start_date, end_date, created_at
         FROM assignments;
 
         INSERT INTO _migrations (name) VALUES ('canonical_player_timelines_v1');
       END IF;
     END $$
+  `;
+
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations
+        WHERE name = 'canonical_player_timelines_v3_player_wide_jerseys'
+      ) THEN
+        IF EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'player_jersey_stints'
+            AND column_name = 'team_id'
+        ) THEN
+          CREATE TEMP TABLE canonical_player_jersey_stints ON COMMIT DROP AS
+          WITH deduped AS (
+            SELECT DISTINCT ON (player_id, start_date)
+              id,
+              player_id,
+              jersey_number,
+              start_date,
+              created_at
+            FROM player_jersey_stints
+            ORDER BY player_id, start_date, created_at DESC, id DESC
+          ),
+          marked AS (
+            SELECT
+              *,
+              CASE
+                WHEN LAG(jersey_number) OVER (
+                  PARTITION BY player_id ORDER BY start_date, created_at, id
+                ) IS DISTINCT FROM jersey_number
+                THEN 1 ELSE 0
+              END AS starts_group
+            FROM deduped
+          ),
+          grouped AS (
+            SELECT
+              *,
+              SUM(starts_group) OVER (
+                PARTITION BY player_id ORDER BY start_date, created_at, id
+              ) AS jersey_group
+            FROM marked
+          ),
+          collapsed AS (
+            SELECT
+              (ARRAY_AGG(id ORDER BY start_date, created_at, id))[1] AS id,
+              player_id,
+              jersey_number,
+              MIN(start_date) AS start_date,
+              MIN(created_at) AS created_at
+            FROM grouped
+            GROUP BY player_id, jersey_number, jersey_group
+          )
+          SELECT
+            id,
+            player_id,
+            jersey_number,
+            start_date,
+            LEAD(start_date) OVER (
+              PARTITION BY player_id ORDER BY start_date, created_at, id
+            ) - 1 AS end_date,
+            created_at
+          FROM collapsed;
+
+          DROP VIEW IF EXISTS player_season_rosters;
+          TRUNCATE player_jersey_stints;
+          ALTER TABLE player_jersey_stints DROP COLUMN team_id;
+
+          INSERT INTO player_jersey_stints (
+            id, player_id, jersey_number, start_date, end_date, created_at
+          )
+          SELECT id, player_id, jersey_number, start_date, end_date, created_at
+          FROM canonical_player_jersey_stints;
+        END IF;
+
+        INSERT INTO _migrations (name)
+        VALUES ('canonical_player_timelines_v3_player_wide_jerseys');
+      END IF;
+    END $$
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS player_jersey_stints_lookup
+      ON player_jersey_stints (player_id, start_date DESC, end_date)
+  `;
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS player_jersey_stints_effective_start_unique
+      ON player_jersey_stints (player_id, start_date)
   `;
 
   await sql`
@@ -312,9 +390,17 @@ async function ensurePlayerTimelineSchema(sql) {
       SELECT pjs.jersey_number
       FROM player_jersey_stints pjs
       WHERE pjs.player_id = pt.player_id
-        AND pjs.team_id = pt.team_id
-        AND pjs.start_date <= COALESCE(season.end_date, CURRENT_DATE)
-        AND (pjs.end_date IS NULL OR pjs.end_date >= season.start_date)
+        AND pjs.start_date <= LEAST(
+          COALESCE(pt.end_date, DATE 'infinity'),
+          COALESCE(season.end_date, CURRENT_DATE)
+        )
+        AND (
+          pjs.end_date IS NULL
+          OR pjs.end_date >= GREATEST(
+            COALESCE(pt.start_date, DATE '-infinity'),
+            season.start_date
+          )
+        )
       ORDER BY pjs.start_date DESC, pjs.created_at DESC
       LIMIT 1
     ) jersey ON TRUE
@@ -348,9 +434,17 @@ async function ensurePlayerTimelineSchema(sql) {
       SELECT pjs.jersey_number
       FROM player_jersey_stints pjs
       WHERE pjs.player_id = pts.player_id
-        AND pjs.team_id = pts.team_id
-        AND pjs.start_date <= COALESCE(season.end_date, CURRENT_DATE)
-        AND (pjs.end_date IS NULL OR pjs.end_date >= season.start_date)
+        AND pjs.start_date <= LEAST(
+          COALESCE(pts.end_date, DATE 'infinity'),
+          COALESCE(season.end_date, CURRENT_DATE)
+        )
+        AND (
+          pjs.end_date IS NULL
+          OR pjs.end_date >= GREATEST(
+            COALESCE(pts.start_date, DATE '-infinity'),
+            season.start_date
+          )
+        )
       ORDER BY pjs.start_date DESC, pjs.created_at DESC
       LIMIT 1
     ) jersey ON TRUE

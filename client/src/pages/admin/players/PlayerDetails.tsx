@@ -82,7 +82,7 @@ import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
 import MovePlayerModal from '../teams/MovePlayerModal';
 import StintEditModal from './StintEditModal';
 import { ACQUISITION_TYPE_LABELS } from './stintOptions';
-import { collapseSameTeamStints, type TeamHistoryStint } from './playerStintHistory';
+import { collapseSameTeamStints } from './playerStintHistory';
 import ChangeJerseyModal from './ChangeJerseyModal';
 import JerseyHistoryEditModal from './JerseyHistoryEditModal';
 import ChangePhotoModal from './ChangePhotoModal';
@@ -1927,40 +1927,8 @@ const formatShortDate = (iso: string | null) => {
   return DATE_FMT.format(new Date(iso));
 };
 
-const dayBefore = (dateStr: string): string => {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d, 17, 0, 0));
-  dt.setUTCDate(dt.getUTCDate() - 1);
-  return dt.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-};
-
 const formatHistoryDateRange = (startDate: string, endDate: string | null) =>
   `${formatShortDate(startDate)} - ${endDate ? formatShortDate(endDate) : 'Present'}`;
-
-const stintHistoryKey = (stint: PlayerStintRecord) => stint.roster_player_team_id ?? stint.id;
-
-const hasCollapsedStints = (stint: PlayerStintRecord): stint is TeamHistoryStint =>
-  'collapsed_stints' in stint && Array.isArray(stint.collapsed_stints);
-
-const getCollapsedStints = (stint: PlayerStintRecord) =>
-  hasCollapsedStints(stint) && stint.collapsed_stints.length > 0 ? stint.collapsed_stints : [stint];
-
-const getCollapsedJerseyHistory = (
-  stint: PlayerStintRecord,
-  jerseyHistoryByStint: Record<string, JerseyHistoryEntry[]>,
-) => {
-  const seenIds = new Set<string>();
-
-  return getCollapsedStints(stint).flatMap((collapsedStint) => {
-    const history = jerseyHistoryByStint[stintHistoryKey(collapsedStint)] ?? [];
-
-    return history.filter((entry) => {
-      if (seenIds.has(entry.id)) return false;
-      seenIds.add(entry.id);
-      return true;
-    });
-  });
-};
 
 const dateKey = (date: string | null | undefined) => date?.slice(0, 10) ?? null;
 
@@ -2029,52 +1997,16 @@ const getStintPhotoHistory = (
 
 type PhotoModalMode = 'set' | 'edit';
 
-const buildJerseyHistoryRows = (
-  stint: PlayerStintRecord,
-  history: JerseyHistoryEntry[],
-  currentStintKey: string | null,
-  currentJerseyNumber: number | null,
-) => {
-  const historyKey = stintHistoryKey(stint);
-  const entries = history.map((entry) => ({
-    id: entry.id,
-    jerseyNumber: entry.jersey_number,
-    effectiveFrom: entry.effective_from,
-    stintKey: entry.player_teams_id,
-    historyEntry: entry as JerseyHistoryEntry | null,
-  }));
-
-  if (entries.length === 0 && stint.jersey_number != null && stint.start_date) {
-    entries.push({
-      id: `assumed-${stint.id}`,
-      jerseyNumber: stint.jersey_number,
-      effectiveFrom: stint.start_date,
-      stintKey: historyKey,
-      historyEntry: null,
-    });
-  }
-
-  return entries
-    .sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom))
-    .reverse()
-    .map((entry, idx, reversed) => {
-      const newerEntry = reversed[idx - 1];
-      const endDate = idx === 0 ? (stint.end_date ?? null) : dayBefore(newerEntry.effectiveFrom);
-
-      return {
-        id: entry.id,
-        jerseyNumber: entry.jerseyNumber,
-        effectiveFrom: entry.effectiveFrom,
-        historyEntry: entry.historyEntry,
-        dateRange: formatHistoryDateRange(entry.effectiveFrom, endDate),
-        current:
-          entry.stintKey === currentStintKey &&
-          idx === 0 &&
-          currentJerseyNumber != null &&
-          entry.jerseyNumber === currentJerseyNumber,
-      };
-    });
-};
+const buildJerseyTimelineRows = (history: JerseyHistoryEntry[]) =>
+  history
+    .map((entry) => ({
+      id: entry.id,
+      jerseyNumber: entry.jersey_number,
+      historyEntry: entry,
+      dateRange: formatHistoryDateRange(entry.effective_from, entry.effective_to),
+      current: entry.effective_to == null,
+    }))
+    .sort((a, b) => b.historyEntry.effective_from.localeCompare(a.historyEntry.effective_from));
 
 const formatSavePct = (value: number | string | null | undefined) => {
   if (value == null) return '—';
@@ -2133,23 +2065,15 @@ const TeamCodeCell = ({ code, name }: { code: string | null; name: string | null
 
 const StintHistoryDetails = ({
   stint,
-  jerseyHistory,
   photoHistory,
-  currentJerseyNumber,
-  currentJerseyStintKey,
   currentPhotoHistoryKey,
   initials,
   onPreviewPhoto,
   onChangePhoto,
-  onEditJerseyHistoryEntry,
   onDeletePhotoEntry,
-  onDeleteJerseyHistoryEntry,
 }: {
   stint: PlayerStintRecord;
-  jerseyHistory: JerseyHistoryEntry[];
   photoHistory: PlayerPhotoEntry[];
-  currentJerseyNumber: number | null;
-  currentJerseyStintKey: string | null;
   currentPhotoHistoryKey: string | null;
   initials: string;
   onPreviewPhoto: (photo: string) => void;
@@ -2158,132 +2082,117 @@ const StintHistoryDetails = ({
     seasonId?: string | null,
     mode?: PhotoModalMode,
   ) => void;
-  onEditJerseyHistoryEntry: (entry: JerseyHistoryEntry) => void;
   onDeletePhotoEntry: (entry: PlayerPhotoEntry) => void;
-  onDeleteJerseyHistoryEntry: (entry: JerseyHistoryEntry) => void;
+}) => (
+  <div className={styles.stintHistorySection}>
+    <span className={styles.stintHistoryTitle}>Season Photos</span>
+    {photoHistory.length === 0 ? (
+      <p className={styles.stintHistoryEmpty}>No season photos yet.</p>
+    ) : (
+      <ResponsiveList className={styles.stintHistoryList}>
+        {photoHistory.map((entry) => {
+          const savedPhoto = hasSavedPhoto(entry);
+          const current = photoHistoryKey(entry) === currentPhotoHistoryKey;
+          const photo = entry.photo;
+
+          return (
+            <ListItem
+              key={photoHistoryKey(entry)}
+              size="compact"
+              className={styles.stintHistoryListItem}
+              name={entry.season_name ?? 'Season'}
+              preTextContent={
+                <PlayerAvatar
+                  photo={entry.photo}
+                  initials={initials}
+                  primaryColor={stint.team.primary_color}
+                  textColor={stint.team.text_color}
+                  size={32}
+                />
+              }
+              rightContent={
+                current ? (
+                  <Tag
+                    label="Current"
+                    intent="success"
+                  />
+                ) : null
+              }
+              actions={[
+                {
+                  icon: 'image',
+                  tooltip: savedPhoto ? 'Edit season photo' : 'Set season photo',
+                  ariaLabel: savedPhoto ? 'Edit season photo' : 'Set season photo',
+                  onClick: () => onChangePhoto(stint, entry.season_id, savedPhoto ? 'edit' : 'set'),
+                },
+                savedPhoto && {
+                  icon: 'delete',
+                  intent: 'danger' as const,
+                  tooltip: 'Delete season photo',
+                  ariaLabel: 'Delete season photo',
+                  onClick: () => onDeletePhotoEntry(entry),
+                },
+              ]}
+              ariaLabel={`Preview ${entry.season_name ?? 'season'} photo`}
+              onClick={photo ? () => onPreviewPhoto(photo) : undefined}
+            />
+          );
+        })}
+      </ResponsiveList>
+    )}
+  </div>
+);
+
+const JerseyNumberTimeline = ({
+  entries,
+  onEdit,
+  onDelete,
+}: {
+  entries: JerseyHistoryEntry[];
+  onEdit: (entry: JerseyHistoryEntry) => void;
+  onDelete: (entry: JerseyHistoryEntry) => void;
 }) => {
-  const jerseyRows = buildJerseyHistoryRows(
-    stint,
-    jerseyHistory,
-    currentJerseyStintKey,
-    currentJerseyNumber,
-  );
+  const rows = buildJerseyTimelineRows(entries);
+
+  if (rows.length === 0) {
+    return <p className={styles.placeholder}>No jersey number history yet.</p>;
+  }
 
   return (
-    <div className={styles.stintHistoryGrid}>
-      <div className={styles.stintHistorySection}>
-        <span className={styles.stintHistoryTitle}>Season Photos</span>
-        {photoHistory.length === 0 ? (
-          <p className={styles.stintHistoryEmpty}>No season photos yet.</p>
-        ) : (
-          <ResponsiveList className={styles.stintHistoryList}>
-            {photoHistory.map((entry) => {
-              const savedPhoto = hasSavedPhoto(entry);
-              const current = photoHistoryKey(entry) === currentPhotoHistoryKey;
-              const photo = entry.photo;
-
-              return (
-                <ListItem
-                  key={photoHistoryKey(entry)}
-                  size="compact"
-                  className={styles.stintHistoryListItem}
-                  name={entry.season_name ?? 'Season'}
-                  preTextContent={
-                    <PlayerAvatar
-                      photo={entry.photo}
-                      initials={initials}
-                      primaryColor={stint.team.primary_color}
-                      textColor={stint.team.text_color}
-                      size={32}
-                    />
-                  }
-                  rightContent={
-                    current ? (
-                      <Tag
-                        label="Current"
-                        intent="success"
-                      />
-                    ) : null
-                  }
-                  actions={[
-                    {
-                      icon: 'image',
-                      tooltip: savedPhoto ? 'Edit season photo' : 'Set season photo',
-                      ariaLabel: savedPhoto ? 'Edit season photo' : 'Set season photo',
-                      onClick: () =>
-                        onChangePhoto(stint, entry.season_id, savedPhoto ? 'edit' : 'set'),
-                    },
-                    savedPhoto && {
-                      icon: 'delete',
-                      intent: 'danger' as const,
-                      tooltip: 'Delete season photo',
-                      ariaLabel: 'Delete season photo',
-                      onClick: () => onDeletePhotoEntry(entry),
-                    },
-                  ]}
-                  ariaLabel={`Preview ${entry.season_name ?? 'season'} photo`}
-                  onClick={photo ? () => onPreviewPhoto(photo) : undefined}
-                />
-              );
-            })}
-          </ResponsiveList>
-        )}
-      </div>
-
-      <div className={styles.stintHistorySection}>
-        <span className={styles.stintHistoryTitle}>Jersey Numbers</span>
-        {jerseyRows.length === 0 ? (
-          <p className={styles.stintHistoryEmpty}>No jersey number history yet.</p>
-        ) : (
-          <ResponsiveList className={styles.stintHistoryList}>
-            {jerseyRows.map((entry) => {
-              return (
-                <ListItem
-                  key={entry.id}
-                  size="compact"
-                  className={styles.stintHistoryListItem}
-                  name={entry.dateRange}
-                  preTextContent={
-                    <Chip
-                      primaryColor={stint.team.primary_color}
-                      textColor={stint.team.text_color}
-                    >
-                      {entry.jerseyNumber}
-                    </Chip>
-                  }
-                  rightContent={
-                    entry.current ? (
-                      <Tag
-                        label="Current"
-                        intent="success"
-                      />
-                    ) : null
-                  }
-                  actions={
-                    entry.historyEntry
-                      ? [
-                          {
-                            icon: JERSEY_HISTORY_ACTION_ICONS.edit,
-                            tooltip: 'Edit jersey number change',
-                            onClick: () => onEditJerseyHistoryEntry(entry.historyEntry!),
-                          },
-                          {
-                            icon: 'delete',
-                            intent: 'danger' as const,
-                            tooltip: 'Delete jersey number change',
-                            ariaLabel: 'Delete jersey number change',
-                            onClick: () => onDeleteJerseyHistoryEntry(entry.historyEntry!),
-                          },
-                        ]
-                      : undefined
-                  }
-                />
-              );
-            })}
-          </ResponsiveList>
-        )}
-      </div>
-    </div>
+    <ResponsiveList className={styles.stintList}>
+      {rows.map((row) => (
+        <ListItem
+          key={row.id}
+          className={styles.jerseyTimelineItem}
+          hideImage
+          name={row.dateRange}
+          preTextContent={<Chip>{row.jerseyNumber}</Chip>}
+          rightContent={
+            row.current ? (
+              <Tag
+                label="Current"
+                intent="success"
+              />
+            ) : null
+          }
+          actions={[
+            {
+              icon: JERSEY_HISTORY_ACTION_ICONS.edit,
+              tooltip: 'Edit jersey number change',
+              ariaLabel: 'Edit jersey number change',
+              onClick: () => onEdit(row.historyEntry),
+            },
+            {
+              icon: 'delete',
+              intent: 'danger' as const,
+              tooltip: 'Delete jersey number change',
+              ariaLabel: 'Delete jersey number change',
+              onClick: () => onDelete(row.historyEntry),
+            },
+          ]}
+        />
+      ))}
+    </ResponsiveList>
   );
 };
 
@@ -2441,7 +2350,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   useDocumentIcon(documentIcon);
   const adminPlayerId = isAdminView ? (id ?? null) : null;
   const { stints } = usePlayerTradeHistory(adminPlayerId);
-  const { byStint: jerseyHistoryByStint } = useJerseyHistory(adminPlayerId);
+  const { entries: jerseyHistoryEntries = [] } = useJerseyHistory(adminPlayerId);
   const { photos: photoHistoryEntries = [], byTeam: photoHistoryByTeam } =
     usePlayerPhotoHistory(adminPlayerId);
   const {
@@ -2498,7 +2407,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const [editingStint, setEditingStint] = useState<PlayerStintRecord | null>(null);
   const [deletingStint, setDeletingStint] = useState<PlayerStintRecord | null>(null);
   const [creatingStint, setCreatingStint] = useState(false);
-  const [changingJerseyStint, setChangingJerseyStint] = useState<PlayerStintRecord | null>(null);
+  const [changingJerseyNumber, setChangingJerseyNumber] = useState(false);
   const [editingJerseyHistoryEntry, setEditingJerseyHistoryEntry] =
     useState<JerseyHistoryEntry | null>(null);
   const [deletingJerseyHistoryEntry, setDeletingJerseyHistoryEntry] =
@@ -3226,7 +3135,6 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   const currentPhotoHistoryKey = currentPhotoHistoryEntry
     ? photoHistoryKey(currentPhotoHistoryEntry)
     : null;
-  const currentJerseyStintKey = latestStint ? stintHistoryKey(latestStint) : null;
   const avatarBg = heroTeam?.primary_color ?? undefined;
   const avatarColor = heroTeam?.text_color ?? undefined;
   const effectivePosition = latestStint?.position ?? player.position;
@@ -3788,158 +3696,157 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
               ? {
                   label: 'History',
                   content: (
-                    <div
-                      className={currentLeagueCode === 'NHL' ? styles.stintHistoryGrid : undefined}
-                    >
-                      <Section
-                        title="History"
-                        action={
-                          <Button
-                            variant="filled"
-                            intent="accent"
-                            icon="add"
-                            size="medium"
-                            onClick={() => setCreatingStint(true)}
-                          >
-                            Record Stint
-                          </Button>
-                        }
-                      >
-                        {teamHistoryStints.length === 0 ? (
-                          <p className={styles.placeholder}>No team history yet.</p>
-                        ) : (
-                          <ResponsiveList className={styles.stintList}>
-                            {teamHistoryStints.map((s) => {
-                              const jerseyHistory = getCollapsedJerseyHistory(
-                                s,
-                                jerseyHistoryByStint,
-                              );
-                              const teamLeagueId = teams.find(
-                                (team) => team.id === s.team_id,
-                              )?.league_id;
-                              const photoHistory = getStintPhotoHistory(
-                                s,
-                                seasons,
-                                photoHistoryByTeam[s.team_id] ?? [],
-                                teamLeagueId,
-                              );
-                              const missingPhotoSeason = findMissingPhotoSeason(
-                                s,
-                                seasons,
-                                photoHistory,
-                                teamLeagueId,
-                              );
-                              const acquisitionLabel = s.acquisition_type
-                                ? (ACQUISITION_TYPE_LABELS[s.acquisition_type] ??
-                                  s.acquisition_type)
-                                : null;
-                              const actions = [
-                                missingPhotoSeason
-                                  ? {
-                                      icon: 'image',
-                                      tooltip: 'Set team photo',
-                                      onClick: () => openChangePhotoModal(s, missingPhotoSeason.id),
-                                    }
-                                  : null,
-                                !s.end_date && s.roster_player_team_id
-                                  ? {
-                                      icon: JERSEY_HISTORY_ACTION_ICONS.record,
-                                      tooltip: 'Record jersey number change',
-                                      onClick: () => setChangingJerseyStint(s),
-                                    }
-                                  : null,
-                                {
-                                  icon: 'edit',
-                                  tooltip: 'Edit stint',
-                                  onClick: () => setEditingStint(s),
-                                },
-                                s.can_delete
-                                  ? {
-                                      icon: 'delete',
-                                      intent: 'danger' as const,
-                                      tooltip: 'Delete stint',
-                                      onClick: () => setDeletingStint(s),
-                                    }
-                                  : null,
-                              ].filter(
-                                (action): action is NonNullable<typeof action> => action != null,
-                              );
+                    <div className={styles.historyTabLayout}>
+                      <div className={styles.historyRecordsGrid}>
+                        <Section
+                          title="Team History"
+                          action={
+                            <Button
+                              variant="filled"
+                              intent="accent"
+                              icon="add"
+                              size="medium"
+                              onClick={() => setCreatingStint(true)}
+                            >
+                              Record Stint
+                            </Button>
+                          }
+                        >
+                          {teamHistoryStints.length === 0 ? (
+                            <p className={styles.placeholder}>No team history yet.</p>
+                          ) : (
+                            <ResponsiveList className={styles.stintList}>
+                              {teamHistoryStints.map((s) => {
+                                const teamLeagueId = teams.find(
+                                  (team) => team.id === s.team_id,
+                                )?.league_id;
+                                const photoHistory = getStintPhotoHistory(
+                                  s,
+                                  seasons,
+                                  photoHistoryByTeam[s.team_id] ?? [],
+                                  teamLeagueId,
+                                );
+                                const missingPhotoSeason = findMissingPhotoSeason(
+                                  s,
+                                  seasons,
+                                  photoHistory,
+                                  teamLeagueId,
+                                );
+                                const acquisitionLabel = s.acquisition_type
+                                  ? (ACQUISITION_TYPE_LABELS[s.acquisition_type] ??
+                                    s.acquisition_type)
+                                  : null;
+                                const actions = [
+                                  missingPhotoSeason
+                                    ? {
+                                        icon: 'image',
+                                        tooltip: 'Set team photo',
+                                        onClick: () =>
+                                          openChangePhotoModal(s, missingPhotoSeason.id),
+                                      }
+                                    : null,
+                                  {
+                                    icon: 'edit',
+                                    tooltip: 'Edit stint',
+                                    onClick: () => setEditingStint(s),
+                                  },
+                                  s.can_delete
+                                    ? {
+                                        icon: 'delete',
+                                        intent: 'danger' as const,
+                                        tooltip: 'Delete stint',
+                                        onClick: () => setDeletingStint(s),
+                                      }
+                                    : null,
+                                ].filter(
+                                  (action): action is NonNullable<typeof action> => action != null,
+                                );
 
-                              return (
-                                <li
-                                  key={s.id}
-                                  className={styles.stintListItem}
-                                >
-                                  <Accordion
-                                    defaultOpen={false}
-                                    variant="light"
-                                    className={{
-                                      root: styles.stintAccordion,
-                                      header: styles.stintHeader,
-                                      labelWrapper: styles.stintHeaderLabelWrap,
-                                      label: styles.stintHeaderAccordionLabel,
-                                    }}
-                                    label={
-                                      <span className={styles.stintHeaderLabel}>
-                                        <TeamLogo
-                                          logo={s.team.logo}
-                                          logoDark={s.team.logo_dark}
-                                          logoLight={s.team.logo_light}
-                                          code={teamCodePlaceholder(s)}
-                                          primaryColor={s.team.primary_color}
-                                          textColor={s.team.text_color}
-                                          size={32}
-                                          shape="square"
-                                        />
-                                        {s.jersey_number != null && (
-                                          <Chip
+                                return (
+                                  <li
+                                    key={s.id}
+                                    className={styles.stintListItem}
+                                  >
+                                    <Accordion
+                                      defaultOpen={false}
+                                      variant="light"
+                                      className={{
+                                        root: styles.stintAccordion,
+                                        header: styles.stintHeader,
+                                        labelWrapper: styles.stintHeaderLabelWrap,
+                                        label: styles.stintHeaderAccordionLabel,
+                                      }}
+                                      label={
+                                        <span className={styles.stintHeaderLabel}>
+                                          <TeamLogo
+                                            logo={s.team.logo}
+                                            logoDark={s.team.logo_dark}
+                                            logoLight={s.team.logo_light}
+                                            code={teamCodePlaceholder(s)}
                                             primaryColor={s.team.primary_color}
                                             textColor={s.team.text_color}
-                                          >
-                                            {s.jersey_number}
-                                          </Chip>
-                                        )}
-                                        <span className={styles.stintHeaderInfo}>
-                                          <span className={styles.stintHeaderName}>
-                                            {s.team.name ?? 'Unknown team'}
-                                          </span>
-                                          <span className={styles.stintHeaderDates}>
-                                            {formatStintDates(s)}
+                                            size={32}
+                                            shape="square"
+                                          />
+                                          <span className={styles.stintHeaderInfo}>
+                                            <span className={styles.stintHeaderName}>
+                                              {s.team.name ?? 'Unknown team'}
+                                            </span>
+                                            <span className={styles.stintHeaderDates}>
+                                              {formatStintDates(s)}
+                                            </span>
                                           </span>
                                         </span>
-                                      </span>
-                                    }
-                                    headerRight={
-                                      acquisitionLabel ? (
-                                        <Tag
-                                          label={acquisitionLabel}
-                                          intent="info"
-                                        />
-                                      ) : null
-                                    }
-                                    hoverActions={actions}
-                                  >
-                                    <StintHistoryDetails
-                                      stint={s}
-                                      jerseyHistory={jerseyHistory}
-                                      photoHistory={photoHistory}
-                                      currentJerseyNumber={jerseyNumber}
-                                      currentJerseyStintKey={currentJerseyStintKey}
-                                      currentPhotoHistoryKey={currentPhotoHistoryKey}
-                                      initials={initials}
-                                      onPreviewPhoto={(src) => setPhotoPreviewSrc(src)}
-                                      onChangePhoto={openChangePhotoModal}
-                                      onEditJerseyHistoryEntry={setEditingJerseyHistoryEntry}
-                                      onDeletePhotoEntry={setDeletingPhotoEntry}
-                                      onDeleteJerseyHistoryEntry={setDeletingJerseyHistoryEntry}
-                                    />
-                                  </Accordion>
-                                </li>
-                              );
-                            })}
-                          </ResponsiveList>
-                        )}
-                      </Section>
+                                      }
+                                      headerRight={
+                                        acquisitionLabel ? (
+                                          <Tag
+                                            label={acquisitionLabel}
+                                            intent="info"
+                                          />
+                                        ) : null
+                                      }
+                                      hoverActions={actions}
+                                    >
+                                      <StintHistoryDetails
+                                        stint={s}
+                                        photoHistory={photoHistory}
+                                        currentPhotoHistoryKey={currentPhotoHistoryKey}
+                                        initials={initials}
+                                        onPreviewPhoto={(src) => setPhotoPreviewSrc(src)}
+                                        onChangePhoto={openChangePhotoModal}
+                                        onDeletePhotoEntry={setDeletingPhotoEntry}
+                                      />
+                                    </Accordion>
+                                  </li>
+                                );
+                              })}
+                            </ResponsiveList>
+                          )}
+                        </Section>
+                        <Section
+                          title="Jersey Number History"
+                          action={
+                            adminPlayerId ? (
+                              <Button
+                                variant="filled"
+                                intent="accent"
+                                icon={JERSEY_HISTORY_ACTION_ICONS.record}
+                                size="medium"
+                                onClick={() => setChangingJerseyNumber(true)}
+                              >
+                                Record Change
+                              </Button>
+                            ) : null
+                          }
+                        >
+                          <JerseyNumberTimeline
+                            entries={jerseyHistoryEntries}
+                            onEdit={setEditingJerseyHistoryEntry}
+                            onDelete={setDeletingJerseyHistoryEntry}
+                          />
+                        </Section>
+                      </div>
                       {currentLeagueCode === 'NHL' && (
                         <ManualMovementReportSection
                           report={manualMovementReport}
@@ -4000,9 +3907,9 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           />
 
           <ChangeJerseyModal
-            open={!!changingJerseyStint}
-            stint={changingJerseyStint}
-            onClose={() => setChangingJerseyStint(null)}
+            open={changingJerseyNumber}
+            currentJerseyNumber={jerseyNumber}
+            onClose={() => setChangingJerseyNumber(false)}
             changeJerseyNumber={changeJerseyNumber}
           />
 

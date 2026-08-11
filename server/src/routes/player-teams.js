@@ -1,38 +1,44 @@
-const router = require('express').Router();
-const { requireAdmin } = require('../middleware/auth');
-const { sql } = require('../db');
+const router = require("express").Router();
+const { requireAdmin } = require("../middleware/auth");
+const { sql } = require("../db");
 const {
   planPlayerStintReconciliation,
   stintRangesOverlap,
   stintSnapshot,
   summarizeReconciliationActions,
-} = require('../lib/playerStintReconciliation');
+} = require("../lib/playerStintReconciliation");
 
 router.use(requireAdmin);
 
 const ACQUISITION_TYPES = new Set([
-  'draft',
-  'trade',
-  'free_agency',
-  'waivers',
-  'signing',
-  'foundational_signing',
-  'expansion_signing',
-  'expansion_draft',
-  'team_transfer',
-  'loan',
-  'other',
+  "draft",
+  "trade",
+  "free_agency",
+  "waivers",
+  "signing",
+  "foundational_signing",
+  "expansion_signing",
+  "expansion_draft",
+  "team_transfer",
+  "loan",
+  "other",
 ]);
-const PLAYER_POSITIONS = new Set(['C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G']);
-const NHL_PUCKPEDIA_IMPORT_SOURCE = 'nhl_puckpedia';
+const PLAYER_POSITIONS = new Set(["C", "LW", "RW", "F", "D", "LD", "RD", "G"]);
+const NHL_PUCKPEDIA_IMPORT_SOURCE = "nhl_puckpedia";
 const UUID_PATTERN = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
-const isValidUuid = (value) => typeof value === 'string' && UUID_PATTERN.test(value);
-const normalizeAcquisitionType = (value) => (value === '' || value == null ? null : value);
-const isValidAcquisitionType = (value) => value == null || ACQUISITION_TYPES.has(value);
+const isValidUuid = (value) =>
+  typeof value === "string" && UUID_PATTERN.test(value);
+const normalizeAcquisitionType = (value) =>
+  value === "" || value == null ? null : value;
+const isValidAcquisitionType = (value) =>
+  value == null || ACQUISITION_TYPES.has(value);
 const isValidDateOnly = (value) => {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value))
+    return false;
   const date = new Date(`${value}T00:00:00.000Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+  return (
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+  );
 };
 const isValidJerseyNumber = (value) => {
   const number = Number(value);
@@ -40,19 +46,26 @@ const isValidJerseyNumber = (value) => {
 };
 
 const normalizeReconcileStint = (stint) => ({
-  import_key: typeof stint?.import_key === 'string' ? stint.import_key.trim() : '',
-  team_id: typeof stint?.team_id === 'string' ? stint.team_id.trim() : '',
-  position: stint?.position === '' || stint?.position == null ? null : stint.position,
+  import_key:
+    typeof stint?.import_key === "string" ? stint.import_key.trim() : "",
+  team_id: typeof stint?.team_id === "string" ? stint.team_id.trim() : "",
+  position:
+    stint?.position === "" || stint?.position == null ? null : stint.position,
   acquisition_type: normalizeAcquisitionType(stint?.acquisition_type),
-  start_date: stint?.start_date === '' || stint?.start_date == null ? null : stint.start_date,
-  end_date: stint?.end_date === '' || stint?.end_date == null ? null : stint.end_date,
+  start_date:
+    stint?.start_date === "" || stint?.start_date == null
+      ? null
+      : stint.start_date,
+  end_date:
+    stint?.end_date === "" || stint?.end_date == null ? null : stint.end_date,
 });
 
 const validateReconcileStints = (rawStints) => {
   if (!Array.isArray(rawStints) || rawStints.length === 0) {
-    return { error: 'stints must be a non-empty array' };
+    return { error: "stints must be a non-empty array" };
   }
-  if (rawStints.length > 500) return { error: 'stints cannot contain more than 500 rows' };
+  if (rawStints.length > 500)
+    return { error: "stints cannot contain more than 500 rows" };
 
   const stints = rawStints.map(normalizeReconcileStint);
   const seenImportKeys = new Set();
@@ -61,7 +74,8 @@ const validateReconcileStints = (rawStints) => {
   for (let index = 0; index < stints.length; index += 1) {
     const stint = stints[index];
     const rowLabel = `Row ${index + 1}`;
-    if (!stint.import_key) return { error: `${rowLabel}: import_key is required` };
+    if (!stint.import_key)
+      return { error: `${rowLabel}: import_key is required` };
     if (seenImportKeys.has(stint.import_key)) {
       return {
         error: `${rowLabel}: import_key must be unique within the request`,
@@ -69,7 +83,8 @@ const validateReconcileStints = (rawStints) => {
     }
     seenImportKeys.add(stint.import_key);
     if (!stint.team_id) return { error: `${rowLabel}: team_id is required` };
-    if (!isValidUuid(stint.team_id)) return { error: `${rowLabel}: team_id must be a UUID` };
+    if (!isValidUuid(stint.team_id))
+      return { error: `${rowLabel}: team_id must be a UUID` };
     if (stint.position != null && !PLAYER_POSITIONS.has(stint.position)) {
       return { error: `${rowLabel}: Invalid position` };
     }
@@ -82,13 +97,18 @@ const validateReconcileStints = (rawStints) => {
     if (stint.end_date != null && !isValidDateOnly(stint.end_date)) {
       return { error: `${rowLabel}: end_date must be YYYY-MM-DD or null` };
     }
-    if (stint.start_date && stint.end_date && stint.end_date < stint.start_date) {
+    if (
+      stint.start_date &&
+      stint.end_date &&
+      stint.end_date < stint.start_date
+    ) {
       return { error: `${rowLabel}: end_date cannot be before start_date` };
     }
     if (stint.end_date == null) openStints += 1;
   }
 
-  if (openStints > 1) return { error: 'Only one imported stint may have an open end date' };
+  if (openStints > 1)
+    return { error: "Only one imported stint may have an open end date" };
 
   for (let left = 0; left < stints.length; left += 1) {
     for (let right = left + 1; right < stints.length; right += 1) {
@@ -112,7 +132,8 @@ const upsertCareerStint = async ({
   start_date = null,
   end_date = null,
 }) => {
-  const rows = (await sql`
+  const rows =
+    (await sql`
     WITH existing AS (
       SELECT id
       FROM player_team_stints
@@ -142,7 +163,7 @@ const upsertCareerStint = async ({
         ${player_id}, ${team_id}, ${position}, ${acquisition_type}, ${!!is_prospect},
         ${start_date}::date, ${end_date}::date
       WHERE NOT EXISTS (SELECT 1 FROM existing)
-      RETURNING *
+      RETURNING player_team_stints.*, TRUE AS created
     )
     SELECT * FROM updated
     UNION ALL
@@ -152,7 +173,8 @@ const upsertCareerStint = async ({
 };
 
 const resolveSeasonStart = async (season_id) => {
-  const rows = (await sql`
+  const rows =
+    (await sql`
     SELECT COALESCE(start_date, created_at::date, CURRENT_DATE)::text AS start_date
     FROM seasons
     WHERE id = ${season_id}
@@ -162,16 +184,15 @@ const resolveSeasonStart = async (season_id) => {
 
 const setJerseyAssignment = async ({
   player_id,
-  team_id,
   jersey_number,
   effective_date,
 }) => {
-  const rows = (await sql`
+  const rows =
+    (await sql`
     WITH current_assignment AS (
       SELECT id, jersey_number
       FROM player_jersey_stints
       WHERE player_id = ${player_id}
-        AND team_id = ${team_id}
         AND start_date <= ${effective_date}::date
         AND (end_date IS NULL OR end_date >= ${effective_date}::date)
       ORDER BY start_date DESC, created_at DESC
@@ -198,16 +219,14 @@ const setJerseyAssignment = async ({
       SELECT MIN(start_date) AS start_date
       FROM player_jersey_stints
       WHERE player_id = ${player_id}
-        AND team_id = ${team_id}
         AND start_date > ${effective_date}::date
     ),
     inserted AS (
       INSERT INTO player_jersey_stints (
-        player_id, team_id, jersey_number, start_date, end_date
+        player_id, jersey_number, start_date, end_date
       )
       SELECT
         ${player_id},
-        ${team_id},
         ${jersey_number}::smallint,
         ${effective_date}::date,
         next_assignment.start_date - 1
@@ -238,7 +257,8 @@ const resolveTradeRosterSeason = async ({
   tradeDate,
   requestedSeasonId = null,
 }) => {
-  const rows = (await sql`
+  const rows =
+    (await sql`
     WITH source_season AS (
       SELECT id, league_id, start_date, end_date
       FROM seasons
@@ -285,23 +305,27 @@ const resolveTradeRosterSeason = async ({
   `) ?? [];
 
   if (rows.length === 0) {
-    return { error: { status: 404, message: 'Season not found' } };
+    return { error: { status: 404, message: "Season not found" } };
   }
 
   const row = rows[0];
   if (requestedSeasonId && !row.requested_season_id) {
-    return { error: { status: 404, message: 'Roster season not found' } };
+    return { error: { status: 404, message: "Roster season not found" } };
   }
   if (requestedSeasonId && row.requested_league_id !== row.source_league_id) {
     return {
-      error: { status: 400, message: 'Roster season must belong to the same league' },
+      error: {
+        status: 400,
+        message: "Roster season must belong to the same league",
+      },
     };
   }
   if (!requestedSeasonId && row.is_after_source_end && !row.roster_season_id) {
     return {
       error: {
         status: 400,
-        message: 'No later season found for this move. Choose a roster season first.',
+        message:
+          "No later season found for this move. Choose a roster season first.",
       },
     };
   }
@@ -313,7 +337,8 @@ const resolveTradeRosterSeason = async ({
 };
 
 const playerHasStatsForTeam = async (playerId, teamId) => {
-  const rows = (await sql`
+  const rows =
+    (await sql`
     SELECT
       EXISTS (
         SELECT 1
@@ -380,7 +405,7 @@ const buildReconciliationWriteQuery = (txn, playerId, importSource, action) => {
   const incoming = action.incoming;
   const snapshotJson = JSON.stringify(stintSnapshot(incoming));
 
-  if (action.action === 'create') {
+  if (action.action === "create") {
     return txn`
       WITH inserted AS (
         INSERT INTO player_team_stints (
@@ -404,7 +429,7 @@ const buildReconciliationWriteQuery = (txn, playerId, importSource, action) => {
     `;
   }
 
-  if (action.action === 'adopt') {
+  if (action.action === "adopt") {
     return txn`
       WITH before AS (
         SELECT *
@@ -530,8 +555,15 @@ const buildReconciliationWriteQuery = (txn, playerId, importSource, action) => {
   `;
 };
 
-const applyReconciliationPlan = async ({ playerId, importSource, plan, existingStints }) => {
-  const writableActions = plan.actions.filter((action) => ['create', 'adopt', 'update'].includes(action.action));
+const applyReconciliationPlan = async ({
+  playerId,
+  importSource,
+  plan,
+  existingStints,
+}) => {
+  const writableActions = plan.actions.filter((action) =>
+    ["create", "adopt", "update"].includes(action.action),
+  );
   if (writableActions.length === 0) {
     return {
       actions: plan.actions.map((action) => ({ ...action, applied: false })),
@@ -539,7 +571,9 @@ const applyReconciliationPlan = async ({ playerId, importSource, plan, existingS
     };
   }
 
-  const expectedStateJson = JSON.stringify(reconcileStateSnapshot(existingStints));
+  const expectedStateJson = JSON.stringify(
+    reconcileStateSnapshot(existingStints),
+  );
   const lockKey = `player-stint-reconcile:${playerId}`;
   const results = await sql.transaction(
     (txn) => [
@@ -571,7 +605,9 @@ const applyReconciliationPlan = async ({ playerId, importSource, plan, existingS
         END AS state_matches
         FROM current_state
       `,
-      ...writableActions.map((action) => buildReconciliationWriteQuery(txn, playerId, importSource, action)),
+      ...writableActions.map((action) =>
+        buildReconciliationWriteQuery(txn, playerId, importSource, action),
+      ),
       txn`
         WITH overlapping AS (
           SELECT 1
@@ -606,7 +642,7 @@ const applyReconciliationPlan = async ({ playerId, importSource, plan, existingS
         END AS timeline_valid
       `,
     ],
-    { isolationLevel: 'Serializable' },
+    { isolationLevel: "Serializable" },
   );
 
   const resultByAction = new Map();
@@ -615,36 +651,41 @@ const applyReconciliationPlan = async ({ playerId, importSource, plan, existingS
   });
 
   const actions = plan.actions.map((action) => {
-    if (!resultByAction.has(action.import_key)) return { ...action, applied: false };
+    if (!resultByAction.has(action.import_key))
+      return { ...action, applied: false };
     const rows = resultByAction.get(action.import_key);
     const row = rows[0] ?? null;
 
     if (!row) {
-      if (action.action === 'create') {
+      if (action.action === "create") {
         return {
           ...action,
-          action: 'unchanged',
+          action: "unchanged",
           applied: false,
           changes: [],
         };
       }
       return {
         ...action,
-        action: 'conflict',
+        action: "conflict",
         applied: false,
         changes: [],
-        conflicts: [...new Set([...action.conflicts, 'concurrent_change'])],
-        conflict_type: 'concurrent_change',
+        conflicts: [...new Set([...action.conflicts, "concurrent_change"])],
+        conflict_type: "concurrent_change",
       };
     }
 
-    const runtimeConflicts = Array.isArray(row.runtime_conflicts) ? row.runtime_conflicts : [];
+    const runtimeConflicts = Array.isArray(row.runtime_conflicts)
+      ? row.runtime_conflicts
+      : [];
     return {
       ...action,
       stint_id: row.id ?? action.stint_id,
       applied: true,
       conflicts: [...new Set([...action.conflicts, ...runtimeConflicts])],
-      conflict_type: action.conflict_type ?? (runtimeConflicts.length > 0 ? 'manual_override' : null),
+      conflict_type:
+        action.conflict_type ??
+        (runtimeConflicts.length > 0 ? "manual_override" : null),
     };
   });
 
@@ -658,24 +699,32 @@ const applyReconciliationPlan = async ({ playerId, importSource, plan, existingS
 // date for newly added players; it no longer creates a duplicate row per year.
 // Returns { created: [...], skipped: N }
 // ---------------------------------------------------------------------------
-router.post('/bulk', async (req, res) => {
+router.post("/bulk", async (req, res) => {
   const { team_id, season_id, players } = req.body;
 
-  if (!team_id) return res.status(400).json({ error: 'team_id is required' });
-  if (!season_id) return res.status(400).json({ error: 'season_id is required' });
+  if (!team_id) return res.status(400).json({ error: "team_id is required" });
+  if (!season_id)
+    return res.status(400).json({ error: "season_id is required" });
   if (!Array.isArray(players) || players.length === 0)
-    return res.status(400).json({ error: 'players must be a non-empty array' });
+    return res.status(400).json({ error: "players must be a non-empty array" });
 
   for (let i = 0; i < players.length; i++) {
     if (!players[i].player_id)
-      return res.status(400).json({ error: `Row ${i + 1}: player_id is required` });
+      return res
+        .status(400)
+        .json({ error: `Row ${i + 1}: player_id is required` });
   }
 
   try {
     const created = [];
     const effectiveStart = await resolveSeasonStart(season_id);
-    if (!effectiveStart) return res.status(404).json({ error: 'Season not found' });
-    for (const { player_id, jersey_number = null, is_prospect = false } of players) {
+    if (!effectiveStart)
+      return res.status(404).json({ error: "Season not found" });
+    for (const {
+      player_id,
+      jersey_number = null,
+      is_prospect = false,
+    } of players) {
       const stint = await upsertCareerStint({
         player_id,
         team_id,
@@ -686,7 +735,6 @@ router.post('/bulk', async (req, res) => {
         if (jersey_number != null) {
           await setJerseyAssignment({
             player_id,
-            team_id,
             jersey_number,
             effective_date: effectiveStart,
           });
@@ -699,14 +747,16 @@ router.post('/bulk', async (req, res) => {
           season_id,
           jersey_number,
           is_prospect: !!is_prospect,
-          roster_source: 'derived',
+          roster_source: "derived",
         });
       }
     }
-    return res.status(201).json({ created, skipped: players.length - created.length });
+    return res
+      .status(201)
+      .json({ created, skipped: players.length - created.length });
   } catch (err) {
-    console.error('player-teams bulk error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("player-teams bulk error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -716,18 +766,31 @@ router.post('/bulk', async (req, res) => {
 // Creates or updates the canonical team affiliation. season_id remains in the
 // request as the date context used by existing clients.
 // ---------------------------------------------------------------------------
-router.post('/', async (req, res) => {
-  const { player_id, team_id, season_id, jersey_number, photo, position, start_date, end_date } = req.body;
+router.post("/", async (req, res) => {
+  const {
+    player_id,
+    team_id,
+    season_id,
+    jersey_number,
+    photo,
+    position,
+    start_date,
+    end_date,
+  } = req.body;
   const is_prospect = !!req.body.is_prospect;
   const acquisition_type = normalizeAcquisitionType(req.body.acquisition_type);
-  if (!player_id) return res.status(400).json({ error: 'player_id is required' });
-  if (!team_id)   return res.status(400).json({ error: 'team_id is required' });
-  if (!season_id) return res.status(400).json({ error: 'season_id is required' });
-  if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
+  if (!player_id)
+    return res.status(400).json({ error: "player_id is required" });
+  if (!team_id) return res.status(400).json({ error: "team_id is required" });
+  if (!season_id)
+    return res.status(400).json({ error: "season_id is required" });
+  if (!isValidAcquisitionType(acquisition_type))
+    return res.status(400).json({ error: "Invalid acquisition_type" });
 
   try {
-    const effectiveStart = start_date ?? await resolveSeasonStart(season_id);
-    if (!effectiveStart) return res.status(404).json({ error: 'Season not found' });
+    const effectiveStart = start_date ?? (await resolveSeasonStart(season_id));
+    if (!effectiveStart)
+      return res.status(404).json({ error: "Season not found" });
     const stint = await upsertCareerStint({
       player_id,
       team_id,
@@ -740,7 +803,6 @@ router.post('/', async (req, res) => {
     if (jersey_number != null) {
       await setJerseyAssignment({
         player_id,
-        team_id,
         jersey_number,
         effective_date: effectiveStart,
       });
@@ -762,16 +824,17 @@ router.post('/', async (req, res) => {
       acquisition_type,
       is_prospect,
       photo: photo ?? null,
-      roster_source: 'derived',
+      roster_source: "derived",
     });
   } catch (err) {
-    if (err.code === '23505') {
+    if (err.code === "23505") {
       return res.status(409).json({
-        error: 'Player already has an active stint in this season. Set an end date or close the existing stint first.',
+        error:
+          "Player already has an active stint in this season. Set an end date or close the existing stint first.",
       });
     }
-    console.error('player-teams create error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("player-teams create error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -782,23 +845,38 @@ router.post('/', async (req, res) => {
 // When jersey_number changes, the old value is preserved in jersey_number_history
 // so that game queries can resolve the correct number by date.
 // ---------------------------------------------------------------------------
-router.patch('/', async (req, res) => {
-  const { player_id, team_id, season_id, jersey_number, photo, position, effective_date } = req.body;
-  if (!player_id) return res.status(400).json({ error: 'player_id is required' });
-  if (!team_id)   return res.status(400).json({ error: 'team_id is required' });
-  if (!season_id) return res.status(400).json({ error: 'season_id is required' });
+router.patch("/", async (req, res) => {
+  const {
+    player_id,
+    team_id,
+    season_id,
+    jersey_number,
+    photo,
+    position,
+    effective_date,
+  } = req.body;
+  if (!player_id)
+    return res.status(400).json({ error: "player_id is required" });
+  if (!team_id) return res.status(400).json({ error: "team_id is required" });
+  if (!season_id)
+    return res.status(400).json({ error: "season_id is required" });
 
-  const jerseyInBody   = 'jersey_number' in req.body;
-  const photoInBody    = 'photo' in req.body;
-  const positionInBody = 'position' in req.body;
-  const prospectInBody = 'is_prospect' in req.body;
+  const jerseyInBody = "jersey_number" in req.body;
+  const photoInBody = "photo" in req.body;
+  const positionInBody = "position" in req.body;
+  const prospectInBody = "is_prospect" in req.body;
 
   if (jerseyInBody && !effective_date) {
-    return res.status(400).json({ error: 'effective_date is required when changing jersey number' });
+    return res
+      .status(400)
+      .json({
+        error: "effective_date is required when changing jersey number",
+      });
   }
 
   try {
-    const canonicalRows = (await sql`
+    const canonicalRows =
+      (await sql`
       UPDATE player_team_stints
       SET
         position = CASE WHEN ${positionInBody} THEN ${position ?? null} ELSE position END,
@@ -818,7 +896,6 @@ router.patch('/', async (req, res) => {
     if (jerseyInBody) {
       await setJerseyAssignment({
         player_id,
-        team_id,
         jersey_number: jersey_number ?? null,
         effective_date,
       });
@@ -826,7 +903,8 @@ router.patch('/', async (req, res) => {
 
     // If jersey_number is changing, record history before the update.
     if (jerseyInBody && jersey_number != null) {
-      const [current] = (await sql`
+      const [current] =
+        (await sql`
         SELECT
           pt.id,
           pt.jersey_number,
@@ -842,7 +920,8 @@ router.patch('/', async (req, res) => {
       if (current && current.jersey_number !== jersey_number) {
         const changeDate = effective_date;
         // Seed initial history if none exists for this stint yet.
-        const existingHistory = (await sql`
+        const existingHistory =
+          (await sql`
           SELECT 1 FROM jersey_number_history WHERE player_teams_id = ${current.id} LIMIT 1
         `) ?? [];
         if (existingHistory.length === 0 && current.jersey_number != null) {
@@ -866,7 +945,8 @@ router.patch('/', async (req, res) => {
       }
     }
 
-    let rows = (await sql`
+    let rows =
+      (await sql`
       UPDATE player_teams
       SET
         jersey_number = CASE WHEN ${jerseyInBody}   THEN ${jersey_number ?? null} ELSE jersey_number END,
@@ -887,7 +967,8 @@ router.patch('/', async (req, res) => {
       !photoInBody &&
       !positionInBody
     ) {
-      rows = (await sql`
+      rows =
+        (await sql`
         UPDATE player_teams
         SET is_prospect = ${!!req.body.is_prospect}
         WHERE id = (
@@ -904,15 +985,18 @@ router.patch('/', async (req, res) => {
     }
 
     if (rows.length === 0 && canonicalRows.length > 0) {
-      rows = [{
-        ...canonicalRows[0],
-        player_team_stint_id: canonicalRows[0].id,
-        season_id,
-        jersey_number: jerseyInBody ? (jersey_number ?? null) : undefined,
-        roster_source: 'derived',
-      }];
+      rows = [
+        {
+          ...canonicalRows[0],
+          player_team_stint_id: canonicalRows[0].id,
+          season_id,
+          jersey_number: jerseyInBody ? (jersey_number ?? null) : undefined,
+          roster_source: "derived",
+        },
+      ];
     }
-    if (rows.length === 0) return res.status(404).json({ error: 'Player team record not found' });
+    if (rows.length === 0)
+      return res.status(404).json({ error: "Player team record not found" });
     if (photoInBody) {
       if (photo) {
         await sql`
@@ -931,8 +1015,8 @@ router.patch('/', async (req, res) => {
     rows[0].photo = photoInBody ? (photo ?? null) : null;
     return res.json(rows[0]);
   } catch (err) {
-    console.error('player-teams update error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("player-teams update error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -941,7 +1025,7 @@ router.patch('/', async (req, res) => {
 // Returns all stints for this player (optionally filtered to a season),
 // newest first. Each row includes team name/logo via team_iterations.
 // ---------------------------------------------------------------------------
-router.get('/history/:playerId', async (req, res) => {
+router.get("/history/:playerId", async (req, res) => {
   const { playerId } = req.params;
   const { season_id } = req.query;
 
@@ -1032,8 +1116,8 @@ router.get('/history/:playerId', async (req, res) => {
     `;
     return res.json(rows.map(mapHistoryRow));
   } catch (err) {
-    console.error('player-teams history error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("player-teams history error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -1045,28 +1129,40 @@ router.get('/history/:playerId', async (req, res) => {
 // intentionally writes only player_team_stints; season rosters are never
 // inferred from transaction history.
 // ---------------------------------------------------------------------------
-router.post('/history/:playerId/reconcile', async (req, res) => {
+router.post("/history/:playerId/reconcile", async (req, res) => {
   const { playerId } = req.params;
-  if (!isValidUuid(playerId)) return res.status(400).json({ error: 'playerId must be a UUID' });
+  if (!isValidUuid(playerId))
+    return res.status(400).json({ error: "playerId must be a UUID" });
 
-  const importSource = req.body.source ?? req.body.import_source ?? NHL_PUCKPEDIA_IMPORT_SOURCE;
+  const importSource =
+    req.body.source ?? req.body.import_source ?? NHL_PUCKPEDIA_IMPORT_SOURCE;
 
   if (importSource !== NHL_PUCKPEDIA_IMPORT_SOURCE) {
-    return res.status(400).json({ error: 'Only nhl_puckpedia stint imports are supported' });
+    return res
+      .status(400)
+      .json({ error: "Only nhl_puckpedia stint imports are supported" });
   }
-  if ('dry_run' in req.body && typeof req.body.dry_run !== 'boolean') {
-    return res.status(400).json({ error: 'dry_run must be a boolean' });
+  if ("dry_run" in req.body && typeof req.body.dry_run !== "boolean") {
+    return res.status(400).json({ error: "dry_run must be a boolean" });
   }
-  if ('apply' in req.body && typeof req.body.apply !== 'boolean') {
-    return res.status(400).json({ error: 'apply must be a boolean' });
+  if ("apply" in req.body && typeof req.body.apply !== "boolean") {
+    return res.status(400).json({ error: "apply must be a boolean" });
   }
-  if ('dry_run' in req.body && 'apply' in req.body && req.body.dry_run === req.body.apply) {
-    return res.status(400).json({ error: 'dry_run and apply must request opposite modes' });
+  if (
+    "dry_run" in req.body &&
+    "apply" in req.body &&
+    req.body.dry_run === req.body.apply
+  ) {
+    return res
+      .status(400)
+      .json({ error: "dry_run and apply must request opposite modes" });
   }
 
-  const dryRun = 'apply' in req.body ? !req.body.apply : (req.body.dry_run ?? true);
+  const dryRun =
+    "apply" in req.body ? !req.body.apply : (req.body.dry_run ?? true);
   const validation = validateReconcileStints(req.body.stints);
-  if (validation.error) return res.status(400).json({ error: validation.error });
+  if (validation.error)
+    return res.status(400).json({ error: validation.error });
   const incomingStints = validation.stints;
 
   try {
@@ -1075,7 +1171,8 @@ router.post('/history/:playerId/reconcile', async (req, res) => {
       FROM players
       WHERE id = ${playerId}
     `;
-    if (playerRows.length === 0) return res.status(404).json({ error: 'Player not found' });
+    if (playerRows.length === 0)
+      return res.status(404).json({ error: "Player not found" });
 
     const teamIds = [...new Set(incomingStints.map((stint) => stint.team_id))];
     const teamRows = await sql`
@@ -1084,11 +1181,17 @@ router.post('/history/:playerId/reconcile', async (req, res) => {
       JOIN leagues l ON l.id = t.league_id
       WHERE t.id = ANY(${teamIds}::uuid[])
     `;
-    const validNhlTeamIds = new Set(teamRows.filter((team) => team.league_code === 'NHL').map((team) => team.id));
-    const invalidTeamIds = teamIds.filter((teamId) => !validNhlTeamIds.has(teamId));
+    const validNhlTeamIds = new Set(
+      teamRows
+        .filter((team) => team.league_code === "NHL")
+        .map((team) => team.id),
+    );
+    const invalidTeamIds = teamIds.filter(
+      (teamId) => !validNhlTeamIds.has(teamId),
+    );
     if (invalidTeamIds.length > 0) {
       return res.status(400).json({
-        error: 'Every imported team must belong to the NHL league',
+        error: "Every imported team must belong to the NHL league",
         invalid_team_ids: invalidTeamIds,
       });
     }
@@ -1141,62 +1244,82 @@ router.post('/history/:playerId/reconcile', async (req, res) => {
       summary: appliedPlan.summary,
     });
   } catch (err) {
-    if (err.code === '23505') {
+    if (err.code === "23505") {
       return res.status(409).json({
-        error: 'The stint import changed concurrently. Preview the reconciliation again.',
+        error:
+          "The stint import changed concurrently. Preview the reconciliation again.",
       });
     }
-    if (err.code === '40001') {
+    if (err.code === "40001") {
       return res.status(409).json({
-        error: 'The stint import was updated concurrently. Retry the reconciliation.',
+        error:
+          "The stint import was updated concurrently. Retry the reconciliation.",
       });
     }
-    if (err.code === '22P02') {
+    if (err.code === "22P02") {
       return res.status(409).json({
-        error: 'The stint history changed during reconciliation. Preview and retry the import.',
+        error:
+          "The stint history changed during reconciliation. Preview and retry the import.",
       });
     }
-    console.error('player-teams reconcile error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("player-teams reconcile error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/player-teams/history/:playerId/jerseys
+// Records a player-wide jersey change without requiring a team affiliation.
+// ---------------------------------------------------------------------------
+router.post("/history/:playerId/jerseys", async (req, res) => {
+  const { playerId } = req.params;
+  const { jersey_number, effective_date } = req.body;
+  if (!isValidJerseyNumber(jersey_number)) {
+    return res
+      .status(400)
+      .json({ error: "jersey_number must be an integer between 0 and 99" });
+  }
+  if (!isValidDateOnly(effective_date)) {
+    return res
+      .status(400)
+      .json({ error: "effective_date must be a YYYY-MM-DD date" });
+  }
+
+  try {
+    const assignment = await setJerseyAssignment({
+      player_id: playerId,
+      jersey_number: Number(jersey_number),
+      effective_date,
+    });
+    return res.status(201).json({ changed: assignment != null, assignment });
+  } catch (err) {
+    console.error("jersey history create error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/player-teams/history/:playerId/jerseys
-// Returns canonical effective-dated jersey assignments. player_teams_id is
-// retained as a response alias for the existing client and now identifies the
-// matching long-lived affiliation.
+// Returns the player's canonical effective-dated jersey assignments.
 // ---------------------------------------------------------------------------
-router.get('/history/:playerId/jerseys', async (req, res) => {
+router.get("/history/:playerId/jerseys", async (req, res) => {
   const { playerId } = req.params;
   try {
     const rows = await sql`
       SELECT
         pjs.id,
-        COALESCE(affiliation.id, pjs.id) AS player_teams_id,
         pjs.player_id,
-        pjs.team_id,
         pjs.jersey_number,
         pjs.start_date::text AS effective_from,
         pjs.end_date::text AS effective_to
       FROM player_jersey_stints pjs
-      LEFT JOIN LATERAL (
-        SELECT pts.id
-        FROM player_team_stints pts
-        WHERE pts.player_id = pjs.player_id
-          AND pts.team_id = pjs.team_id
-          AND COALESCE(pts.start_date, DATE '-infinity') <= COALESCE(pjs.end_date, DATE 'infinity')
-          AND COALESCE(pts.end_date, DATE 'infinity') >= pjs.start_date
-        ORDER BY pts.start_date DESC NULLS LAST, pts.created_at DESC
-        LIMIT 1
-      ) affiliation ON TRUE
       WHERE pjs.player_id = ${playerId}
-      ORDER BY pjs.team_id, pjs.start_date ASC
+      ORDER BY pjs.start_date DESC, pjs.created_at DESC
     `;
     return res.json(rows);
   } catch (err) {
-    console.error('jersey history error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("jersey history error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -1204,14 +1327,18 @@ router.get('/history/:playerId/jerseys', async (req, res) => {
 // PATCH /api/admin/player-teams/history/jerseys/:id
 // Updates a canonical jersey assignment and recalculates interval boundaries.
 // ---------------------------------------------------------------------------
-router.patch('/history/jerseys/:id', async (req, res) => {
+router.patch("/history/jerseys/:id", async (req, res) => {
   const { id } = req.params;
   const { jersey_number, effective_from } = req.body;
   if (!isValidJerseyNumber(jersey_number)) {
-    return res.status(400).json({ error: 'jersey_number must be an integer between 0 and 99' });
+    return res
+      .status(400)
+      .json({ error: "jersey_number must be an integer between 0 and 99" });
   }
   if (!isValidDateOnly(effective_from)) {
-    return res.status(400).json({ error: 'effective_from must be a YYYY-MM-DD date' });
+    return res
+      .status(400)
+      .json({ error: "effective_from must be a YYYY-MM-DD date" });
   }
 
   try {
@@ -1221,10 +1348,10 @@ router.patch('/history/jerseys/:id', async (req, res) => {
         jersey_number = ${Number(jersey_number)},
         start_date = ${effective_from}::date
       WHERE id = ${id}
-      RETURNING id, player_id, team_id, jersey_number, start_date::text AS effective_from
+      RETURNING id, player_id, jersey_number, start_date::text AS effective_from
     `;
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'Jersey history row not found' });
+      return res.status(404).json({ error: "Jersey history row not found" });
     }
 
     await sql`
@@ -1234,27 +1361,16 @@ router.patch('/history/jerseys/:id', async (req, res) => {
           LEAD(start_date) OVER (ORDER BY start_date, created_at, id) - 1 AS end_date
         FROM player_jersey_stints
         WHERE player_id = ${rows[0].player_id}
-          AND team_id = ${rows[0].team_id}
       )
       UPDATE player_jersey_stints pjs
       SET end_date = ordered.end_date
       FROM ordered
       WHERE pjs.id = ordered.id
     `;
-    const [affiliation] = (await sql`
-      SELECT id
-      FROM player_team_stints
-      WHERE player_id = ${rows[0].player_id}
-        AND team_id = ${rows[0].team_id}
-        AND COALESCE(start_date, DATE '-infinity') <= ${effective_from}::date
-        AND COALESCE(end_date, DATE 'infinity') >= ${effective_from}::date
-      ORDER BY start_date DESC NULLS LAST, created_at DESC
-      LIMIT 1
-    `) ?? [];
-    return res.json({ ...rows[0], player_teams_id: affiliation?.id ?? rows[0].id });
+    return res.json(rows[0]);
   } catch (err) {
-    console.error('jersey history update error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("jersey history update error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -1262,7 +1378,7 @@ router.patch('/history/jerseys/:id', async (req, res) => {
 // DELETE /api/admin/player-teams/history/jerseys/:id
 // Deletes a canonical jersey assignment and reconnects adjacent intervals.
 // ---------------------------------------------------------------------------
-router.delete('/history/jerseys/:id', async (req, res) => {
+router.delete("/history/jerseys/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -1270,12 +1386,12 @@ router.delete('/history/jerseys/:id', async (req, res) => {
       WITH deleted AS (
         DELETE FROM player_jersey_stints
         WHERE id = ${id}
-        RETURNING id, player_id, team_id, jersey_number, start_date::text AS effective_from
+        RETURNING id, player_id, jersey_number, start_date::text AS effective_from
       )
       SELECT * FROM deleted
     `;
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'Jersey history row not found' });
+      return res.status(404).json({ error: "Jersey history row not found" });
     }
     await sql`
       WITH ordered AS (
@@ -1284,17 +1400,16 @@ router.delete('/history/jerseys/:id', async (req, res) => {
           LEAD(start_date) OVER (ORDER BY start_date, created_at, id) - 1 AS end_date
         FROM player_jersey_stints
         WHERE player_id = ${rows[0].player_id}
-          AND team_id = ${rows[0].team_id}
       )
       UPDATE player_jersey_stints pjs
       SET end_date = ordered.end_date
       FROM ordered
       WHERE pjs.id = ordered.id
     `;
-    return res.json({ ...rows[0], player_teams_id: null });
+    return res.json(rows[0]);
   } catch (err) {
-    console.error('jersey history delete error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("jersey history delete error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -1303,7 +1418,7 @@ router.delete('/history/jerseys/:id', async (req, res) => {
 // Returns one photo row per season/team membership, with saved photos when
 // present and provider-generated season URLs as display fallbacks.
 // ---------------------------------------------------------------------------
-router.get('/history/:playerId/photos', async (req, res) => {
+router.get("/history/:playerId/photos", async (req, res) => {
   const { playerId } = req.params;
   try {
     const rows = await sql`
@@ -1371,8 +1486,8 @@ router.get('/history/:playerId/photos', async (req, res) => {
     `;
     return res.json(rows);
   } catch (err) {
-    console.error('player photo history error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("player photo history error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -1381,13 +1496,14 @@ router.get('/history/:playerId/photos', async (req, res) => {
 // Body: { team_id, season_id, photo }
 // Upserts one player photo for that player/team/season.
 // ---------------------------------------------------------------------------
-router.post('/history/:playerId/photos', async (req, res) => {
+router.post("/history/:playerId/photos", async (req, res) => {
   const { playerId } = req.params;
   const { team_id, season_id, photo } = req.body;
 
-  if (!team_id) return res.status(400).json({ error: 'team_id is required' });
-  if (!season_id) return res.status(400).json({ error: 'season_id is required' });
-  if (!photo) return res.status(400).json({ error: 'photo is required' });
+  if (!team_id) return res.status(400).json({ error: "team_id is required" });
+  if (!season_id)
+    return res.status(400).json({ error: "season_id is required" });
+  if (!photo) return res.status(400).json({ error: "photo is required" });
 
   try {
     const rows = await sql`
@@ -1399,8 +1515,8 @@ router.post('/history/:playerId/photos', async (req, res) => {
     `;
     return res.status(201).json(rows[0]);
   } catch (err) {
-    console.error('player photo upsert error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("player photo upsert error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -1408,7 +1524,7 @@ router.post('/history/:playerId/photos', async (req, res) => {
 // DELETE /api/admin/player-teams/history/photos/:id
 // Deletes one saved player photo record.
 // ---------------------------------------------------------------------------
-router.delete('/history/photos/:id', async (req, res) => {
+router.delete("/history/photos/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -1418,12 +1534,12 @@ router.delete('/history/photos/:id', async (req, res) => {
       RETURNING id, player_id, team_id, season_id, photo, created_at
     `;
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'Player photo row not found' });
+      return res.status(404).json({ error: "Player photo row not found" });
     }
     return res.json(rows[0]);
   } catch (err) {
-    console.error('player photo delete error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("player photo delete error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -1432,25 +1548,35 @@ router.delete('/history/photos/:id', async (req, res) => {
 // Body: { team_id?, season_id?, jersey_number?, photo?, position?, acquisition_type?, start_date?, end_date? }
 // Updates editable fields on a specific stint row by its UUID.
 // ---------------------------------------------------------------------------
-router.patch('/:id', async (req, res) => {
+router.patch("/:id", async (req, res) => {
   const { id } = req.params;
-  const { team_id, season_id, jersey_number, photo, position, start_date, end_date } = req.body;
+  const {
+    team_id,
+    season_id,
+    jersey_number,
+    photo,
+    position,
+    start_date,
+    end_date,
+  } = req.body;
   const acquisition_type = normalizeAcquisitionType(req.body.acquisition_type);
 
-  const teamInBody      = 'team_id'       in req.body;
-  const seasonInBody    = 'season_id'     in req.body;
-  const jerseyInBody    = 'jersey_number' in req.body;
-  const prospectInBody  = 'is_prospect'   in req.body;
-  const photoInBody     = 'photo'         in req.body;
-  const positionInBody  = 'position'      in req.body;
-  const acquisitionInBody = 'acquisition_type' in req.body;
-  const startDateInBody = 'start_date'    in req.body;
-  const endDateInBody   = 'end_date'      in req.body;
+  const teamInBody = "team_id" in req.body;
+  const seasonInBody = "season_id" in req.body;
+  const jerseyInBody = "jersey_number" in req.body;
+  const prospectInBody = "is_prospect" in req.body;
+  const photoInBody = "photo" in req.body;
+  const positionInBody = "position" in req.body;
+  const acquisitionInBody = "acquisition_type" in req.body;
+  const startDateInBody = "start_date" in req.body;
+  const endDateInBody = "end_date" in req.body;
   const rosterSeasonId = seasonInBody ? season_id : null;
-  if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
+  if (!isValidAcquisitionType(acquisition_type))
+    return res.status(400).json({ error: "Invalid acquisition_type" });
 
   try {
-    const stintRows = (await sql`
+    const stintRows =
+      (await sql`
       UPDATE player_team_stints
       SET
         team_id       = CASE WHEN ${teamInBody}      THEN ${team_id}::uuid                   ELSE team_id       END,
@@ -1468,7 +1594,8 @@ router.patch('/:id', async (req, res) => {
     `) ?? [];
 
     if (stintRows.length > 0) {
-      let [roster] = (await sql`
+      let [roster] =
+        (await sql`
         SELECT id, team_id, season_id, jersey_number, is_prospect, position
         FROM player_teams
         WHERE player_id = ${stintRows[0].player_id}
@@ -1478,7 +1605,8 @@ router.patch('/:id', async (req, res) => {
         LIMIT 1
       `) ?? [];
       if (roster && (jerseyInBody || prospectInBody || positionInBody)) {
-        [roster] = (await sql`
+        [roster] =
+          (await sql`
           UPDATE player_teams
           SET
             jersey_number = CASE WHEN ${jerseyInBody}   THEN ${jersey_number ?? null}  ELSE jersey_number END,
@@ -1488,7 +1616,8 @@ router.patch('/:id', async (req, res) => {
           RETURNING id, team_id, season_id, jersey_number, is_prospect, position
         `) ?? [];
       }
-      const photoSeasonId = roster?.season_id ?? (seasonInBody ? season_id : null);
+      const photoSeasonId =
+        roster?.season_id ?? (seasonInBody ? season_id : null);
       const photoTeamId = roster?.team_id ?? stintRows[0].team_id;
       if (photoInBody && photoSeasonId) {
         if (photo) {
@@ -1533,7 +1662,8 @@ router.patch('/:id', async (req, res) => {
         start_date::text AS start_date,
         end_date::text   AS end_date
     `;
-    if (rows.length === 0) return res.status(404).json({ error: 'Stint not found' });
+    if (rows.length === 0)
+      return res.status(404).json({ error: "Stint not found" });
     if (photoInBody) {
       const photoTeamId = teamInBody ? team_id : rows[0].team_id;
       const photoSeasonId = seasonInBody ? season_id : rows[0].season_id;
@@ -1554,8 +1684,8 @@ router.patch('/:id', async (req, res) => {
     rows[0].photo = photoInBody ? (photo ?? null) : null;
     return res.json(rows[0]);
   } catch (err) {
-    console.error('player-teams patch/:id error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("player-teams patch/:id error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -1563,19 +1693,24 @@ router.patch('/:id', async (req, res) => {
 // DELETE /api/admin/player-teams/:id
 // Removes a player's association with a team for that season.
 // ---------------------------------------------------------------------------
-router.delete('/:id', async (req, res) => {
+router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const stintRows = (await sql`
+    const stintRows =
+      (await sql`
       SELECT id, player_id, team_id
       FROM player_team_stints
       WHERE id = ${id}
     `) ?? [];
     if (stintRows.length > 0) {
-      const hasStats = await playerHasStatsForTeam(stintRows[0].player_id, stintRows[0].team_id);
+      const hasStats = await playerHasStatsForTeam(
+        stintRows[0].player_id,
+        stintRows[0].team_id,
+      );
       if (hasStats) {
         return res.status(409).json({
-          error: 'Cannot delete team stint while player has stats for this team.',
+          error:
+            "Cannot delete team stint while player has stats for this team.",
         });
       }
       // Career stints are not FK-linked to season roster rows, so remove any
@@ -1594,7 +1729,7 @@ router.delete('/:id', async (req, res) => {
         DELETE FROM player_team_stints
         WHERE id = ${id}
       `;
-      return res.json({ message: 'Stint deleted' });
+      return res.json({ message: "Stint deleted" });
     }
 
     const rows = await sql`
@@ -1602,22 +1737,26 @@ router.delete('/:id', async (req, res) => {
       FROM player_teams
       WHERE id = ${id}
     `;
-    if (rows.length === 0) return res.status(404).json({ error: 'Stint not found' });
+    if (rows.length === 0)
+      return res.status(404).json({ error: "Stint not found" });
 
-    const hasStats = await playerHasStatsForTeam(rows[0].player_id, rows[0].team_id);
+    const hasStats = await playerHasStatsForTeam(
+      rows[0].player_id,
+      rows[0].team_id,
+    );
     if (hasStats) {
       return res.status(409).json({
-        error: 'Cannot delete team stint while player has stats for this team.',
+        error: "Cannot delete team stint while player has stats for this team.",
       });
     }
     await sql`
       DELETE FROM player_teams
       WHERE id = ${id}
     `;
-    return res.json({ message: 'Player removed from team' });
+    return res.json({ message: "Player removed from team" });
   } catch (err) {
-    console.error('player-teams delete/:id error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("player-teams delete/:id error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -1627,19 +1766,27 @@ router.delete('/:id', async (req, res) => {
 // Closes each player's current active stint and opens a new one on to_team_id.
 // Returns { traded: [...], failed: [player_ids that had no active stint] }
 // ---------------------------------------------------------------------------
-router.post('/bulk-trade', async (req, res) => {
+router.post("/bulk-trade", async (req, res) => {
   const { players, season_id, to_team_id, trade_date } = req.body;
-  const requestedRosterSeasonId = req.body.target_season_id ?? req.body.roster_season_id ?? null;
+  const requestedRosterSeasonId =
+    req.body.target_season_id ?? req.body.roster_season_id ?? null;
   const acquisition_type =
-    'acquisition_type' in req.body ? normalizeAcquisitionType(req.body.acquisition_type) : 'trade';
+    "acquisition_type" in req.body
+      ? normalizeAcquisitionType(req.body.acquisition_type)
+      : "trade";
 
   if (!Array.isArray(players) || players.length === 0)
-    return res.status(400).json({ error: 'players must be a non-empty array' });
-  if (!season_id)  return res.status(400).json({ error: 'season_id is required' });
-  if (!to_team_id) return res.status(400).json({ error: 'to_team_id is required' });
-  if (!trade_date) return res.status(400).json({ error: 'trade_date is required' });
-  if (!isValidDateOnly(trade_date)) return res.status(400).json({ error: 'trade_date must be YYYY-MM-DD' });
-  if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
+    return res.status(400).json({ error: "players must be a non-empty array" });
+  if (!season_id)
+    return res.status(400).json({ error: "season_id is required" });
+  if (!to_team_id)
+    return res.status(400).json({ error: "to_team_id is required" });
+  if (!trade_date)
+    return res.status(400).json({ error: "trade_date is required" });
+  if (!isValidDateOnly(trade_date))
+    return res.status(400).json({ error: "trade_date must be YYYY-MM-DD" });
+  if (!isValidAcquisitionType(acquisition_type))
+    return res.status(400).json({ error: "Invalid acquisition_type" });
 
   try {
     const seasonResolution = await resolveTradeRosterSeason({
@@ -1657,7 +1804,11 @@ router.post('/bulk-trade', async (req, res) => {
     const traded = [];
     const failed = [];
 
-    for (const { player_id, jersey_number = null, position = null } of players) {
+    for (const {
+      player_id,
+      jersey_number = null,
+      position = null,
+    } of players) {
       const closed = await closeActiveCareerStints(player_id, trade_date);
 
       if (closed.length === 0) {
@@ -1675,7 +1826,6 @@ router.post('/bulk-trade', async (req, res) => {
       if (jersey_number != null) {
         await setJerseyAssignment({
           player_id,
-          team_id: to_team_id,
           jersey_number,
           effective_date: trade_date,
         });
@@ -1687,19 +1837,19 @@ router.post('/bulk-trade', async (req, res) => {
         jersey_number,
         position,
         acquisition_type,
-        roster_source: 'derived',
+        roster_source: "derived",
       });
     }
 
     return res.status(201).json({ traded, failed });
   } catch (err) {
-    if (err.code === '23505') {
+    if (err.code === "23505") {
       return res.status(409).json({
-        error: 'Player already has an active roster row in the target season.',
+        error: "Player already has an active roster row in the target season.",
       });
     }
-    console.error('player-teams bulk-trade error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("player-teams bulk-trade error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -1709,17 +1859,33 @@ router.post('/bulk-trade', async (req, res) => {
 // Closes the player's current stint (sets end_date) and opens a new one on
 // to_team_id starting on trade_date.
 // ---------------------------------------------------------------------------
-router.post('/trade', async (req, res) => {
-  const { player_id, season_id, to_team_id, trade_date, jersey_number = null, position = null } = req.body;
-  const requestedRosterSeasonId = req.body.target_season_id ?? req.body.roster_season_id ?? null;
+router.post("/trade", async (req, res) => {
+  const {
+    player_id,
+    season_id,
+    to_team_id,
+    trade_date,
+    jersey_number = null,
+    position = null,
+  } = req.body;
+  const requestedRosterSeasonId =
+    req.body.target_season_id ?? req.body.roster_season_id ?? null;
   const acquisition_type =
-    'acquisition_type' in req.body ? normalizeAcquisitionType(req.body.acquisition_type) : 'trade';
-  if (!player_id)  return res.status(400).json({ error: 'player_id is required' });
-  if (!season_id)  return res.status(400).json({ error: 'season_id is required' });
-  if (!to_team_id) return res.status(400).json({ error: 'to_team_id is required' });
-  if (!trade_date) return res.status(400).json({ error: 'trade_date is required' });
-  if (!isValidDateOnly(trade_date)) return res.status(400).json({ error: 'trade_date must be YYYY-MM-DD' });
-  if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
+    "acquisition_type" in req.body
+      ? normalizeAcquisitionType(req.body.acquisition_type)
+      : "trade";
+  if (!player_id)
+    return res.status(400).json({ error: "player_id is required" });
+  if (!season_id)
+    return res.status(400).json({ error: "season_id is required" });
+  if (!to_team_id)
+    return res.status(400).json({ error: "to_team_id is required" });
+  if (!trade_date)
+    return res.status(400).json({ error: "trade_date is required" });
+  if (!isValidDateOnly(trade_date))
+    return res.status(400).json({ error: "trade_date must be YYYY-MM-DD" });
+  if (!isValidAcquisitionType(acquisition_type))
+    return res.status(400).json({ error: "Invalid acquisition_type" });
 
   try {
     const seasonResolution = await resolveTradeRosterSeason({
@@ -1736,7 +1902,11 @@ router.post('/trade', async (req, res) => {
     const rosterSeasonId = seasonResolution.rosterSeasonId;
     const closed = await closeActiveCareerStints(player_id, trade_date);
     if (closed.length === 0) {
-      return res.status(404).json({ error: 'No active stint found for this player in this season' });
+      return res
+        .status(404)
+        .json({
+          error: "No active stint found for this player in this season",
+        });
     }
 
     const created = await upsertCareerStint({
@@ -1749,7 +1919,6 @@ router.post('/trade', async (req, res) => {
     if (jersey_number != null) {
       await setJerseyAssignment({
         player_id,
-        team_id: to_team_id,
         jersey_number,
         effective_date: trade_date,
       });
@@ -1763,17 +1932,17 @@ router.post('/trade', async (req, res) => {
         jersey_number,
         position,
         acquisition_type,
-        roster_source: 'derived',
+        roster_source: "derived",
       },
     });
   } catch (err) {
-    if (err.code === '23505') {
+    if (err.code === "23505") {
       return res.status(409).json({
-        error: 'Player already has an active roster row in the target season.',
+        error: "Player already has an active roster row in the target season.",
       });
     }
-    console.error('player-teams trade error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error("player-teams trade error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

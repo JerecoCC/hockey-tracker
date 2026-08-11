@@ -115,13 +115,17 @@ jest.mock(
       </button>
     ),
 );
-jest.mock('@jerecocc/tracker-ui/components/Card/Card', () => ({ title, action, className, children }: any) => (
-  <div className={className}>
-    {title}
-    {action}
-    {children}
-  </div>
-));
+jest.mock(
+  '@jerecocc/tracker-ui/components/Card/Card',
+  () =>
+    ({ title, action, className, children }: any) => (
+      <div className={className}>
+        {title}
+        {action}
+        {children}
+      </div>
+    ),
+);
 jest.mock(
   '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal',
   () =>
@@ -184,50 +188,60 @@ jest.mock('@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar', () => ({ 
 jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => ({ size }: any) => (
   <span data-size={size}>logo</span>
 ));
-jest.mock('@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip', () => ({ ariaLabel, text, content }: any) => (
-  <span aria-label={ariaLabel ?? text ?? 'Information'}>{content ?? text}</span>
-));
-jest.mock('@jerecocc/tracker-ui/components/Table/Table', () => ({ columns, rows, getRowKey, emptyMessage, getRowClassName }: any) => (
-  <table>
-    <thead>
-      <tr>
-        {columns.map((column: any, index: number) => (
-          <th key={index}>{column.header}</th>
-        ))}
-      </tr>
-    </thead>
-    <tbody>
-      {rows.length > 0 ? (
-        rows.map((row: any, rowIndex: number) => (
-          <tr
-            key={getRowKey?.(row) ?? rowIndex}
-            className={getRowClassName?.(row, rowIndex)}
-          >
-            {columns.map((column: any, columnIndex: number) => {
-              const content =
-                column.type === 'custom'
-                  ? column.render(row)
-                  : column.type === 'logo'
-                    ? column.getName(row)
-                    : row[column.key];
-              return <td key={columnIndex}>{content}</td>;
-            })}
+jest.mock(
+  '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip',
+  () =>
+    ({ ariaLabel, text, content }: any) => (
+      <span aria-label={ariaLabel ?? text ?? 'Information'}>{content ?? text}</span>
+    ),
+);
+jest.mock(
+  '@jerecocc/tracker-ui/components/Table/Table',
+  () =>
+    ({ columns, rows, getRowKey, emptyMessage, getRowClassName }: any) => (
+      <table>
+        <thead>
+          <tr>
+            {columns.map((column: any, index: number) => (
+              <th key={index}>{column.header}</th>
+            ))}
           </tr>
-        ))
-      ) : (
-        <tr>
-          <td colSpan={columns.length}>{emptyMessage}</td>
-        </tr>
-      )}
-    </tbody>
-  </table>
-));
+        </thead>
+        <tbody>
+          {rows.length > 0 ? (
+            rows.map((row: any, rowIndex: number) => (
+              <tr
+                key={getRowKey?.(row) ?? rowIndex}
+                className={getRowClassName?.(row, rowIndex)}
+              >
+                {columns.map((column: any, columnIndex: number) => {
+                  const content =
+                    column.type === 'custom'
+                      ? column.render(row)
+                      : column.type === 'logo'
+                        ? column.getName(row)
+                        : row[column.key];
+                  return <td key={columnIndex}>{content}</td>;
+                })}
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={columns.length}>{emptyMessage}</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    ),
+);
 jest.mock('@jerecocc/tracker-ui/components/Tabs/Tabs', () => ({ tabs, selectedIndex = 0 }: any) => (
   <div>{tabs[selectedIndex].content}</div>
 ));
-jest.mock('@jerecocc/tracker-ui/components/Tooltip/Tooltip', () => ({ children, className }: any) => (
-  <span className={className}>{children}</span>
-));
+jest.mock(
+  '@jerecocc/tracker-ui/components/Tooltip/Tooltip',
+  () =>
+    ({ children, className }: any) => <span className={className}>{children}</span>,
+);
 jest.mock('../teams/TeamPlayerEditModal', () => () => null);
 jest.mock(
   '../teams/MovePlayerModal',
@@ -417,7 +431,7 @@ beforeEach(() => {
       },
     ],
   });
-  mockUseJerseyHistory.mockReturnValue({ byStint: {} });
+  mockUseJerseyHistory.mockReturnValue({ entries: [], byStint: {} });
   mockUsePlayerPhotoHistory.mockReturnValue({ byTeam: {} });
   mockUseStintActions.mockReturnValue({
     createStint: jest.fn(),
@@ -745,7 +759,7 @@ describe('PlayerDetails info tab', () => {
     );
   });
 
-  it('labels the team history tab as history and renders stint history accordions', async () => {
+  it('renders team stints and jersey assignments as separate histories', async () => {
     const user = userEvent.setup();
     mockUseTabState.mockReturnValue([4, jest.fn()]);
     mockUsePlayerTradeHistory.mockReturnValue({
@@ -775,19 +789,45 @@ describe('PlayerDetails info tab', () => {
       ],
     });
     mockUseJerseyHistory.mockReturnValue({
+      entries: [
+        {
+          id: 'jersey-1',
+          player_teams_id: 'stint-1',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          jersey_number: 19,
+          effective_from: '2024-10-01',
+          effective_to: '2025-01-04',
+        },
+        {
+          id: 'jersey-2',
+          player_teams_id: 'stint-1',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          jersey_number: 91,
+          effective_from: '2025-01-05',
+          effective_to: null,
+        },
+      ],
       byStint: {
         'stint-1': [
           {
             id: 'jersey-1',
             player_teams_id: 'stint-1',
+            player_id: 'player-1',
+            team_id: 'team-1',
             jersey_number: 19,
             effective_from: '2024-10-01',
+            effective_to: '2025-01-04',
           },
           {
             id: 'jersey-2',
             player_teams_id: 'stint-1',
+            player_id: 'player-1',
+            team_id: 'team-1',
             jersey_number: 91,
             effective_from: '2025-01-05',
+            effective_to: null,
           },
         ],
       },
@@ -823,10 +863,12 @@ describe('PlayerDetails info tab', () => {
 
     const { container } = render(<PlayerDetails />);
 
-    expect(screen.getByText('History')).toBeInTheDocument();
-    expect(screen.queryByText('Team History')).not.toBeInTheDocument();
-    const historyList = container.querySelector('.stintList') as HTMLElement;
-    const stintAccordion = within(historyList)
+    expect(screen.getByText('Team History')).toBeInTheDocument();
+    expect(screen.getByText('Jersey Number History')).toBeInTheDocument();
+    const historyLists = container.querySelectorAll('.stintList');
+    const teamHistoryList = historyLists[0] as HTMLElement;
+    const jerseyHistoryList = historyLists[1] as HTMLElement;
+    const stintAccordion = within(teamHistoryList)
       .getByText('Toronto Maple Leafs')
       .closest('.stintAccordion') as HTMLElement;
     expect(stintAccordion).toBeInTheDocument();
@@ -835,24 +877,21 @@ describe('PlayerDetails info tab', () => {
     expect(stintAccordion.querySelector('.stintHeaderLabelWrap')).toBeInTheDocument();
     expect(stintAccordion.querySelector('.stintHeaderAccordionLabel')).toBeInTheDocument();
     expect(within(stintAccordion).getByText('logo')).toHaveAttribute('data-size', '32');
-    expect(screen.queryByText('Jersey Numbers')).not.toBeInTheDocument();
+    expect(within(stintAccordion).queryByText('91')).not.toBeInTheDocument();
 
-    await user.click(within(stintAccordion).getByRole('button', { name: 'Expand' }));
-
-    const sectionTitles = within(stintAccordion)
-      .getAllByText(/Season Photos|Jersey Numbers/)
-      .map((node) => node.textContent);
-    expect(sectionTitles).toEqual(['Season Photos', 'Jersey Numbers']);
-    expect(within(stintAccordion).getByText('Jersey Numbers')).toBeInTheDocument();
-    expect(within(stintAccordion).queryByText('Assumed')).not.toBeInTheDocument();
-
-    const currentJerseyItem = within(stintAccordion)
+    const currentJerseyItem = within(jerseyHistoryList)
       .getByText('Jan 5, 2025 - Present')
       .closest('li') as HTMLElement;
     expect(within(currentJerseyItem).getByText('91')).toHaveClass('chip');
+    expect(within(currentJerseyItem).queryByText('logo')).not.toBeInTheDocument();
     expect(within(currentJerseyItem).getByText('Jan 5, 2025 - Present')).toHaveClass('name');
+    expect(within(currentJerseyItem).queryByText('Toronto Maple Leafs')).not.toBeInTheDocument();
     expect(within(currentJerseyItem).getByText('Current')).toHaveClass('tag', 'success');
-    expect(currentJerseyItem).toHaveClass('itemCompact');
+
+    await user.click(within(stintAccordion).getByRole('button', { name: 'Expand' }));
+
+    expect(within(stintAccordion).getByText('Season Photos')).toBeInTheDocument();
+    expect(within(stintAccordion).queryByText('Jersey Numbers')).not.toBeInTheDocument();
 
     await user.click(
       within(currentJerseyItem).getByRole('button', { name: 'Edit jersey number change' }),
@@ -862,7 +901,6 @@ describe('PlayerDetails info tab', () => {
         open: true,
         entry: expect.objectContaining({
           id: 'jersey-2',
-          player_teams_id: 'stint-1',
           jersey_number: 91,
           effective_from: '2025-01-05',
         }),
@@ -870,13 +908,12 @@ describe('PlayerDetails info tab', () => {
       }),
     );
 
-    const startingJerseyItem = within(stintAccordion)
+    const startingJerseyItem = within(jerseyHistoryList)
       .getByText('Oct 1, 2024 - Jan 4, 2025')
       .closest('li') as HTMLElement;
     expect(within(startingJerseyItem).getByText('19')).toHaveClass('chip');
     expect(within(startingJerseyItem).getByText('Oct 1, 2024 - Jan 4, 2025')).toHaveClass('name');
     expect(within(startingJerseyItem).queryByText('Past')).not.toBeInTheDocument();
-    expect(startingJerseyItem).toHaveClass('itemCompact');
 
     await user.click(
       within(startingJerseyItem).getByRole('button', { name: 'Edit jersey number change' }),
@@ -886,7 +923,6 @@ describe('PlayerDetails info tab', () => {
         open: true,
         entry: expect.objectContaining({
           id: 'jersey-1',
-          player_teams_id: 'stint-1',
           jersey_number: 19,
           effective_from: '2024-10-01',
         }),
@@ -1858,8 +1894,7 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getByRole('img', { name: 'John Smith' })).toHaveAttribute('src', generatedPhoto);
   });
 
-  it('does not add an assumed current jersey row when saved history exists', async () => {
-    const user = userEvent.setup();
+  it('renders only canonical jersey timeline records', () => {
     mockUseTabState.mockReturnValue([4, jest.fn()]);
     mockUsePlayerTradeHistory.mockReturnValue({
       stints: [
@@ -1888,6 +1923,26 @@ describe('PlayerDetails info tab', () => {
       ],
     });
     mockUseJerseyHistory.mockReturnValue({
+      entries: [
+        {
+          id: 'jersey-original',
+          player_teams_id: 'stint-1',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          jersey_number: 71,
+          effective_from: '2026-02-20',
+          effective_to: '2026-03-05',
+        },
+        {
+          id: 'jersey-current',
+          player_teams_id: 'stint-1',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          jersey_number: 28,
+          effective_from: '2026-03-06',
+          effective_to: null,
+        },
+      ],
       byStint: {
         'stint-1': [
           {
@@ -1906,21 +1961,11 @@ describe('PlayerDetails info tab', () => {
       },
     });
 
-    const { container } = render(<PlayerDetails />);
-    const historyList = container.querySelector('.stintList') as HTMLElement;
-    const stintAccordion = within(historyList)
-      .getByText('Toronto Maple Leafs')
-      .closest('.stintAccordion') as HTMLElement;
+    render(<PlayerDetails />);
 
-    await user.click(within(stintAccordion).getByRole('button', { name: 'Expand' }));
-
-    const jerseySection = within(stintAccordion)
-      .getByText('Jersey Numbers')
-      .closest('.stintHistorySection') as HTMLElement;
-    expect(within(jerseySection).getAllByRole('listitem')).toHaveLength(2);
-    expect(within(jerseySection).getByText('Mar 6, 2026 - Present')).toBeInTheDocument();
-    expect(within(jerseySection).getByText('Feb 20, 2026 - Mar 5, 2026')).toBeInTheDocument();
-    expect(within(jerseySection).queryByText('Oct 7, 2025 - Feb 19, 2026')).not.toBeInTheDocument();
+    expect(screen.getByText('Mar 6, 2026 - Present')).toBeInTheDocument();
+    expect(screen.getByText('Feb 20, 2026 - Mar 5, 2026')).toBeInTheDocument();
+    expect(screen.queryByText('Oct 7, 2025 - Feb 19, 2026')).not.toBeInTheDocument();
   });
 
   it('deletes season photo and jersey number records from history rows', async () => {
@@ -1929,6 +1974,17 @@ describe('PlayerDetails info tab', () => {
     const deletePlayerPhoto = jest.fn().mockResolvedValue(true);
     mockUseTabState.mockReturnValue([4, jest.fn()]);
     mockUseJerseyHistory.mockReturnValue({
+      entries: [
+        {
+          id: 'jersey-1',
+          player_teams_id: 'stint-1',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          jersey_number: 19,
+          effective_from: '2024-10-01',
+          effective_to: null,
+        },
+      ],
       byStint: {
         'stint-1': [
           {
@@ -1997,12 +2053,7 @@ describe('PlayerDetails info tab', () => {
 
     await waitFor(() => expect(deletePlayerPhoto).toHaveBeenCalledWith('photo-1'));
 
-    const jerseySection = within(stintAccordion)
-      .getByText('Jersey Numbers')
-      .closest('.stintHistorySection') as HTMLElement;
-    const jerseyItem = within(jerseySection)
-      .getByText('Oct 1, 2024 - Present')
-      .closest('li') as HTMLElement;
+    const jerseyItem = screen.getByText('Oct 1, 2024 - Present').closest('li') as HTMLElement;
     await user.click(
       within(jerseyItem).getByRole('button', { name: 'Delete jersey number change' }),
     );
@@ -2011,7 +2062,7 @@ describe('PlayerDetails info tab', () => {
     await waitFor(() => expect(deleteJerseyHistoryEntry).toHaveBeenCalledWith('jersey-1'));
   });
 
-  it('shows edit actions for jersey records from every collapsed same-team stint', async () => {
+  it('shows edit actions for jersey records independently of collapsed same-team stints', async () => {
     const user = userEvent.setup();
     mockUseTabState.mockReturnValue([4, jest.fn()]);
     mockUsePlayerTradeHistory.mockReturnValue({
@@ -2069,6 +2120,26 @@ describe('PlayerDetails info tab', () => {
       ],
     });
     mockUseJerseyHistory.mockReturnValue({
+      entries: [
+        {
+          id: 'jersey-current',
+          player_teams_id: 'roster-current',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          jersey_number: 91,
+          effective_from: '2025-10-01',
+          effective_to: null,
+        },
+        {
+          id: 'jersey-older',
+          player_teams_id: 'roster-older',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          jersey_number: 19,
+          effective_from: '2024-10-01',
+          effective_to: '2025-09-30',
+        },
+      ],
       byStint: {
         'roster-current': [
           {
@@ -2089,15 +2160,9 @@ describe('PlayerDetails info tab', () => {
       },
     });
 
-    const { container } = render(<PlayerDetails />);
-    const historyList = container.querySelector('.stintList') as HTMLElement;
-    const stintAccordion = within(historyList)
-      .getByText('Toronto Maple Leafs')
-      .closest('.stintAccordion') as HTMLElement;
+    render(<PlayerDetails />);
 
-    await user.click(within(stintAccordion).getByRole('button', { name: 'Expand' }));
-
-    const currentJerseyItem = within(stintAccordion)
+    const currentJerseyItem = screen
       .getByText('Oct 1, 2025 - Present')
       .closest('li') as HTMLElement;
     const editCurrentJerseyButton = within(currentJerseyItem).getByRole('button', {
@@ -2110,12 +2175,11 @@ describe('PlayerDetails info tab', () => {
         open: true,
         entry: expect.objectContaining({
           id: 'jersey-current',
-          player_teams_id: 'roster-current',
         }),
       }),
     );
 
-    const olderJerseyItem = within(stintAccordion)
+    const olderJerseyItem = screen
       .getByText('Oct 1, 2024 - Sep 30, 2025')
       .closest('li') as HTMLElement;
     await user.click(
@@ -2126,7 +2190,6 @@ describe('PlayerDetails info tab', () => {
         open: true,
         entry: expect.objectContaining({
           id: 'jersey-older',
-          player_teams_id: 'roster-older',
         }),
       }),
     );
@@ -2205,7 +2268,7 @@ describe('PlayerDetails info tab', () => {
     );
   });
 
-  it('renders a supported icon for the record jersey number change action', () => {
+  it('renders a supported icon for the jersey timeline record action', () => {
     mockUseTabState.mockReturnValue([4, jest.fn()]);
     mockUsePlayerTradeHistory.mockReturnValue({
       stints: [
@@ -2237,7 +2300,7 @@ describe('PlayerDetails info tab', () => {
 
     render(<PlayerDetails />);
 
-    expect(screen.getByRole('button', { name: 'Record jersey number change' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Record Change' })).toHaveAttribute(
       'data-icon',
       'more_time',
     );
@@ -2344,6 +2407,29 @@ describe('PlayerDetails info tab', () => {
         ],
       },
     });
+    mockUseJerseyHistory.mockReturnValue({
+      entries: [
+        {
+          id: 'jersey-current',
+          player_teams_id: 'stint-current',
+          player_id: 'player-1',
+          team_id: 'team-2',
+          jersey_number: 91,
+          effective_from: '2026-03-06',
+          effective_to: null,
+        },
+        {
+          id: 'jersey-past',
+          player_teams_id: 'stint-past',
+          player_id: 'player-1',
+          team_id: 'team-1',
+          jersey_number: 91,
+          effective_from: '2022-08-18',
+          effective_to: '2026-03-06',
+        },
+      ],
+      byStint: {},
+    });
 
     const { container } = render(<PlayerDetails />);
     const historyList = container.querySelector('.stintList') as HTMLElement;
@@ -2362,11 +2448,9 @@ describe('PlayerDetails info tab', () => {
     });
     expect(within(currentPhotoItem).getByText('Current')).toHaveClass('tag', 'success');
 
-    const currentJerseyItem = within(currentAccordion)
-      .getAllByText('Mar 6, 2026 - Present')
-      .map((node) => node.closest('li') as HTMLElement | null)
-      .find((node): node is HTMLElement => node?.classList.contains('itemCompact') ?? false);
-    expect(currentJerseyItem).toBeDefined();
+    const currentJerseyItem = screen
+      .getByText('Mar 6, 2026 - Present')
+      .closest('li') as HTMLElement;
     expect(within(currentJerseyItem).getByText('Current')).toHaveClass('tag', 'success');
 
     const pastPhotoItem = within(pastAccordion).getByRole('button', {
@@ -2374,11 +2458,9 @@ describe('PlayerDetails info tab', () => {
     });
     expect(within(pastPhotoItem).queryByText('Past')).not.toBeInTheDocument();
 
-    const pastJerseyItem = within(pastAccordion)
-      .getAllByText('Aug 18, 2022 - Mar 6, 2026')
-      .map((node) => node.closest('li') as HTMLElement | null)
-      .find((node): node is HTMLElement => node?.classList.contains('itemCompact') ?? false);
-    expect(pastJerseyItem).toBeDefined();
+    const pastJerseyItem = screen
+      .getByText('Aug 18, 2022 - Mar 6, 2026')
+      .closest('li') as HTMLElement;
     expect(within(pastJerseyItem).queryByText('Past')).not.toBeInTheDocument();
   });
 
@@ -4015,12 +4097,8 @@ describe('buildManualMovementStintImport', () => {
         'C',
       );
 
-    expect(buildAnchor('2025-10-01').stints[0].import_key).toBe(
-      'nhl_puckpedia:v1:anchor:stint-1',
-    );
-    expect(buildAnchor('2025-10-02').stints[0].import_key).toBe(
-      'nhl_puckpedia:v1:anchor:stint-1',
-    );
+    expect(buildAnchor('2025-10-01').stints[0].import_key).toBe('nhl_puckpedia:v1:anchor:stint-1');
+    expect(buildAnchor('2025-10-02').stints[0].import_key).toBe('nhl_puckpedia:v1:anchor:stint-1');
   });
 
   it('blocks ambiguous same-date source events instead of shifting their identities', () => {

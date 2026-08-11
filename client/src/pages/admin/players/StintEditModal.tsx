@@ -2,7 +2,6 @@ import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   ControlledDatePickerField,
-  ControlledInputField,
   ControlledSelectField,
 } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
@@ -29,7 +28,6 @@ const POSITION_OPTIONS = [
 
 interface FormValues {
   team_id: string;
-  jersey_number: string;
   position: string;
   acquisition_type: string;
   start_date: string;
@@ -61,13 +59,11 @@ const StintEditModal = ({
   updateStint,
 }: Props) => {
   const mode = stint ? 'edit' : 'create';
-  const canEditJerseyNumber = mode === 'create' || !!stint?.roster_player_team_id;
   const formValues = useMemo<FormValues>(
     () =>
       stint
         ? {
             team_id: stint.team_id,
-            jersey_number: stint.jersey_number == null ? '' : String(stint.jersey_number),
             position: stint.position ?? '',
             acquisition_type: stint.acquisition_type ?? '',
             start_date: stint.start_date?.slice(0, 10) ?? '',
@@ -75,7 +71,6 @@ const StintEditModal = ({
           }
         : {
             team_id: '',
-            jersey_number: '',
             position: '',
             acquisition_type: 'free_agency',
             start_date: '',
@@ -140,14 +135,12 @@ const StintEditModal = ({
   }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
-    const jerseyNumber = data.jersey_number ? Number(data.jersey_number) : null;
     if (mode === 'create') {
       const seasonId = inferSeasonId(data.team_id, data.start_date, data.end_date);
       if (!seasonId) return;
       const ok = await createStint({
         team_id: data.team_id,
         season_id: seasonId,
-        jersey_number: jerseyNumber,
         is_prospect: false,
         position: data.position || null,
         acquisition_type: data.acquisition_type || 'free_agency',
@@ -161,7 +154,6 @@ const StintEditModal = ({
       const ok = await updateStint(stint.id, {
         team_id: data.team_id,
         ...(seasonId ? { season_id: seasonId } : {}),
-        ...(canEditJerseyNumber ? { jersey_number: jerseyNumber } : {}),
         position: data.position || null,
         acquisition_type: data.acquisition_type || null,
         start_date: data.start_date || null,
@@ -203,29 +195,17 @@ const StintEditModal = ({
             placeholder="Inherit from player..."
             disabled={isSubmitting}
           />
-          <div className={styles.teamRow}>
-            <ControlledSelectField
-              label="Team"
-              control={control}
-              name="team_id"
-              options={teamOptions}
-              placeholder="Select team..."
-              searchable
-              required
-              rules={{ required: true }}
-              disabled={isSubmitting}
-            />
-            <ControlledInputField
-              type="number"
-              label="Jersey #"
-              control={control}
-              name="jersey_number"
-              placeholder="e.g. 97"
-              min={0}
-              max={99}
-              disabled={isSubmitting || !canEditJerseyNumber}
-            />
-          </div>
+          <ControlledSelectField
+            label="Team"
+            control={control}
+            name="team_id"
+            options={teamOptions}
+            placeholder="Select team..."
+            searchable
+            required
+            rules={{ required: true }}
+            disabled={isSubmitting}
+          />
           <ControlledSelectField
             label="Acquisition Type"
             control={control}

@@ -129,7 +129,7 @@ const seasons = [
 ] as unknown as SeasonRecord[];
 
 describe('StintEditModal', () => {
-  it('records a new stint with move-style defaults and jersey number', async () => {
+  it('records a new stint with move-style defaults', async () => {
     const user = userEvent.setup();
     const createStint = jest.fn().mockResolvedValue(true);
 
@@ -162,7 +162,6 @@ describe('StintEditModal', () => {
 
     await user.selectOptions(screen.getByLabelText('Team'), 'team-ana');
     await user.type(screen.getByLabelText('Start Date'), '2025-01-15');
-    await user.type(screen.getByLabelText('Jersey #'), '23');
     await user.selectOptions(screen.getByLabelText('Position'), 'RW');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
@@ -170,7 +169,6 @@ describe('StintEditModal', () => {
       expect.objectContaining({
         team_id: 'team-ana',
         season_id: 'season-1',
-        jersey_number: 23,
         is_prospect: false,
         position: 'RW',
         acquisition_type: 'free_agency',
@@ -227,8 +225,6 @@ describe('StintEditModal', () => {
 
     expect(screen.queryByText('Roster Status')).not.toBeInTheDocument();
 
-    await user.clear(screen.getByLabelText('Jersey #'));
-    await user.type(screen.getByLabelText('Jersey #'), '45');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     const updatePayload = updateStint.mock.calls[0][1];
@@ -237,13 +233,13 @@ describe('StintEditModal', () => {
       expect.objectContaining({
         team_id: 'team-sjs',
         season_id: 'season-1',
-        jersey_number: 45,
       }),
     );
     expect(updatePayload).not.toHaveProperty('is_prospect');
+    expect(updatePayload).not.toHaveProperty('jersey_number');
   });
 
-  it('does not submit jersey changes when editing an unlinked career stint', async () => {
+  it('keeps jersey history out of the team stint editor', async () => {
     const user = userEvent.setup();
     const updateStint = jest.fn().mockResolvedValue(true);
 
@@ -283,7 +279,7 @@ describe('StintEditModal', () => {
       />,
     );
 
-    expect(screen.getByLabelText('Jersey #')).toBeDisabled();
+    expect(screen.queryByLabelText('Jersey #')).not.toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText('Acquisition Type'), 'trade');
     await user.click(screen.getByRole('button', { name: 'Save' }));

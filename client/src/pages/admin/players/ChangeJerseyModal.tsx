@@ -5,7 +5,6 @@ import {
   ControlledInputField,
 } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
-import { type PlayerStintRecord } from '@/hooks/useTeamPlayers';
 import styles from '../leagues/PlayerFormModal.module.scss';
 
 interface FormValues {
@@ -15,22 +14,18 @@ interface FormValues {
 
 interface Props {
   open: boolean;
-  stint: PlayerStintRecord | null;
+  currentJerseyNumber: number | null;
   onClose: () => void;
-  changeJerseyNumber: (
-    stint: PlayerStintRecord,
-    jerseyNumber: number,
-    effectiveDate?: string | null,
-  ) => Promise<boolean>;
+  changeJerseyNumber: (jerseyNumber: number, effectiveDate?: string | null) => Promise<boolean>;
 }
 
-const ChangeJerseyModal = ({ open, stint, onClose, changeJerseyNumber }: Props) => {
+const ChangeJerseyModal = ({ open, currentJerseyNumber, onClose, changeJerseyNumber }: Props) => {
   const formValues = useMemo<FormValues>(
     () => ({
-      jersey_number: stint?.jersey_number != null ? String(stint.jersey_number) : '',
+      jersey_number: currentJerseyNumber != null ? String(currentJerseyNumber) : '',
       effective_date: '',
     }),
-    [stint],
+    [currentJerseyNumber],
   );
   const {
     control,
@@ -52,9 +47,8 @@ const ChangeJerseyModal = ({ open, stint, onClose, changeJerseyNumber }: Props) 
   }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
-    if (!stint) return;
     if (!data.effective_date) return;
-    const ok = await changeJerseyNumber(stint, Number(data.jersey_number), data.effective_date);
+    const ok = await changeJerseyNumber(Number(data.jersey_number), data.effective_date);
     if (ok) handleClose();
   });
 

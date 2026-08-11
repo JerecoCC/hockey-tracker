@@ -3,7 +3,7 @@
 ## Data ownership
 
 - `player_team_stints` is the canonical effective-dated team affiliation. A player is not re-added merely because a new season starts.
-- `player_jersey_stints` is the canonical effective-dated jersey assignment. Identical numbers can span seasons, and the team remains part of the assignment context.
+- `player_jersey_stints` is the canonical player-wide, effective-dated jersey assignment. Identical numbers span seasons and team changes without creating another assignment.
 - `player_season_rosters` is a read-only compatibility view. It returns preserved `player_teams` snapshots first and derives only missing season memberships from team stints.
 - `season_projected_lineup_slots` is an editable season/team template. Creating a game copies the projection into `game_rosters`; later projection edits do not rewrite a historical game.
 - `game_rosters` remains the record of actual game participation.

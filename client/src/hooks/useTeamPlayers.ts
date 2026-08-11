@@ -95,13 +95,15 @@ export interface UpdateJerseyHistoryEntryData {
   effective_from: string;
 }
 
-/** One row from jersey_number_history for a player's stint. */
+/** One canonical jersey assignment from the player's jersey-number timeline. */
 export interface JerseyHistoryEntry {
   id: string;
-  player_teams_id: string;
+  player_id: string;
   jersey_number: number;
   /** YYYY-MM-DD */
   effective_from: string;
+  /** YYYY-MM-DD, or null when this is the current assignment. */
+  effective_to: string | null;
 }
 
 export interface PlayerPhotoEntry {
@@ -117,8 +119,7 @@ export interface PlayerPhotoEntry {
 }
 
 /**
- * Fetches all jersey number history entries across every stint for a player.
- * Returns `byStint`: a map of player_teams_id → sorted entries (oldest first).
+ * Fetches the player's canonical jersey-number timeline.
  */
 export const useJerseyHistory = (playerId: string | null) => {
   const { data = [] } = useQuery<JerseyHistoryEntry[]>({
@@ -133,16 +134,7 @@ export const useJerseyHistory = (playerId: string | null) => {
     enabled: !!playerId,
   });
 
-  const byStint = useMemo(() => {
-    const map: Record<string, JerseyHistoryEntry[]> = {};
-    for (const entry of data) {
-      if (!map[entry.player_teams_id]) map[entry.player_teams_id] = [];
-      map[entry.player_teams_id].push(entry);
-    }
-    return map;
-  }, [data]);
-
-  return { byStint };
+  return { entries: data };
 };
 
 export const usePlayerPhotoHistory = (playerId: string | null) => {
@@ -310,14 +302,9 @@ export const useStintActions = (playerId: string | null) => {
   };
 
   const changeJerseyNumber = async (
-    stint: PlayerStintRecord,
     jerseyNumber: number,
     effectiveDate?: string | null,
   ): Promise<boolean> => {
-    if (!stint.season_id) {
-      toast.error('Add this player to a season roster before changing jersey number');
-      return false;
-    }
     if (!effectiveDate) {
       toast.error('Effective date is required to change a jersey number');
       return false;
@@ -325,12 +312,9 @@ export const useStintActions = (playerId: string | null) => {
 
     setSaving(true);
     try {
-      await axios.patch(
-        `${API}/admin/player-teams`,
+      await axios.post(
+        `${API}/admin/player-teams/history/${playerId}/jerseys`,
         {
-          player_id: stint.player_id,
-          team_id: stint.team_id,
-          season_id: stint.season_id,
           jersey_number: jerseyNumber,
           effective_date: effectiveDate,
         },
@@ -496,8 +480,6 @@ export interface TeamPlayerRecord extends PlayerRecord {
 
 import { API, authHeaders, getApiErrorMessage as apiError } from '@/lib/apiClient';
 const PLAYER_HISTORY_STALE_MS = 30_000;
-
-
 
 interface UseTeamPlayersOptions {
   includeProspects?: boolean;
