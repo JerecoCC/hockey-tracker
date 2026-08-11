@@ -93,6 +93,7 @@ const POSITION_TABS: PositionTabDefinition[] = [
 
 const ALL_SLOTS = POSITION_TABS.flatMap((tab) => tab.slots);
 const ALL_SLOT_KEYS = new Set(ALL_SLOTS.map((slot) => slot.key));
+const REQUIRED_SLOT_KEYS = ALL_SLOTS.map((slot) => slot.key).filter((slotKey) => slotKey !== 'G3');
 const PLAYER_DRAG_TYPE = 'text/projected-lineup-player-id';
 
 const positionGroup = (position: string | null): PositionGroup => {
@@ -124,7 +125,8 @@ const assignmentsFromSlots = (savedSlots: ProjectedLineupSlot[]): SlotAssignment
     if (!legacyMatch) return;
     const group = legacyMatch[1] as PositionGroup;
     const legacyIndex = Number(legacyMatch[2]) - 1;
-    const targetKey = slotKeysByGroup[group][legacyIndex] ?? slotKeysByGroup[group][legacyIndexes[group]];
+    const targetKey =
+      slotKeysByGroup[group][legacyIndex] ?? slotKeysByGroup[group][legacyIndexes[group]];
     legacyIndexes[group] += 1;
     if (targetKey) assignments[targetKey] = slot.player_id;
   });
@@ -147,14 +149,14 @@ const playerMatchesSearch = (player: TeamPlayerRecord, query: string) => {
 
 const sortPlayers = (players: TeamPlayerRecord[], sortBy: PlayerSort) =>
   [...players].sort((left, right) => {
-    const byLastName = left.last_name.localeCompare(right.last_name) ||
+    const byLastName =
+      left.last_name.localeCompare(right.last_name) ||
       left.first_name.localeCompare(right.first_name);
-    const byJerseyNumber = (left.jersey_number ?? Number.POSITIVE_INFINITY) -
+    const byJerseyNumber =
+      (left.jersey_number ?? Number.POSITIVE_INFINITY) -
       (right.jersey_number ?? Number.POSITIVE_INFINITY);
 
-    return sortBy === 'jersey'
-      ? byJerseyNumber || byLastName
-      : byLastName || byJerseyNumber;
+    return sortBy === 'jersey' ? byJerseyNumber || byLastName : byLastName || byJerseyNumber;
   });
 
 const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, players }: Props) => {
@@ -164,10 +166,11 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
   const [playerSort, setPlayerSort] = useState<PlayerSort>('jersey');
   const [dragPlayerId, setDragPlayerId] = useState<string | null>(null);
   const [dropSlotKey, setDropSlotKey] = useState<string | null>(null);
+  const savedAssignments = useMemo(() => assignmentsFromSlots(slots), [slots]);
 
   useEffect(() => {
-    if (open && !loading) setAssignments(assignmentsFromSlots(slots));
-  }, [loading, open, slots]);
+    if (open && !loading) setAssignments(savedAssignments);
+  }, [loading, open, savedAssignments]);
 
   useEffect(() => {
     if (!open) {
@@ -191,6 +194,9 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
     () => new Set(Object.values(assignments).filter((id): id is string => Boolean(id))),
     [assignments],
   );
+  const requiredSlotsFilled = REQUIRED_SLOT_KEYS.every((slotKey) => assignments[slotKey]);
+  const hasChanges = ALL_SLOTS.some((slot) => assignments[slot.key] !== savedAssignments[slot.key]);
+  const canSave = !loading && !saving && requiredSlotsFilled && hasChanges;
 
   const updateAssignment = (playerId: string, targetKey: string) => {
     if (saving) return;
@@ -235,8 +241,12 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
     const playerId = getDraggedPlayerId(event);
     const player = playersById.get(playerId);
     const sourceKey = Object.keys(assignments).find((key) => assignments[key] === playerId);
-    const valid = !saving && !disabled && sourceKey !== slotKey &&
-      player && positionGroup(player.position) === slotKey.charAt(0);
+    const valid =
+      !saving &&
+      !disabled &&
+      sourceKey !== slotKey &&
+      player &&
+      positionGroup(player.position) === slotKey.charAt(0);
 
     if (!valid) {
       event.dataTransfer.dropEffect = 'none';
@@ -275,7 +285,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
   };
 
   const handleSave = async () => {
-    if (loading || saving) return;
+    if (!canSave) return;
     const projectedSlots = ALL_SLOTS.flatMap((slot) => {
       const playerId = assignments[slot.key];
       return playerId ? [{ slot_key: slot.key, player_id: playerId }] : [];
@@ -284,11 +294,19 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
   };
 
   const renderLoadingTab = (tab: PositionTabDefinition) => (
-    <div className={styles.tabContent} aria-label={`Loading ${tab.label.toLowerCase()} projection`}>
-      <Section className={styles.section} title={tab.lineupTitle}>
+    <div
+      className={styles.tabContent}
+      aria-label={`Loading ${tab.label.toLowerCase()} projection`}
+    >
+      <Section
+        className={styles.section}
+        title={tab.lineupTitle}
+      >
         {tab.columns.length > 0 && (
           <div className={`${styles.columnHeaders} ${styles[`slotGrid${tab.group}`]}`}>
-            {tab.columns.map((column) => <span key={column}>{column}</span>)}
+            {tab.columns.map((column) => (
+              <span key={column}>{column}</span>
+            ))}
           </div>
         )}
         <div className={`${styles.slotGrid} ${styles[`slotGrid${tab.group}`]}`}>
@@ -303,10 +321,19 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
       </Section>
 
       <div className={styles.listSectionFrame}>
-        <Section className={`${styles.section} ${styles.listSection}`} title={tab.availableTitle}>
+        <Section
+          className={`${styles.section} ${styles.listSection}`}
+          title={tab.availableTitle}
+        >
           <div className={styles.loadingSearchToolbar}>
-            <Skeleton variant="block" className={styles.searchSkeleton} />
-            <Skeleton variant="block" className={styles.sortSkeleton} />
+            <Skeleton
+              variant="block"
+              className={styles.searchSkeleton}
+            />
+            <Skeleton
+              variant="block"
+              className={styles.sortSkeleton}
+            />
           </div>
           <ResponsiveList className={styles.playerList}>
             {Array.from({ length: 5 }, (_, index) => (
@@ -328,15 +355,21 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
       (player) => positionGroup(player.position) === tab.group && !assignedPlayerIds.has(player.id),
     );
     const goalieThirdDisabled = tab.group === 'G' && (!assignments.G1 || !assignments.G2);
-    const hasOpenSlot = tab.slots.some((slot) => !assignments[slot.key] && slot.key !== 'G3') ||
+    const hasOpenSlot =
+      tab.slots.some((slot) => !assignments[slot.key] && slot.key !== 'G3') ||
       (tab.group === 'G' && !goalieThirdDisabled && !assignments.G3);
 
     return (
       <div className={styles.tabContent}>
-        <Section className={styles.section} title={tab.lineupTitle}>
+        <Section
+          className={styles.section}
+          title={tab.lineupTitle}
+        >
           {tab.columns.length > 0 && (
             <div className={`${styles.columnHeaders} ${styles[`slotGrid${tab.group}`]}`}>
-              {tab.columns.map((column) => <span key={column}>{column}</span>)}
+              {tab.columns.map((column) => (
+                <span key={column}>{column}</span>
+              ))}
             </div>
           )}
           <div className={`${styles.slotGrid} ${styles[`slotGrid${tab.group}`]}`}>
@@ -359,7 +392,10 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
                 >
                   {player ? (
                     <>
-                      <span className={styles.dragHandle} aria-hidden="true">
+                      <span
+                        className={styles.dragHandle}
+                        aria-hidden="true"
+                      >
                         <FontAwesomeIcon icon={faGripLinesVertical} />
                       </span>
                       <div
@@ -413,7 +449,10 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
         </Section>
 
         <div className={styles.listSectionFrame}>
-          <Section className={`${styles.section} ${styles.listSection}`} title={tab.availableTitle}>
+          <Section
+            className={`${styles.section} ${styles.listSection}`}
+            title={tab.availableTitle}
+          >
             <SearchableList
               items={availablePlayers}
               filterItem={playerMatchesSearch}
@@ -455,7 +494,10 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
                       onDragStart={(event) => handleDragStart(event, player.id)}
                       onDragEnd={handleDragEnd}
                     >
-                      <span className={styles.dragHandle} aria-hidden="true">
+                      <span
+                        className={styles.dragHandle}
+                        aria-hidden="true"
+                      >
                         <FontAwesomeIcon icon={faGripLinesVertical} />
                       </span>
                       <ListItem
@@ -506,7 +548,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
       onConfirm={handleSave}
       confirmLabel="Save Projection"
       confirmIcon="set_lineup"
-      confirmDisabled={loading || saving}
+      confirmDisabled={!canSave}
       busy={saving}
       size="xl"
     >

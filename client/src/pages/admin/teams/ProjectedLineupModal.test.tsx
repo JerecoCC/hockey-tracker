@@ -9,10 +9,19 @@ jest.mock('@/hooks/useProjectedLineup', () => ({
 
 jest.mock('@jerecocc/tracker-ui/components/Modal/Modal', () => ({
   __esModule: true,
-  default: ({ children, title, onConfirm }: any) => (
-    <div role="dialog" aria-label={title}>
+  default: ({ children, title, onConfirm, confirmDisabled, busy }: any) => (
+    <div
+      role="dialog"
+      aria-label={title}
+    >
       {children}
-      <button type="button" onClick={onConfirm}>Save Projection</button>
+      <button
+        type="button"
+        disabled={confirmDisabled || busy}
+        onClick={onConfirm}
+      >
+        Save Projection
+      </button>
     </div>
   ),
 }));
@@ -22,7 +31,10 @@ jest.mock('@jerecocc/tracker-ui/components/Tabs/Tabs', () => ({
   default: ({ tabs }: any) => (
     <div>
       {tabs.map((tab: any) => (
-        <section key={tab.label} aria-label={`${tab.label} tab`}>
+        <section
+          key={tab.label}
+          aria-label={`${tab.label} tab`}
+        >
           <h2>{tab.label}</h2>
           {tab.content}
         </section>
@@ -50,7 +62,14 @@ jest.mock('@jerecocc/tracker-ui/components/Button/Button', () => ({
       variant: _variant,
       ...buttonProps
     } = props;
-    return <button type="button" {...buttonProps}>{children}</button>;
+    return (
+      <button
+        type="button"
+        {...buttonProps}
+      >
+        {children}
+      </button>
+    );
   },
 }));
 
@@ -65,6 +84,20 @@ const players = [
   { id: 'goalie-1', first_name: 'Grace', last_name: 'Starter', position: 'G', jersey_number: 30 },
   { id: 'goalie-2', first_name: 'Blair', last_name: 'Backup', position: 'G', jersey_number: 35 },
   { id: 'goalie-3', first_name: 'Terry', last_name: 'Third', position: 'G', jersey_number: 40 },
+  ...Array.from({ length: 9 }, (_, index) => ({
+    id: `forward-${index + 4}`,
+    first_name: 'Forward',
+    last_name: `Player ${index + 4}`,
+    position: 'F',
+    jersey_number: index + 41,
+  })),
+  ...Array.from({ length: 5 }, (_, index) => ({
+    id: `defense-${index + 2}`,
+    first_name: 'Defense',
+    last_name: `Player ${index + 2}`,
+    position: 'D',
+    jersey_number: index + 51,
+  })),
 ].map((player) => ({
   ...player,
   photo: null,
@@ -78,16 +111,43 @@ const players = [
   team_name: 'Test Team',
 })) as TeamPlayerRecord[];
 
-const renderModal = () => render(
-  <ProjectedLineupModal
-    open
-    onClose={jest.fn()}
-    teamId="team-1"
-    seasonId="season-1"
-    teamName="Test Team"
-    players={players}
-  />,
-);
+const REQUIRED_SLOT_ASSIGNMENTS = [
+  ...Array.from({ length: 4 }, (_, lineIndex) =>
+    ['LW', 'C', 'RW'].map((position, positionIndex) => ({
+      slot_key: `F${lineIndex + 1}_${position}`,
+      player_id: `forward-${lineIndex * 3 + positionIndex + 1}`,
+    })),
+  ).flat(),
+  ...Array.from({ length: 3 }, (_, pairingIndex) =>
+    ['LD', 'RD'].map((position, positionIndex) => ({
+      slot_key: `D${pairingIndex + 1}_${position}`,
+      player_id: `defense-${pairingIndex * 2 + positionIndex + 1}`,
+    })),
+  ).flat(),
+  { slot_key: 'G1', player_id: 'goalie-1' },
+  { slot_key: 'G2', player_id: 'goalie-2' },
+];
+
+const completeSavedSlots = () =>
+  REQUIRED_SLOT_ASSIGNMENTS.map((assignment, sortOrder) => ({
+    id: `slot-${sortOrder + 1}`,
+    season_id: 'season-1',
+    team_id: 'team-1',
+    sort_order: sortOrder,
+    ...assignment,
+  }));
+
+const renderModal = () =>
+  render(
+    <ProjectedLineupModal
+      open
+      onClose={jest.fn()}
+      teamId="team-1"
+      seasonId="season-1"
+      teamName="Test Team"
+      players={players}
+    />,
+  );
 
 const dropPlayer = (playerId: string, slotKey: string) => {
   const dataTransfer = {
@@ -122,11 +182,19 @@ describe('ProjectedLineupModal', () => {
     expect(screen.getAllByTestId(/^lineup-slot-F/)).toHaveLength(12);
     expect(screen.getAllByTestId(/^lineup-slot-D/)).toHaveLength(6);
     expect(screen.getAllByTestId(/^lineup-slot-G/)).toHaveLength(3);
-    expect(screen.getByText('Left Wing', { selector: '.columnHeaders > span' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Left Wing', { selector: '.columnHeaders > span' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Center', { selector: '.columnHeaders > span' })).toBeInTheDocument();
-    expect(screen.getByText('Right Wing', { selector: '.columnHeaders > span' })).toBeInTheDocument();
-    expect(screen.getByText('Left Defense', { selector: '.columnHeaders > span' })).toBeInTheDocument();
-    expect(screen.getByText('Right Defense', { selector: '.columnHeaders > span' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Right Wing', { selector: '.columnHeaders > span' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Left Defense', { selector: '.columnHeaders > span' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Right Defense', { selector: '.columnHeaders > span' }),
+    ).toBeInTheDocument();
     expect(screen.queryByText('Goaltender')).not.toBeInTheDocument();
     expect(screen.queryByText('Line 1')).not.toBeInTheDocument();
     expect(screen.queryByText('Pairing 1')).not.toBeInTheDocument();
@@ -148,18 +216,22 @@ describe('ProjectedLineupModal', () => {
   it('indicates and applies jersey-number or last-name sorting', () => {
     renderModal();
     const forwardsTab = screen.getByRole('region', { name: 'Forwards tab' });
-    const playerNames = () => within(forwardsTab)
-      .getAllByLabelText(/^(Alex Wing|Casey Center|Zane Able)$/)
-      .map((item) => item.getAttribute('aria-label'));
+    const playerNames = () =>
+      within(forwardsTab)
+        .getAllByLabelText(/^(Alex Wing|Casey Center|Zane Able)$/)
+        .map((item) => item.getAttribute('aria-label'));
 
-    expect(within(forwardsTab).getByRole('button', { name: 'Sort by jersey number' }))
-      .toHaveAttribute('data-active', 'true');
+    expect(
+      within(forwardsTab).getByRole('button', { name: 'Sort by jersey number' }),
+    ).toHaveAttribute('data-active', 'true');
     expect(playerNames()).toEqual(['Alex Wing', 'Casey Center', 'Zane Able']);
 
     fireEvent.click(within(forwardsTab).getByRole('button', { name: 'Sort by last name' }));
 
-    expect(within(forwardsTab).getByRole('button', { name: 'Sort by last name' }))
-      .toHaveAttribute('data-active', 'true');
+    expect(within(forwardsTab).getByRole('button', { name: 'Sort by last name' })).toHaveAttribute(
+      'data-active',
+      'true',
+    );
     expect(playerNames()).toEqual(['Zane Able', 'Casey Center', 'Alex Wing']);
   });
 
@@ -200,7 +272,14 @@ describe('ProjectedLineupModal', () => {
   it('disables player dragging and lineup drop targets while saving', async () => {
     mockUseProjectedLineup.mockReturnValue({
       slots: [
-        { id: 'slot-1', season_id: 'season-1', team_id: 'team-1', player_id: 'forward-1', slot_key: 'F1_LW', sort_order: 0 },
+        {
+          id: 'slot-1',
+          season_id: 'season-1',
+          team_id: 'team-1',
+          player_id: 'forward-1',
+          slot_key: 'F1_LW',
+          sort_order: 0,
+        },
       ],
       loading: false,
       saving: true,
@@ -210,8 +289,9 @@ describe('ProjectedLineupModal', () => {
     renderModal();
 
     await waitFor(() => {
-      expect(within(screen.getByTestId('lineup-slot-F1_LW')).getByLabelText('Alex Wing'))
-        .toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('lineup-slot-F1_LW')).getByLabelText('Alex Wing'),
+      ).toBeInTheDocument();
     });
     const assignedPlayer = screen.getByLabelText('Alex Wing').closest('[aria-disabled="true"]');
     const availablePlayer = screen.getByLabelText('Casey Center').closest('[aria-disabled="true"]');
@@ -219,25 +299,56 @@ describe('ProjectedLineupModal', () => {
     expect(assignedPlayer).toHaveAttribute('draggable', 'false');
     expect(availablePlayer).toHaveAttribute('draggable', 'false');
     expect(screen.getByTestId('lineup-slot-F1_C')).toHaveAttribute('aria-disabled', 'true');
-    expect(within(screen.getByRole('region', { name: 'Forwards tab' }))
-      .getByRole('button', { name: 'Sort by jersey number' })).toBeDisabled();
+    expect(
+      within(screen.getByRole('region', { name: 'Forwards tab' })).getByRole('button', {
+        name: 'Sort by jersey number',
+      }),
+    ).toBeDisabled();
   });
 
-  it('saves a player dropped into a specific forward line slot', async () => {
+  it('only saves a changed, complete projection and treats the third goalie as optional', async () => {
     renderModal();
-    dropPlayer('forward-1', 'F1_LW');
+    const saveButton = screen.getByRole('button', { name: 'Save Projection' });
+
+    expect(saveButton).toBeDisabled();
+    REQUIRED_SLOT_ASSIGNMENTS.forEach(({ player_id, slot_key }) => dropPlayer(player_id, slot_key));
     const assignedPlayer = within(screen.getByTestId('lineup-slot-F1_LW'));
 
     expect(assignedPlayer.getByText('Alex')).toHaveClass('eyebrow');
     expect(assignedPlayer.getByText('Wing')).toHaveClass('name');
     expect(assignedPlayer.getByText('11')).toBeInTheDocument();
     expect(assignedPlayer.queryByText('Left Wing')).not.toBeInTheDocument();
+    expect(screen.getByTestId('lineup-slot-G3')).toHaveTextContent('Drop third goalie here');
+    expect(saveButton).toBeEnabled();
 
+    fireEvent.click(saveButton);
+
+    await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+    expect(save.mock.calls[0][0]).toHaveLength(REQUIRED_SLOT_ASSIGNMENTS.length);
+    expect(save.mock.calls[0][0]).toEqual(expect.arrayContaining(REQUIRED_SLOT_ASSIGNMENTS));
+    expect(save.mock.calls[0][0]).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ slot_key: 'G3' })]),
+    );
+  });
+
+  it('does not allow saving a complete projection until it changes', async () => {
+    mockUseProjectedLineup.mockReturnValue({
+      slots: completeSavedSlots(),
+      loading: false,
+      saving: false,
+      save,
+    });
+
+    renderModal();
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Save Projection' })).toBeDisabled();
+      expect(
+        within(screen.getByTestId('lineup-slot-F1_LW')).getByLabelText('Alex Wing'),
+      ).toBeInTheDocument();
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Save Projection' }));
-
-    await waitFor(() => expect(save).toHaveBeenCalledWith([
-      { slot_key: 'F1_LW', player_id: 'forward-1' },
-    ]));
+    expect(save).not.toHaveBeenCalled();
   });
 
   it('keeps the third goalie slot disabled until starter and backup are filled', () => {
@@ -262,8 +373,22 @@ describe('ProjectedLineupModal', () => {
   it('maps legacy numbered slots into the new line and pairing positions', async () => {
     mockUseProjectedLineup.mockReturnValue({
       slots: [
-        { id: 'slot-1', season_id: 'season-1', team_id: 'team-1', player_id: 'forward-1', slot_key: 'F1', sort_order: 0 },
-        { id: 'slot-2', season_id: 'season-1', team_id: 'team-1', player_id: 'defense-1', slot_key: 'D1', sort_order: 1 },
+        {
+          id: 'slot-1',
+          season_id: 'season-1',
+          team_id: 'team-1',
+          player_id: 'forward-1',
+          slot_key: 'F1',
+          sort_order: 0,
+        },
+        {
+          id: 'slot-2',
+          season_id: 'season-1',
+          team_id: 'team-1',
+          player_id: 'defense-1',
+          slot_key: 'D1',
+          sort_order: 1,
+        },
       ],
       loading: false,
       saving: false,
@@ -273,8 +398,12 @@ describe('ProjectedLineupModal', () => {
     renderModal();
 
     await waitFor(() => {
-      expect(within(screen.getByTestId('lineup-slot-F1_LW')).getByLabelText('Alex Wing')).toBeInTheDocument();
-      expect(within(screen.getByTestId('lineup-slot-D1_LD')).getByLabelText('Dana Blue')).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('lineup-slot-F1_LW')).getByLabelText('Alex Wing'),
+      ).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('lineup-slot-D1_LD')).getByLabelText('Dana Blue'),
+      ).toBeInTheDocument();
     });
   });
 });

@@ -291,7 +291,6 @@ const TeamPlayersTab = ({
   const rosterActions = readOnly ? null : (
     <div className={styles.rosterActions}>
       <Button
-        variant="outlined"
         intent="accent"
         icon="grid_view"
         disabled={!selectedSeasonId || allTeamPlayers.length === 0}

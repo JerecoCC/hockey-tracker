@@ -205,7 +205,7 @@ describe('TeamPlayersTab', () => {
     expect(mockMoreActionsMenu).toHaveBeenLastCalledWith(
       expect.objectContaining({ iconHeight: 'button', iconSize: '1.25rem' }),
     );
-    expect(projectedLineupButton).toHaveClass('outlinedAccent');
+    expect(projectedLineupButton).toHaveClass('filledAccent');
     expect(projectedLineupButton.querySelector('svg')).toBeInTheDocument();
     expect(mockMoreActionsMenu.mock.calls.at(-1)?.[0].items).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ label: 'Projected Lineup' })]),

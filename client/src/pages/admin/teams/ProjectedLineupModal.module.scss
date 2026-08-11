@@ -1,5 +1,5 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 .tabContent {
   display: grid;
@@ -55,7 +55,9 @@
   border: 1px dashed color-mix(in srgb, var(--app-text-muted, #{$text-dim}) 75%, transparent);
   border-radius: $radius-md;
   background: color-mix(in srgb, var(--app-bg, #{$bg-page}) 70%, transparent);
-  transition: border-color $transition-fast, background $transition-fast;
+  transition:
+    border-color $transition-fast,
+    background $transition-fast;
 
   &:not(.slotDisabled):hover {
     border-color: var(--app-accent, #{$accent});
@@ -161,11 +163,26 @@
 }
 
 .searchablePlayers {
+  --projected-lineup-list-height: calc(
+    240px + #{$space-2xl * 5} + 10px + #{$space-sm * 4} + #{$space-md * 2}
+  );
+
   display: flex;
   flex: 1;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+
+  // SearchableList renders empty and no-result messages in place of the list.
+  // Give those messages the same viewport box so the section never collapses.
+  > p {
+    box-sizing: border-box;
+    height: var(--projected-lineup-list-height);
+    flex: 0 0 auto;
+    margin: 0 (-$space-md) (-$space-md);
+    padding: $space-md;
+    border-top: 1px solid var(--app-border, #{$border});
+  }
 }
 
 .playerSortControl {
@@ -195,7 +212,7 @@
   --app-list-gap: #{$space-sm};
 
   box-sizing: border-box;
-  height: calc(240px + #{$space-2xl * 5} + 10px + #{$space-sm * 4} + #{$space-md * 2});
+  height: var(--projected-lineup-list-height);
   min-height: 0;
   flex: 0 0 auto;
   margin: 0 (-$space-md) (-$space-md);
@@ -314,7 +331,6 @@
   .slot {
     height: calc(48px + #{$space-2xl} + 2px);
   }
-
 }
 
 @media (max-width: $screen-phone-max) {
