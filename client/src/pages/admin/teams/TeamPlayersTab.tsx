@@ -304,7 +304,7 @@ const TeamPlayersTab = ({
         variant="outlined"
         intent="accent"
         icon="grid_view"
-        disabled={!selectedSeasonId || rosterPlayers.length === 0}
+        disabled={!selectedSeasonId || allTeamPlayers.length === 0}
         onClick={() => setProjectedLineupOpen(true)}
       >
         Projected Lineup
@@ -459,7 +459,7 @@ const TeamPlayersTab = ({
                   teamId={teamId}
                   seasonId={selectedSeasonId}
                   teamName={teamName}
-                  players={rosterPlayers}
+                  players={allTeamPlayers}
                 />
               )}
               <LineupCreatePlayersModal

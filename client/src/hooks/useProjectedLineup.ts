@@ -49,8 +49,9 @@ export const useProjectedLineup = (
       );
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.setQueryData(queryKey, data);
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
       toast.success('Projected lineup saved');
     },
     onError: (error) => toast.error(getApiErrorMessage(error, 'Failed to save projected lineup')),

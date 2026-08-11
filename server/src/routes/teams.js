@@ -171,7 +171,9 @@ router.get('/:id/seasons/:seasonId/projected-lineup', async (req, res) => {
   }
 });
 
-// Replaces the projection after verifying every player is on the active roster.
+// Replaces the projection after verifying every player belongs to the team for
+// this season. Assigned reserves are promoted to the roster atomically with
+// the projection update.
 router.put('/:id/seasons/:seasonId/projected-lineup', async (req, res) => {
   const { id, seasonId } = req.params;
   const { slots } = req.body;
@@ -222,36 +224,64 @@ router.put('/:id/seasons/:seasonId/projected-lineup', async (req, res) => {
           ON roster.player_id = input.player_id
          AND roster.team_id = ${id}
          AND roster.season_id = ${seasonId}
-         AND roster.is_prospect = FALSE
         WHERE roster.player_id IS NULL
       `;
       if (invalid.length > 0) {
         return res.status(400).json({
-          error: 'Projected lineup players must be active members of this season roster',
+          error: 'Projected lineup players must be members of this team for the season',
           invalid_player_ids: invalid.map((row) => row.player_id),
         });
       }
     }
 
-    await sql`
-      WITH cleared AS (
-        DELETE FROM season_projected_lineup_slots
-        WHERE team_id = ${id} AND season_id = ${seasonId}
-      )
-      INSERT INTO season_projected_lineup_slots (
-        season_id, team_id, player_id, slot_key, sort_order
-      )
-      SELECT ${seasonId}, ${id}, input.player_id, input.slot_key, input.sort_order
-      FROM jsonb_to_recordset(${JSON.stringify(normalized)}::jsonb)
-        AS input(player_id uuid, slot_key text, sort_order smallint)
-    `;
-
-    const rows = await sql`
-      SELECT id, season_id, team_id, player_id, slot_key, sort_order
-      FROM season_projected_lineup_slots
-      WHERE team_id = ${id} AND season_id = ${seasonId}
-      ORDER BY sort_order, slot_key
-    `;
+    const serializedSlots = JSON.stringify(normalized);
+    const transactionResults = await sql.transaction(
+      (txn) => [
+        txn`
+          UPDATE player_team_stints stint
+          SET is_prospect = FALSE
+          FROM jsonb_to_recordset(${serializedSlots}::jsonb)
+            AS input(player_id uuid, slot_key text, sort_order smallint),
+            seasons season
+          WHERE stint.player_id = input.player_id
+            AND stint.team_id = ${id}
+            AND stint.is_prospect = TRUE
+            AND season.id = ${seasonId}
+            AND COALESCE(stint.start_date, DATE '-infinity') <= COALESCE(season.end_date, DATE 'infinity')
+            AND COALESCE(stint.end_date, DATE 'infinity') >= season.start_date
+        `,
+        txn`
+          UPDATE player_teams legacy
+          SET is_prospect = FALSE
+          FROM jsonb_to_recordset(${serializedSlots}::jsonb)
+            AS input(player_id uuid, slot_key text, sort_order smallint)
+          WHERE legacy.player_id = input.player_id
+            AND legacy.team_id = ${id}
+            AND legacy.season_id = ${seasonId}
+            AND legacy.is_prospect = TRUE
+        `,
+        txn`
+          DELETE FROM season_projected_lineup_slots
+          WHERE team_id = ${id} AND season_id = ${seasonId}
+        `,
+        txn`
+          INSERT INTO season_projected_lineup_slots (
+            season_id, team_id, player_id, slot_key, sort_order
+          )
+          SELECT ${seasonId}, ${id}, input.player_id, input.slot_key, input.sort_order
+          FROM jsonb_to_recordset(${serializedSlots}::jsonb)
+            AS input(player_id uuid, slot_key text, sort_order smallint)
+        `,
+        txn`
+          SELECT id, season_id, team_id, player_id, slot_key, sort_order
+          FROM season_projected_lineup_slots
+          WHERE team_id = ${id} AND season_id = ${seasonId}
+          ORDER BY sort_order, slot_key
+        `,
+      ],
+      { isolationLevel: 'Serializable' },
+    );
+    const rows = transactionResults[4] ?? [];
     return res.json(rows);
   } catch (err) {
     console.error('projected lineup put error:', err);

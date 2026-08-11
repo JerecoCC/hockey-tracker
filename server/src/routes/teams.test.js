@@ -1,6 +1,10 @@
 'use strict';
 
-jest.mock('../db', () => ({ sql: jest.fn() }));
+jest.mock('../db', () => {
+  const sql = jest.fn();
+  sql.transaction = jest.fn();
+  return { sql };
+});
 jest.mock('../middleware/auth', () => ({
   requireAdmin: (req, res, next) => { req.user = { id: 'admin-1', role: 'admin' }; next(); },
   requireAuth:  (req, res, next) => { req.user = { id: 'admin-1', role: 'admin' }; next(); },
@@ -449,18 +453,35 @@ describe('season projected lineup', () => {
     expect(sql.mock.calls[0][0].join(' ')).toContain('season_projected_lineup_slots');
   });
 
-  it('replaces a projection after roster validation', async () => {
+  it('replaces a projection and promotes assigned reserves after team membership validation', async () => {
+    let transactionQueries = [];
     sql
       .mockResolvedValueOnce([{ team_exists: true, season_exists: true, team_in_season: true }])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ player_id: '00000000-0000-0000-0000-000000000001', slot_key: 'G1', sort_order: 0 }]);
+      .mockResolvedValueOnce([]);
+    sql.transaction.mockImplementationOnce(async (buildQueries) => {
+      const txn = jest.fn((strings, ...values) => ({ strings, values }));
+      transactionQueries = buildQueries(txn);
+      return [[], [], [], [], [{
+        player_id: '00000000-0000-0000-0000-000000000001',
+        slot_key: 'G1',
+        sort_order: 0,
+      }]];
+    });
     const res = await request(app)
       .put('/api/admin/teams/team-1/seasons/season-1/projected-lineup')
       .send({ slots: [{ slot_key: 'G1', player_id: '00000000-0000-0000-0000-000000000001' }] });
     expect(res.status).toBe(200);
     expect(res.body[0].slot_key).toBe('G1');
-    expect(sql.mock.calls[2][0].join(' ')).toContain('DELETE FROM season_projected_lineup_slots');
+    expect(sql.mock.calls[1][0].join(' ')).not.toMatch(/roster\.is_prospect = FALSE/);
+    expect(sql.transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'Serializable',
+    });
+    expect(transactionQueries).toHaveLength(5);
+    expect(transactionQueries[0].strings.join(' ')).toContain('UPDATE player_team_stints stint');
+    expect(transactionQueries[1].strings.join(' ')).toContain('UPDATE player_teams legacy');
+    expect(transactionQueries[2].strings.join(' ')).toContain('DELETE FROM season_projected_lineup_slots');
+    expect(transactionQueries[3].strings.join(' ')).toContain('INSERT INTO season_projected_lineup_slots');
+    expect(transactionQueries[4].strings.join(' ')).toContain('SELECT id, season_id');
   });
 
   it('rejects duplicate projected players before writing', async () => {

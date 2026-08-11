@@ -7,6 +7,7 @@ import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import TeamPlayersTab from './TeamPlayersTab';
 
 const mockAddPlayersModal = jest.fn(() => null);
+const mockProjectedLineupModal = jest.fn(() => null);
 const mockMoreActionsMenu = jest.fn();
 
 jest.mock('react-router-dom', () => ({
@@ -68,6 +69,15 @@ jest.mock('./AddPlayersModal', () => {
 });
 jest.mock('./BulkTradeModal', () => () => null);
 jest.mock('./TeamPlayerEditModal', () => () => null);
+jest.mock('./ProjectedLineupModal', () => {
+  type MockProjectedLineupModalProps = Record<string, unknown>;
+
+  const MockProjectedLineupModal = (props: MockProjectedLineupModalProps) =>
+    mockProjectedLineupModal(props);
+
+  MockProjectedLineupModal.displayName = 'MockProjectedLineupModal';
+  return MockProjectedLineupModal;
+});
 
 const mockUseSeasons = useSeasons as jest.Mock;
 const mockUseProjectedLineup = jest.mocked(useProjectedLineup);
@@ -262,6 +272,27 @@ describe('TeamPlayersTab', () => {
 
     expect(screen.getByRole('button', { name: 'Move Players' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Trade Players' })).not.toBeInTheDocument();
+  });
+
+  it('includes reserve players in the projected lineup modal', async () => {
+    const user = userEvent.setup();
+    const reservePlayer = {
+      ...players[0],
+      id: 'reserve-1',
+      first_name: 'Reserve',
+      last_name: 'Forward',
+      is_prospect: true,
+    } as TeamPlayerRecord;
+    mockUseTeamPlayers.mockReturnValue({ ...teamPlayersState, players: [reservePlayer] });
+
+    renderTeamPlayersTab();
+    const projectedLineupButton = screen.getByRole('button', { name: 'Projected Lineup' });
+
+    expect(projectedLineupButton).toBeEnabled();
+    await user.click(projectedLineupButton);
+    expect(mockProjectedLineupModal).toHaveBeenLastCalledWith(
+      expect.objectContaining({ players: [reservePlayer] }),
+    );
   });
 
   it('does not show roster-status tags for reserves', async () => {
