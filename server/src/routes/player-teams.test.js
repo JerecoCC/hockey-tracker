@@ -812,7 +812,7 @@ describe("PATCH /api/admin/player-teams", () => {
 });
 
 describe("POST /api/admin/player-teams/trade", () => {
-  it("records a changed jersey number using the movement date", async () => {
+  it("records a changed jersey number using its selected effective date", async () => {
     sql
       .mockResolvedValueOnce([
         {
@@ -853,22 +853,17 @@ describe("POST /api/admin/player-teams/trade", () => {
       to_team_id: "team-new",
       trade_date: "2025-11-15",
       jersey_number: 28,
+      jersey_effective_date: "2025-11-20",
       position: "D",
     });
 
     expect(res.status).toBe(201);
-    expect(res.body.jersey_assignment).toMatchObject({
-      id: "jersey-stint-2",
-      jersey_number: 28,
-      start_date: "2025-11-15",
-    });
-
     const jerseyHistoryWrite = sql.mock.calls.find((call) =>
       call[0].join(" ").includes("INSERT INTO player_jersey_stints"),
     );
     expect(jerseyHistoryWrite).toBeDefined();
     expect(jerseyHistoryWrite).toEqual(
-      expect.arrayContaining(["player-1", 28, "2025-11-15"]),
+      expect.arrayContaining(["player-1", 28, "2025-11-20"]),
     );
   });
 

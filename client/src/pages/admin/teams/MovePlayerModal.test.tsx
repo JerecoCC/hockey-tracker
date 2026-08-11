@@ -39,12 +39,14 @@ jest.mock('@/components/form/ControlledFields', () => {
     label: string;
     placeholder?: string;
     options?: Array<{ value: string; label: string }>;
+    rules?: Record<string, unknown>;
   }
 
   const MockField = (props: MockFieldProps) => (
     <Controller
       control={props.control}
       name={props.name}
+      rules={props.rules}
       render={({ field }: { field: { value: string; onChange: (value: string) => void } }) => (
         <label>
           {props.label}
@@ -213,6 +215,7 @@ describe('MovePlayerModal', () => {
         '2026-07-15',
         null,
         null,
+        null,
         'trade',
         'season-2026',
       );
@@ -251,6 +254,54 @@ describe('MovePlayerModal', () => {
         'team-next',
         '2026-03-15',
         20,
+        null,
+        null,
+        'trade',
+        null,
+      );
+    });
+  });
+
+  it('requires a separate effective date when the jersey number changes', async () => {
+    const user = userEvent.setup();
+    const movePlayer = jest.fn().mockResolvedValue(true);
+
+    render(
+      <MovePlayerModal
+        open
+        player={player}
+        currentTeamId="team-current"
+        seasonId="season-2025"
+        leagueId="league-1"
+        seasons={seasons}
+        onClose={jest.fn()}
+        movePlayer={movePlayer}
+      />,
+    );
+
+    expect(screen.queryByLabelText('Jersey Effective Date')).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText('Jersey #'));
+    await user.type(screen.getByLabelText('Jersey #'), '28');
+    await user.selectOptions(screen.getByLabelText('Move To'), 'team-next');
+    await user.type(screen.getByLabelText('Date'), '2026-03-15');
+
+    expect(screen.getByLabelText('Jersey Effective Date')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Move' }));
+    expect(movePlayer).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText('Jersey Effective Date'), '2026-03-20');
+    await user.click(screen.getByRole('button', { name: 'Move' }));
+
+    await waitFor(() => {
+      expect(movePlayer).toHaveBeenCalledWith(
+        'player-1',
+        'season-2025',
+        'team-next',
+        '2026-03-15',
+        28,
+        '2026-03-20',
         null,
         'trade',
         null,

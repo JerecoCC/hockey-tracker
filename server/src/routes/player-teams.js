@@ -1855,7 +1855,7 @@ router.post("/bulk-trade", async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/player-teams/trade
-// Body: { player_id, season_id, to_team_id, trade_date, jersey_number?, position?, acquisition_type? }
+// Body: { player_id, season_id, to_team_id, trade_date, jersey_number?, jersey_effective_date?, position?, acquisition_type? }
 // Closes the player's current stint (sets end_date) and opens a new one on
 // to_team_id starting on trade_date.
 // ---------------------------------------------------------------------------
@@ -1866,6 +1866,7 @@ router.post("/trade", async (req, res) => {
     to_team_id,
     trade_date,
     jersey_number = null,
+    jersey_effective_date = null,
     position = null,
   } = req.body;
   const requestedRosterSeasonId =
@@ -1884,6 +1885,10 @@ router.post("/trade", async (req, res) => {
     return res.status(400).json({ error: "trade_date is required" });
   if (!isValidDateOnly(trade_date))
     return res.status(400).json({ error: "trade_date must be YYYY-MM-DD" });
+  if (jersey_effective_date != null && !isValidDateOnly(jersey_effective_date))
+    return res
+      .status(400)
+      .json({ error: "jersey_effective_date must be YYYY-MM-DD" });
   if (!isValidAcquisitionType(acquisition_type))
     return res.status(400).json({ error: "Invalid acquisition_type" });
 
@@ -1916,17 +1921,15 @@ router.post("/trade", async (req, res) => {
       acquisition_type,
       start_date: trade_date,
     });
-    let jerseyAssignment = null;
     if (jersey_number != null) {
-      jerseyAssignment = await setJerseyAssignment({
+      await setJerseyAssignment({
         player_id,
         jersey_number,
-        effective_date: trade_date,
+        effective_date: jersey_effective_date ?? trade_date,
       });
     }
     return res.status(201).json({
       from_team_id: closed[0].team_id,
-      jersey_assignment: jerseyAssignment,
       new_stint: {
         ...created,
         player_team_stint_id: created.id,

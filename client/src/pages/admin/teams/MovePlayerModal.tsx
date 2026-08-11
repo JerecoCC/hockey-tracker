@@ -27,6 +27,7 @@ interface FormValues {
   to_team_id: string | null;
   trade_date: string;
   jersey_number: string;
+  jersey_effective_date: string;
   position: string;
   acquisition_type: string;
   target_season_id: string;
@@ -46,6 +47,7 @@ interface Props {
     toTeamId: string,
     moveDate: string,
     jerseyNumber?: number | null,
+    jerseyEffectiveDate?: string | null,
     position?: string | null,
     acquisitionType?: string | null,
     targetSeasonId?: string | null,
@@ -92,6 +94,7 @@ const MovePlayerModal = ({
       to_team_id: null,
       trade_date: '',
       jersey_number: player?.jersey_number == null ? '' : String(player.jersey_number),
+      jersey_effective_date: '',
       position: '',
       acquisition_type: 'trade',
       target_season_id: '',
@@ -135,9 +138,15 @@ const MovePlayerModal = ({
     mode: 'onChange',
   });
   const tradeDate = watch('trade_date');
+  const jerseyNumberValue = watch('jersey_number');
   const targetSeasonId = watch('target_season_id');
   const sourceSeasonEnd = dateKey(sourceSeason?.end_date);
   const isPostSeasonMove = !!sourceSeasonEnd && !!tradeDate && tradeDate > sourceSeasonEnd;
+  const parsedJerseyNumber = jerseyNumberValue === '' ? null : Number(jerseyNumberValue);
+  const isJerseyNumberChanged =
+    !isPostSeasonMove &&
+    parsedJerseyNumber != null &&
+    parsedJerseyNumber !== player?.jersey_number;
   const seasonOptions = useMemo(
     () =>
       [...leagueSeasons]
@@ -169,6 +178,12 @@ const MovePlayerModal = ({
     }
   }, [isPostSeasonMove, nextSeasonId, setValue, targetSeasonId]);
 
+  useEffect(() => {
+    if (!isJerseyNumberChanged) {
+      setValue('jersey_effective_date', '', { shouldDirty: false, shouldValidate: true });
+    }
+  }, [isJerseyNumberChanged, setValue]);
+
   const handleClose = useCallback(() => {
     reset(formValues);
     onClose();
@@ -178,6 +193,7 @@ const MovePlayerModal = ({
     if (!player || !data.to_team_id) return;
     const jerseyNumber =
       !isPostSeasonMove && data.jersey_number ? Number(data.jersey_number) : null;
+    const jerseyEffectiveDate = isJerseyNumberChanged ? data.jersey_effective_date : null;
     const position = data.position || null;
     const rosterSeasonId = isPostSeasonMove ? data.target_season_id || null : null;
     const ok = await movePlayer(
@@ -186,6 +202,7 @@ const MovePlayerModal = ({
       data.to_team_id,
       data.trade_date,
       jerseyNumber,
+      jerseyEffectiveDate,
       position,
       data.acquisition_type || 'trade',
       rosterSeasonId,
@@ -243,6 +260,16 @@ const MovePlayerModal = ({
               />
             )}
           </div>
+          {isJerseyNumberChanged && (
+            <ControlledDatePickerField
+              label="Jersey Effective Date"
+              control={control}
+              name="jersey_effective_date"
+              required
+              rules={{ required: 'Jersey effective date is required' }}
+              disabled={isSubmitting}
+            />
+          )}
           <fieldset className={styles.fieldGroup}>
             <legend className={styles.groupLabel}>MOVEMENT</legend>
             <div className={styles.movementRow}>
