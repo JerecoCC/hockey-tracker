@@ -19,7 +19,7 @@ const fetchAwardPlayerEligibilityRow = async (seasonId, playerId) => {
     FROM players p
     LEFT JOIN LATERAL (
       SELECT position
-      FROM player_teams
+      FROM player_season_rosters
       WHERE player_id = p.id AND season_id = ${seasonId}
       ORDER BY end_date DESC NULLS FIRST, start_date DESC NULLS LAST, created_at DESC
       LIMIT 1
@@ -2019,7 +2019,7 @@ router.get('/:id/stats', async (req, res) => {
         player_team AS (
           SELECT DISTINCT ON (pt.player_id)
             pt.player_id, pt.team_id, pt.jersey_number, pt.photo
-          FROM player_teams pt
+          FROM player_season_rosters pt
           WHERE pt.season_id = ${id}
           ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
         ),
@@ -2093,7 +2093,7 @@ router.get('/:id/stats', async (req, res) => {
         player_team AS (
           SELECT DISTINCT ON (pt.player_id)
             pt.player_id, pt.team_id, pt.jersey_number, pt.photo
-          FROM player_teams pt
+          FROM player_season_rosters pt
           WHERE pt.season_id = ${id}
           ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
         ),
@@ -2210,7 +2210,7 @@ router.get('/:id/stats', async (req, res) => {
       player_team AS (
         SELECT DISTINCT ON (pt.player_id)
           pt.player_id, pt.team_id, pt.jersey_number, pt.photo, pt.created_at
-        FROM player_teams pt
+        FROM player_season_rosters pt
         WHERE pt.season_id = ${id}
         ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
       )
@@ -2267,7 +2267,7 @@ router.get('/:id/stats', async (req, res) => {
       player_team AS (
         SELECT DISTINCT ON (pt.player_id)
           pt.player_id, pt.team_id, pt.jersey_number, pt.photo, pt.created_at
-        FROM player_teams pt
+        FROM player_season_rosters pt
         WHERE pt.season_id = ${id}
         ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
       ),
@@ -2334,7 +2334,7 @@ router.get('/:id/stats', async (req, res) => {
         JOIN period_vals pv ON pv.p = gl.period
         LEFT JOIN LATERAL (
           SELECT true AS is_own_goal
-          FROM player_teams pt
+          FROM player_season_rosters pt
           WHERE pt.player_id = gl.scorer_id
             AND pt.team_id = sr.team_id
             AND pt.season_id = sr.season_id
@@ -2536,7 +2536,7 @@ router.get('/:id/awards', async (req, res) => {
       LEFT JOIN players p ON p.id = sar.player_id
       LEFT JOIN LATERAL (
         SELECT player_id, team_id, jersey_number, photo, position
-        FROM player_teams
+        FROM player_season_rosters
         WHERE player_id = sar.player_id AND season_id = ${id}
         ORDER BY end_date DESC NULLS FIRST, start_date DESC NULLS LAST, created_at DESC
         LIMIT 1

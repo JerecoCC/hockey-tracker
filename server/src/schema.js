@@ -270,6 +270,7 @@ const playerTeamStints = pgTable('player_team_stints', {
   teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   position: text('position'),
   acquisitionType: text('acquisition_type'),
+  isProspect: boolean('is_prospect').notNull().default(false),
   startDate: date('start_date'),
   endDate: date('end_date'),
   importSource: text('import_source'),
@@ -281,6 +282,29 @@ const playerTeamStints = pgTable('player_team_stints', {
   importIdentityUnique: uniqueIndex('player_team_stints_import_identity_unique')
     .on(table.playerId, table.importSource, table.importKey)
     .where(sql`${table.importSource} IS NOT NULL AND ${table.importKey} IS NOT NULL`),
+}));
+
+const playerJerseyStints = pgTable('player_jersey_stints', {
+  id: id(),
+  playerId: uuid('player_id').notNull().references(() => players.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  jerseyNumber: smallint('jersey_number').notNull(),
+  startDate: date('start_date').notNull(),
+  endDate: date('end_date'),
+  createdAt: createdAt(),
+});
+
+const seasonProjectedLineupSlots = pgTable('season_projected_lineup_slots', {
+  id: id(),
+  seasonId: uuid('season_id').notNull().references(() => seasons.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  playerId: uuid('player_id').notNull().references(() => players.id, { onDelete: 'cascade' }),
+  slotKey: text('slot_key').notNull(),
+  sortOrder: smallint('sort_order').notNull().default(0),
+  createdAt: createdAt(),
+}, (table) => ({
+  seasonTeamSlotUnique: unique().on(table.seasonId, table.teamId, table.slotKey),
+  seasonTeamPlayerUnique: unique().on(table.seasonId, table.teamId, table.playerId),
 }));
 
 const playerPhotos = pgTable('player_photos', {
@@ -485,6 +509,8 @@ module.exports = {
   players,
   playerTeams,
   playerTeamStints,
+  playerJerseyStints,
+  seasonProjectedLineupSlots,
   playerPhotos,
   jerseyNumberHistory,
   bracketRuleSets,

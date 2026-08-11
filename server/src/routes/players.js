@@ -127,7 +127,7 @@ router.get('/', async (req, res) => {
         FROM players p
         LEFT JOIN LATERAL (
           SELECT pt.*
-          FROM player_teams pt
+          FROM player_season_rosters pt
           JOIN teams t ON t.id = pt.team_id
           WHERE pt.player_id = p.id
             AND t.league_id = ${league_id}
@@ -160,7 +160,7 @@ router.get('/', async (req, res) => {
         ) latest_jnh ON TRUE
         WHERE NOT EXISTS (
           SELECT 1
-          FROM player_teams active_pt
+          FROM player_season_rosters active_pt
           JOIN teams active_t ON active_t.id = active_pt.team_id
           WHERE active_pt.player_id = p.id
             AND active_t.league_id = ${league_id}
@@ -170,12 +170,12 @@ router.get('/', async (req, res) => {
         AND (
           NOT EXISTS (
             SELECT 1
-            FROM player_teams any_pt
+            FROM player_season_rosters any_pt
             WHERE any_pt.player_id = p.id
           )
           OR EXISTS (
             SELECT 1
-            FROM player_teams league_pt
+            FROM player_season_rosters league_pt
             JOIN teams league_t ON league_t.id = league_pt.team_id
             WHERE league_pt.player_id = p.id
               AND league_t.league_id = ${league_id}
@@ -236,7 +236,7 @@ router.get('/', async (req, res) => {
                 s.id AS last_season_id,
                 s.name AS last_season_name
               FROM players p
-              JOIN player_teams pt ON pt.player_id = p.id
+              JOIN player_season_rosters pt ON pt.player_id = p.id
                                   AND (${includeProspects} OR pt.is_prospect = FALSE)
                                   AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
               JOIN teams        t  ON t.id          = pt.team_id
@@ -348,7 +348,7 @@ router.get('/', async (req, res) => {
                 recent_games.games_played,
                 s.id AS last_season_id
               FROM players p
-              JOIN player_teams pt ON pt.player_id = p.id
+              JOIN player_season_rosters pt ON pt.player_id = p.id
                                   AND (${includeProspects} OR pt.is_prospect = FALSE)
                                   AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
               JOIN teams        t  ON t.id          = pt.team_id
@@ -484,7 +484,7 @@ router.get('/', async (req, res) => {
                     )
                   )::int AS season_points
                 FROM players p
-                JOIN player_teams pt ON pt.player_id = p.id
+                JOIN player_season_rosters pt ON pt.player_id = p.id
                                     AND pt.season_id  = ${season_id}
                                     AND (${includeProspects} OR pt.is_prospect = FALSE)
                                     AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
@@ -585,7 +585,7 @@ router.get('/', async (req, res) => {
                       AND rs.league_id = ${league_id}
                   ) AS has_games
                 FROM players p
-                JOIN player_teams pt ON pt.player_id = p.id
+                JOIN player_season_rosters pt ON pt.player_id = p.id
                                     AND (${includeProspects} OR pt.is_prospect = FALSE)
                                     AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
                 JOIN teams        t  ON t.id          = pt.team_id
@@ -656,7 +656,7 @@ router.get('/', async (req, res) => {
                   p.rookie_season_id,
                   p.is_active
                 FROM players p
-                JOIN player_teams pt ON pt.player_id = p.id
+                JOIN player_season_rosters pt ON pt.player_id = p.id
                                     AND pt.season_id  = ${season_id}
                                     AND (${includeProspects} OR pt.is_prospect = FALSE)
                                     AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
@@ -700,7 +700,7 @@ router.get('/', async (req, res) => {
                   p.rookie_season_id,
                   p.is_active
                 FROM players p
-                JOIN player_teams pt ON pt.player_id = p.id
+                JOIN player_season_rosters pt ON pt.player_id = p.id
                                     AND (${includeProspects} OR pt.is_prospect = FALSE)
                                     AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
                 JOIN teams        t  ON t.id          = pt.team_id
@@ -801,7 +801,7 @@ router.get('/', async (req, res) => {
                 )
               )::int AS season_points
             FROM players p
-            JOIN player_teams pt ON pt.player_id = p.id
+            JOIN player_season_rosters pt ON pt.player_id = p.id
                                 AND pt.season_id  = ${season_id}
                                 AND (${includeProspects} OR pt.is_prospect = FALSE)
                                 AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
@@ -876,7 +876,7 @@ router.get('/', async (req, res) => {
                   AND rs.league_id = ${league_id}
               ) AS has_games
             FROM players p
-            JOIN player_teams pt ON pt.player_id = p.id
+            JOIN player_season_rosters pt ON pt.player_id = p.id
                                 AND (${includeProspects} OR pt.is_prospect = FALSE)
                                 AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
             JOIN teams        t  ON t.id          = pt.team_id
@@ -917,7 +917,8 @@ router.get('/', async (req, res) => {
             height_cm, weight_lbs, position, shoots,
             rookie_season_id, rookie_season_name,
             status, is_active, created_at,
-            jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
+            jersey_number, player_team_id, player_team_stint_id, roster_source,
+            team_id, team_name, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.league_player_number, p.first_name, p.last_name,
@@ -930,13 +931,15 @@ router.get('/', async (req, res) => {
               p.status, p.is_active, p.created_at,
               pt.jersey_number,
               pt.id          AS player_team_id,
+              pt.player_team_stint_id,
+              pt.roster_source,
               pt.team_id,
               pt.is_prospect,
               ti.name       AS team_name,
               t.primary_color,
               t.text_color
             FROM players p
-            JOIN player_teams pt ON pt.player_id = p.id
+            JOIN player_season_rosters pt ON pt.player_id = p.id
                                 AND pt.team_id   = ${team_id}
                                 AND pt.season_id = ${season_id}
                                 AND (${includeProspects} OR pt.is_prospect = FALSE)
@@ -981,7 +984,7 @@ router.get('/', async (req, res) => {
               t.primary_color,
               t.text_color
             FROM players p
-            JOIN player_teams pt ON pt.player_id = p.id
+            JOIN player_season_rosters pt ON pt.player_id = p.id
                                 AND pt.team_id   = ${team_id}
                                 AND (${includeProspects} OR pt.is_prospect = FALSE)
                                 AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
@@ -1075,7 +1078,7 @@ router.get('/:id/stats', async (req, res) => {
           pt.start_date,
           pt.end_date,
           pt.created_at
-        FROM player_teams pt
+        FROM player_season_rosters pt
         WHERE pt.player_id = ${id}
           AND pt.season_id = sr.season_id
           AND pt.team_id = sr.team_id
@@ -1156,7 +1159,7 @@ router.get('/:id/awards', async (req, res) => {
         JOIN players p ON p.id = sar.player_id
         LEFT JOIN LATERAL (
           SELECT team_id, photo, start_date, end_date, created_at
-          FROM player_teams pt
+          FROM player_season_rosters pt
           WHERE pt.player_id = sar.player_id
             AND pt.season_id = s.id
           ORDER BY
@@ -1238,7 +1241,7 @@ router.get('/:id/awards', async (req, res) => {
         JOIN seasons s ON s.id = sa.season_id
         JOIN LATERAL (
           SELECT team_id
-          FROM player_teams pt
+          FROM player_season_rosters pt
           WHERE pt.player_id = ${id}
             AND pt.season_id = s.id
           ORDER BY
@@ -1492,7 +1495,7 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
         JOIN period_vals pv ON pv.p = gl.period
         LEFT JOIN LATERAL (
           SELECT true AS is_own_goal
-          FROM player_teams pt
+          FROM player_season_rosters pt
           WHERE pt.player_id = gl.scorer_id
             AND pt.team_id = sr.team_id
             AND pt.season_id = sr.season_id
@@ -1656,7 +1659,7 @@ router.get('/route-lookup', async (req, res) => {
             'g'
           )) AS league_player_slug
         FROM players p
-        JOIN player_teams pt ON pt.player_id = p.id
+        JOIN player_season_rosters pt ON pt.player_id = p.id
         JOIN teams t ON t.id = pt.team_id
         JOIN leagues l ON l.id = t.league_id
         LEFT JOIN LATERAL (
@@ -1859,7 +1862,7 @@ router.get('/:id/last-five-games', async (req, res) => {
         JOIN period_vals pv ON pv.p = gl.period
         LEFT JOIN LATERAL (
           SELECT true AS is_own_goal
-          FROM player_teams pt
+          FROM player_season_rosters pt
           WHERE pt.player_id = gl.scorer_id
             AND pt.team_id = sr.team_id
             AND pt.season_id = sr.season_id
@@ -2140,7 +2143,7 @@ router.get('/:id/game-logs', async (req, res) => {
         JOIN period_vals pv ON pv.p = gl.period
         LEFT JOIN LATERAL (
           SELECT true AS is_own_goal
-          FROM player_teams pt
+          FROM player_season_rosters pt
           WHERE pt.player_id = gl.scorer_id
             AND pt.team_id = sr.team_id
             AND pt.season_id = sr.season_id
@@ -2350,7 +2353,7 @@ router.get('/:id', async (req, res) => {
       FROM players p
       LEFT JOIN LATERAL (
         SELECT pt.*
-        FROM player_teams pt
+        FROM player_season_rosters pt
         WHERE pt.player_id = p.id
         ORDER BY
           CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
@@ -2587,7 +2590,7 @@ router.patch('/:id/retire', async (req, res) => {
       ),
       latest_roster_stint AS (
         SELECT pt.id
-        FROM player_teams pt
+        FROM player_season_rosters pt
         WHERE pt.player_id = ${id}
           AND pt.end_date IS NULL
           AND EXISTS (SELECT 1 FROM retired_player)
@@ -2665,7 +2668,7 @@ router.patch('/:id/unretire', async (req, res) => {
       ),
       latest_closed_roster_stint AS (
         SELECT pt.id
-        FROM player_teams pt
+        FROM player_season_rosters pt
         WHERE pt.player_id = ${id}
           AND pt.end_date IS NOT NULL
           AND EXISTS (SELECT 1 FROM unretired_player)

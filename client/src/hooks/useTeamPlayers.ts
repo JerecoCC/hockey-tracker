@@ -484,6 +484,8 @@ export interface PlayerRosterInput {
 /** Extends PlayerRecord with team-assignment fields returned when fetching by team_id. */
 export interface TeamPlayerRecord extends PlayerRecord {
   player_team_id: string | null;
+  player_team_stint_id?: string | null;
+  roster_source?: 'legacy' | 'derived';
   jersey_number: number | null;
   team_id: string | null;
   team_name: string | null;

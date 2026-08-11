@@ -1004,9 +1004,9 @@ describe('POST /api/admin/games/:id/roster', () => {
     expect(res.body[0].player_id).toBe('player-1');
 
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
-    expect(queries[0]).toMatch(/UPDATE player_teams pt/);
+    expect(queries[0]).toMatch(/UPDATE player_team_stints pt/);
     expect(queries[0]).toMatch(/SET is_prospect = FALSE/);
-    expect(queries[0]).toMatch(/pt\.season_id = g\.season_id/);
+    expect(queries[0]).not.toMatch(/pt\.season_id = g\.season_id/);
     expect(queries[1]).toMatch(/INSERT INTO game_rosters/);
     expect(queries[2]).toMatch(/player_team_stints/);
     expect(queries[2]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);

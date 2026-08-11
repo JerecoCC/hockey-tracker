@@ -278,7 +278,7 @@ async function insertGamePlayerStats(sql, gameId) {
       JOIN players p ON p.id = gr.player_id
       LEFT JOIN LATERAL (
         SELECT position
-        FROM player_teams pt
+        FROM player_season_rosters pt
         WHERE pt.player_id = gr.player_id
           AND pt.team_id = gr.team_id
           AND pt.season_id = g.season_id
@@ -416,7 +416,7 @@ async function insertGamePlayerStats(sql, gameId) {
        AND gl.period <> 'SO'
       LEFT JOIN LATERAL (
         SELECT true AS is_own_goal
-        FROM player_teams pt
+        FROM player_season_rosters pt
         WHERE pt.player_id = gl.scorer_id
           AND pt.team_id = sr.team_id
           AND pt.season_id = sr.season_id

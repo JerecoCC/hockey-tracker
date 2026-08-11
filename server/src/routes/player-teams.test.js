@@ -117,8 +117,9 @@ describe('POST /api/admin/player-teams/bulk', () => {
 
   it('creates roster rows and reports skipped duplicates', async () => {
     sql
-      .mockResolvedValueOnce([{ id: 'stint-1', player_id: 'player-1' }])
-      .mockResolvedValueOnce([{ id: 'career-stint-1', player_id: 'player-1' }])
+      .mockResolvedValueOnce([{ start_date: '2025-10-01' }])
+      .mockResolvedValueOnce([{ id: 'career-stint-1', player_id: 'player-1', created: true }])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
 
     const res = await request(app)
@@ -135,7 +136,8 @@ describe('POST /api/admin/player-teams/bulk', () => {
     expect(res.status).toBe(201);
     expect(res.body.created).toHaveLength(1);
     expect(res.body.skipped).toBe(1);
-    expect(sql).toHaveBeenCalledTimes(3);
+    expect(sql).toHaveBeenCalledTimes(4);
+    expect(sql.mock.calls.some((call) => call[0].join(' ').includes('INSERT INTO player_teams'))).toBe(false);
   });
 });
 
@@ -156,18 +158,16 @@ describe('POST /api/admin/player-teams', () => {
 
   it('accepts expansion signing as an acquisition_type', async () => {
     sql
+      .mockResolvedValueOnce([{ start_date: '2024-10-01' }])
       .mockResolvedValueOnce([{
-        id: 'stint-1',
+        id: 'career-stint-1',
         player_id: 'player-1',
         team_id: 'team-1',
-        season_id: 'season-1',
-        jersey_number: 16,
         position: 'C',
         acquisition_type: 'expansion_signing',
         start_date: '2024-10-01',
         end_date: null,
-      }])
-      .mockResolvedValueOnce([{ id: 'career-stint-1' }]);
+      }]);
 
     const res = await request(app)
       .post('/api/admin/player-teams')
@@ -661,7 +661,7 @@ describe('PATCH /api/admin/player-teams', () => {
     expect(sql).not.toHaveBeenCalled();
   });
 
-  it('uses the season start date when seeding backdated jersey history', async () => {
+  it('writes a dated canonical jersey assignment while mirroring a legacy row', async () => {
     sql
       .mockResolvedValueOnce([{
         id: 'stint-1',
@@ -669,6 +669,7 @@ describe('PATCH /api/admin/player-teams', () => {
         effective_start: '2025-12-01',
         season_start: '2025-10-07',
       }])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([])
@@ -694,14 +695,20 @@ describe('PATCH /api/admin/player-teams', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.jersey_number).toBe(19);
-    expect(sql.mock.calls[0][0].join(' ')).toContain(
+    const legacyLookup = sql.mock.calls.find((call) =>
+      call[0].join(' ').includes('AS effective_start'),
+    );
+    expect(legacyLookup[0].join(' ')).toContain(
       'COALESCE(pt.start_date, s.start_date, pt.created_at::date)::text AS effective_start',
     );
-    expect(sql.mock.calls[2][3]).toBe('2025-10-07');
+    expect(sql.mock.calls.some((call) =>
+      call[0].join(' ').includes('INSERT INTO player_jersey_stints'),
+    )).toBe(true);
   });
 
   it('updates prospect status without creating a new stint', async () => {
-    sql.mockResolvedValueOnce([{
+    sql
+      .mockResolvedValueOnce([{
       id: 'stint-1',
       player_id: 'player-1',
       team_id: 'team-1',
@@ -709,7 +716,8 @@ describe('PATCH /api/admin/player-teams', () => {
       jersey_number: 16,
       is_prospect: true,
       position: 'C',
-    }]);
+      }])
+      .mockResolvedValueOnce([]);
 
     const res = await request(app)
       .patch('/api/admin/player-teams')
@@ -725,7 +733,8 @@ describe('PATCH /api/admin/player-teams', () => {
       id: 'stint-1',
       is_prospect: true,
     });
-    expect(sql).toHaveBeenCalledTimes(1);
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql.mock.calls[0][0].join(' ')).toContain('UPDATE player_team_stints');
   });
 
   it('updates prospect status on a matching historical stint when no active row exists', async () => {
@@ -801,8 +810,7 @@ describe('POST /api/admin/player-teams/trade', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.new_stint.acquisition_type).toBeNull();
-    const insertValues = sql.mock.calls[3].slice(1);
-    expect(insertValues[insertValues.length - 1]).toBeNull();
+    expect(sql.mock.calls.some((call) => call[0].join(' ').includes('INSERT INTO player_teams'))).toBe(false);
   });
 
   it('adds the destination row to the next season when the move is after the source season ended', async () => {
@@ -845,7 +853,8 @@ describe('POST /api/admin/player-teams/trade', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.new_stint.season_id).toBe('season-2026');
-    expect(sql.mock.calls[3].slice(1)).toEqual(expect.arrayContaining(['season-2026']));
+    expect(res.body.new_stint.roster_source).toBe('derived');
+    expect(sql.mock.calls.some((call) => call[0].join(' ').includes('INSERT INTO player_teams'))).toBe(false);
   });
 
   it('uses the selected roster season when one is provided', async () => {
@@ -889,7 +898,8 @@ describe('POST /api/admin/player-teams/trade', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.new_stint.season_id).toBe('season-choice');
-    expect(sql.mock.calls[3].slice(1)).toEqual(expect.arrayContaining(['season-choice']));
+    expect(res.body.new_stint.roster_source).toBe('derived');
+    expect(sql.mock.calls.some((call) => call[0].join(' ').includes('INSERT INTO player_teams'))).toBe(false);
   });
 });
 
@@ -1017,7 +1027,7 @@ describe('PATCH /api/admin/player-teams/:id', () => {
     expect(sql).toHaveBeenCalledTimes(2);
   });
 
-  it('updates prospect status on a specific stint row', async () => {
+  it('updates prospect status on a legacy season roster row', async () => {
     sql
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{
@@ -1042,6 +1052,35 @@ describe('PATCH /api/admin/player-teams/:id', () => {
       id: 'stint-1',
       is_prospect: true,
     });
+    expect(sql).toHaveBeenCalledTimes(2);
+  });
+
+  it('updates prospect status on a derived career stint roster row', async () => {
+    sql
+      .mockResolvedValueOnce([{
+        id: 'career-stint-1',
+        player_id: 'player-1',
+        team_id: 'team-1',
+        position: 'LW',
+        is_prospect: true,
+        acquisition_type: 'trade',
+        start_date: '2026-07-01',
+        end_date: null,
+      }])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app)
+      .patch('/api/admin/player-teams/career-stint-1')
+      .send({ is_prospect: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: 'career-stint-1',
+      roster_player_team_id: null,
+      is_prospect: true,
+    });
+    expect(sql.mock.calls[0][0].join(' ')).toContain('is_prospect');
+    expect(sql.mock.calls[0].slice(1)).toContain(true);
     expect(sql).toHaveBeenCalledTimes(2);
   });
 });
@@ -1116,26 +1155,28 @@ describe('GET /api/admin/player-teams/history/:playerId/jerseys', () => {
 });
 
 describe('PATCH /api/admin/player-teams/history/jerseys/:id', () => {
-  it('updates a jersey history row and syncs the latest stint jersey', async () => {
+  it('updates a jersey assignment and reconnects the timeline', async () => {
     const row = {
       id: 'j-1',
-      player_teams_id: 'stint-1',
+      player_id: 'player-1',
+      team_id: 'team-1',
       jersey_number: 72,
       effective_from: '2026-01-25',
     };
     sql
       .mockResolvedValueOnce([row])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'stint-1' }]);
 
     const res = await request(app)
       .patch('/api/admin/player-teams/history/jerseys/j-1')
       .send({ jersey_number: 72, effective_from: '2026-01-25' });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual(row);
-    expect(sql).toHaveBeenCalledTimes(2);
-    expect(sql.mock.calls[0][0].join(' ')).toContain('UPDATE jersey_number_history');
-    expect(sql.mock.calls[1][0].join(' ')).toContain('UPDATE player_teams');
+    expect(res.body).toEqual({ ...row, player_teams_id: 'stint-1' });
+    expect(sql).toHaveBeenCalledTimes(3);
+    expect(sql.mock.calls[0][0].join(' ')).toContain('UPDATE player_jersey_stints');
+    expect(sql.mock.calls[1][0].join(' ')).toContain('LEAD(start_date)');
   });
 
   it('validates jersey history update payloads', async () => {
@@ -1150,23 +1191,23 @@ describe('PATCH /api/admin/player-teams/history/jerseys/:id', () => {
 });
 
 describe('DELETE /api/admin/player-teams/history/jerseys/:id', () => {
-  it('deletes a jersey history row and syncs the latest stint jersey', async () => {
+  it('deletes a jersey assignment and reconnects the timeline', async () => {
     const row = {
       id: 'j-1',
-      player_teams_id: 'stint-1',
+      player_id: 'player-1',
+      team_id: 'team-1',
       jersey_number: 72,
       effective_from: '2026-01-25',
     };
-    sql.mockResolvedValueOnce([row]);
+    sql.mockResolvedValueOnce([row]).mockResolvedValueOnce([]);
 
     const res = await request(app).delete('/api/admin/player-teams/history/jerseys/j-1');
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual(row);
-    expect(sql).toHaveBeenCalledTimes(1);
+    expect(res.body).toEqual({ ...row, player_teams_id: null });
+    expect(sql).toHaveBeenCalledTimes(2);
     const queryText = sql.mock.calls[0][0].join(' ');
-    expect(queryText).toContain('DELETE FROM jersey_number_history');
-    expect(queryText).toContain('UPDATE player_teams');
+    expect(queryText).toContain('DELETE FROM player_jersey_stints');
   });
 
   it('returns 404 when the jersey history row is missing', async () => {

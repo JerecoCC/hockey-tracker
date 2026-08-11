@@ -18,6 +18,9 @@ client/storybook-static/
 *.log
 npm-debug.log*
 
+# Local database backups and portable restore tooling
+.backups/
+
 # Graphify generated artifacts
 graphify-out/
 **/graphify-out/

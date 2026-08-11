@@ -3,6 +3,7 @@ const { drizzle } = require('drizzle-orm/neon-http');
 const schema = require('./schema');
 const { backfillAllSeasonStatsSnapshots } = require('./lib/gameStatsSnapshots');
 const { ensureMigrationLedger } = require('./db/migrations');
+const { ensurePlayerTimelineSchema } = require('./db/playerTimeline');
 
 const rawUrl = process.env.POSTGRES_URL;
 
@@ -1420,6 +1421,8 @@ async function initSchema() {
     CREATE INDEX IF NOT EXISTS jnh_player_teams_effective
       ON jersey_number_history (player_teams_id, effective_from DESC)
   `;
+
+  await ensurePlayerTimelineSchema(sql);
 
   // Flag exactly one season per league as the "current" season.
   // is_current is kept for backward-compat but is no longer the source of truth —

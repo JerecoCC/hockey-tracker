@@ -1144,7 +1144,7 @@ router.get('/players', async (req, res) => {
               t.primary_color,
               t.text_color
             FROM players p
-            JOIN player_teams pt ON pt.player_id = p.id
+            JOIN player_season_rosters pt ON pt.player_id = p.id
                                 AND pt.team_id = ${team_id}
                                 AND pt.season_id = ${season_id}
                                 AND (${includeProspects} OR pt.is_prospect = FALSE)
@@ -1189,7 +1189,7 @@ router.get('/players', async (req, res) => {
               t.primary_color,
               t.text_color
             FROM players p
-            JOIN player_teams pt ON pt.player_id = p.id
+            JOIN player_season_rosters pt ON pt.player_id = p.id
                                 AND pt.team_id = ${team_id}
                                 AND (${includeProspects} OR pt.is_prospect = FALSE)
                                 AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
@@ -1254,7 +1254,7 @@ router.get('/players/route-lookup', async (req, res) => {
             'g'
           )) AS league_player_slug
         FROM players p
-        JOIN player_teams pt ON pt.player_id = p.id
+        JOIN player_season_rosters pt ON pt.player_id = p.id
         JOIN teams t ON t.id = pt.team_id
         JOIN leagues l ON l.id = t.league_id
         LEFT JOIN LATERAL (
@@ -1404,7 +1404,7 @@ router.get('/players/:id/stats', async (req, res) => {
           pt.start_date,
           pt.end_date,
           pt.created_at
-        FROM player_teams pt
+        FROM player_season_rosters pt
         WHERE pt.player_id = ${id}
           AND pt.season_id = sr.season_id
           AND pt.team_id = sr.team_id
@@ -1485,7 +1485,7 @@ router.get('/players/:id/awards', async (req, res) => {
         JOIN players p ON p.id = sar.player_id
         LEFT JOIN LATERAL (
           SELECT team_id, photo, start_date, end_date, created_at
-          FROM player_teams pt
+          FROM player_season_rosters pt
           WHERE pt.player_id = sar.player_id
             AND pt.season_id = s.id
           ORDER BY
@@ -1567,7 +1567,7 @@ router.get('/players/:id/awards', async (req, res) => {
         JOIN seasons s ON s.id = sa.season_id
         JOIN LATERAL (
           SELECT team_id
-          FROM player_teams pt
+          FROM player_season_rosters pt
           WHERE pt.player_id = ${id}
             AND pt.season_id = s.id
           ORDER BY
@@ -2024,7 +2024,7 @@ router.get('/players/:id', async (req, res) => {
       FROM players p
       LEFT JOIN LATERAL (
         SELECT pt.*
-        FROM player_teams pt
+        FROM player_season_rosters pt
         WHERE pt.player_id = p.id
         ORDER BY
           CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
