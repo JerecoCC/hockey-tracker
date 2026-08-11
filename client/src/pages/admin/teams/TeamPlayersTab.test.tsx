@@ -185,7 +185,7 @@ describe('TeamPlayersTab', () => {
     expect(screen.getByText('-')).toBeInTheDocument();
   });
 
-  it('uses matching toolbar action heights and medium filled section actions', async () => {
+  it('uses matching toolbar action heights and medium outlined section actions', async () => {
     const user = userEvent.setup();
     renderTeamPlayersTab();
 
@@ -207,7 +207,7 @@ describe('TeamPlayersTab', () => {
       goaliesAddButton,
     ]) {
       expect(sectionAddButton).toHaveAttribute('data-size', 'medium');
-      expect(sectionAddButton).toHaveClass('filledAccent');
+      expect(sectionAddButton).toHaveClass('outlinedAccent');
     }
 
     await user.click(toolbarAddButton);

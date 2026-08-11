@@ -374,15 +374,15 @@ const TeamPlayersTab = ({
               action={
                 readOnly ? null : (
                   <Button
-                    variant="filled"
+                    variant="outlined"
                     intent="accent"
                     icon="group_add"
                     size="medium"
-                    tooltip={`Add ${section.title}`}
-                    aria-label={`Add ${section.title}`}
                     disabled={!selectedSeasonId}
                     onClick={() => openAddPlayersModal(section)}
-                  />
+                  >
+                    Add {section.title}
+                  </Button>
                 )
               }
             >
