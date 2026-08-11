@@ -3,12 +3,9 @@
 
 .tabContent {
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(16rem, 2fr);
-  gap: $space-lg;
-}
-
-.tabContentForwards {
   grid-template-columns: minmax(0, 7fr) minmax(14rem, 3fr);
+  align-items: start;
+  gap: $space-lg;
 }
 
 .section {
@@ -43,7 +40,7 @@
 }
 
 .slotGridG {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .slot {
@@ -197,8 +194,10 @@
 .playerList {
   --app-list-gap: #{$space-sm};
 
+  box-sizing: border-box;
+  height: calc(240px + #{$space-2xl * 5} + 10px + #{$space-sm * 4} + #{$space-md * 2});
   min-height: 0;
-  flex: 1;
+  flex: 0 0 auto;
   margin: 0 (-$space-md) (-$space-md);
   padding: $space-md;
   border-top: 1px solid var(--app-border, #{$border});
@@ -295,14 +294,12 @@
 }
 
 .listSectionFrame {
-  position: relative;
   min-width: 0;
   min-height: 0;
+  align-self: start;
 }
 
 .listSection {
-  position: absolute;
-  inset: 0;
   display: flex;
   min-height: 0;
   flex-direction: column;
@@ -312,15 +309,6 @@
 @media (max-width: $screen-tablet-max) {
   .tabContent {
     grid-template-columns: 1fr;
-  }
-
-  .listSectionFrame {
-    position: static;
-  }
-
-  .listSection {
-    position: static;
-    max-height: 32rem;
   }
 
   .slot {

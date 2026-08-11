@@ -284,10 +284,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
   };
 
   const renderLoadingTab = (tab: PositionTabDefinition) => (
-    <div
-      className={`${styles.tabContent} ${tab.group === 'F' ? styles.tabContentForwards : ''}`}
-      aria-label={`Loading ${tab.label.toLowerCase()} projection`}
-    >
+    <div className={styles.tabContent} aria-label={`Loading ${tab.label.toLowerCase()} projection`}>
       <Section className={styles.section} title={tab.lineupTitle}>
         {tab.columns.length > 0 && (
           <div className={`${styles.columnHeaders} ${styles[`slotGrid${tab.group}`]}`}>
@@ -312,7 +309,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
             <Skeleton variant="block" className={styles.sortSkeleton} />
           </div>
           <ResponsiveList className={styles.playerList}>
-            {Array.from({ length: 4 }, (_, index) => (
+            {Array.from({ length: 5 }, (_, index) => (
               <Skeleton
                 as="li"
                 key={index}
@@ -335,7 +332,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
       (tab.group === 'G' && !goalieThirdDisabled && !assignments.G3);
 
     return (
-      <div className={`${styles.tabContent} ${tab.group === 'F' ? styles.tabContentForwards : ''}`}>
+      <div className={styles.tabContent}>
         <Section className={styles.section} title={tab.lineupTitle}>
           {tab.columns.length > 0 && (
             <div className={`${styles.columnHeaders} ${styles[`slotGrid${tab.group}`]}`}>

@@ -111,7 +111,7 @@ describe('ProjectedLineupModal', () => {
     const { container } = renderModal();
 
     expect(container.querySelectorAll('.slotSkeleton')).toHaveLength(21);
-    expect(container.querySelectorAll('.playerSkeleton')).toHaveLength(12);
+    expect(container.querySelectorAll('.playerSkeleton')).toHaveLength(15);
     expect(screen.getByLabelText('Loading forwards projection')).toBeInTheDocument();
     expect(screen.queryByText(/Loading projected lineup/)).not.toBeInTheDocument();
   });
@@ -131,6 +131,7 @@ describe('ProjectedLineupModal', () => {
     expect(screen.queryByText('Line 1')).not.toBeInTheDocument();
     expect(screen.queryByText('Pairing 1')).not.toBeInTheDocument();
     expect(screen.getByTestId('lineup-slot-G1').parentElement).toHaveClass('slotGridG');
+    expect(screen.getByTestId('lineup-slot-G1').parentElement?.children).toHaveLength(3);
   });
 
   it('filters the available player list with the tracker-ui search field', () => {
