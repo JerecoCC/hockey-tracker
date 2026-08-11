@@ -305,6 +305,8 @@ const TeamPlayersTab = ({
         Add Players
       </Button>
       <MoreActionsMenu
+        iconHeight="button"
+        iconSize="1.25rem"
         items={[
           {
             label: 'Create Players',
@@ -372,7 +374,7 @@ const TeamPlayersTab = ({
               action={
                 readOnly ? null : (
                   <Button
-                    variant="outlined"
+                    variant="filled"
                     intent="accent"
                     icon="group_add"
                     size="medium"

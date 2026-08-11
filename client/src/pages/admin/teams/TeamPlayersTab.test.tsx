@@ -6,6 +6,7 @@ import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import TeamPlayersTab from './TeamPlayersTab';
 
 const mockAddPlayersModal = jest.fn(() => null);
+const mockMoreActionsMenu = jest.fn();
 
 jest.mock('react-router-dom', () => ({
   Link: ({ to, children, ...props }: any) => (
@@ -28,22 +29,28 @@ jest.mock('@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu', () 
 
   interface MockMoreActionsMenuProps {
     items: MockActionItem[];
+    iconHeight?: 'default' | 'button' | 'field';
+    iconSize?: string;
   }
 
-  const MockMoreActionsMenu = ({ items }: MockMoreActionsMenuProps) => (
-    <div>
-      {items.map((item) => (
-        <button
-          key={item.label}
-          type="button"
-          disabled={item.disabled}
-          onClick={item.onClick}
-        >
-          {item.label}
-        </button>
-      ))}
-    </div>
-  );
+  const MockMoreActionsMenu = (props: MockMoreActionsMenuProps) => {
+    mockMoreActionsMenu(props);
+
+    return (
+      <div>
+        {props.items.map((item) => (
+          <button
+            key={item.label}
+            type="button"
+            disabled={item.disabled}
+            onClick={item.onClick}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   MockMoreActionsMenu.displayName = 'MockMoreActionsMenu';
   return MockMoreActionsMenu;
@@ -178,7 +185,7 @@ describe('TeamPlayersTab', () => {
     expect(screen.getByText('-')).toBeInTheDocument();
   });
 
-  it('keeps toolbar add players and adds filtered bordered section actions', async () => {
+  it('uses matching toolbar action heights and medium filled section actions', async () => {
     const user = userEvent.setup();
     renderTeamPlayersTab();
 
@@ -190,6 +197,18 @@ describe('TeamPlayersTab', () => {
     const forwardsAddButton = screen.getByRole('button', { name: 'Add Forwards' });
     const defenseAddButton = screen.getByRole('button', { name: 'Add Defense' });
     const goaliesAddButton = screen.getByRole('button', { name: 'Add Goalies' });
+
+    expect(mockMoreActionsMenu).toHaveBeenLastCalledWith(
+      expect.objectContaining({ iconHeight: 'button', iconSize: '1.25rem' }),
+    );
+    for (const sectionAddButton of [
+      forwardsAddButton,
+      defenseAddButton,
+      goaliesAddButton,
+    ]) {
+      expect(sectionAddButton).toHaveAttribute('data-size', 'medium');
+      expect(sectionAddButton).toHaveClass('filledAccent');
+    }
 
     await user.click(toolbarAddButton);
     expect(latestAddPlayersModalProps()).toEqual(
