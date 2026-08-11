@@ -812,6 +812,66 @@ describe("PATCH /api/admin/player-teams", () => {
 });
 
 describe("POST /api/admin/player-teams/trade", () => {
+  it("records a changed jersey number using the movement date", async () => {
+    sql
+      .mockResolvedValueOnce([
+        {
+          source_season_id: "season-1",
+          source_league_id: "league-1",
+          source_start_date: "2025-10-01",
+          source_end_date: "2026-06-30",
+          requested_season_id: null,
+          requested_league_id: null,
+          is_after_source_end: false,
+          roster_season_id: "season-1",
+        },
+      ])
+      .mockResolvedValueOnce([{ id: "old-stint", team_id: "team-old" }])
+      .mockResolvedValueOnce([
+        {
+          id: "new-stint",
+          player_id: "player-1",
+          team_id: "team-new",
+          start_date: "2025-11-15",
+          end_date: null,
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "jersey-stint-2",
+          player_id: "player-1",
+          jersey_number: 28,
+          start_date: "2025-11-15",
+          end_date: null,
+          created: true,
+        },
+      ]);
+
+    const res = await request(app).post("/api/admin/player-teams/trade").send({
+      player_id: "player-1",
+      season_id: "season-1",
+      to_team_id: "team-new",
+      trade_date: "2025-11-15",
+      jersey_number: 28,
+      position: "D",
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.jersey_assignment).toMatchObject({
+      id: "jersey-stint-2",
+      jersey_number: 28,
+      start_date: "2025-11-15",
+    });
+
+    const jerseyHistoryWrite = sql.mock.calls.find((call) =>
+      call[0].join(" ").includes("INSERT INTO player_jersey_stints"),
+    );
+    expect(jerseyHistoryWrite).toBeDefined();
+    expect(jerseyHistoryWrite).toEqual(
+      expect.arrayContaining(["player-1", 28, "2025-11-15"]),
+    );
+  });
+
   it("keeps acquisition_type null when explicitly provided as unknown", async () => {
     sql
       .mockResolvedValueOnce([

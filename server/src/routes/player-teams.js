@@ -1916,8 +1916,9 @@ router.post("/trade", async (req, res) => {
       acquisition_type,
       start_date: trade_date,
     });
+    let jerseyAssignment = null;
     if (jersey_number != null) {
-      await setJerseyAssignment({
+      jerseyAssignment = await setJerseyAssignment({
         player_id,
         jersey_number,
         effective_date: trade_date,
@@ -1925,6 +1926,7 @@ router.post("/trade", async (req, res) => {
     }
     return res.status(201).json({
       from_team_id: closed[0].team_id,
+      jersey_assignment: jerseyAssignment,
       new_stint: {
         ...created,
         player_team_stint_id: created.id,
