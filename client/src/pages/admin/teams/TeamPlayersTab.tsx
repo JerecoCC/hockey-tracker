@@ -18,14 +18,12 @@ import { formatPlayerPosition } from '@/lib/playerPosition';
 import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playerSearch';
 import { buildPlayerDetailsPath, buildUserPlayerDetailsPath } from '@/lib/routeSlugs';
 import LineupCreatePlayersModal from '../games/game-details/lineups/LineupCreatePlayersModal';
-import AddPlayersModal from './AddPlayersModal';
 import BulkTradeModal from './BulkTradeModal';
 import TeamPlayerEditModal from './TeamPlayerEditModal';
 import ProjectedLineupModal from './ProjectedLineupModal';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './TeamDetails.module.scss';
 
-const FORWARD_ADD_PLAYER_POSITIONS = ['C', 'LW', 'RW', 'L', 'R', 'F'] as const;
 const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD']);
 const GOALIE_POSITIONS = new Set(['G']);
 const PLAYER_SECTION_SKELETON_ROW_COUNT = 3;
@@ -33,7 +31,6 @@ const PLAYER_SECTION_SKELETON_ROW_COUNT = 3;
 const PLAYER_SECTIONS = [
   {
     title: 'Forwards',
-    addPlayerPositions: FORWARD_ADD_PLAYER_POSITIONS,
     matches: (p: TeamPlayerRecord) => {
       const position = (p.position ?? '').toUpperCase();
       return !GOALIE_POSITIONS.has(position) && !DEFENSE_POSITIONS.has(position);
@@ -41,17 +38,13 @@ const PLAYER_SECTIONS = [
   },
   {
     title: 'Defense',
-    addPlayerPositions: ['D', 'LD', 'RD'],
     matches: (p: TeamPlayerRecord) => DEFENSE_POSITIONS.has((p.position ?? '').toUpperCase()),
   },
   {
     title: 'Goalies',
-    addPlayerPositions: ['G'],
     matches: (p: TeamPlayerRecord) => GOALIE_POSITIONS.has((p.position ?? '').toUpperCase()),
   },
 ];
-
-type PlayerSection = (typeof PLAYER_SECTIONS)[number];
 
 type PlayerView = 'roster' | 'prospects';
 
@@ -90,10 +83,10 @@ const TeamPlayersTab = ({
     players,
     loading,
     busy,
-    addPlayersToRoster,
     updatePlayer,
     updatePlayerTeam,
     updatePlayerRosterRole,
+    resetRoster,
     removePlayerFromTeam,
     uploadPlayerPhoto,
     createAndRosterPlayers,
@@ -106,18 +99,21 @@ const TeamPlayersTab = ({
     mode,
     includeProspects: true,
   });
-  const { slots: projectedLineupSlots } = useProjectedLineup(teamId, selectedSeasonId, { mode });
-  const [addModalOpen, setAddModalOpen] = useState(false);
-  const [addModalSection, setAddModalSection] = useState<PlayerSection | null>(null);
+  const { slots: projectedLineupSlots, loading: projectedLineupLoading } = useProjectedLineup(
+    teamId,
+    selectedSeasonId,
+    { mode },
+  );
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
   const [projectedLineupOpen, setProjectedLineupOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TeamPlayerRecord | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<TeamPlayerRecord | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [resetRosterOpen, setResetRosterOpen] = useState(false);
+  const [isResettingRoster, setIsResettingRoster] = useState(false);
 
   const rosterPlayers = allTeamPlayers.filter((p) => !p.is_prospect);
-  const existingPlayerIds = new Set(allTeamPlayers.map((p) => p.id));
   const projectedPlayerIds = new Set(projectedLineupSlots.map((slot) => slot.player_id));
   const rosterPlayerCount = rosterPlayers.length;
   const rosterGoalieCount = rosterPlayers.filter((p) => p.position === 'G').length;
@@ -155,14 +151,14 @@ const TeamPlayersTab = ({
     if (ok) setConfirmRemove(null);
   };
 
-  const openAddPlayersModal = (section: PlayerSection | null = null) => {
-    setAddModalSection(section);
-    setAddModalOpen(true);
-  };
-
-  const closeAddPlayersModal = () => {
-    setAddModalOpen(false);
-    setAddModalSection(null);
+  const handleResetRoster = async () => {
+    setIsResettingRoster(true);
+    const ok = await resetRoster();
+    setIsResettingRoster(false);
+    if (ok) {
+      setResetRosterOpen(false);
+      setPlayerView('prospects');
+    }
   };
 
   const renderPlayer = (p: TeamPlayerRecord) => {
@@ -251,9 +247,11 @@ const TeamPlayersTab = ({
         textColor={p.text_color ?? undefined}
         chip={{ label: p.jersey_number ?? '-' }}
         subtitle={formatPlayerPosition(p.position) ?? undefined}
-        rightContent={projectedPlayerIds.has(p.id)
-          ? { type: 'tag', label: 'Projected', intent: 'accent' }
-          : undefined}
+        rightContent={
+          projectedPlayerIds.has(p.id)
+            ? { type: 'tag', label: 'Projected', intent: 'accent' }
+            : undefined
+        }
         href={playerDetailsPath}
         ariaLabel={`Open ${playerName}`}
         actions={actions}
@@ -293,14 +291,6 @@ const TeamPlayersTab = ({
   const rosterActions = readOnly ? null : (
     <div className={styles.rosterActions}>
       <Button
-        intent="accent"
-        icon="group_add"
-        disabled={!selectedSeasonId}
-        onClick={() => openAddPlayersModal()}
-      >
-        Add Players
-      </Button>
-      <Button
         variant="outlined"
         intent="accent"
         icon="grid_view"
@@ -325,6 +315,16 @@ const TeamPlayersTab = ({
             disabled: !selectedSeasonId || players.length === 0,
             onClick: () => setTradeModalOpen(true),
           },
+          ...(!projectedLineupLoading && projectedLineupSlots.length === 0
+            ? [
+                {
+                  label: 'Reset Roster',
+                  icon: 'restart_alt',
+                  disabled: !selectedSeasonId || rosterPlayerCount === 0,
+                  onClick: () => setResetRosterOpen(true),
+                },
+              ]
+            : []),
         ]}
       />
     </div>
@@ -376,20 +376,6 @@ const TeamPlayersTab = ({
                   aria-label={`${section.title} count`}
                 />
               }
-              action={
-                readOnly ? null : (
-                  <Button
-                    variant="outlined"
-                    intent="accent"
-                    icon="group_add"
-                    size="medium"
-                    disabled={!selectedSeasonId}
-                    onClick={() => openAddPlayersModal(section)}
-                  >
-                    Add {section.title}
-                  </Button>
-                )
-              }
             >
               {loading ? (
                 renderPlayerSkeletons(section.title)
@@ -438,18 +424,6 @@ const TeamPlayersTab = ({
             bulkTradePlayers={bulkTradePlayers}
           />
 
-          <AddPlayersModal
-            open={addModalOpen}
-            onClose={closeAddPlayersModal}
-            teamId={teamId}
-            leagueId={leagueId}
-            seasonId={selectedSeasonId}
-            existingPlayerIds={existingPlayerIds}
-            positionFilter={addModalSection?.addPlayerPositions}
-            positionFilterLabel={addModalSection?.title}
-            addPlayersToRoster={addPlayersToRoster}
-          />
-
           {selectedSeasonId && (
             <>
               {projectedLineupOpen && (
@@ -481,6 +455,24 @@ const TeamPlayersTab = ({
               />
             </>
           )}
+
+          <ConfirmModal
+            open={resetRosterOpen}
+            title="Reset Roster"
+            body={
+              <>
+                Move all {rosterPlayerCount} roster player
+                {rosterPlayerCount === 1 ? '' : 's'} for {teamName} to reserves? This cannot be done
+                after a projected lineup is set for the season.
+              </>
+            }
+            confirmLabel="Reset Roster"
+            confirmIcon="restart_alt"
+            intent="danger"
+            busy={isResettingRoster}
+            onConfirm={handleResetRoster}
+            onCancel={() => setResetRosterOpen(false)}
+          />
 
           <ConfirmModal
             open={!!confirmRemove}

@@ -171,6 +171,96 @@ router.get('/:id/seasons/:seasonId/projected-lineup', async (req, res) => {
   }
 });
 
+// Moves the selected season's active roster to reserves. A projection locks
+// the roster because projected players are promoted automatically when saved.
+router.post('/:id/seasons/:seasonId/reset-roster', async (req, res) => {
+  const { id, seasonId } = req.params;
+
+  try {
+    const transactionResults = await sql.transaction(
+      (txn) => [
+        txn`
+          SELECT
+            EXISTS(SELECT 1 FROM teams WHERE id = ${id}) AS team_exists,
+            EXISTS(SELECT 1 FROM seasons WHERE id = ${seasonId}) AS season_exists,
+            EXISTS(
+              SELECT 1 FROM season_participant_teams
+              WHERE team_id = ${id} AND season_id = ${seasonId}
+            ) AS team_in_season,
+            EXISTS(
+              SELECT 1 FROM season_projected_lineup_slots
+              WHERE team_id = ${id} AND season_id = ${seasonId}
+            ) AS has_projected_lineup
+        `,
+        txn`
+          UPDATE player_team_stints stint
+          SET is_prospect = TRUE
+          FROM seasons season
+          WHERE stint.team_id = ${id}
+            AND season.id = ${seasonId}
+            AND stint.is_prospect = FALSE
+            AND EXISTS (
+              SELECT 1 FROM season_participant_teams
+              WHERE team_id = ${id} AND season_id = ${seasonId}
+            )
+            AND COALESCE(stint.start_date, DATE '-infinity') <= COALESCE(season.end_date, DATE 'infinity')
+            AND COALESCE(stint.end_date, DATE 'infinity') >= season.start_date
+            AND EXISTS (
+              SELECT 1
+              FROM player_season_rosters roster
+              WHERE roster.player_id = stint.player_id
+                AND roster.team_id = ${id}
+                AND roster.season_id = ${seasonId}
+                AND roster.is_prospect = FALSE
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM season_projected_lineup_slots
+              WHERE team_id = ${id} AND season_id = ${seasonId}
+            )
+          RETURNING stint.player_id
+        `,
+        txn`
+          UPDATE player_teams legacy
+          SET is_prospect = TRUE
+          WHERE legacy.team_id = ${id}
+            AND legacy.season_id = ${seasonId}
+            AND legacy.is_prospect = FALSE
+            AND EXISTS (
+              SELECT 1 FROM season_participant_teams
+              WHERE team_id = ${id} AND season_id = ${seasonId}
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM season_projected_lineup_slots
+              WHERE team_id = ${id} AND season_id = ${seasonId}
+            )
+          RETURNING legacy.player_id
+        `,
+      ],
+      { isolationLevel: 'Serializable' },
+    );
+
+    const [scope] = transactionResults[0] ?? [];
+    if (!scope?.team_exists || !scope?.season_exists) {
+      return res.status(404).json({ error: 'Team or season not found' });
+    }
+    if (!scope.team_in_season) {
+      return res.status(409).json({ error: 'Team does not participate in this season' });
+    }
+    if (scope.has_projected_lineup) {
+      return res.status(409).json({ error: 'Roster cannot be reset after a projected lineup is set' });
+    }
+
+    const resetPlayerIds = new Set([
+      ...(transactionResults[1] ?? []).map((row) => row.player_id),
+      ...(transactionResults[2] ?? []).map((row) => row.player_id),
+    ]);
+    return res.json({ reset_count: resetPlayerIds.size });
+  } catch (err) {
+    console.error('reset roster error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Replaces the projection after verifying every player belongs to the team for
 // this season. Assigned reserves are promoted to the roster atomically with
 // the projection update.

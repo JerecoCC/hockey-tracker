@@ -497,3 +497,44 @@ describe('season projected lineup', () => {
     expect(sql).not.toHaveBeenCalled();
   });
 });
+
+describe('POST /api/admin/teams/:id/seasons/:seasonId/reset-roster', () => {
+  it('moves every roster player to reserves and returns a distinct count', async () => {
+    let transactionQueries = [];
+    sql.transaction.mockImplementationOnce(async (buildQueries) => {
+      const txn = jest.fn((strings, ...values) => ({ strings, values }));
+      transactionQueries = buildQueries(txn);
+      return [
+        [{ team_exists: true, season_exists: true, team_in_season: true, has_projected_lineup: false }],
+        [{ player_id: 'player-1' }, { player_id: 'player-2' }],
+        [{ player_id: 'player-1' }],
+      ];
+    });
+
+    const res = await request(app)
+      .post('/api/admin/teams/team-1/seasons/season-1/reset-roster');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ reset_count: 2 });
+    expect(transactionQueries).toHaveLength(3);
+    expect(transactionQueries[1].strings.join(' ')).toContain('UPDATE player_team_stints stint');
+    expect(transactionQueries[2].strings.join(' ')).toContain('UPDATE player_teams legacy');
+    expect(sql.transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'Serializable',
+    });
+  });
+
+  it('rejects reset when a projected lineup exists', async () => {
+    sql.transaction.mockResolvedValueOnce([
+      [{ team_exists: true, season_exists: true, team_in_season: true, has_projected_lineup: true }],
+      [],
+      [],
+    ]);
+
+    const res = await request(app)
+      .post('/api/admin/teams/team-1/seasons/season-1/reset-roster');
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/projected lineup/i);
+  });
+});

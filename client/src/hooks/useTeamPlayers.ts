@@ -744,6 +744,30 @@ const useTeamPlayers = (
     }
   };
 
+  const resetRoster = async (): Promise<boolean> => {
+    if (!teamId || !seasonId || mode !== 'admin') return false;
+    try {
+      const { data } = await axios.post<{ reset_count: number }>(
+        `${API}/admin/teams/${teamId}/seasons/${seasonId}/reset-roster`,
+        {},
+        { headers: authHeaders() },
+      );
+      const count = data.reset_count;
+      toast.success(
+        count === 0
+          ? 'Roster is already empty'
+          : `${count} player${count === 1 ? '' : 's'} moved to reserves`,
+      );
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to reset roster'));
+      return false;
+    }
+  };
+
   const deletePlayer = async (playerId: string): Promise<void> => {
     setBusy(playerId);
     try {
@@ -924,6 +948,7 @@ const useTeamPlayers = (
     updateJerseyNumber,
     updatePlayerTeam,
     updatePlayerRosterRole,
+    resetRoster,
     removePlayerFromTeam,
     uploadPlayerPhoto,
     deletePlayer,

@@ -6,7 +6,6 @@ import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import TeamPlayersTab from './TeamPlayersTab';
 
-const mockAddPlayersModal = jest.fn(() => null);
 const mockProjectedLineupModal = jest.fn(() => null);
 const mockMoreActionsMenu = jest.fn();
 
@@ -59,14 +58,6 @@ jest.mock('@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu', () 
   return MockMoreActionsMenu;
 });
 jest.mock('../games/game-details/lineups/LineupCreatePlayersModal', () => () => null);
-jest.mock('./AddPlayersModal', () => {
-  type MockAddPlayersModalProps = Record<string, unknown>;
-
-  const MockAddPlayersModal = (props: MockAddPlayersModalProps) => mockAddPlayersModal(props);
-
-  MockAddPlayersModal.displayName = 'MockAddPlayersModal';
-  return MockAddPlayersModal;
-});
 jest.mock('./BulkTradeModal', () => () => null);
 jest.mock('./TeamPlayerEditModal', () => () => null);
 jest.mock('./ProjectedLineupModal', () => {
@@ -82,9 +73,6 @@ jest.mock('./ProjectedLineupModal', () => {
 const mockUseSeasons = useSeasons as jest.Mock;
 const mockUseProjectedLineup = jest.mocked(useProjectedLineup);
 const mockUseTeamPlayers = useTeamPlayers as jest.Mock;
-const latestAddPlayersModalProps = () =>
-  mockAddPlayersModal.mock.calls[mockAddPlayersModal.mock.calls.length - 1]?.[0];
-
 const players = [
   {
     id: 'player-1',
@@ -144,6 +132,7 @@ const teamPlayersState = {
   updatePlayer: jest.fn(),
   updatePlayerTeam: jest.fn(),
   updatePlayerRosterRole: jest.fn(),
+  resetRoster: jest.fn().mockResolvedValue(true),
   removePlayerFromTeam: jest.fn(),
   uploadPlayerPhoto: jest.fn(),
   createAndRosterPlayers: jest.fn(),
@@ -168,7 +157,12 @@ beforeEach(() => {
   mockUseSeasons.mockReturnValue({
     seasons: [{ id: 'season-1', name: '2024-25', is_current: true }],
   });
-  mockUseProjectedLineup.mockReturnValue({ slots: [], loading: false, saving: false, save: jest.fn() });
+  mockUseProjectedLineup.mockReturnValue({
+    slots: [],
+    loading: false,
+    saving: false,
+    save: jest.fn(),
+  });
   mockUseTeamPlayers.mockReturnValue(teamPlayersState);
 });
 
@@ -199,19 +193,14 @@ describe('TeamPlayersTab', () => {
     expect(screen.getByText('-')).toBeInTheDocument();
   });
 
-  it('uses matching toolbar action heights and medium outlined section actions', async () => {
-    const user = userEvent.setup();
+  it('removes add-player actions and offers roster reset under more actions', () => {
     renderTeamPlayersTab();
 
     expect(screen.getByLabelText('Forwards count')).toHaveTextContent('1');
     expect(screen.getByLabelText('Defense count')).toHaveTextContent('1');
     expect(screen.getByLabelText('Goalies count')).toHaveTextContent('1');
 
-    const toolbarAddButton = screen.getByRole('button', { name: 'Add Players' });
     const projectedLineupButton = screen.getByRole('button', { name: 'Projected Lineup' });
-    const forwardsAddButton = screen.getByRole('button', { name: 'Add Forwards' });
-    const defenseAddButton = screen.getByRole('button', { name: 'Add Defense' });
-    const goaliesAddButton = screen.getByRole('button', { name: 'Add Goalies' });
 
     expect(mockMoreActionsMenu).toHaveBeenLastCalledWith(
       expect.objectContaining({ iconHeight: 'button', iconSize: '1.25rem' }),
@@ -221,50 +210,26 @@ describe('TeamPlayersTab', () => {
     expect(mockMoreActionsMenu.mock.calls.at(-1)?.[0].items).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ label: 'Projected Lineup' })]),
     );
-    for (const sectionAddButton of [
-      forwardsAddButton,
-      defenseAddButton,
-      goaliesAddButton,
-    ]) {
-      expect(sectionAddButton).toHaveAttribute('data-size', 'medium');
-      expect(sectionAddButton).toHaveClass('outlinedAccent');
-    }
-
-    await user.click(toolbarAddButton);
-    expect(latestAddPlayersModalProps()).toEqual(
-      expect.objectContaining({
-        open: true,
-        positionFilter: undefined,
-        positionFilterLabel: undefined,
-      }),
+    expect(mockMoreActionsMenu.mock.calls.at(-1)?.[0].items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Reset Roster', icon: 'restart_alt' }),
+      ]),
     );
+    expect(
+      screen.queryByRole('button', { name: /add (players|forwards|defense|goalies)/i }),
+    ).not.toBeInTheDocument();
+  });
 
-    await user.click(forwardsAddButton);
-    expect(latestAddPlayersModalProps()).toEqual(
-      expect.objectContaining({
-        open: true,
-        positionFilter: ['C', 'LW', 'RW', 'L', 'R', 'F'],
-        positionFilterLabel: 'Forwards',
-      }),
-    );
+  it('confirms a roster reset and switches to reserves after success', async () => {
+    const user = userEvent.setup();
+    renderTeamPlayersTab();
 
-    await user.click(defenseAddButton);
-    expect(latestAddPlayersModalProps()).toEqual(
-      expect.objectContaining({
-        open: true,
-        positionFilter: ['D', 'LD', 'RD'],
-        positionFilterLabel: 'Defense',
-      }),
-    );
+    await user.click(screen.getByRole('button', { name: 'Reset Roster' }));
+    const resetButtons = screen.getAllByRole('button', { name: 'Reset Roster' });
+    await user.click(resetButtons.at(-1)!);
 
-    await user.click(goaliesAddButton);
-    expect(latestAddPlayersModalProps()).toEqual(
-      expect.objectContaining({
-        open: true,
-        positionFilter: ['G'],
-        positionFilterLabel: 'Goalies',
-      }),
-    );
+    expect(teamPlayersState.resetRoster).toHaveBeenCalledTimes(1);
+    expect(screen.getByPlaceholderText('Search reserves...')).toBeInTheDocument();
   });
 
   it('labels the bulk player movement action as move players', () => {
@@ -310,14 +275,16 @@ describe('TeamPlayersTab', () => {
 
   it('labels only players included in the selected season projected lineup', () => {
     mockUseProjectedLineup.mockReturnValue({
-      slots: [{
-        id: 'projected-1',
-        season_id: 'season-1',
-        team_id: 'team-1',
-        player_id: 'player-1',
-        slot_key: 'F1_C',
-        sort_order: 0,
-      }],
+      slots: [
+        {
+          id: 'projected-1',
+          season_id: 'season-1',
+          team_id: 'team-1',
+          player_id: 'player-1',
+          slot_key: 'F1_C',
+          sort_order: 0,
+        },
+      ],
       loading: false,
       saving: false,
       save: jest.fn(),
@@ -329,6 +296,7 @@ describe('TeamPlayersTab', () => {
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
     expect(screen.queryByText('Inactive')).not.toBeInTheDocument();
     expect(screen.queryByText('Reserve')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reset Roster' })).not.toBeInTheDocument();
   });
 
   it('finds players by alternate Maksim and Maxim transliterations', async () => {
