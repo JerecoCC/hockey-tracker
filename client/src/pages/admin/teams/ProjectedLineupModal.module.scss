@@ -1,11 +1,6 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
-.loading {
-  margin: 0;
-  color: var(--app-text-muted, #{$text-dim});
-}
-
 .tabContent {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(16rem, 2fr);
@@ -69,6 +64,11 @@
     border-color: var(--app-accent, #{$accent});
     background: color-mix(in srgb, var(--app-accent, #{$accent}) 8%, transparent);
   }
+}
+
+.slotSkeleton.slotSkeleton {
+  border-style: solid;
+  pointer-events: none;
 }
 
 .slotDropTarget {
@@ -157,6 +157,12 @@
   }
 }
 
+.interactionDisabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .searchablePlayers {
   display: flex;
   flex: 1;
@@ -169,6 +175,25 @@
   flex: 0 0 auto;
 }
 
+.loadingSearchToolbar {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  margin-bottom: $space-md;
+}
+
+.searchSkeleton {
+  height: 42px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sortSkeleton {
+  width: 4.5rem;
+  height: 42px;
+  flex: 0 0 auto;
+}
+
 .playerList {
   --app-list-gap: #{$space-sm};
 
@@ -178,6 +203,11 @@
   padding: $space-md;
   border-top: 1px solid var(--app-border, #{$border});
   overflow-y: auto;
+}
+
+.playerSkeleton {
+  height: calc(48px + #{$space-2xl} + 2px);
+  flex: 0 0 auto;
 }
 
 .draggablePlayer {
@@ -198,9 +228,32 @@
 }
 
 .playerListItem {
+  --list-item-actions-max-width: 2.75rem;
+
   width: 100%;
   box-sizing: border-box;
   padding-left: $space-md;
+
+  // ListItem normally reveals actions while their max-width is still growing,
+  // which can briefly clip the trailing edge of an outlined icon button.
+  // Reserve the full action width before fading/sliding it into view, then
+  // hide it immediately before collapsing the space on mouse-out.
+  &.playerListItem > span:last-child {
+    transition:
+      max-width 0s,
+      margin-left 0s,
+      opacity 0s,
+      transform $transition-fast ease;
+  }
+
+  &.playerListItem:hover > span:last-child,
+  &.playerListItem:focus-within > span:last-child {
+    transition:
+      max-width 0s,
+      margin-left 0s,
+      opacity $transition-fast ease,
+      transform $transition-fast ease;
+  }
 }
 
 .slotFilled .playerListItem {

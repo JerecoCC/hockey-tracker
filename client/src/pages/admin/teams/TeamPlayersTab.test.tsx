@@ -1,6 +1,7 @@
 import { type ComponentProps } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useProjectedLineup } from '@/hooks/useProjectedLineup';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import TeamPlayersTab from './TeamPlayersTab';
@@ -19,6 +20,7 @@ jest.mock('react-router-dom', () => ({
   ),
 }));
 jest.mock('@/hooks/useSeasons', () => jest.fn());
+jest.mock('@/hooks/useProjectedLineup', () => ({ useProjectedLineup: jest.fn() }));
 jest.mock('@/hooks/useTeamPlayers', () => jest.fn());
 jest.mock('@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu', () => {
   interface MockActionItem {
@@ -68,6 +70,7 @@ jest.mock('./BulkTradeModal', () => () => null);
 jest.mock('./TeamPlayerEditModal', () => () => null);
 
 const mockUseSeasons = useSeasons as jest.Mock;
+const mockUseProjectedLineup = jest.mocked(useProjectedLineup);
 const mockUseTeamPlayers = useTeamPlayers as jest.Mock;
 const latestAddPlayersModalProps = () =>
   mockAddPlayersModal.mock.calls[mockAddPlayersModal.mock.calls.length - 1]?.[0];
@@ -155,6 +158,7 @@ beforeEach(() => {
   mockUseSeasons.mockReturnValue({
     seasons: [{ id: 'season-1', name: '2024-25', is_current: true }],
   });
+  mockUseProjectedLineup.mockReturnValue({ slots: [], loading: false, saving: false, save: jest.fn() });
   mockUseTeamPlayers.mockReturnValue(teamPlayersState);
 });
 
@@ -260,7 +264,7 @@ describe('TeamPlayersTab', () => {
     expect(screen.queryByRole('button', { name: 'Trade Players' })).not.toBeInTheDocument();
   });
 
-  it('uses reserve wording for players outside the active roster', async () => {
+  it('does not show roster-status tags for reserves', async () => {
     const user = userEvent.setup();
     const reservePlayer = { ...players[0], is_prospect: true } as TeamPlayerRecord;
     mockUseTeamPlayers.mockReturnValue({ ...teamPlayersState, players: [reservePlayer] });
@@ -268,9 +272,32 @@ describe('TeamPlayersTab', () => {
     renderTeamPlayersTab();
     await user.click(screen.getByRole('button', { name: 'Reserves' }));
 
-    expect(screen.getByText('Reserve')).toBeInTheDocument();
+    expect(screen.queryByText('Reserve')).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText('Search reserves...')).toBeInTheDocument();
     expect(screen.queryByText('Prospect')).not.toBeInTheDocument();
+  });
+
+  it('labels only players included in the selected season projected lineup', () => {
+    mockUseProjectedLineup.mockReturnValue({
+      slots: [{
+        id: 'projected-1',
+        season_id: 'season-1',
+        team_id: 'team-1',
+        player_id: 'player-1',
+        slot_key: 'F1_C',
+        sort_order: 0,
+      }],
+      loading: false,
+      saving: false,
+      save: jest.fn(),
+    });
+
+    renderTeamPlayersTab();
+
+    expect(screen.getByText('Projected')).toBeInTheDocument();
+    expect(screen.queryByText('Active')).not.toBeInTheDocument();
+    expect(screen.queryByText('Inactive')).not.toBeInTheDocument();
+    expect(screen.queryByText('Reserve')).not.toBeInTheDocument();
   });
 
   it('finds players by alternate Maksim and Maxim transliterations', async () => {
@@ -333,5 +360,6 @@ describe('TeamPlayersTab', () => {
       'href',
       '/leagues/nhl/teams/tor/players/34-auston-matthews',
     );
+    expect(mockUseProjectedLineup).toHaveBeenCalledWith('team-1', 'season-1', { mode: 'user' });
   });
 });

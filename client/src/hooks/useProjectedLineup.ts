@@ -17,14 +17,23 @@ export interface ProjectedLineupSlot {
   photo?: string | null;
 }
 
-export const useProjectedLineup = (teamId?: string, seasonId?: string | null) => {
+interface UseProjectedLineupOptions {
+  mode?: 'admin' | 'user';
+}
+
+export const useProjectedLineup = (
+  teamId?: string,
+  seasonId?: string | null,
+  options: UseProjectedLineupOptions = {},
+) => {
   const queryClient = useQueryClient();
-  const queryKey = ['projected-lineup', teamId, seasonId] as const;
+  const mode = options.mode ?? 'admin';
+  const queryKey = [mode === 'user' ? 'user-projected-lineup' : 'projected-lineup', teamId, seasonId] as const;
   const query = useQuery<ProjectedLineupSlot[]>({
     queryKey,
     queryFn: async () => {
       const { data } = await axios.get<ProjectedLineupSlot[]>(
-        `${API}/admin/teams/${teamId}/seasons/${seasonId}/projected-lineup`,
+        `${API}/${mode}/teams/${teamId}/seasons/${seasonId}/projected-lineup`,
         { headers: authHeaders() },
       );
       return data;

@@ -138,6 +138,23 @@ describe('GET /api/user/teams', () => {
   });
 });
 
+describe('GET /api/user/teams/:id/seasons/:seasonId/projected-lineup', () => {
+  it('returns the saved projection for read-only team player labels', async () => {
+    sql.mockResolvedValueOnce([
+      { player_id: 'player-1', slot_key: 'F1_C', sort_order: 0 },
+    ]);
+
+    const res = await request(app)
+      .get('/api/user/teams/team-1/seasons/season-1/projected-lineup');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([
+      { player_id: 'player-1', slot_key: 'F1_C', sort_order: 0 },
+    ]);
+    expect(sql.mock.calls[0][0].join(' ')).toContain('season_projected_lineup_slots');
+  });
+});
+
 describe('GET /api/user/seasons', () => {
   it('includes bracket round and matchup names for score card playoff round options', async () => {
     sql.mockResolvedValueOnce([

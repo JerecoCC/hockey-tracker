@@ -8,6 +8,7 @@ import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAva
 import SearchableList from '@jerecocc/tracker-ui/components/SearchableList/SearchableList';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import Tabs from '@jerecocc/tracker-ui/components/Tabs/Tabs';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { useProjectedLineup, type ProjectedLineupSlot } from '@/hooks/useProjectedLineup';
@@ -175,6 +176,13 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
     }
   }, [open]);
 
+  useEffect(() => {
+    if (saving) {
+      setDragPlayerId(null);
+      setDropSlotKey(null);
+    }
+  }, [saving]);
+
   const playersById = useMemo(
     () => new Map(players.map((player) => [player.id, player])),
     [players],
@@ -185,6 +193,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
   );
 
   const updateAssignment = (playerId: string, targetKey: string) => {
+    if (saving) return;
     setAssignments((current) => {
       const next = { ...current };
       const sourceKey = Object.keys(next).find((key) => next[key] === playerId);
@@ -200,6 +209,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
   };
 
   const removeAssignment = (slotKey: string) => {
+    if (saving) return;
     setAssignments((current) => {
       const next = { ...current, [slotKey]: null };
       if (!next.G1 || !next.G2) next.G3 = null;
@@ -208,6 +218,11 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
   };
 
   const handleDragStart = (event: DragEvent, playerId: string) => {
+    if (saving) {
+      event.preventDefault();
+      event.dataTransfer.effectAllowed = 'none';
+      return;
+    }
     setDragPlayerId(playerId);
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData(PLAYER_DRAG_TYPE, playerId);
@@ -220,7 +235,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
     const playerId = getDraggedPlayerId(event);
     const player = playersById.get(playerId);
     const sourceKey = Object.keys(assignments).find((key) => assignments[key] === playerId);
-    const valid = !disabled && sourceKey !== slotKey &&
+    const valid = !saving && !disabled && sourceKey !== slotKey &&
       player && positionGroup(player.position) === slotKey.charAt(0);
 
     if (!valid) {
@@ -254,17 +269,62 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
   };
 
   const addToFirstOpenSlot = (playerId: string, tab: PositionTabDefinition) => {
+    if (saving) return;
     const target = tab.slots.find((slot) => !assignments[slot.key]);
     if (target) updateAssignment(playerId, target.key);
   };
 
   const handleSave = async () => {
+    if (loading || saving) return;
     const projectedSlots = ALL_SLOTS.flatMap((slot) => {
       const playerId = assignments[slot.key];
       return playerId ? [{ slot_key: slot.key, player_id: playerId }] : [];
     });
     if (await save(projectedSlots)) onClose();
   };
+
+  const renderLoadingTab = (tab: PositionTabDefinition) => (
+    <div
+      className={`${styles.tabContent} ${tab.group === 'F' ? styles.tabContentForwards : ''}`}
+      aria-label={`Loading ${tab.label.toLowerCase()} projection`}
+    >
+      <Section className={styles.section} title={tab.lineupTitle}>
+        {tab.columns.length > 0 && (
+          <div className={`${styles.columnHeaders} ${styles[`slotGrid${tab.group}`]}`}>
+            {tab.columns.map((column) => <span key={column}>{column}</span>)}
+          </div>
+        )}
+        <div className={`${styles.slotGrid} ${styles[`slotGrid${tab.group}`]}`}>
+          {tab.slots.map((slot) => (
+            <Skeleton
+              key={slot.key}
+              variant="card"
+              className={`${styles.slot} ${styles.slotSkeleton}`}
+            />
+          ))}
+        </div>
+      </Section>
+
+      <div className={styles.listSectionFrame}>
+        <Section className={`${styles.section} ${styles.listSection}`} title={tab.availableTitle}>
+          <div className={styles.loadingSearchToolbar}>
+            <Skeleton variant="block" className={styles.searchSkeleton} />
+            <Skeleton variant="block" className={styles.sortSkeleton} />
+          </div>
+          <ResponsiveList className={styles.playerList}>
+            {Array.from({ length: 4 }, (_, index) => (
+              <Skeleton
+                as="li"
+                key={index}
+                variant="card"
+                className={styles.playerSkeleton}
+              />
+            ))}
+          </ResponsiveList>
+        </Section>
+      </div>
+    </div>
+  );
 
   const renderTab = (tab: PositionTabDefinition) => {
     const availablePlayers = players.filter(
@@ -286,7 +346,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
             {tab.slots.map((slot) => {
               const playerId = assignments[slot.key];
               const player = playerId ? playersById.get(playerId) : undefined;
-              const disabled = slot.key === 'G3' && goalieThirdDisabled;
+              const disabled = saving || (slot.key === 'G3' && goalieThirdDisabled);
               return (
                 <Card
                   key={slot.key}
@@ -306,8 +366,9 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
                         <FontAwesomeIcon icon={faGripLinesVertical} />
                       </span>
                       <div
-                        className={styles.assignedPlayer}
+                        className={`${styles.assignedPlayer} ${saving ? styles.interactionDisabled : ''}`}
                         draggable={!saving}
+                        aria-disabled={saving}
                         onDragStart={(event) => handleDragStart(event, player.id)}
                         onDragEnd={handleDragEnd}
                       >
@@ -365,6 +426,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
                   className={styles.playerSortControl}
                   value={playerSort}
                   onChange={(value) => setPlayerSort(value as PlayerSort)}
+                  disabled={saving}
                   ariaLabel="Sort available players"
                   options={[
                     {
@@ -390,8 +452,9 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
                   {sortPlayers(filteredPlayers, playerSort).map((player) => (
                     <div
                       key={player.id}
-                      className={`${styles.draggablePlayer} ${dragPlayerId === player.id ? styles.draggingPlayer : ''}`}
+                      className={`${styles.draggablePlayer} ${dragPlayerId === player.id ? styles.draggingPlayer : ''} ${saving ? styles.interactionDisabled : ''}`}
                       draggable={!saving}
+                      aria-disabled={saving}
                       onDragStart={(event) => handleDragStart(event, player.id)}
                       onDragEnd={handleDragEnd}
                     >
@@ -456,7 +519,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
         keepMounted
         tabs={POSITION_TABS.map((tab) => ({
           label: tab.label,
-          content: loading ? <p className={styles.loading}>Loading projected lineup…</p> : renderTab(tab),
+          content: loading ? renderLoadingTab(tab) : renderTab(tab),
         }))}
       />
     </Modal>

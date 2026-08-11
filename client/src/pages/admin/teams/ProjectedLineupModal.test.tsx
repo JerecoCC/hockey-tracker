@@ -105,6 +105,17 @@ beforeEach(() => {
 });
 
 describe('ProjectedLineupModal', () => {
+  it('uses layout-matched skeletons while the projection initially loads', () => {
+    mockUseProjectedLineup.mockReturnValue({ slots: [], loading: true, saving: false, save });
+
+    const { container } = renderModal();
+
+    expect(container.querySelectorAll('.slotSkeleton')).toHaveLength(21);
+    expect(container.querySelectorAll('.playerSkeleton')).toHaveLength(12);
+    expect(screen.getByLabelText('Loading forwards projection')).toBeInTheDocument();
+    expect(screen.queryByText(/Loading projected lineup/)).not.toBeInTheDocument();
+  });
+
   it('renders a 12-slot forward grid, 6-slot defense grid, and 3-slot goalie grid', () => {
     renderModal();
 
@@ -183,6 +194,32 @@ describe('ProjectedLineupModal', () => {
 
     fireEvent.dragEnd(source, { dataTransfer });
     expect(source).not.toHaveClass('draggingPlayer');
+  });
+
+  it('disables player dragging and lineup drop targets while saving', async () => {
+    mockUseProjectedLineup.mockReturnValue({
+      slots: [
+        { id: 'slot-1', season_id: 'season-1', team_id: 'team-1', player_id: 'forward-1', slot_key: 'F1_LW', sort_order: 0 },
+      ],
+      loading: false,
+      saving: true,
+      save,
+    });
+
+    renderModal();
+
+    await waitFor(() => {
+      expect(within(screen.getByTestId('lineup-slot-F1_LW')).getByLabelText('Alex Wing'))
+        .toBeInTheDocument();
+    });
+    const assignedPlayer = screen.getByLabelText('Alex Wing').closest('[aria-disabled="true"]');
+    const availablePlayer = screen.getByLabelText('Casey Center').closest('[aria-disabled="true"]');
+
+    expect(assignedPlayer).toHaveAttribute('draggable', 'false');
+    expect(availablePlayer).toHaveAttribute('draggable', 'false');
+    expect(screen.getByTestId('lineup-slot-F1_C')).toHaveAttribute('aria-disabled', 'true');
+    expect(within(screen.getByRole('region', { name: 'Forwards tab' }))
+      .getByRole('button', { name: 'Sort by jersey number' })).toBeDisabled();
   });
 
   it('saves a player dropped into a specific forward line slot', async () => {

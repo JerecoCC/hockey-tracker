@@ -12,10 +12,10 @@ import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/S
 import SeasonSelect from '@/shared/SeasonSelect/SeasonSelect';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import useSeasons from '@/hooks/useSeasons';
+import { useProjectedLineup } from '@/hooks/useProjectedLineup';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
 import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playerSearch';
-import { getPlayerStatus } from '@/lib/playerStatus';
 import { buildPlayerDetailsPath, buildUserPlayerDetailsPath } from '@/lib/routeSlugs';
 import LineupCreatePlayersModal from '../games/game-details/lineups/LineupCreatePlayersModal';
 import AddPlayersModal from './AddPlayersModal';
@@ -106,6 +106,7 @@ const TeamPlayersTab = ({
     mode,
     includeProspects: true,
   });
+  const { slots: projectedLineupSlots } = useProjectedLineup(teamId, selectedSeasonId, { mode });
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [addModalSection, setAddModalSection] = useState<PlayerSection | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -117,6 +118,7 @@ const TeamPlayersTab = ({
 
   const rosterPlayers = allTeamPlayers.filter((p) => !p.is_prospect);
   const existingPlayerIds = new Set(allTeamPlayers.map((p) => p.id));
+  const projectedPlayerIds = new Set(projectedLineupSlots.map((slot) => slot.player_id));
   const rosterPlayerCount = rosterPlayers.length;
   const rosterGoalieCount = rosterPlayers.filter((p) => p.position === 'G').length;
   const normalizedQuery = normalizePlayerSearchText(query);
@@ -165,7 +167,6 @@ const TeamPlayersTab = ({
 
   const renderPlayer = (p: TeamPlayerRecord) => {
     const playerName = `${p.first_name} ${p.last_name}`;
-    const status = getPlayerStatus(p);
     const playerDetailsPath =
       mode === 'user'
         ? buildUserPlayerDetailsPath({
@@ -250,16 +251,9 @@ const TeamPlayersTab = ({
         textColor={p.text_color ?? undefined}
         chip={{ label: p.jersey_number ?? '-' }}
         subtitle={formatPlayerPosition(p.position) ?? undefined}
-        rightContent={
-          isProspectsView
-            ? { type: 'tag', label: 'Reserve', intent: 'neutral' }
-            : {
-                type: 'tag',
-                label:
-                  status === 'active' ? 'Active' : status === 'retired' ? 'Retired' : 'Inactive',
-                intent: status === 'active' ? 'success' : 'neutral',
-              }
-        }
+        rightContent={projectedPlayerIds.has(p.id)
+          ? { type: 'tag', label: 'Projected', intent: 'accent' }
+          : undefined}
         href={playerDetailsPath}
         ariaLabel={`Open ${playerName}`}
         actions={actions}

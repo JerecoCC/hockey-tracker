@@ -2333,6 +2333,38 @@ router.get('/teams', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/user/teams/:id/seasons/:seasonId/projected-lineup
+// Read-only projection used to label players on public team detail pages.
+// ---------------------------------------------------------------------------
+router.get('/teams/:id/seasons/:seasonId/projected-lineup', async (req, res) => {
+  const { id, seasonId } = req.params;
+  try {
+    const rows = await sql`
+      SELECT
+        slot.id, slot.season_id, slot.team_id, slot.player_id,
+        slot.slot_key, slot.sort_order,
+        p.first_name, p.last_name,
+        COALESCE(roster.position, p.position) AS position,
+        roster.jersey_number,
+        COALESCE(best_player_photo(p.id, slot.season_id, slot.team_id), p.photo) AS photo
+      FROM season_projected_lineup_slots slot
+      JOIN players p ON p.id = slot.player_id
+      LEFT JOIN player_season_rosters roster
+        ON roster.player_id = slot.player_id
+       AND roster.team_id = slot.team_id
+       AND roster.season_id = slot.season_id
+      WHERE slot.team_id = ${id}
+        AND slot.season_id = ${seasonId}
+      ORDER BY slot.sort_order, slot.slot_key
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('user projected lineup error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/user/teams/:id - read-only team detail
 // ---------------------------------------------------------------------------
 router.get('/teams/:id', async (req, res) => {
