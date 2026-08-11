@@ -1,0 +1,291 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.loading {
+  margin: 0;
+  color: var(--app-text-muted, #{$text-dim});
+}
+
+.tabContent {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(16rem, 2fr);
+  gap: $space-lg;
+}
+
+.tabContentForwards {
+  grid-template-columns: minmax(0, 7fr) minmax(14rem, 3fr);
+}
+
+.section {
+  min-width: 0;
+  padding: $space-md;
+}
+
+.columnHeaders {
+  display: grid;
+  gap: $space-sm;
+  margin-bottom: $space-md;
+
+  span {
+    color: var(--app-text, #{$text-body});
+    font-size: $font-sm;
+    font-weight: 700;
+    text-align: center;
+  }
+}
+
+.slotGrid {
+  display: grid;
+  gap: $space-sm;
+}
+
+.slotGridF {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.slotGridD {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.slotGridG {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.slot {
+  position: relative;
+  display: flex;
+  height: calc(48px + #{$space-2xl} + 2px);
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: $space-sm;
+  padding: $space-sm;
+  border: 1px dashed color-mix(in srgb, var(--app-text-muted, #{$text-dim}) 75%, transparent);
+  border-radius: $radius-md;
+  background: color-mix(in srgb, var(--app-bg, #{$bg-page}) 70%, transparent);
+  transition: border-color $transition-fast, background $transition-fast;
+
+  &:not(.slotDisabled):hover {
+    border-color: var(--app-accent, #{$accent});
+    background: color-mix(in srgb, var(--app-accent, #{$accent}) 8%, transparent);
+  }
+}
+
+.slotDropTarget {
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    border-radius: inherit;
+    background:
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, #{$accent-light} 22%, transparent),
+        color-mix(in srgb, #{$accent} 12%, transparent)
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        color-mix(in srgb, #{$accent-light} 26%, transparent) 0 6px,
+        transparent 6px 12px
+      );
+    box-shadow:
+      inset 0 0 0 2px color-mix(in srgb, #{$accent-light} 82%, transparent),
+      inset 0 0 0 999px color-mix(in srgb, #{$bg-page} 14%, transparent);
+    pointer-events: none;
+  }
+}
+
+:global(:root[data-theme='light']) .slotDropTarget {
+  &::before {
+    background:
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--app-accent-light, #2563eb) 13%, transparent),
+        color-mix(in srgb, var(--app-accent-light, #2563eb) 7%, transparent)
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        color-mix(in srgb, var(--app-accent-light, #2563eb) 18%, transparent) 0 6px,
+        transparent 6px 12px
+      );
+    box-shadow:
+      inset 0 0 0 2px color-mix(in srgb, var(--app-accent-light, #2563eb) 54%, transparent),
+      inset 0 0 0 999px rgba(255, 255, 255, 0.16);
+  }
+}
+
+.slotFilled {
+  padding: 0;
+  border-style: solid;
+
+  &:hover > .dragHandle,
+  &:focus-within > .dragHandle,
+  &[data-dragging='true'] > .dragHandle {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.slotDisabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.emptySlotText {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  padding: $space-xs;
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-xs;
+  text-align: center;
+}
+
+.assignedPlayer {
+  width: 100%;
+  min-width: 0;
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  .slotFilled[data-dragging='true'] & {
+    opacity: 0.55;
+    cursor: grabbing;
+  }
+}
+
+.searchablePlayers {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.playerSortControl {
+  flex: 0 0 auto;
+}
+
+.playerList {
+  --app-list-gap: #{$space-sm};
+
+  min-height: 0;
+  flex: 1;
+  margin: 0 (-$space-md) (-$space-md);
+  padding: $space-md;
+  border-top: 1px solid var(--app-border, #{$border});
+  overflow-y: auto;
+}
+
+.draggablePlayer {
+  position: relative;
+  flex: 0 0 auto;
+  min-width: 0;
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:hover .dragHandle,
+  &:focus-within .dragHandle {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.playerListItem {
+  width: 100%;
+  box-sizing: border-box;
+  padding-left: $space-md;
+}
+
+.slotFilled .playerListItem {
+  height: 100%;
+  padding-top: calc(#{$space-md} - 1px);
+  padding-bottom: calc(#{$space-md} - 1px);
+}
+
+.draggingPlayer {
+  opacity: 0.55;
+  cursor: grabbing;
+
+  .dragHandle {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.dragHandle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: $space-md;
+  border-radius: $radius-sm 0 0 $radius-sm;
+  background: color-mix(in srgb, var(--app-accent, #{$accent}) 72%, var(--app-border, #{$border}));
+  color: color-mix(in srgb, var(--app-accent-light, #{$accent-light}) 42%, #{$text-bright});
+  font-size: 0.75rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-100%);
+  transition:
+    opacity $transition-fast ease,
+    transform $transition-fast ease;
+}
+
+.listSectionFrame {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.listSection {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: $screen-tablet-max) {
+  .tabContent {
+    grid-template-columns: 1fr;
+  }
+
+  .listSectionFrame {
+    position: static;
+  }
+
+  .listSection {
+    position: static;
+    max-height: 32rem;
+  }
+
+  .slot {
+    height: calc(48px + #{$space-2xl} + 2px);
+  }
+
+}
+
+@media (max-width: $screen-phone-max) {
+  .slotGrid {
+    gap: $space-xs;
+  }
+
+  .slot {
+    padding: $space-xs;
+  }
+
+  .slotFilled {
+    padding: 0;
+  }
+}

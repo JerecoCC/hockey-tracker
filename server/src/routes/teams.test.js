@@ -438,3 +438,41 @@ describe('DELETE /api/admin/teams/:id/iterations/:iterationId', () => {
     expect(res.body.error).toMatch(/iteration not found/i);
   });
 });
+
+describe('season projected lineup', () => {
+  it('returns the stored projection', async () => {
+    sql.mockResolvedValueOnce([{ player_id: 'player-1', slot_key: 'G1', sort_order: 0 }]);
+    const res = await request(app)
+      .get('/api/admin/teams/team-1/seasons/season-1/projected-lineup');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([{ player_id: 'player-1', slot_key: 'G1', sort_order: 0 }]);
+    expect(sql.mock.calls[0][0].join(' ')).toContain('season_projected_lineup_slots');
+  });
+
+  it('replaces a projection after roster validation', async () => {
+    sql
+      .mockResolvedValueOnce([{ team_exists: true, season_exists: true, team_in_season: true }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ player_id: '00000000-0000-0000-0000-000000000001', slot_key: 'G1', sort_order: 0 }]);
+    const res = await request(app)
+      .put('/api/admin/teams/team-1/seasons/season-1/projected-lineup')
+      .send({ slots: [{ slot_key: 'G1', player_id: '00000000-0000-0000-0000-000000000001' }] });
+    expect(res.status).toBe(200);
+    expect(res.body[0].slot_key).toBe('G1');
+    expect(sql.mock.calls[2][0].join(' ')).toContain('DELETE FROM season_projected_lineup_slots');
+  });
+
+  it('rejects duplicate projected players before writing', async () => {
+    const res = await request(app)
+      .put('/api/admin/teams/team-1/seasons/season-1/projected-lineup')
+      .send({
+        slots: [
+          { slot_key: 'F1', player_id: 'player-1' },
+          { slot_key: 'F2', player_id: 'player-1' },
+        ],
+      });
+    expect(res.status).toBe(400);
+    expect(sql).not.toHaveBeenCalled();
+  });
+});

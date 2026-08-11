@@ -142,6 +142,123 @@ router.get('/', async (_req, res) => {
   }
 });
 
+// A season projection is an editable template, not historical participation.
+router.get('/:id/seasons/:seasonId/projected-lineup', async (req, res) => {
+  const { id, seasonId } = req.params;
+  try {
+    const rows = await sql`
+      SELECT
+        slot.id, slot.season_id, slot.team_id, slot.player_id,
+        slot.slot_key, slot.sort_order,
+        p.first_name, p.last_name,
+        COALESCE(roster.position, p.position) AS position,
+        roster.jersey_number,
+        COALESCE(best_player_photo(p.id, slot.season_id, slot.team_id), p.photo) AS photo
+      FROM season_projected_lineup_slots slot
+      JOIN players p ON p.id = slot.player_id
+      LEFT JOIN player_season_rosters roster
+        ON roster.player_id = slot.player_id
+       AND roster.team_id = slot.team_id
+       AND roster.season_id = slot.season_id
+      WHERE slot.team_id = ${id}
+        AND slot.season_id = ${seasonId}
+      ORDER BY slot.sort_order, slot.slot_key
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('projected lineup get error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Replaces the projection after verifying every player is on the active roster.
+router.put('/:id/seasons/:seasonId/projected-lineup', async (req, res) => {
+  const { id, seasonId } = req.params;
+  const { slots } = req.body;
+  if (!Array.isArray(slots)) return res.status(400).json({ error: 'slots must be an array' });
+  if (slots.length > 30) return res.status(400).json({ error: 'slots cannot contain more than 30 rows' });
+
+  const normalized = slots.map((slot, index) => ({
+    slot_key: typeof slot?.slot_key === 'string' ? slot.slot_key.trim().toUpperCase() : '',
+    player_id: typeof slot?.player_id === 'string' ? slot.player_id.trim() : '',
+    sort_order: index,
+  }));
+  const slotKeys = new Set();
+  const playerIds = new Set();
+  for (const slot of normalized) {
+    if (!/^[A-Z0-9_-]{1,24}$/.test(slot.slot_key)) {
+      return res.status(400).json({ error: 'Each slot_key must be 1-24 letters, numbers, underscores, or dashes' });
+    }
+    if (!slot.player_id) return res.status(400).json({ error: 'Each slot requires player_id' });
+    if (slotKeys.has(slot.slot_key)) return res.status(400).json({ error: `Duplicate slot_key: ${slot.slot_key}` });
+    if (playerIds.has(slot.player_id)) return res.status(400).json({ error: 'A player can only occupy one projected slot' });
+    slotKeys.add(slot.slot_key);
+    playerIds.add(slot.player_id);
+  }
+
+  try {
+    const [scope] = await sql`
+      SELECT
+        EXISTS(SELECT 1 FROM teams WHERE id = ${id}) AS team_exists,
+        EXISTS(SELECT 1 FROM seasons WHERE id = ${seasonId}) AS season_exists,
+        EXISTS(
+          SELECT 1 FROM season_participant_teams
+          WHERE team_id = ${id} AND season_id = ${seasonId}
+        ) AS team_in_season
+    `;
+    if (!scope?.team_exists || !scope?.season_exists) {
+      return res.status(404).json({ error: 'Team or season not found' });
+    }
+    if (!scope.team_in_season) {
+      return res.status(409).json({ error: 'Team does not participate in this season' });
+    }
+
+    if (normalized.length > 0) {
+      const invalid = await sql`
+        SELECT input.player_id
+        FROM jsonb_to_recordset(${JSON.stringify(normalized)}::jsonb)
+          AS input(player_id uuid, slot_key text, sort_order smallint)
+        LEFT JOIN player_season_rosters roster
+          ON roster.player_id = input.player_id
+         AND roster.team_id = ${id}
+         AND roster.season_id = ${seasonId}
+         AND roster.is_prospect = FALSE
+        WHERE roster.player_id IS NULL
+      `;
+      if (invalid.length > 0) {
+        return res.status(400).json({
+          error: 'Projected lineup players must be active members of this season roster',
+          invalid_player_ids: invalid.map((row) => row.player_id),
+        });
+      }
+    }
+
+    await sql`
+      WITH cleared AS (
+        DELETE FROM season_projected_lineup_slots
+        WHERE team_id = ${id} AND season_id = ${seasonId}
+      )
+      INSERT INTO season_projected_lineup_slots (
+        season_id, team_id, player_id, slot_key, sort_order
+      )
+      SELECT ${seasonId}, ${id}, input.player_id, input.slot_key, input.sort_order
+      FROM jsonb_to_recordset(${JSON.stringify(normalized)}::jsonb)
+        AS input(player_id uuid, slot_key text, sort_order smallint)
+    `;
+
+    const rows = await sql`
+      SELECT id, season_id, team_id, player_id, slot_key, sort_order
+      FROM season_projected_lineup_slots
+      WHERE team_id = ${id} AND season_id = ${seasonId}
+      ORDER BY sort_order, slot_key
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('projected lineup put error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ---------------------------------------------------------------------------
 // GET /api/admin/teams/:id  – get a single team (with league info)
 // ---------------------------------------------------------------------------

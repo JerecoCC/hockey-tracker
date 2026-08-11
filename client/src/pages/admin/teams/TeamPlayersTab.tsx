@@ -6,7 +6,7 @@ import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import MoreActionsMenu from '@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu';
 import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
-import { SearchInput } from '@jerecocc/tracker-ui';
+import SearchInput from '@jerecocc/tracker-ui/components/SearchField/SearchInput';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/shared/SeasonSelect/SeasonSelect';
@@ -21,6 +21,7 @@ import LineupCreatePlayersModal from '../games/game-details/lineups/LineupCreate
 import AddPlayersModal from './AddPlayersModal';
 import BulkTradeModal from './BulkTradeModal';
 import TeamPlayerEditModal from './TeamPlayerEditModal';
+import ProjectedLineupModal from './ProjectedLineupModal';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './TeamDetails.module.scss';
 
@@ -109,6 +110,7 @@ const TeamPlayersTab = ({
   const [addModalSection, setAddModalSection] = useState<PlayerSection | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
+  const [projectedLineupOpen, setProjectedLineupOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TeamPlayerRecord | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<TeamPlayerRecord | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
@@ -304,6 +306,15 @@ const TeamPlayersTab = ({
       >
         Add Players
       </Button>
+      <Button
+        variant="outlined"
+        intent="accent"
+        icon="grid_view"
+        disabled={!selectedSeasonId || rosterPlayers.length === 0}
+        onClick={() => setProjectedLineupOpen(true)}
+      >
+        Projected Lineup
+      </Button>
       <MoreActionsMenu
         iconHeight="button"
         iconSize="1.25rem"
@@ -446,23 +457,35 @@ const TeamPlayersTab = ({
           />
 
           {selectedSeasonId && (
-            <LineupCreatePlayersModal
-              open={createModalOpen}
-              onClose={() => setCreateModalOpen(false)}
-              teamId={teamId}
-              leagueId={leagueId}
-              seasonId={selectedSeasonId}
-              teamName={teamName}
-              existingCount={rosterPlayerCount}
-              existingGoalieCount={rosterGoalieCount}
-              existingRoster={allTeamPlayers.map((p) => ({
-                first_name: p.first_name,
-                last_name: p.last_name,
-                jersey_number: p.jersey_number ?? null,
-              }))}
-              allowRosterOverflow
-              createAndRosterPlayers={createAndRosterPlayers}
-            />
+            <>
+              {projectedLineupOpen && (
+                <ProjectedLineupModal
+                  open
+                  onClose={() => setProjectedLineupOpen(false)}
+                  teamId={teamId}
+                  seasonId={selectedSeasonId}
+                  teamName={teamName}
+                  players={rosterPlayers}
+                />
+              )}
+              <LineupCreatePlayersModal
+                open={createModalOpen}
+                onClose={() => setCreateModalOpen(false)}
+                teamId={teamId}
+                leagueId={leagueId}
+                seasonId={selectedSeasonId}
+                teamName={teamName}
+                existingCount={rosterPlayerCount}
+                existingGoalieCount={rosterGoalieCount}
+                existingRoster={allTeamPlayers.map((p) => ({
+                  first_name: p.first_name,
+                  last_name: p.last_name,
+                  jersey_number: p.jersey_number ?? null,
+                }))}
+                allowRosterOverflow
+                createAndRosterPlayers={createAndRosterPlayers}
+              />
+            </>
           )}
 
           <ConfirmModal

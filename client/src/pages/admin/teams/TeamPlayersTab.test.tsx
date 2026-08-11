@@ -194,12 +194,18 @@ describe('TeamPlayersTab', () => {
     expect(screen.getByLabelText('Goalies count')).toHaveTextContent('1');
 
     const toolbarAddButton = screen.getByRole('button', { name: 'Add Players' });
+    const projectedLineupButton = screen.getByRole('button', { name: 'Projected Lineup' });
     const forwardsAddButton = screen.getByRole('button', { name: 'Add Forwards' });
     const defenseAddButton = screen.getByRole('button', { name: 'Add Defense' });
     const goaliesAddButton = screen.getByRole('button', { name: 'Add Goalies' });
 
     expect(mockMoreActionsMenu).toHaveBeenLastCalledWith(
       expect.objectContaining({ iconHeight: 'button', iconSize: '1.25rem' }),
+    );
+    expect(projectedLineupButton).toHaveClass('outlinedAccent');
+    expect(projectedLineupButton.querySelector('svg')).toBeInTheDocument();
+    expect(mockMoreActionsMenu.mock.calls.at(-1)?.[0].items).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ label: 'Projected Lineup' })]),
     );
     for (const sectionAddButton of [
       forwardsAddButton,
