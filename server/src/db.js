@@ -1054,6 +1054,7 @@ async function initSchema() {
   await sql`
     CREATE TABLE IF NOT EXISTS players (
       id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      league_id      UUID REFERENCES leagues(id) ON DELETE SET NULL,
       league_player_number TEXT,
       first_name     TEXT NOT NULL,
       last_name      TEXT NOT NULL,
@@ -1074,6 +1075,8 @@ async function initSchema() {
   `;
 
   // Migrations for columns added after the table was first created
+  await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS league_id UUID REFERENCES leagues(id) ON DELETE SET NULL`;
+  await sql`CREATE INDEX IF NOT EXISTS players_league_id_idx ON players (league_id) WHERE league_id IS NOT NULL`;
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS league_player_number TEXT`;
   await sql`CREATE INDEX IF NOT EXISTS players_league_player_number_idx ON players (league_player_number) WHERE league_player_number IS NOT NULL`;
   await sql`
@@ -1423,6 +1426,31 @@ async function initSchema() {
   `;
 
   await ensurePlayerTimelineSchema(sql);
+
+  // Preserve the league ownership implied by existing player history. Players
+  // that have appeared in more than one league remain unowned and continue to
+  // be discovered through their roster rows.
+  await sql`
+    UPDATE players p
+    SET league_id = s.league_id
+    FROM seasons s
+    WHERE p.league_id IS NULL
+      AND p.rookie_season_id = s.id
+  `;
+  await sql`
+    WITH single_league_players AS (
+      SELECT pt.player_id, MIN(t.league_id::text)::uuid AS league_id
+      FROM player_season_rosters pt
+      JOIN teams t ON t.id = pt.team_id
+      GROUP BY pt.player_id
+      HAVING COUNT(DISTINCT t.league_id) = 1
+    )
+    UPDATE players p
+    SET league_id = slp.league_id
+    FROM single_league_players slp
+    WHERE p.id = slp.player_id
+      AND p.league_id IS NULL
+  `;
 
   // Flag exactly one season per league as the "current" season.
   // is_current is kept for backward-compat but is no longer the source of truth —

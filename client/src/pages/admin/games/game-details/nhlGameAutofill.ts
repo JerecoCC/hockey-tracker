@@ -58,6 +58,7 @@ interface NhlPlayer {
 
 interface MatchedPlayer extends NhlPlayer {
   localId: string;
+  localJerseyNumber: number | null;
   localLeaguePlayerNumber?: string | null;
   canSyncLeaguePlayerNumber?: boolean;
 }
@@ -428,6 +429,7 @@ export async function autofillGameFromNhlGamecenter(
     : matched;
 
   await syncLeaguePlayerNumbers(matched, warnings);
+  await syncJerseyNumberHistory([...matched.away, ...matched.home], rosterDate);
   await syncGameRoster(game, rosterMatched);
   await emitProgress({
     step: 'roster',
@@ -1597,6 +1599,7 @@ function matchNhlPlayers(
     return [{
       ...nhlPlayer,
       localId: local.id,
+      localJerseyNumber: local.jersey_number,
       localLeaguePlayerNumber: local.league_player_number ?? null,
       canSyncLeaguePlayerNumber: !exactLeagueNumberMatch && nameConfirmedJerseyMatch?.id === local.id,
     }];
@@ -2992,6 +2995,30 @@ function readText(value: unknown): string | undefined {
     return value.default;
   }
   return undefined;
+}
+
+async function syncJerseyNumberHistory(players: MatchedPlayer[], gameDate: string) {
+  const effectiveDate = gameDate.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveDate)) {
+    throw new Error('A valid game date is required to record jersey number changes.');
+  }
+
+  const changes = Array.from(
+    new Map(
+      players
+        .filter((player) => player.localJerseyNumber !== player.sweaterNumber)
+        .map((player) => [player.localId, player]),
+    ).values(),
+  );
+
+  await Promise.all(
+    changes.map((player) =>
+      apiPost(`/admin/player-teams/history/${player.localId}/jerseys`, {
+        jersey_number: player.sweaterNumber,
+        effective_date: effectiveDate,
+      }),
+    ),
+  );
 }
 
 function toOptionalNumber(value: unknown): number | null {

@@ -188,6 +188,28 @@ describe('useLeaguePlayers – addPlayer', () => {
     expect(toast.success).toHaveBeenCalled();
   });
 
+  it('associates a new player with the league-scoped flow', async () => {
+    mockedAxios.post.mockResolvedValueOnce({ data: PLAYER });
+    const { result } = renderHook(() => useLeaguePlayers('league-1'), {
+      wrapper: createWrapper(),
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.addPlayer({
+        first_name: 'Roman',
+        last_name: 'Kantserov',
+        position: 'RW',
+      });
+    });
+
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      expect.stringContaining('/admin/players'),
+      expect.objectContaining({ league_id: 'league-1' }),
+      expect.any(Object),
+    );
+  });
+
   it('shows error toast and returns false on failure', async () => {
     mockedAxios.post.mockRejectedValueOnce(new Error('Network error'));
     const { result } = renderHook(() => useLeaguePlayers(), { wrapper: createWrapper() });
@@ -224,6 +246,26 @@ describe('useLeaguePlayers – bulkAddPlayers', () => {
       expect.any(Object),
     );
     expect(toast.success).toHaveBeenCalledWith(expect.stringMatching(/1 player/i));
+  });
+
+  it('associates bulk-created players with the league-scoped flow', async () => {
+    mockedAxios.post.mockResolvedValueOnce({ data: { created: [PLAYER] } });
+    const { result } = renderHook(() => useLeaguePlayers('league-1'), {
+      wrapper: createWrapper(),
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.bulkAddPlayers([
+        { first_name: 'Roman', last_name: 'Kantserov', position: 'RW', shoots: 'L' },
+      ]);
+    });
+
+    expect(mockedAxios.post).toHaveBeenCalledWith(
+      expect.stringContaining('/admin/players/bulk'),
+      expect.objectContaining({ league_id: 'league-1' }),
+      expect.any(Object),
+    );
   });
 
   it('shows plural in success toast for multiple players', async () => {

@@ -261,6 +261,9 @@ describe('autofillGameFromPwhlGamecenter', () => {
         return Promise.resolve({ data: { id: 'goal-1', game_id: 'game-1', ...postBody } });
       }
       if (u.endsWith('/admin/games/game-1/goalie-stints')) return Promise.resolve({ data: [] });
+      if (/\/admin\/player-teams\/history\/[^/]+\/jerseys$/.test(u)) {
+        return Promise.resolve({ data: { changed: true } });
+      }
       return Promise.reject(new Error(`Unexpected POST ${url}`));
     });
 
@@ -359,6 +362,33 @@ describe('autofillGameFromPwhlGamecenter', () => {
         }),
       ]),
     );
+  });
+
+  it('records a jersey history change on the PWHL game date before saving the roster', async () => {
+    extraPlayers.push({
+      id: 'kiara-zanon',
+      team_id: 'tor-team',
+      jersey_number: 19,
+      league_player_number: '317',
+      first_name: 'Kiara',
+      last_name: 'Zanon',
+      position: 'LW',
+    });
+
+    await autofillGameFromPwhlGamecenter(game, '210');
+
+    const historyPost = mockedAxios.post.mock.calls.find(([url]) =>
+      String(url).endsWith('/admin/player-teams/history/kiara-zanon/jerseys'),
+    );
+    const rosterPostIndex = mockedAxios.post.mock.calls.findIndex(([url]) =>
+      String(url).endsWith('/admin/games/game-1/roster'),
+    );
+
+    expect(historyPost?.[1]).toEqual({
+      jersey_number: 11,
+      effective_date: '2025-11-21',
+    });
+    expect(mockedAxios.post.mock.calls.indexOf(historyPost!)).toBeLessThan(rosterPostIndex);
   });
 
   it('collapses split PWHL goalie log rows when a team did not switch goalies', async () => {

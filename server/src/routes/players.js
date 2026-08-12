@@ -290,6 +290,43 @@ router.get('/', async (req, res) => {
                 pt.created_at DESC,
                 pt.id DESC
             ) sub
+
+            UNION ALL
+
+            SELECT
+              p.id, p.league_player_number, p.first_name, p.last_name, p.photo,
+              p.date_of_birth::text AS date_of_birth,
+              p.birth_city, p.birth_country,
+              p.height_cm, p.weight_lbs, p.position, p.shoots,
+              p.rookie_season_id,
+              (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
+              p.status, p.is_active, p.created_at,
+              NULL::smallint AS jersey_number,
+              NULL::uuid AS player_team_id,
+              NULL::uuid AS team_id,
+              NULL::text AS team_name,
+              NULL::text AS team_code,
+              NULL::text AS team_logo,
+              NULL::text AS team_logo_dark,
+              NULL::text AS team_logo_light,
+              NULL::text AS primary_color,
+              NULL::text AS text_color,
+              FALSE AS is_prospect,
+              NULL::text AS acquisition_type,
+              NULL::text AS start_date,
+              FALSE AS has_games,
+              0::int AS games_played,
+              NULL::uuid AS last_season_id,
+              NULL::text AS last_season_name
+            FROM players p
+            WHERE p.league_id = ${league_id}
+              AND NOT EXISTS (
+                SELECT 1
+                FROM player_season_rosters direct_pt
+                JOIN teams direct_t ON direct_t.id = direct_pt.team_id
+                WHERE direct_pt.player_id = p.id
+                  AND direct_t.league_id = ${league_id}
+              )
           )
           SELECT *
           FROM roster
@@ -318,7 +355,10 @@ router.get('/', async (req, res) => {
               AND (date_of_birth IS NULL OR start_date IS NULL OR acquisition_type IS NULL)
             )
           )
-          ORDER BY first_name, last_name, id
+          ORDER BY
+            (player_team_id IS NULL) DESC,
+            CASE WHEN player_team_id IS NULL THEN created_at END DESC,
+            first_name, last_name, id
           LIMIT ${pageSize} OFFSET ${offset}
         `;
 
@@ -387,6 +427,28 @@ router.get('/', async (req, res) => {
                 pt.created_at DESC,
                 pt.id DESC
             ) sub
+
+            UNION ALL
+
+            SELECT
+              p.id, p.league_player_number, p.first_name, p.last_name,
+              p.date_of_birth, p.position,
+              NULL::smallint AS jersey_number,
+              p.rookie_season_id,
+              p.is_active,
+              NULL::text AS acquisition_type,
+              NULL::date AS start_date,
+              0::int AS games_played,
+              NULL::uuid AS last_season_id
+            FROM players p
+            WHERE p.league_id = ${league_id}
+              AND NOT EXISTS (
+                SELECT 1
+                FROM player_season_rosters direct_pt
+                JOIN teams direct_t ON direct_t.id = direct_pt.team_id
+                WHERE direct_pt.player_id = p.id
+                  AND direct_t.league_id = ${league_id}
+              )
           )
           SELECT COUNT(*)::int AS total
           FROM roster
@@ -2442,7 +2504,7 @@ router.post('/', async (req, res) => {
   const {
     first_name, last_name, position, shoots,
     date_of_birth, birth_city, birth_country,
-    height_cm, weight_lbs, rookie_season_id, is_active, league_player_number, status,
+    height_cm, weight_lbs, rookie_season_id, is_active, league_player_number, status, league_id,
   } = req.body;
   const normalizedLeaguePlayerNumber = normalizeLeagueNumber(league_player_number);
   const playerStatus = normalizePlayerStatus({ status, is_active });
@@ -2460,12 +2522,12 @@ router.post('/', async (req, res) => {
   try {
     const rows = await sql`
       INSERT INTO players (
-        league_player_number,
+        league_id, league_player_number,
         first_name, last_name, position, shoots,
         date_of_birth, birth_city, birth_country,
         height_cm, weight_lbs, rookie_season_id, status, is_active
       ) VALUES (
-        ${normalizedLeaguePlayerNumber},
+        ${league_id ?? null}, ${normalizedLeaguePlayerNumber},
         ${first_name.trim()}, ${last_name.trim()},
         ${position ?? null}, ${shoots ?? null},
         ${date_of_birth ?? null}, ${birth_city?.trim() ?? null},
@@ -2477,6 +2539,7 @@ router.post('/', async (req, res) => {
       )
       ON CONFLICT (league_player_number) WHERE league_player_number IS NOT NULL
       DO UPDATE SET
+        league_id = COALESCE(players.league_id, EXCLUDED.league_id),
         photo = COALESCE(players.photo, EXCLUDED.photo),
         date_of_birth = COALESCE(players.date_of_birth, EXCLUDED.date_of_birth),
         birth_city = COALESCE(players.birth_city, EXCLUDED.birth_city),
@@ -2519,7 +2582,7 @@ router.post('/', async (req, res) => {
 // Body: { players: [{ first_name, last_name, position, shoots, rookie_season_id? }, ...] }
 // ---------------------------------------------------------------------------
 router.post('/bulk', async (req, res) => {
-  const { players } = req.body;
+  const { players, league_id } = req.body;
 
   if (!Array.isArray(players) || players.length === 0) {
     return res.status(400).json({ error: 'players must be a non-empty array' });
@@ -2545,15 +2608,16 @@ router.post('/bulk', async (req, res) => {
         return res.status(400).json({ error: 'status must be active, inactive, or retired' });
       }
       const rows = await sql`
-        INSERT INTO players (league_player_number, first_name, last_name, position, shoots, rookie_season_id, status, is_active)
+        INSERT INTO players (league_id, league_player_number, first_name, last_name, position, shoots, rookie_season_id, status, is_active)
         VALUES (
-          ${normalizedLeaguePlayerNumber},
+          ${league_id ?? null}, ${normalizedLeaguePlayerNumber},
           ${first_name.trim()}, ${last_name.trim()},
           ${position}, ${shoots ?? null}, ${rookie_season_id || null},
           ${playerStatus}, ${playerStatus === 'active'}
         )
         ON CONFLICT (league_player_number) WHERE league_player_number IS NOT NULL
         DO UPDATE SET
+          league_id = COALESCE(players.league_id, EXCLUDED.league_id),
           position = COALESCE(players.position, EXCLUDED.position),
           shoots = COALESCE(players.shoots, EXCLUDED.shoots),
           rookie_season_id = COALESCE(players.rookie_season_id, EXCLUDED.rookie_season_id),

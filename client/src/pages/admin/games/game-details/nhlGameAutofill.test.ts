@@ -308,6 +308,33 @@ describe('autofillGameFromNhlGamecenter', () => {
     ).toBe(true);
   });
 
+  it('records a jersey history change on the NHL game date before saving the roster', async () => {
+    extraPlayers.push({
+      id: 'jarvis-stale-number',
+      first_name: 'Seth',
+      last_name: 'Jarvis',
+      jersey_number: 99,
+      league_player_number: '1',
+      team_id: 'car-team',
+      position: 'F',
+    });
+
+    await autofillGameFromNhlGamecenter(game, '317');
+
+    const historyPost = mockedAxios.post.mock.calls.find(([url]) =>
+      String(url).endsWith('/admin/player-teams/history/jarvis-stale-number/jerseys'),
+    );
+    const rosterPostIndex = mockedAxios.post.mock.calls.findIndex(([url]) =>
+      String(url).endsWith('/admin/games/game-1/roster'),
+    );
+
+    expect(historyPost?.[1]).toEqual({
+      jersey_number: 24,
+      effective_date: '2025-11-19',
+    });
+    expect(mockedAxios.post.mock.calls.indexOf(historyPost!)).toBeLessThan(rosterPostIndex);
+  });
+
   it('records a shorthanded goal with the canonical "shorthanded" goal_type', async () => {
     boxscoreData = {
       ...boxscore,

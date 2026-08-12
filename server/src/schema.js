@@ -339,6 +339,7 @@ const teamIterations = pgTable("team_iterations", {
 
 const players = pgTable("players", {
   id: id(),
+  leagueId: uuid("league_id").references(() => leagues.id, { onDelete: "set null" }),
   leaguePlayerNumber: text("league_player_number"),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),

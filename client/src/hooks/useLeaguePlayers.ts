@@ -54,6 +54,7 @@ export interface PlayerRecord {
 export interface CreatePlayerData {
   first_name: string;
   last_name: string;
+  league_id?: string | null;
   league_player_number?: string | null;
   position?: PlayerPosition | null;
   shoots?: PlayerShoots | null;
@@ -157,7 +158,11 @@ const useLeaguePlayers = (
 
   const addPlayer = async (payload: CreatePlayerData): Promise<boolean> => {
     try {
-      await axios.post(`${API}/admin/players`, payload, { headers: authHeaders() });
+      await axios.post(
+        `${API}/admin/players`,
+        { ...payload, ...(leagueId ? { league_id: leagueId } : {}) },
+        { headers: authHeaders() },
+      );
       toast.success('Player created!');
       await queryClient.invalidateQueries({ queryKey: ['players'] });
       return true;
@@ -204,7 +209,7 @@ const useLeaguePlayers = (
     try {
       await axios.post(
         `${API}/admin/players/bulk`,
-        { players },
+        { players, ...(leagueId ? { league_id: leagueId } : {}) },
         { headers: authHeaders() },
       );
       const n = players.length;

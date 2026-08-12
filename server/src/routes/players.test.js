@@ -176,7 +176,13 @@ describe('GET /api/admin/players', () => {
     expect(rowQueryText).toContain('COUNT(DISTINCT gr.game_id)::int');
     expect(rowQueryText).toContain('recent_games.games_played > 0 AS has_games');
     expect(rowQueryText).toContain('JOIN recent_seasons s ON s.id');
+    expect(rowQueryText).toContain('p.league_id =');
+    expect(rowQueryText).toContain('UNION ALL');
+    expect(rowQueryText).toContain('(player_team_id IS NULL) DESC');
+    expect(rowQueryText).toContain('THEN created_at END DESC');
     expect(countQueryText).toContain('WITH recent_seasons AS');
+    expect(countQueryText).toContain('p.league_id =');
+    expect(countQueryText).toContain('UNION ALL');
     expectCareerStintPreferenceBeforeRosterRecency(rowQueryText);
     expectCareerStintPreferenceBeforeRosterRecency(countQueryText);
     expect(sql.mock.calls[0]).toContain(5);
@@ -885,6 +891,21 @@ describe('POST /api/admin/players', () => {
     expect(res.body.first_name).toBe('Wayne');
   });
 
+  it('stores the league association supplied by a league-scoped create flow', async () => {
+    sql.mockResolvedValueOnce([PLAYER]);
+    const res = await request(app).post('/api/admin/players')
+      .send({
+        first_name: 'Roman',
+        last_name: 'Kantserov',
+        position: 'RW',
+        league_id: 'league-1',
+      });
+
+    expect(res.status).toBe(201);
+    expect(sql.mock.calls[0][0].join(' ')).toContain('league_id, league_player_number');
+    expect(sql.mock.calls[0]).toContain('league-1');
+  });
+
   it('creates an inactive player when status is provided', async () => {
     sql.mockResolvedValueOnce([{ ...PLAYER, status: 'inactive', is_active: false }]);
     const res = await request(app).post('/api/admin/players')
@@ -949,6 +970,16 @@ describe('POST /api/admin/players/bulk', () => {
       .send({ players: [validRow, validRow2] });
     expect(res.status).toBe(201);
     expect(res.body.created).toHaveLength(2);
+  });
+
+  it('stores the league association for bulk-created players', async () => {
+    sql.mockResolvedValueOnce([PLAYER]);
+    const res = await request(app).post('/api/admin/players/bulk')
+      .send({ league_id: 'league-1', players: [validRow] });
+
+    expect(res.status).toBe(201);
+    expect(sql.mock.calls[0][0].join(' ')).toContain('league_id, league_player_number');
+    expect(sql.mock.calls[0]).toContain('league-1');
   });
 
   it('creates a single player successfully', async () => {
