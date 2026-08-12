@@ -137,7 +137,7 @@ describe('ScheduleWeekList', () => {
       'aria-current',
       'date',
     );
-    expect(screen.getByText('Today')).toBeInTheDocument();
+    expect(screen.getByText('Today')).toHaveClass('tag', 'outlined', 'accent');
   });
 
   it('adds the mobile sticky modifier when requested', () => {

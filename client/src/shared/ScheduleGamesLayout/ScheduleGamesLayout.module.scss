@@ -137,17 +137,13 @@
 }
 
 .dayTodayIndicator.dayTodayIndicator {
-  --badge-bg: color-mix(in srgb, #{$accent} 16%, transparent);
-  --badge-border-color: #{$accent};
-  --badge-value-color: var(--app-accent-light, #93c5fd);
-  --badge-min-height: 1.35rem;
-  --badge-padding: 0.1rem 0.45rem;
-  --badge-font-size: 0.625rem;
-
+  box-sizing: border-box;
+  min-height: 1.35rem;
+  padding: 0.1rem 0.45rem;
   border-radius: 999px;
+  font-size: 0.625rem;
   letter-spacing: 0.04em;
   line-height: 1;
-  text-transform: uppercase;
 }
 
 .list {
@@ -243,6 +239,7 @@
     justify-content: space-between;
     gap: $space-sm;
     width: 100%;
+    min-height: 1.35rem;
     min-width: 0;
   }
 
@@ -430,8 +427,8 @@
         }
 
         .dayTodayIndicator.dayTodayIndicator {
-          --badge-padding: 0.1rem 0.2rem;
-          --badge-font-size: 0.5rem;
+          padding: 0.1rem 0.2rem;
+          font-size: 0.5rem;
         }
       }
     }

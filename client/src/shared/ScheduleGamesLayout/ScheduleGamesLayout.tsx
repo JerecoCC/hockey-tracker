@@ -7,6 +7,7 @@ import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
+import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import styles from './ScheduleGamesLayout.module.scss';
 
 export type ScheduleDayGroup<T> = readonly [dateKey: string, items: T[]];
@@ -168,8 +169,10 @@ export const ScheduleWeekSummary = <T,>({
             <span className={styles.weekSummaryDayRow}>
               <span className={styles.weekSummaryDate}>{formatDate(dateKey)}</span>
               {isToday ? (
-                <Badge
-                  value="Today"
+                <Tag
+                  label="Today"
+                  variant="outlined"
+                  intent="accent"
                   className={styles.dayTodayIndicator}
                 />
               ) : (
