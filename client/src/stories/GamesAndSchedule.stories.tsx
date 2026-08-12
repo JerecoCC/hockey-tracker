@@ -20,7 +20,6 @@ import {
   type ScheduleDayGroup,
 } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
 import TeamCalendarGameCard from '@/shared/TeamCalendarGameCard/TeamCalendarGameCard';
-import { scheduleCalendarDayNumberClassName } from '@/shared/ScheduleGamesLayout/scheduleGamesLayoutStyles';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import type { GameRecord } from '@/hooks/useGames';
@@ -163,7 +162,6 @@ export const CalendarAndSchedule = {
         <ScheduleCalendarCard>
           <MonthCalendar
             month={new Date(2026, 0, 1)}
-            dayNumberClassName={scheduleCalendarDayNumberClassName}
             getDayHeaderRight={({ day }) =>
               day === 18 ? <ScheduleCalendarDayCount count={1} /> : null
             }

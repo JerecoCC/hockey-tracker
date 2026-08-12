@@ -22,7 +22,6 @@ import {
   ScheduleWeekSummary,
 } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
 import {
-  scheduleCalendarDayNumberClassName,
   scheduleViewSegmentedControlClassName,
 } from '@/shared/ScheduleGamesLayout/scheduleGamesLayoutStyles';
 import { useScheduleWeekSummaryStuck } from '@/shared/ScheduleGamesLayout/useScheduleWeekSummaryStuck';
@@ -1216,7 +1215,6 @@ const SeasonGamesTab = ({
               <MonthCalendar
                 month={calendarMonth}
                 loading={loading}
-                dayNumberClassName={scheduleCalendarDayNumberClassName}
                 getDayClassName={({ dateKey }) =>
                   isSeasonDate(dateKey) ? undefined : styles.outOfSeasonDay
                 }

@@ -38,7 +38,6 @@ import {
   ScheduleWeekSummary,
 } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
 import {
-  scheduleCalendarDayNumberClassName,
   scheduleViewSegmentedControlClassName,
 } from '@/shared/ScheduleGamesLayout/scheduleGamesLayoutStyles';
 import { useScheduleWeekSummaryStuck } from '@/shared/ScheduleGamesLayout/useScheduleWeekSummaryStuck';
@@ -1649,7 +1648,6 @@ const UserGames = () => {
               ref={calendarGridRef}
               month={calendarMonth}
               loading={isLoading}
-              dayNumberClassName={scheduleCalendarDayNumberClassName}
               getDayHeaderRight={({ dateKey }) => {
                 const gameCount = gamesByCalendarDate.get(dateKey)?.length ?? 0;
                 return gameCount > 0 ? (

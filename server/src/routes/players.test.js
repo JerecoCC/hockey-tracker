@@ -391,6 +391,30 @@ describe('GET /api/admin/players/route-lookup', () => {
     const queryText = sql.mock.calls[0][0].join(' ');
     expect(queryText).toContain('jersey_number::text');
     expect(queryText).toContain('league_player_slug');
+    expect(queryText).toContain('JOIN leagues l ON l.id = p.league_id');
+    expect(queryText).toContain('NOT EXISTS');
+  });
+
+  it('resolves a league-owned player without a roster by name slug', async () => {
+    const lookup = {
+      player_id: 'player-roman',
+      team_id: null,
+      league_id: 'league-1',
+      league_code: 'NHL',
+      team_code: null,
+      player_slug: 'roman-kantserov',
+    };
+    sql.mockResolvedValueOnce([lookup]);
+
+    const res = await request(app).get(
+      '/api/admin/players/route-lookup?league_code=nhl&player_slug=roman-kantserov',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(lookup);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('p.league_id');
+    expect(queryText).toContain('NULL::uuid AS roster_team_id');
   });
 
   it('resolves a team-scoped jersey-name player URL to database ids', async () => {

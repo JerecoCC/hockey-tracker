@@ -1786,6 +1786,44 @@ router.get('/route-lookup', async (req, res) => {
         ) latest_jnh ON true
         WHERE lower(l.code) = lower(${leagueCode})
           AND (${teamCode || null}::text IS NULL OR lower(ti.code) = lower(${teamCode}))
+
+        UNION ALL
+
+        SELECT
+          p.id AS player_id,
+          p.league_player_number,
+          NULL::uuid AS roster_team_id,
+          l.id AS league_id,
+          l.code AS league_code,
+          NULL::text AS roster_team_code,
+          NULL::smallint AS jersey_number,
+          NULL::smallint AS roster_jersey_number,
+          NULL::date AS start_date,
+          NULL::date AS end_date,
+          p.created_at,
+          trim(both '-' from regexp_replace(
+            lower(trim(concat_ws(' ', p.first_name, p.last_name))),
+            '[^a-z0-9]+',
+            '-',
+            'g'
+          )) AS name_slug,
+          trim(both '-' from regexp_replace(
+            lower(trim(COALESCE(p.league_player_number, ''))),
+            '[^a-z0-9]+',
+            '-',
+            'g'
+          )) AS league_player_slug
+        FROM players p
+        JOIN leagues l ON l.id = p.league_id
+        WHERE ${teamCode || null}::text IS NULL
+          AND lower(l.code) = lower(${leagueCode})
+          AND NOT EXISTS (
+            SELECT 1
+            FROM player_season_rosters direct_pt
+            JOIN teams direct_t ON direct_t.id = direct_pt.team_id
+            WHERE direct_pt.player_id = p.id
+              AND direct_t.league_id = l.id
+          )
       ),
       matched_routes AS (
         SELECT
