@@ -26,7 +26,6 @@
 
   &DayGameCell {
     --team-calendar-away-day-accent: #ffffff;
-    --team-calendar-away-day-text: #14181f;
     --accordion-header-bg: var(--team-calendar-day-accent);
     --accordion-border-color: var(--team-calendar-day-accent);
     --month-calendar-day-bg: var(
@@ -37,7 +36,12 @@
         var(--app-surface, #{$bg-card})
       )
     );
-    --month-calendar-day-number-color: var(--team-calendar-day-text);
+    --month-calendar-day-number-border: var(--month-calendar-day-bg);
+    --month-calendar-day-number-bg: var(--month-calendar-day-bg);
+    --month-calendar-day-number-color: var(
+      --team-calendar-card-text,
+      var(--app-text, #{$text-body})
+    );
 
     border-color: var(--team-calendar-day-accent);
   }
@@ -45,7 +49,6 @@
 
 :global(:root[data-theme='light']) .calendarDayGameCell {
   --team-calendar-away-day-accent: #64748b;
-  --team-calendar-away-day-text: #ffffff;
   --team-calendar-home-card-text: var(--app-text-strong, #0f172a);
 }
 

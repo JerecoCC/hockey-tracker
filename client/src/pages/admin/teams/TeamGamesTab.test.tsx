@@ -376,9 +376,14 @@ describe('TeamGamesTab', () => {
     const homeGameButton = screen.getByLabelText('Open game vs Away Team');
     const homeGameDay = homeGameButton.closest('.calendarDayGameCell');
 
-    expect(homeGameDay).toHaveStyle('--month-calendar-day-number-bg: #123456');
     expect(homeGameDay).toHaveStyle(
-      '--month-calendar-day-number-border: color-mix(in srgb, #ffffff 40%, #123456)',
+      '--month-calendar-day-number-bg: var(--month-calendar-day-bg)',
+    );
+    expect(homeGameDay).toHaveStyle(
+      '--month-calendar-day-number-border: var(--month-calendar-day-bg)',
+    );
+    expect(homeGameDay).toHaveStyle(
+      '--month-calendar-day-number-color: var(--team-calendar-card-text, #ffffff)',
     );
   });
 

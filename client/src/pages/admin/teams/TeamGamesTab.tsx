@@ -73,10 +73,10 @@ const formatWinnerFirstScore = (away: number, home: number) =>
 
 type CalendarDayStyle = CSSProperties & {
   '--team-calendar-day-accent'?: string;
-  '--team-calendar-day-text'?: string;
   '--team-calendar-card-text'?: string;
   '--month-calendar-day-number-border'?: string;
   '--month-calendar-day-number-bg'?: string;
+  '--month-calendar-day-number-color'?: string;
 };
 
 const getTeamCalendarDayStyle = (game: GameRecord, teamId: string): CalendarDayStyle => {
@@ -85,15 +85,15 @@ const getTeamCalendarDayStyle = (game: GameRecord, teamId: string): CalendarDayS
   const dayAccent = isHomeGame
     ? game.home_team.primary_color || '#334155'
     : 'var(--team-calendar-away-day-accent, #ffffff)';
-  const dayText = isHomeGame
-    ? homeTextColor
-    : 'var(--team-calendar-away-day-text, #14181f)';
+  const dayBodyText = isHomeGame
+    ? `var(--team-calendar-card-text, ${homeTextColor})`
+    : 'var(--app-text, #e2e8f0)';
 
   return {
     '--team-calendar-day-accent': dayAccent,
-    '--team-calendar-day-text': dayText,
-    '--month-calendar-day-number-border': `color-mix(in srgb, ${dayText} 40%, ${dayAccent})`,
-    '--month-calendar-day-number-bg': dayAccent,
+    '--month-calendar-day-number-border': 'var(--month-calendar-day-bg)',
+    '--month-calendar-day-number-bg': 'var(--month-calendar-day-bg)',
+    '--month-calendar-day-number-color': dayBodyText,
     ...(isHomeGame
       ? {
           '--team-calendar-card-text': `var(--team-calendar-home-card-text, ${homeTextColor})`,
