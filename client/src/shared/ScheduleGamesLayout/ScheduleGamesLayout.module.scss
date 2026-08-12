@@ -207,10 +207,10 @@
     position: relative;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
-    gap: $space-md;
+    justify-content: flex-start;
+    gap: $space-lg;
     min-height: 82px;
-    padding: $space-sm $space-md;
+    padding: $space-md;
     border: 1px solid var(--week-summary-day-border);
     border-radius: $radius-md;
     background: transparent;
@@ -247,7 +247,7 @@
   }
 
   &CountRow {
-    height: 1.25rem;
+    height: 1.625rem;
   }
 
   &DayActive {
