@@ -29,6 +29,7 @@ const LeaguesPage = lazy(() => import('./pages/admin/leagues/Leagues'));
 const LeagueDetailsPage = lazy(() => import('./pages/admin/leagues/LeagueDetails'));
 const UsersPage = lazy(() => import('./pages/admin/users/Users'));
 const TeamDetailsPage = lazy(() => import('./pages/admin/teams/TeamDetails'));
+const TeamSeasonDetailsPage = lazy(() => import('./pages/admin/teams/TeamSeasonDetails'));
 const SeasonDetailsPage = lazy(() => import('./pages/admin/seasons/SeasonDetails'));
 const SeasonDayGamesPage = lazy(() => import('./pages/admin/seasons/SeasonDayGamesPage'));
 const PlayoffSeriesDetailsPage = lazy(
@@ -172,7 +173,15 @@ const router = createBrowserRouter([
       { path: '/admin/users', element: <UsersPage /> },
       { path: '/admin/leagues/:leagueSlug', element: <LeagueDetailsPage /> },
       { path: '/admin/leagues/:leagueSlug/teams/:teamSlug', element: <TeamDetailsPage /> },
+      {
+        path: '/admin/leagues/:leagueSlug/teams/:teamSlug/seasons/:seasonSlug',
+        element: <TeamSeasonDetailsPage entry="team" />,
+      },
       { path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug', element: <SeasonDetailsPage /> },
+      {
+        path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug/teams/:teamSlug',
+        element: <TeamSeasonDetailsPage entry="season" />,
+      },
       {
         path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug/days/:dateSlug',
         element: <SeasonDayGamesPage />,

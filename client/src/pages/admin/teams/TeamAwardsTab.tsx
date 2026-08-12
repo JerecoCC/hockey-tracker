@@ -14,6 +14,7 @@ import styles from './TeamDetails.module.scss';
 
 interface Props {
   teamId: string;
+  seasonId?: string | null;
   mode?: 'admin' | 'user';
 }
 
@@ -151,11 +152,12 @@ const awardInfoLabel = (group: TeamAwardGroup) => {
   );
 };
 
-const TeamAwardsTab = ({ teamId, mode = 'admin' }: Props) => {
+const TeamAwardsTab = ({ teamId, seasonId, mode = 'admin' }: Props) => {
   const { awards, loading } = useTeamAwards(teamId, { mode });
   const [awardViewMode, setAwardViewMode] = useState<AwardViewMode>('list');
-  const awardGroups = groupTeamAwards(awards);
-  const sortedAwards = sortTeamAwards(awards);
+  const visibleAwards = seasonId ? awards.filter((award) => award.season_id === seasonId) : awards;
+  const awardGroups = groupTeamAwards(visibleAwards);
+  const sortedAwards = sortTeamAwards(visibleAwards);
 
   return (
     <Section

@@ -182,6 +182,33 @@ describe('GET /api/user/seasons', () => {
   });
 });
 
+describe('GET /api/user/players', () => {
+  it('returns current-state and last-played-season fields for a team player list', async () => {
+    const player = {
+      id: 'player-1',
+      first_name: 'Auston',
+      last_name: 'Matthews',
+      end_date: null,
+      is_prospect: false,
+      latest_associated_season_id: 'season-1',
+      latest_associated_season_name: '2025-26',
+      latest_associated_season_is_current: true,
+    };
+    sql.mockResolvedValueOnce([player]);
+
+    const res = await request(app).get('/api/user/players?team_id=team-1&include_prospects=true');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([player]);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('pt.end_date::text AS end_date');
+    expect(queryText).toContain('FROM game_player_stats gps');
+    expect(queryText).toContain('latest_associated_season_name');
+    expect(queryText).toContain('FROM player_season_rosters roster');
+    expect(queryText).toContain('associated_season.id = associated_league.current_season_id');
+  });
+});
+
 describe('GET /api/user/players/route-lookup', () => {
   it('resolves a user player details route to database ids', async () => {
     const lookup = {

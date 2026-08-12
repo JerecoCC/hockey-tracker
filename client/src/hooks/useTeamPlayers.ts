@@ -470,6 +470,11 @@ export interface TeamPlayerRecord extends PlayerRecord {
   player_team_id: string | null;
   player_team_stint_id?: string | null;
   roster_source?: 'legacy' | 'derived';
+  start_date?: string | null;
+  end_date?: string | null;
+  latest_associated_season_id?: string | null;
+  latest_associated_season_name?: string | null;
+  latest_associated_season_is_current?: boolean;
   jersey_number: number | null;
   team_id: string | null;
   team_name: string | null;

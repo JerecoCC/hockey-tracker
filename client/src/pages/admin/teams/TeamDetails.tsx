@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Tabs from '@jerecocc/tracker-ui/components/Tabs/Tabs';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
@@ -16,16 +16,10 @@ import {
   toRouteSlug,
 } from '@/lib/routeSlugs';
 import TeamInfoTab from './TeamInfoTab';
-import TeamGamesTab from './TeamGamesTab';
 import TeamPlayersTab from './TeamPlayersTab';
-import TeamAwardsTab from './TeamAwardsTab';
+import TeamSeasonsTab from './TeamSeasonsTab';
 import TeamHistoryTab from './TeamHistoryTab';
 import styles from './TeamDetails.module.scss';
-
-const getCurrentMonthStart = () => {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1);
-};
 
 interface Props {
   mode?: 'admin' | 'user';
@@ -45,8 +39,6 @@ const TeamDetailsPage = ({ mode = 'admin' }: Props) => {
     leagueSlug?: string;
     leagueId?: string;
   }>();
-  const [searchParams] = useSearchParams();
-  const routeSeasonParam = searchParams.get('season');
   const teamSlug = routeTeamSlug ?? legacyTeamId;
   const leagueSlug = routeLeagueSlug ?? legacyLeagueId;
   const isLegacyTeamRoute = !!teamSlug && UUID_PATTERN.test(teamSlug);
@@ -60,7 +52,6 @@ const TeamDetailsPage = ({ mode = 'admin' }: Props) => {
   const leagueId = isLegacyLeagueRoute ? leagueSlug : routeLeague?.id;
   const {
     teams: leagueTeams,
-    seasons: leagueSeasons,
     loading: leagueDetailsLoading,
   } = useLeagueDetails(leagueId, { mode });
   const routeTeam = isLegacyTeamRoute
@@ -86,18 +77,6 @@ const TeamDetailsPage = ({ mode = 'admin' }: Props) => {
   const [activeTab, handleTabChange] = useTabState(
     isAdminView ? 'tab:team-details' : 'tab:user-team-details',
   );
-  const [teamGamesCalendarMonth, setTeamGamesCalendarMonth] = useState<Date>(getCurrentMonthStart);
-  const routeSeason = routeSeasonParam
-    ? leagueSeasons.find(
-        (season) =>
-          season.id === routeSeasonParam ||
-          toRouteSlug(season.name) === toRouteSlug(routeSeasonParam),
-      )
-    : null;
-  const routeSeasonId =
-    routeSeason?.id ??
-    (routeSeasonParam && UUID_PATTERN.test(routeSeasonParam) ? routeSeasonParam : null);
-  const canonicalSeasonParam = routeSeason ? toRouteSlug(routeSeason.name) : routeSeasonId;
   const leagueDetailsPath = buildLeagueDetailsPath({
     leagueCode: team?.league_code,
     leagueId: team?.league_id ?? leagueId,
@@ -138,34 +117,25 @@ const TeamDetailsPage = ({ mode = 'admin' }: Props) => {
           leagueId: team.league_id,
           teamCode: team.code,
           teamId: team.id,
-          seasonName: routeSeason?.name,
-          seasonId: routeSeasonId,
         })
       : buildUserTeamDetailsPath({
           leagueCode: team.league_code,
           leagueId: team.league_id,
           teamCode: team.code,
           teamId: team.id,
-          seasonName: routeSeason?.name,
-          seasonId: routeSeasonId,
         });
     if (
       leagueSlug !== toRouteSlug(team.league_code) ||
-      teamSlug !== toRouteSlug(team.code) ||
-      (routeSeasonParam ?? null) !== (canonicalSeasonParam ?? null)
+      teamSlug !== toRouteSlug(team.code)
     ) {
       navigate(canonicalPath, { replace: true });
     }
   }, [
-    canonicalSeasonParam,
     isAdminView,
     isLegacyLeagueRoute,
     isLegacyTeamRoute,
     leagueSlug,
     navigate,
-    routeSeason?.name,
-    routeSeasonId,
-    routeSeasonParam,
     team,
     teamSlug,
   ]);
@@ -174,10 +144,6 @@ const TeamDetailsPage = ({ mode = 'admin' }: Props) => {
     if (loading || team) return;
     navigate(backPath, { replace: true });
   }, [backPath, loading, navigate, team]);
-
-  useEffect(() => {
-    setTeamGamesCalendarMonth(getCurrentMonthStart());
-  }, [team?.id]);
 
   if (loading) {
     return (
@@ -207,21 +173,6 @@ const TeamDetailsPage = ({ mode = 'admin' }: Props) => {
       ),
     },
     {
-      label: 'Games',
-      icon: 'sports_hockey',
-      content: (
-        <TeamGamesTab
-          teamId={team.id}
-          teamName={team.name}
-          leagueId={team.league_id ?? leagueId ?? ''}
-          leagueCode={team.league_code}
-          calendarMonth={teamGamesCalendarMonth}
-          onCalendarMonthChange={setTeamGamesCalendarMonth}
-          mode={mode}
-        />
-      ),
-    },
-    {
       label: 'Players',
       icon: 'set_lineup',
       content: (
@@ -231,22 +182,26 @@ const TeamDetailsPage = ({ mode = 'admin' }: Props) => {
           leagueId={team.league_id ?? ''}
           leagueCode={team.league_code}
           teamCode={team.code}
-          defaultSeasonId={routeSeasonId}
-          readOnly={!isAdminView}
+          scope="team"
+          readOnly
           mode={mode}
         />
       ),
     },
-    {
-      label: 'Awards',
-      icon: 'emoji_events',
-      content: (
-        <TeamAwardsTab
-          teamId={team.id}
-          mode={mode}
-        />
-      ),
-    },
+    isAdminView
+      ? {
+          label: 'Seasons',
+          icon: 'calendar_month',
+          content: (
+            <TeamSeasonsTab
+              teamId={team.id}
+              teamCode={team.code}
+              leagueId={team.league_id}
+              leagueCode={team.league_code}
+            />
+          ),
+        }
+      : null,
     isAdminView
       ? {
           label: 'History',

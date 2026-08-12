@@ -1170,7 +1170,10 @@ router.get('/players', async (req, res) => {
             height_cm, weight_lbs, position, shoots,
             rookie_season_id, rookie_season_name,
             status, is_active, created_at,
-            jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
+            jersey_number, player_team_id, start_date, end_date,
+            latest_associated_season_id, latest_associated_season_name,
+            latest_associated_season_is_current,
+            team_id, team_name, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
@@ -1183,6 +1186,11 @@ router.get('/players', async (req, res) => {
               p.status, p.is_active, p.created_at,
               pt.jersey_number,
               pt.id AS player_team_id,
+              pt.start_date::text AS start_date,
+              pt.end_date::text AS end_date,
+              latest_association.season_id AS latest_associated_season_id,
+              latest_association.season_name AS latest_associated_season_name,
+              latest_association.is_current AS latest_associated_season_is_current,
               pt.team_id,
               pt.is_prospect,
               ti.name AS team_name,
@@ -1193,14 +1201,43 @@ router.get('/players', async (req, res) => {
                                 AND pt.team_id = ${team_id}
                                 AND (${includeProspects} OR pt.is_prospect = FALSE)
                                 AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
+            JOIN seasons s ON s.id = pt.season_id
             JOIN teams t ON t.id = pt.team_id
+            LEFT JOIN LATERAL (
+              SELECT
+                associated_season.id AS season_id,
+                associated_season.name AS season_name,
+                (associated_season.id = associated_league.current_season_id) AS is_current
+              FROM (
+                SELECT gps.season_id
+                FROM game_player_stats gps
+                WHERE gps.player_id = p.id AND gps.team_id = t.id
+                UNION
+                SELECT roster.season_id
+                FROM player_season_rosters roster
+                WHERE roster.player_id = p.id AND roster.team_id = t.id
+              ) association
+              JOIN seasons associated_season ON associated_season.id = association.season_id
+              JOIN leagues associated_league ON associated_league.id = associated_season.league_id
+              ORDER BY
+                associated_season.start_date DESC NULLS LAST,
+                associated_season.created_at DESC,
+                associated_season.id DESC
+              LIMIT 1
+            ) latest_association ON TRUE
             LEFT JOIN LATERAL (
               SELECT name FROM team_iterations
               WHERE team_id = t.id
               ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
-            ORDER BY p.id, pt.season_id DESC
+            ORDER BY
+              p.id,
+              CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+              COALESCE(pt.end_date, pt.start_date, s.start_date, pt.created_at::date) DESC NULLS LAST,
+              s.start_date DESC NULLS LAST,
+              pt.created_at DESC,
+              pt.id DESC
           ) sub
           ORDER BY last_name, first_name
         `;
@@ -2505,7 +2542,10 @@ router.get('/seasons', async (req, res) => {
         l.code AS league_code,
         l.logo AS league_logo,
         s.start_date::text AS start_date,
+        s.started_at::text AS started_at,
         s.end_date::text AS end_date,
+        s.is_ended,
+        s.playoffs_started,
         s.goalie_min_regular_minutes,
         l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes,
         s.created_at,

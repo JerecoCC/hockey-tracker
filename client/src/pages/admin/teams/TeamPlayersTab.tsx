@@ -1,17 +1,15 @@
-import { useEffect, useState } from 'react';
-import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
+import { useState } from 'react';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
+import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import MoreActionsMenu from '@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu';
 import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
 import SearchInput from '@jerecocc/tracker-ui/components/SearchField/SearchInput';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
-import SeasonSelect from '@/shared/SeasonSelect/SeasonSelect';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
-import useSeasons from '@/hooks/useSeasons';
 import { useProjectedLineup } from '@/hooks/useProjectedLineup';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -46,7 +44,7 @@ const PLAYER_SECTIONS = [
   },
 ];
 
-type PlayerView = 'roster' | 'prospects';
+type PlayerView = 'all' | 'current' | 'roster' | 'prospects';
 
 interface Props {
   teamId: string;
@@ -54,7 +52,8 @@ interface Props {
   leagueId: string;
   leagueCode: string | null;
   teamCode: string | null;
-  defaultSeasonId?: string | null;
+  seasonId?: string | null;
+  scope?: 'team' | 'season';
   readOnly?: boolean;
   mode?: 'admin' | 'user';
 }
@@ -65,18 +64,14 @@ const TeamPlayersTab = ({
   leagueId,
   leagueCode,
   teamCode,
-  defaultSeasonId,
+  seasonId = null,
+  scope = 'team',
   readOnly = false,
   mode = 'admin',
 }: Props) => {
-  const { seasons: leagueSeasons } = useSeasons(leagueId, { mode });
-  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(defaultSeasonId ?? null);
-  const [playerView, setPlayerView] = useState<PlayerView>('roster');
+  const selectedSeasonId = scope === 'season' ? seasonId : null;
+  const [playerView, setPlayerView] = useState<PlayerView>(scope === 'team' ? 'current' : 'roster');
   const [query, setQuery] = useState('');
-
-  useEffect(() => {
-    if (!selectedSeasonId && defaultSeasonId) setSelectedSeasonId(defaultSeasonId);
-  }, [defaultSeasonId, selectedSeasonId]);
 
   const isProspectsView = playerView === 'prospects';
   const {
@@ -93,7 +88,8 @@ const TeamPlayersTab = ({
     bulkTradePlayers,
   } = useTeamPlayers(teamId, selectedSeasonId ?? undefined, {
     mode,
-    prospectsOnly: isProspectsView,
+    includeProspects: scope === 'team',
+    prospectsOnly: scope === 'season' && isProspectsView,
   });
   const { players: allTeamPlayers } = useTeamPlayers(teamId, selectedSeasonId ?? undefined, {
     mode,
@@ -118,8 +114,15 @@ const TeamPlayersTab = ({
   const rosterPlayerCount = rosterPlayers.length;
   const rosterGoalieCount = rosterPlayers.filter((p) => p.position === 'G').length;
   const normalizedQuery = normalizePlayerSearchText(query);
+  const scopedPlayers =
+    scope === 'team'
+      ? allTeamPlayers.filter((player) => {
+          if (playerView === 'all') return true;
+          return player.end_date == null;
+        })
+      : players;
   const filteredPlayers = normalizedQuery
-    ? players.filter((p) => {
+    ? scopedPlayers.filter((p) => {
         const name = `${p.first_name} ${p.last_name}`;
         const jersey = p.jersey_number != null ? String(p.jersey_number) : '';
         return (
@@ -128,7 +131,7 @@ const TeamPlayersTab = ({
           jersey.startsWith(normalizedQuery.replace('#', ''))
         );
       })
-    : players;
+    : scopedPlayers;
 
   const sortPlayers = (items: TeamPlayerRecord[]) =>
     [...items].sort((a, b) => {
@@ -181,7 +184,7 @@ const TeamPlayersTab = ({
           });
     const actions: ListItemAction[] = [];
 
-    if (!readOnly) {
+    if (!readOnly && scope === 'season') {
       if (isProspectsView) {
         actions.push(
           {
@@ -248,9 +251,23 @@ const TeamPlayersTab = ({
         chip={{ label: p.jersey_number ?? '-' }}
         subtitle={formatPlayerPosition(p.position) ?? undefined}
         rightContent={
-          projectedPlayerIds.has(p.id)
-            ? { type: 'tag', label: 'Projected', intent: 'accent' }
-            : undefined
+          scope === 'team'
+            ? playerView === 'current'
+              ? {
+                  type: 'tag',
+                  label: p.is_prospect ? 'Reserve' : 'Roster',
+                  intent: p.is_prospect ? 'neutral' : 'accent',
+                }
+              : p.latest_associated_season_name
+                ? {
+                    type: 'tag',
+                    label: p.latest_associated_season_name,
+                    intent: p.latest_associated_season_is_current ? 'success' : 'neutral',
+                  }
+                : undefined
+            : projectedPlayerIds.has(p.id)
+              ? { type: 'tag', label: 'Projected', intent: 'accent' }
+              : undefined
         }
         href={playerDetailsPath}
         ariaLabel={`Open ${playerName}`}
@@ -282,13 +299,20 @@ const TeamPlayersTab = ({
       value={playerView}
       onChange={(value) => setPlayerView(value as PlayerView)}
       options={[
-        { value: 'roster', label: 'Roster' },
-        { value: 'prospects', label: 'Reserves' },
+        ...(scope === 'team'
+          ? [
+              { value: 'current', label: 'Current' },
+              { value: 'all', label: 'All' },
+            ]
+          : [
+              { value: 'roster', label: 'Roster' },
+              { value: 'prospects', label: 'Reserves' },
+            ]),
       ]}
     />
   );
 
-  const rosterActions = readOnly ? null : (
+  const rosterActions = readOnly || scope !== 'season' ? null : (
     <div className={styles.rosterActions}>
       <Button
         intent="accent"
@@ -332,22 +356,17 @@ const TeamPlayersTab = ({
   return (
     <>
       <Section
-        title="Players"
-        titleAccessory={
-          leagueSeasons.length > 0 ? (
-            <div className={styles.playerHeaderSeasonGroup}>
-              <Divider orientation="vertical" />
-              <div className={styles.playerSeasonSelect}>
-                <SeasonSelect
-                  value={selectedSeasonId}
-                  seasons={leagueSeasons}
-                  onChange={setSelectedSeasonId}
-                  defaultSeasonMode="latest-ended"
-                  width="content"
-                />
-              </div>
-            </div>
-          ) : null
+        title={
+          <>
+            Players
+            <Divider orientation="vertical" />
+            <MetricTag
+              value={filteredPlayers.length}
+              label={filteredPlayers.length === 1 ? 'player' : 'players'}
+              position="postfix"
+              aria-label="Players total count"
+            />
+          </>
         }
         action={playerViewControl}
       >
@@ -370,8 +389,10 @@ const TeamPlayersTab = ({
               key={section.title}
               title={section.title}
               titleAccessory={
-                <Badge
+                <MetricTag
                   value={sectionPlayers.length}
+                  label={sectionPlayers.length === 1 ? 'player' : 'players'}
+                  position="postfix"
                   aria-label={`${section.title} count`}
                 />
               }
@@ -384,10 +405,16 @@ const TeamPlayersTab = ({
                 </ResponsiveList>
               ) : (
                 <p className={styles.rosterEmpty}>
-                  {players.length === 0
+                  {scopedPlayers.length === 0
                     ? isProspectsView
-                      ? 'No reserves for this season.'
-                      : 'No players on this roster yet.'
+                      ? scope === 'team'
+                        ? 'No current reserves.'
+                        : 'No reserves for this season.'
+                      : playerView === 'all'
+                        ? 'No players have belonged to this team yet.'
+                        : scope === 'team'
+                          ? 'No current players.'
+                          : 'No players on this roster yet.'
                     : normalizedQuery
                       ? `No ${section.title.toLowerCase()} match "${query}".`
                       : isProspectsView
@@ -400,7 +427,7 @@ const TeamPlayersTab = ({
         })}
       </div>
 
-      {!readOnly && (
+      {!readOnly && scope === 'season' && (
         <>
           <TeamPlayerEditModal
             open={!!editTarget}

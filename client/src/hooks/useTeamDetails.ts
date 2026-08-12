@@ -63,8 +63,37 @@ export interface TeamAwardRecord {
   team_text_color: string | null;
 }
 
+export interface TeamSeasonRecord {
+  id: string;
+  name: string;
+  league_id: string;
+  start_date: string | null;
+  started_at: string | null;
+  end_date: string | null;
+  is_current: boolean;
+  is_ended: boolean;
+  playoffs_started: boolean;
+  created_at: string;
+}
+
 
 type TeamDetailsMode = 'admin' | 'user';
+
+export const useTeamSeasons = (teamId: string | null | undefined) => {
+  const { data: seasons = [], isLoading: loading } = useQuery<TeamSeasonRecord[]>({
+    queryKey: ['team-seasons', teamId],
+    queryFn: async () => {
+      const { data } = await axios.get<TeamSeasonRecord[]>(
+        `${API}/admin/teams/${teamId}/seasons`,
+        { headers: authHeaders() },
+      );
+      return data;
+    },
+    enabled: !!teamId,
+  });
+
+  return { seasons, loading };
+};
 
 export const useTeamAwards = (
   teamId: string | null | undefined,

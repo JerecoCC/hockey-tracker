@@ -176,6 +176,7 @@ interface Props {
   teamName: string;
   leagueId: string;
   leagueCode?: string | null;
+  seasonId?: string | null;
   calendarMonth?: Date;
   onCalendarMonthChange?: (month: Date) => void;
   mode?: 'admin' | 'user';
@@ -186,6 +187,7 @@ const TeamGamesTab = ({
   teamName,
   leagueId,
   leagueCode,
+  seasonId,
   calendarMonth: controlledCalendarMonth,
   onCalendarMonthChange,
   mode = 'admin',
@@ -214,6 +216,7 @@ const TeamGamesTab = ({
   const { games, loading } = useGames(
     {
       teamId,
+      seasonId: seasonId ?? undefined,
       month: toMonthPickerValue(calendarMonth),
     },
     { mode },

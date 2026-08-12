@@ -123,6 +123,34 @@ describe('GET /api/admin/teams/:id', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/teams/:id/seasons
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/teams/:id/seasons', () => {
+  it('returns the seasons in which the team participated', async () => {
+    const seasons = [
+      {
+        id: 'season-1',
+        name: '2026-27',
+        league_id: 'league-1',
+        start_date: '2026-10-01',
+        end_date: '2027-06-30',
+        is_current: true,
+      },
+    ];
+    sql.mockResolvedValueOnce(seasons);
+
+    const res = await request(app).get('/api/admin/teams/team-1/seasons');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(seasons);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('season_participant_teams');
+    expect(queryText).toContain('participant.team_id');
+    expect(queryText).toContain('s.id = l.current_season_id');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/teams/:id/awards
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/teams/:id/awards', () => {

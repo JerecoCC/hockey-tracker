@@ -142,6 +142,33 @@ router.get('/', async (_req, res) => {
   }
 });
 
+// Seasons in which this team participated, newest first.
+router.get('/:id/seasons', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const seasons = await sql`
+      SELECT
+        s.id, s.name, s.league_id,
+        s.start_date::text AS start_date,
+        s.started_at::text AS started_at,
+        s.end_date::text AS end_date,
+        (s.id = l.current_season_id) AS is_current,
+        s.is_ended,
+        s.playoffs_started,
+        s.created_at
+      FROM season_participant_teams participant
+      JOIN seasons s ON s.id = participant.season_id
+      JOIN leagues l ON l.id = s.league_id
+      WHERE participant.team_id = ${id}
+      ORDER BY s.start_date DESC NULLS LAST, s.created_at DESC, s.name DESC
+    `;
+    return res.json(seasons);
+  } catch (err) {
+    console.error('team seasons error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // A season projection is an editable template, not historical participation.
 router.get('/:id/seasons/:seasonId/projected-lineup', async (req, res) => {
   const { id, seasonId } = req.params;

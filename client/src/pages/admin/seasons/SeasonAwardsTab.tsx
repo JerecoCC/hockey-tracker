@@ -35,7 +35,7 @@ import type { GoalieStatRecord, SkaterStatRecord } from '@/hooks/useSeasonStats'
 import {
   buildLeaguePlayerDetailsPath,
   buildPlayerDetailsPath,
-  buildTeamDetailsPath,
+  buildSeasonTeamDetailsPath,
 } from '@/lib/routeSlugs';
 import {
   awardCompetitionScopeLabel,
@@ -711,7 +711,7 @@ const SeasonAwardsTab = ({
   const recipientHref = (recipient: SeasonAwardRecipient) => {
     if (recipient.recipient_type === 'team') {
       return recipient.team_id || recipient.team_code
-        ? buildTeamDetailsPath({
+        ? buildSeasonTeamDetailsPath({
             leagueCode,
             leagueId,
             teamCode: recipient.team_code,

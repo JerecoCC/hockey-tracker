@@ -313,7 +313,14 @@ describe('GET /api/admin/players', () => {
   });
 
   it('filters by team_id and returns roster fields', async () => {
-    sql.mockResolvedValueOnce([PLAYER_WITH_ROSTER]);
+    sql.mockResolvedValueOnce([
+      {
+        ...PLAYER_WITH_ROSTER,
+        latest_associated_season_id: 'season-1',
+        latest_associated_season_name: '2025-26',
+        latest_associated_season_is_current: true,
+      },
+    ]);
     const res = await request(app).get('/api/admin/players?team_id=team-1');
     expect(res.status).toBe(200);
     expect(sql).toHaveBeenCalledTimes(1);
@@ -322,7 +329,16 @@ describe('GET /api/admin/players', () => {
       team_name: 'Oilers',
       primary_color: '#ff4500',
       text_color: '#ffffff',
+      latest_associated_season_id: 'season-1',
+      latest_associated_season_name: '2025-26',
+      latest_associated_season_is_current: true,
     });
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('FROM game_player_stats gps');
+    expect(queryText).toContain('latest_associated_season_name');
+    expect(queryText).toContain('gps.team_id = t.id');
+    expect(queryText).toContain('FROM player_season_rosters roster');
+    expect(queryText).toContain('associated_season.id = associated_league.current_season_id');
   });
 
   it('returns 500 on DB error', async () => {

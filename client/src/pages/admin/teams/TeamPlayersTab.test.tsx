@@ -2,7 +2,6 @@ import { type ComponentProps } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useProjectedLineup } from '@/hooks/useProjectedLineup';
-import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import TeamPlayersTab from './TeamPlayersTab';
 
@@ -19,7 +18,6 @@ jest.mock('react-router-dom', () => ({
     </a>
   ),
 }));
-jest.mock('@/hooks/useSeasons', () => jest.fn());
 jest.mock('@/hooks/useProjectedLineup', () => ({ useProjectedLineup: jest.fn() }));
 jest.mock('@/hooks/useTeamPlayers', () => jest.fn());
 jest.mock('@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu', () => {
@@ -70,7 +68,6 @@ jest.mock('./ProjectedLineupModal', () => {
   return MockProjectedLineupModal;
 });
 
-const mockUseSeasons = useSeasons as jest.Mock;
 const mockUseProjectedLineup = jest.mocked(useProjectedLineup);
 const mockUseTeamPlayers = useTeamPlayers as jest.Mock;
 const players = [
@@ -147,16 +144,14 @@ const renderTeamPlayersTab = (props: Partial<ComponentProps<typeof TeamPlayersTa
       leagueId="league-1"
       leagueCode="NHL"
       teamCode="TOR"
-      defaultSeasonId="season-1"
+      scope="season"
+      seasonId="season-1"
       {...props}
     />,
   );
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUseSeasons.mockReturnValue({
-    seasons: [{ id: 'season-1', name: '2024-25', is_current: true }],
-  });
   mockUseProjectedLineup.mockReturnValue({
     slots: [],
     loading: false,
@@ -181,7 +176,6 @@ describe('TeamPlayersTab', () => {
     );
     expect(screen.queryByRole('button', { name: /view player/i })).not.toBeInTheDocument();
     expect(container.querySelector('.playerHeaderDivider')).not.toBeInTheDocument();
-    expect(container.querySelector('.playerHeaderSeasonGroup .vertical')).toBeInTheDocument();
   });
 
   it('shows a dash jersey chip when a roster player has no jersey number', () => {
@@ -196,9 +190,14 @@ describe('TeamPlayersTab', () => {
   it('removes add-player actions and offers roster reset under more actions', () => {
     renderTeamPlayersTab();
 
+    expect(screen.getByLabelText('Players total count')).toHaveTextContent('3');
+    expect(screen.getByLabelText('Players total count')).toHaveTextContent('players');
     expect(screen.getByLabelText('Forwards count')).toHaveTextContent('1');
+    expect(screen.getByLabelText('Forwards count')).toHaveTextContent('player');
     expect(screen.getByLabelText('Defense count')).toHaveTextContent('1');
+    expect(screen.getByLabelText('Defense count')).toHaveTextContent('player');
     expect(screen.getByLabelText('Goalies count')).toHaveTextContent('1');
+    expect(screen.getByLabelText('Goalies count')).toHaveTextContent('player');
 
     const projectedLineupButton = screen.getByRole('button', { name: 'Projected Lineup' });
 
@@ -348,7 +347,6 @@ describe('TeamPlayersTab', () => {
   it('renders a read-only user roster without admin actions and links the user player route', () => {
     const { container } = renderTeamPlayersTab({ readOnly: true, mode: 'user' });
 
-    expect(mockUseSeasons).toHaveBeenCalledWith('league-1', { mode: 'user' });
     expect(mockUseTeamPlayers).toHaveBeenCalledWith(
       'team-1',
       'season-1',
@@ -360,5 +358,62 @@ describe('TeamPlayersTab', () => {
       '/leagues/nhl/teams/tor/players/34-auston-matthews',
     );
     expect(mockUseProjectedLineup).toHaveBeenCalledWith('team-1', 'season-1', { mode: 'user' });
+  });
+
+  it('combines current players and shows their latest associated season in the all view', async () => {
+    const user = userEvent.setup();
+    const historicalPlayers = [
+      {
+        ...players[0],
+        end_date: null,
+        latest_associated_season_name: '2026-27',
+        latest_associated_season_is_current: true,
+      },
+      {
+        ...players[1],
+        end_date: null,
+        is_prospect: true,
+        latest_associated_season_name: '2025-26',
+      },
+      {
+        ...players[2],
+        end_date: '2025-06-30',
+        latest_associated_season_name: '2024-25',
+      },
+    ] as TeamPlayerRecord[];
+    mockUseTeamPlayers.mockReturnValue({ ...teamPlayersState, players: historicalPlayers });
+
+    renderTeamPlayersTab({ scope: 'team', seasonId: null, readOnly: true });
+
+    expect(screen.getByText('Auston Matthews')).toBeInTheDocument();
+    expect(screen.getByText('Morgan Rielly')).toBeInTheDocument();
+    expect(screen.queryByText('Joseph Woll')).not.toBeInTheDocument();
+    expect(screen.getByText('Roster')).toBeInTheDocument();
+    expect(screen.getByText('Reserve')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'All' }));
+    expect(screen.getByText('Auston Matthews')).toBeInTheDocument();
+    expect(screen.getByText('Morgan Rielly')).toBeInTheDocument();
+    expect(screen.getByText('Joseph Woll')).toBeInTheDocument();
+    expect(screen.getByText('2026-27')).toHaveClass('success');
+    expect(screen.getByText('2025-26')).toBeInTheDocument();
+    expect(screen.getByText('2024-25')).toBeInTheDocument();
+    expect(screen.queryByText(/Last played/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Roster')).not.toBeInTheDocument();
+    expect(screen.queryByText('Reserve')).not.toBeInTheDocument();
+  });
+
+  it('leaves the all-view right content empty without a season association', async () => {
+    const user = userEvent.setup();
+    mockUseTeamPlayers.mockReturnValue({
+      ...teamPlayersState,
+      players: [{ ...players[0], end_date: null }],
+    });
+
+    renderTeamPlayersTab({ scope: 'team', seasonId: null, readOnly: true });
+    await user.click(screen.getByRole('button', { name: 'All' }));
+
+    expect(screen.queryByText('No games played')).not.toBeInTheDocument();
+    expect(screen.queryByText('Roster')).not.toBeInTheDocument();
   });
 });
