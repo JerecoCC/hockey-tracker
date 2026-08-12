@@ -251,6 +251,7 @@ beforeEach(() => {
       end_date: '2025-06-30',
       games_per_season: 82,
       is_current: true,
+      started_at: '2024-10-01T00:00:00.000Z',
       playoffs_started: false,
       is_ended: false,
       has_scheduled_games: false,
@@ -275,6 +276,7 @@ beforeEach(() => {
     updateGroup: jest.fn(),
     deleteGroup: jest.fn(),
     setCurrentSeason: jest.fn(),
+    startSeason: jest.fn(),
     startPlayoffs: jest.fn(),
     endSeason: jest.fn(),
     updateSeason: jest.fn(),
@@ -423,7 +425,9 @@ describe('SeasonDetails standings tab', () => {
 
     await user.click(screen.getByText('Toronto Maple Leafs'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor?season=2024-25');
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/admin/leagues/nhl/seasons/2024-25/teams/tor',
+    );
   });
 
   it('uses the post-division pool for wildcard standings and highlights qualifying rows', async () => {
@@ -471,6 +475,7 @@ describe('SeasonDetails standings tab', () => {
         end_date: '2025-06-30',
         games_per_season: 82,
         is_current: true,
+        started_at: '2024-10-01T00:00:00.000Z',
         playoffs_started: false,
         is_ended: false,
         has_scheduled_games: false,
@@ -519,6 +524,7 @@ describe('SeasonDetails standings tab', () => {
       updateGroup: jest.fn(),
       deleteGroup: jest.fn(),
       setCurrentSeason: jest.fn(),
+      startSeason: jest.fn(),
       startPlayoffs: jest.fn(),
       endSeason: jest.fn(),
       updateSeason: jest.fn(),
@@ -569,6 +575,25 @@ describe('SeasonDetails standings tab', () => {
 });
 
 describe('SeasonDetails info tab', () => {
+  it('offers the manual start action while the active season is upcoming', () => {
+    mockUseTabState.mockReturnValue([0, jest.fn()]);
+    const details = mockUseSeasonDetails();
+    mockUseSeasonDetails.mockClear();
+    mockUseSeasonDetails.mockReturnValue({
+      ...details,
+      season: { ...details.season, started_at: null },
+    });
+
+    render(<SeasonDetails />);
+
+    const items = mockMoreActionsMenu.mock.calls[0][0].items;
+    expect(items).toEqual(expect.arrayContaining([expect.objectContaining({ label: 'Start Season' })]));
+    expect(items).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ label: 'Start Playoffs' })]),
+    );
+    expect(screen.getByText('Upcoming')).toBeInTheDocument();
+  });
+
   it('renders season actions at the top right with the expected icon styles', () => {
     mockUseTabState.mockReturnValue([0, jest.fn()]);
 

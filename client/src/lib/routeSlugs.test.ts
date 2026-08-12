@@ -1,5 +1,7 @@
 import {
   buildSeasonDayGamesPath,
+  buildSeasonTeamDetailsPath,
+  buildTeamSeasonDetailsPath,
   buildPlayerDetailsPath,
   buildGameDetailsPath,
   buildLeaguePlayerDetailsPath,
@@ -13,6 +15,28 @@ import {
   playerTeamRouteSlug,
   userWatchedTeamRouteSlug,
 } from './routeSlugs';
+
+describe('team season routes', () => {
+  it('builds the team-centric route used by the team seasons tab', () => {
+    expect(
+      buildTeamSeasonDetailsPath({
+        leagueCode: 'NHL',
+        teamCode: 'BOS',
+        seasonName: '2026-27',
+      }),
+    ).toBe('/admin/leagues/nhl/teams/bos/seasons/2026-27');
+  });
+
+  it('builds the season-centric route used by season team items', () => {
+    expect(
+      buildSeasonTeamDetailsPath({
+        leagueCode: 'NHL',
+        seasonName: '2026-27',
+        teamCode: 'BOS',
+      }),
+    ).toBe('/admin/leagues/nhl/seasons/2026-27/teams/bos');
+  });
+});
 
 describe('buildGameDetailsPath', () => {
   it('uses the dated matchup route when date and team codes are available', () => {

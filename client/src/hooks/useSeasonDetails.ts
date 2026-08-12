@@ -315,6 +315,30 @@ const useSeasonDetails = (
     }
   };
 
+  const startSeason = async (): Promise<boolean> => {
+    setBusy('start-season');
+    try {
+      await axios.patch(
+        `${API}/admin/seasons/${seasonId}/start`,
+        {},
+        { headers: authHeaders() },
+      );
+      toast.success('Season started!');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['season', seasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['seasons'] }),
+        queryClient.invalidateQueries({ queryKey: ['leagues'] }),
+        queryClient.invalidateQueries({ queryKey: ['team-seasons'] }),
+      ]);
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to start season'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const startPlayoffs = async (): Promise<boolean> => {
     setBusy('start-playoffs');
     try {
@@ -399,6 +423,7 @@ const useSeasonDetails = (
     updateGroup,
     deleteGroup,
     setCurrentSeason,
+    startSeason,
     startPlayoffs,
     endSeason,
     updateSeason,

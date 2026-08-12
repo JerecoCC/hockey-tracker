@@ -2599,6 +2599,36 @@ async function initSchema() {
       ADD COLUMN IF NOT EXISTS playoffs_started BOOLEAN NOT NULL DEFAULT FALSE
   `;
 
+  // Explicit lifecycle marker. A season remains upcoming until an admin starts it,
+  // even when its optional calendar start_date is missing or has passed.
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ
+  `;
+  await sql`
+    UPDATE seasons s
+    SET started_at = COALESCE(
+      (
+        SELECT MIN(COALESCE(g.time_start, g.scheduled_at))
+        FROM games g
+        WHERE g.season_id = s.id
+          AND g.status IN ('in_progress', 'final')
+      ),
+      s.start_date::timestamp,
+      s.created_at
+    )
+    WHERE s.started_at IS NULL
+      AND (
+        s.playoffs_started
+        OR s.is_ended
+        OR EXISTS (
+          SELECT 1 FROM games g
+          WHERE g.season_id = s.id
+            AND g.status IN ('in_progress', 'final')
+        )
+      )
+  `;
+
   // ── One-time data migration tracking ─────────────────────────────────────────
   // The migration ledger is initialized once at the start of initSchema.
 

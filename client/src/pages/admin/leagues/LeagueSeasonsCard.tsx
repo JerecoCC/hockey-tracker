@@ -3,6 +3,7 @@ import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/L
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import { useLeagueDetailsContext } from './leagueDetailsState';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
+import { getSeasonPhase, seasonPhasePresentation } from '@/lib/seasonPhase';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -49,37 +50,43 @@ const LeagueSeasonsCard = (props: Props) => {
         <ResponsiveList
           className={`${styles.seasonList} ${seasons.length > 5 ? styles.seasonListLimited : ''}`}
         >
-          {seasons.map((s) => (
-            <ListItem
-              key={s.id}
-              fullWidth
-              hideImage
-              name={s.name}
-              href={getSeasonHref(s)}
-              subtitle={formatSeasonSubtitle(s.start_date, s.end_date, s.is_current)}
-              rightContent={
-                s.is_current ? { type: 'tag', label: 'Current', intent: 'success' } : undefined
-              }
-              actions={
-                [
-                  {
-                    icon: 'edit',
-                    intent: 'neutral',
-                    tooltip: 'Edit',
-                    disabled: busy === s.id,
-                    onClick: () => onEditSeason(s),
-                  },
-                  {
-                    icon: 'delete',
-                    intent: 'danger',
-                    tooltip: 'Delete',
-                    disabled: busy === s.id,
-                    onClick: () => onDeleteSeason(s),
-                  },
-                ] satisfies ListItemAction[]
-              }
-            />
-          ))}
+          {seasons.map((s) => {
+            const phase = getSeasonPhase(s);
+            const phasePresentation = seasonPhasePresentation(phase);
+            return (
+              <ListItem
+                key={s.id}
+                fullWidth
+                hideImage
+                name={s.name}
+                href={getSeasonHref(s)}
+                subtitle={formatSeasonSubtitle(
+                  s.start_date,
+                  s.end_date,
+                  phase === 'in_progress' || phase === 'playoffs',
+                )}
+                rightContent={{ type: 'tag', ...phasePresentation }}
+                actions={
+                  [
+                    {
+                      icon: 'edit',
+                      intent: 'neutral',
+                      tooltip: 'Edit',
+                      disabled: busy === s.id,
+                      onClick: () => onEditSeason(s),
+                    },
+                    {
+                      icon: 'delete',
+                      intent: 'danger',
+                      tooltip: 'Delete',
+                      disabled: busy === s.id,
+                      onClick: () => onDeleteSeason(s),
+                    },
+                  ] satisfies ListItemAction[]
+                }
+              />
+            );
+          })}
         </ResponsiveList>
       )}
     </Section>

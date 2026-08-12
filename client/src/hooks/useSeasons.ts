@@ -14,6 +14,8 @@ export interface SeasonRecord {
   league_code: string;
   league_logo: string | null;
   start_date: string | null;
+  /** Set only when the season is formally started; calendar dates do not control lifecycle. */
+  started_at: string | null;
   end_date: string | null;
   is_current: boolean;
   /** True when the season has been explicitly marked as ended — roster editing is locked. */

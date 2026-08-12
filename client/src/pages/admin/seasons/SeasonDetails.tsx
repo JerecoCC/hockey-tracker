@@ -31,7 +31,7 @@ import {
   buildLeagueDetailsPath,
   buildPlayerDetailsPath,
   buildSeasonDetailsPath,
-  buildTeamDetailsPath,
+  buildSeasonTeamDetailsPath,
   toRouteSlug,
 } from '@/lib/routeSlugs';
 import useSeasonStats, {
@@ -41,6 +41,7 @@ import useSeasonStats, {
 } from '@/hooks/useSeasonStats';
 import Select from '@jerecocc/tracker-ui/components/Select/Select';
 import useTabState from '@/hooks/useTabState';
+import { getSeasonPhase, seasonPhasePresentation } from '@/lib/seasonPhase';
 import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import SeasonEndModal from './SeasonEndModal';
@@ -227,6 +228,7 @@ const SeasonDetailsPage = () => {
     loading: detailsLoading,
     busy,
     setCurrentSeason,
+    startSeason,
     startPlayoffs,
     endSeason,
     updateSeason,
@@ -335,6 +337,7 @@ const SeasonDetailsPage = () => {
 
   const [showEndModal, setShowEndModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showStartSeasonConfirm, setShowStartSeasonConfirm] = useState(false);
   const [showStartPlayoffsConfirm, setShowStartPlayoffsConfirm] = useState(false);
 
   // ── Stats state ───────────────────────────────────────────────────────────────
@@ -857,7 +860,7 @@ const SeasonDetailsPage = () => {
     );
   const navigateToTeam = (row: TeamStandingRecord) =>
     navigate(
-      buildTeamDetailsPath({
+      buildSeasonTeamDetailsPath({
         leagueCode: season?.league_code,
         leagueId,
         teamCode: row.team_code,
@@ -880,17 +883,32 @@ const SeasonDetailsPage = () => {
     return <p style={{ color: 'var(--text-dim)' }}>Season not found.</p>;
   }
 
+  const seasonPhase = getSeasonPhase(season);
+  const phasePresentation = seasonPhasePresentation(seasonPhase);
   const regularSeasonEndBlocked = hasUnfinishedRegularGames || hasIncompleteRegularTeamGames;
-  const canStartPlayoffs = season.is_current && !season.playoffs_started;
+  const canStartSeason = season.is_current && seasonPhase === 'upcoming';
+  const canStartPlayoffs = season.is_current && seasonPhase === 'in_progress';
+  const canEndSeason =
+    season.is_current && (seasonPhase === 'in_progress' || seasonPhase === 'playoffs');
   const startPlayoffsDisabled = busy === 'start-playoffs' || regularSeasonEndBlocked;
   const seasonMoreItems = [
-    ...(!season.is_current
+    ...(!season.is_current && seasonPhase !== 'ended'
       ? [
           {
-            label: 'Set as Current',
+            label: 'Set as Active Season',
             icon: 'stars',
             disabled: busy === 'set-current',
             onClick: () => setCurrentSeason(true),
+          },
+        ]
+      : []),
+    ...(canStartSeason
+      ? [
+          {
+            label: 'Start Season',
+            icon: 'play_arrow',
+            disabled: busy === 'start-season',
+            onClick: () => setShowStartSeasonConfirm(true),
           },
         ]
       : []),
@@ -904,7 +922,7 @@ const SeasonDetailsPage = () => {
           },
         ]
       : []),
-    ...(season.is_current
+    ...(canEndSeason
       ? [
           {
             label: 'End Season',
@@ -924,30 +942,18 @@ const SeasonDetailsPage = () => {
       logo={season.league_logo}
       name={season.name}
       code={season.league_code}
-      subtitle={formatDateRange(season.start_date, season.end_date, season.is_current)}
+      subtitle={formatDateRange(
+        season.start_date,
+        season.end_date,
+        seasonPhase === 'in_progress' || seasonPhase === 'playoffs',
+      )}
       primaryColor="#334155"
       textColor="#ffffff"
       nameAccessory={
-        <>
-          {season.is_current && !season.playoffs_started && (
-            <Tag
-              label="Current"
-              intent="success"
-            />
-          )}
-          {season.is_current && season.playoffs_started && (
-            <Tag
-              label="Playoffs"
-              intent="accent"
-            />
-          )}
-          {season.is_ended && (
-            <Tag
-              label="Ended"
-              intent="neutral"
-            />
-          )}
-        </>
+        <Tag
+          label={phasePresentation.label}
+          intent={phasePresentation.intent}
+        />
       }
       actions={
         <>
@@ -1038,7 +1044,9 @@ const SeasonDetailsPage = () => {
                 fetchAlignmentSet={fetchAlignmentSet}
                 loading={loading}
                 busy={busy}
+                isActive={season.is_current}
                 isEnded={season.is_ended}
+                isStarted={seasonPhase !== 'upcoming'}
                 hasScheduledGames={season.has_scheduled_games}
                 groupAlignmentSetId={season.group_alignment_set_id}
                 updateSeason={updateSeason}
@@ -1514,6 +1522,21 @@ const SeasonDetailsPage = () => {
             ),
           },
         ]}
+      />
+
+      <ConfirmModal
+        open={showStartSeasonConfirm}
+        title="Start Season"
+        body="Mark this season as in progress? Preseason-only configuration will be locked."
+        confirmLabel={busy === 'start-season' ? 'Startingâ€¦' : 'Start Season'}
+        confirmIcon="play_arrow"
+        intent="accent"
+        busy={busy === 'start-season'}
+        onCancel={() => setShowStartSeasonConfirm(false)}
+        onConfirm={async () => {
+          const ok = await startSeason();
+          if (ok) setShowStartSeasonConfirm(false);
+        }}
       />
 
       <ConfirmModal

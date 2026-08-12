@@ -15,7 +15,7 @@ import { type AlignmentGroupRecord, type GroupAlignmentSet } from '@/hooks/useGr
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import { type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
 import { type CreateSeasonData } from '@/hooks/useSeasons';
-import { buildTeamDetailsPath } from '@/lib/routeSlugs';
+import { buildSeasonTeamDetailsPath } from '@/lib/routeSlugs';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './SeasonTeamsCard.module.scss';
 
@@ -110,7 +110,7 @@ interface TeamListProps {
 const TeamList = ({ teams, leagueCode, leagueId, seasonId, seasonName }: TeamListProps) => (
   <ResponsiveList className={styles.teamList}>
     {teams.map((team) => {
-      const teamHref = buildTeamDetailsPath({
+      const teamHref = buildSeasonTeamDetailsPath({
         leagueCode,
         leagueId,
         teamCode: team.code,
@@ -286,7 +286,9 @@ interface Props {
   fetchAlignmentSet: (alignmentSetId: string) => Promise<GroupAlignmentSet | null>;
   loading: boolean;
   busy: string | null;
+  isActive: boolean;
   isEnded: boolean;
+  isStarted: boolean;
   hasScheduledGames: boolean;
   groupAlignmentSetId: string | null;
   updateSeason: (id: string, payload: Partial<CreateSeasonData>) => Promise<boolean>;
@@ -303,7 +305,9 @@ const SeasonTeamsCard = ({
   fetchAlignmentSet,
   loading,
   busy,
+  isActive,
   isEnded,
+  isStarted,
   hasScheduledGames,
   groupAlignmentSetId,
   updateSeason,
@@ -375,15 +379,19 @@ const SeasonTeamsCard = ({
     value: set.id,
     label: set.structure_type === 'league' ? `${set.name} (league-wide)` : set.name,
   }));
-  const alignmentLocked = isEnded || hasScheduledGames;
+  const alignmentLocked = !isActive || isEnded || isStarted || hasScheduledGames;
   const alignmentLabel = selectedAlignment
     ? selectedAlignment.structure_type === 'league'
       ? `${selectedAlignment.name} (league-wide)`
       : selectedAlignment.name
     : 'No alignment assigned';
-  const alignmentLockedTooltip = hasScheduledGames
-    ? 'Alignment cannot be changed after games are scheduled.'
-    : 'Alignment cannot be changed after the season ends.';
+  const alignmentLockedTooltip = !isActive
+    ? 'Alignment can only be changed for the league active season.'
+    : isEnded
+      ? 'Alignment cannot be changed after the season ends.'
+      : isStarted
+        ? 'Alignment cannot be changed after the season starts.'
+        : 'Alignment cannot be changed after games are scheduled.';
   const handleSaveAlignment = async () => {
     if (!hasDraftAlignmentChange || !draftAlignmentSetId) return;
     await updateSeason(seasonId, {

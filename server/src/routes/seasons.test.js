@@ -27,6 +27,7 @@ const SEASON = {
   league_id: 'league-1',
   is_current: false,
   is_ended: false,
+  started_at: '2024-09-01T00:00:00.000Z',
   start_date: '2024-09-01',
   end_date: '2025-04-30',
   created_at: new Date().toISOString(),
@@ -500,6 +501,7 @@ describe('PATCH /api/admin/seasons/:id', () => {
     sql.mockResolvedValueOnce([
       {
         ...SEASON,
+        is_current: true,
         end_date: null,
         group_alignment_set_id: 'alignment-1',
         has_scheduled_games: true,
@@ -547,12 +549,64 @@ describe('PATCH /api/admin/seasons/:id', () => {
 });
 
 // ---------------------------------------------------------------------------
+// PATCH /api/admin/seasons/:id/start
+// ---------------------------------------------------------------------------
+describe('PATCH /api/admin/seasons/:id/start', () => {
+  it('moves the active upcoming season to in progress', async () => {
+    sql
+      .mockResolvedValueOnce([
+        {
+          id: 'season-1',
+          is_current: true,
+          started_at: null,
+          playoffs_started: false,
+          is_ended: false,
+        },
+      ])
+      .mockResolvedValueOnce([{ id: 'season-1', started_at: '2024-10-01T00:00:00.000Z' }]);
+
+    const res = await request(app).patch('/api/admin/seasons/season-1/start').send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body.started_at).toBe('2024-10-01T00:00:00.000Z');
+    expect(sql.mock.calls[1][0].join('')).toContain('COALESCE(started_at, NOW())');
+  });
+
+  it('does not allow a non-active season to be started', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        id: 'season-1',
+        is_current: false,
+        started_at: null,
+        playoffs_started: false,
+        is_ended: false,
+      },
+    ]);
+
+    const res = await request(app).patch('/api/admin/seasons/season-1/start').send({});
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/active season/i);
+    expect(sql).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // PATCH /api/admin/seasons/:id/playoffs
 // ---------------------------------------------------------------------------
 describe('PATCH /api/admin/seasons/:id/playoffs', () => {
   it('starts playoffs when regular-season completion checks pass', async () => {
     sql
-      .mockResolvedValueOnce([{ id: 'season-1', has_unfinished_regular_games: false }])
+      .mockResolvedValueOnce([
+        {
+          id: 'season-1',
+          is_current: true,
+          started_at: SEASON.started_at,
+          is_ended: false,
+          playoffs_started: false,
+          has_unfinished_regular_games: false,
+        },
+      ])
       .mockResolvedValueOnce([{ has_incomplete_regular_team_games: false }])
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce([{ ...SEASON, playoffs_started: true }]);
@@ -568,7 +622,16 @@ describe('PATCH /api/admin/seasons/:id/playoffs', () => {
   });
 
   it('blocks playoffs while regular-season games are scheduled or in progress', async () => {
-    sql.mockResolvedValueOnce([{ id: 'season-1', has_unfinished_regular_games: true }]);
+    sql.mockResolvedValueOnce([
+      {
+        id: 'season-1',
+        is_current: true,
+        started_at: SEASON.started_at,
+        is_ended: false,
+        playoffs_started: false,
+        has_unfinished_regular_games: true,
+      },
+    ]);
 
     const res = await request(app).patch('/api/admin/seasons/season-1/playoffs').send({});
 
@@ -579,7 +642,16 @@ describe('PATCH /api/admin/seasons/:id/playoffs', () => {
 
   it('blocks playoffs until every team has reached games_per_season', async () => {
     sql
-      .mockResolvedValueOnce([{ id: 'season-1', has_unfinished_regular_games: false }])
+      .mockResolvedValueOnce([
+        {
+          id: 'season-1',
+          is_current: true,
+          started_at: SEASON.started_at,
+          is_ended: false,
+          playoffs_started: false,
+          has_unfinished_regular_games: false,
+        },
+      ])
       .mockResolvedValueOnce([{ has_incomplete_regular_team_games: true }]);
 
     const res = await request(app).patch('/api/admin/seasons/season-1/playoffs').send({});
@@ -627,6 +699,20 @@ describe('DELETE /api/admin/seasons/:id', () => {
 // PATCH /api/admin/seasons/:id/current
 // ---------------------------------------------------------------------------
 describe('PATCH /api/admin/seasons/:id/current', () => {
+  it('does not allow an ended season to become active', async () => {
+    sql.mockResolvedValueOnce([
+      { id: 'season-1', league_id: 'league-1', is_ended: true },
+    ]);
+
+    const res = await request(app)
+      .patch('/api/admin/seasons/season-1/current')
+      .send({ is_current: true });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/ended season/i);
+    expect(sql).toHaveBeenCalledTimes(1);
+  });
+
   it('sets is_current to true by updating leagues.current_season_id', async () => {
     sql
       .mockResolvedValueOnce([{ id: 'season-1', league_id: 'league-1' }]) // existence check

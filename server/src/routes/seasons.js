@@ -359,7 +359,7 @@ router.get('/', async (req, res) => {
       ? await sql`
           SELECT s.id, s.name, s.league_id,
                  (l.current_season_id = s.id) AS is_current,
-                 s.is_ended, s.playoffs_started,
+                 s.is_ended, s.playoffs_started, s.started_at::text AS started_at,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
                  s.goalie_min_regular_minutes,
@@ -384,7 +384,7 @@ router.get('/', async (req, res) => {
       : await sql`
           SELECT s.id, s.name, s.league_id,
                  (l.current_season_id = s.id) AS is_current,
-                 s.is_ended, s.playoffs_started,
+                 s.is_ended, s.playoffs_started, s.started_at::text AS started_at,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
                  s.goalie_min_regular_minutes,
@@ -421,7 +421,7 @@ router.get('/:id', async (req, res) => {
     const rows = await sql`
       SELECT s.id, s.name, s.league_id,
              (l.current_season_id = s.id) AS is_current,
-             s.is_ended, s.playoffs_started,
+             s.is_ended, s.playoffs_started, s.started_at::text AS started_at,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
              COALESCE(pqf.rules, s.playoff_format, l.playoff_format) AS playoff_format,
@@ -535,6 +535,7 @@ router.post('/', async (req, res) => {
         ${group_alignment_set_id || null}
       )
       RETURNING id, name, league_id, FALSE AS is_current,
+                NULL::text AS started_at,
                 start_date::text AS start_date, end_date::text AS end_date,
                 games_per_season, goalie_min_regular_minutes,
                 playoff_qualification_format_id, group_alignment_set_id,
@@ -578,12 +579,16 @@ router.patch('/:id', async (req, res) => {
     // Fetch current row so we can merge partial updates
     const existing = await sql`
       SELECT id, name, league_id,
-             start_date::text AS start_date, end_date::text AS end_date, is_ended,
-             playoffs_started,
+             start_date::text AS start_date, started_at::text AS started_at,
+             end_date::text AS end_date, is_ended, playoffs_started,
              games_per_season, playoff_format,
              playoff_qualification_format_id,
              best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes,
              bracket_rule_set_id, group_alignment_set_id,
+             EXISTS (
+               SELECT 1 FROM leagues l
+               WHERE l.id = seasons.league_id AND l.current_season_id = seasons.id
+             ) AS is_current,
              EXISTS (SELECT 1 FROM games g WHERE g.season_id = seasons.id) AS has_scheduled_games
       FROM seasons WHERE id = ${id}
     `;
@@ -635,6 +640,10 @@ router.patch('/:id', async (req, res) => {
     // Auto-set is_ended when an end_date is provided; never auto-clear it.
     const mergedIsEnded = mergedEndDate ? true : cur.is_ended;
 
+    if (end_date !== undefined && mergedEndDate && !cur.started_at) {
+      return res.status(409).json({ error: 'Season must be started before it can be ended' });
+    }
+
     if (!mergedName) return res.status(400).json({ error: 'name is required' });
     if (
       mergedGoalieMinRegularMinutes != null &&
@@ -655,6 +664,16 @@ router.patch('/:id', async (req, res) => {
       group_alignment_set_id !== undefined &&
       (mergedGroupAlignmentSetId ?? null) !== (cur.group_alignment_set_id ?? null)
     ) {
+      if (!cur.is_current) {
+        return res.status(409).json({
+          error: 'Team alignment can only be changed for the league active season',
+        });
+      }
+      if (cur.started_at) {
+        return res.status(409).json({
+          error: 'Team alignment cannot be changed after the season has started',
+        });
+      }
       if (cur.has_scheduled_games) {
         return res.status(409).json({
           error: 'Team alignment cannot be changed after games have been scheduled for this season',
@@ -730,7 +749,7 @@ router.patch('/:id', async (req, res) => {
     const rows = await sql`
       SELECT s.id, s.name, s.league_id,
              (l.current_season_id = s.id) AS is_current,
-             s.is_ended, s.playoffs_started,
+             s.is_ended, s.playoffs_started, s.started_at::text AS started_at,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
              s.goalie_min_regular_minutes,
@@ -783,11 +802,15 @@ router.patch('/:id/current', async (req, res) => {
   try {
     // Verify the season exists and fetch its league_id
     const existing = await sql`
-      SELECT id, league_id FROM seasons WHERE id = ${id}
+      SELECT id, league_id, is_ended FROM seasons WHERE id = ${id}
     `;
     if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
 
     const { league_id } = existing[0];
+
+    if (is_current && existing[0].is_ended) {
+      return res.status(409).json({ error: 'An ended season cannot be set as active' });
+    }
 
     if (is_current) {
       // Point the league's current_season_id at this season.
@@ -807,7 +830,7 @@ router.patch('/:id/current', async (req, res) => {
     const rows = await sql`
       SELECT s.id, s.name, s.league_id,
              (l.current_season_id = s.id) AS is_current,
-             s.is_ended,
+             s.is_ended, s.playoffs_started, s.started_at::text AS started_at,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.goalie_min_regular_minutes,
              EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id) AS has_scheduled_games,
@@ -832,6 +855,49 @@ router.patch('/:id/current', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// PATCH /api/admin/seasons/:id/start - explicit override from Upcoming to In Progress.
+// The optional calendar start_date is intentionally not used as a lifecycle trigger.
+// ---------------------------------------------------------------------------
+router.patch('/:id/start', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const existing = await sql`
+      SELECT
+        s.id,
+        s.started_at,
+        s.playoffs_started,
+        s.is_ended,
+        (l.current_season_id = s.id) AS is_current
+      FROM seasons s
+      JOIN leagues l ON l.id = s.league_id
+      WHERE s.id = ${id}
+    `;
+    if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
+    if (!existing[0].is_current) {
+      return res.status(409).json({ error: 'Only the league active season can be started' });
+    }
+    if (existing[0].is_ended) {
+      return res.status(409).json({ error: 'An ended season cannot be started' });
+    }
+    if (existing[0].playoffs_started) {
+      return res.status(409).json({ error: 'Playoffs have already started for this season' });
+    }
+
+    const rows = await sql`
+      UPDATE seasons
+      SET started_at = COALESCE(started_at, NOW())
+      WHERE id = ${id}
+      RETURNING id, started_at::text AS started_at
+    `;
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('seasons start error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // PATCH /api/admin/seasons/:id/playoffs  – mark regular season as ended,
 // setting playoffs_started = true.  Does NOT set is_ended (the whole season
 // is not over — only the regular-season portion is complete).
@@ -842,7 +908,11 @@ router.patch('/:id/playoffs', async (req, res) => {
   try {
     const existing = await sql`
       SELECT
-        id,
+        seasons.id,
+        seasons.started_at,
+        seasons.playoffs_started,
+        seasons.is_ended,
+        (leagues.current_season_id = seasons.id) AS is_current,
         EXISTS (
           SELECT 1 FROM games g
           WHERE g.season_id = seasons.id
@@ -850,9 +920,22 @@ router.patch('/:id/playoffs', async (req, res) => {
             AND g.status IN ('scheduled', 'in_progress')
         ) AS has_unfinished_regular_games
       FROM seasons
-      WHERE id = ${id}
+      JOIN leagues ON leagues.id = seasons.league_id
+      WHERE seasons.id = ${id}
     `;
     if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
+    if (!existing[0].is_current) {
+      return res.status(409).json({ error: 'Only the league active season can start playoffs' });
+    }
+    if (!existing[0].started_at) {
+      return res.status(409).json({ error: 'Season must be started before playoffs can begin' });
+    }
+    if (existing[0].is_ended) {
+      return res.status(409).json({ error: 'An ended season cannot start playoffs' });
+    }
+    if (existing[0].playoffs_started) {
+      return res.status(409).json({ error: 'Playoffs have already started for this season' });
+    }
     if (existing[0].has_unfinished_regular_games) {
       return res.status(409).json({
         error: 'Regular season cannot end while regular-season games are scheduled or in progress',
@@ -873,7 +956,7 @@ router.patch('/:id/playoffs', async (req, res) => {
     const rows = await sql`
       SELECT s.id, s.name, s.league_id,
              (l.current_season_id = s.id) AS is_current,
-             s.is_ended, s.playoffs_started,
+             s.is_ended, s.playoffs_started, s.started_at::text AS started_at,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
              s.goalie_min_regular_minutes,

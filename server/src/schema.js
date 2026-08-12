@@ -76,6 +76,7 @@ const seasons = pgTable("seasons", {
     .notNull()
     .references(() => leagues.id, { onDelete: "cascade" }),
   startDate: date("start_date"),
+  startedAt: timestamp("started_at", { withTimezone: true }),
   endDate: date("end_date"),
   isCurrent: boolean("is_current").notNull().default(false),
   isEnded: boolean("is_ended").notNull().default(false),

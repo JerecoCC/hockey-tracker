@@ -108,7 +108,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
       { value: NO_ROOKIE_SEASON, label: 'No rookie season' },
       ...seasons.map((season) => ({
         value: season.id,
-        label: season.is_current ? `${season.name} (Current)` : season.name,
+        label: season.is_current ? `${season.name} (Active)` : season.name,
       })),
     ],
     [seasons],
