@@ -81,7 +81,9 @@ const defaultProps: SeasonTeamsCardProps = {
   fetchAlignmentSet: jest.fn(),
   loading: false,
   busy: null,
+  isActive: true,
   isEnded: false,
+  isStarted: false,
   hasScheduledGames: false,
   groupAlignmentSetId: 'align-groups',
   updateSeason: jest.fn(),
@@ -119,11 +121,11 @@ describe('SeasonTeamsCard', () => {
     expect(parentGroup).not.toHaveClass('accordion');
     const parentHeader = parentGroup?.querySelector('.alignmentParentGroupHeader');
     expect(parentHeader).toHaveTextContent('Eastern Conference');
-    const parentBadge = parentHeader?.querySelector('.alignmentGroupNameCount');
-    expect(parentBadge).toHaveClass('badge');
-    expect(parentBadge).not.toHaveAttribute('title');
-    expect(parentBadge).toHaveTextContent('2');
-    expect(parentBadge).toHaveTextContent('teams');
+    const parentMetric = parentHeader?.querySelector('.alignmentGroupNameCount');
+    expect(parentMetric).toHaveClass('metricTag');
+    expect(parentMetric).not.toHaveAttribute('title');
+    expect(parentMetric).toHaveTextContent('2');
+    expect(parentMetric).toHaveTextContent('teams');
     expect(
       parentGroup?.querySelector('.alignmentParentGroupHeaderDivider.divider.horizontal'),
     ).toBeInTheDocument();

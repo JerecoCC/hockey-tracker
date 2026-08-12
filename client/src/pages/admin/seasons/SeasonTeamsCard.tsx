@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
-import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
@@ -205,10 +204,11 @@ const GroupNode = ({
             <div className={styles.alignmentParentGroupTitle}>
               <span className={styles.alignmentParentGroupName}>
                 {groupName}
-                <Badge
+                <MetricTag
                   className={styles.alignmentGroupNameCount}
                   value={teamCount}
                   label={teamCountLabel}
+                  position="postfix"
                 />
               </span>
             </div>
