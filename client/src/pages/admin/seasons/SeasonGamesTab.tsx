@@ -21,7 +21,10 @@ import {
   ScheduleWeekList,
   ScheduleWeekSummary,
 } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
-import { scheduleViewSegmentedControlClassName } from '@/shared/ScheduleGamesLayout/scheduleGamesLayoutStyles';
+import {
+  scheduleCalendarDayNumberClassName,
+  scheduleViewSegmentedControlClassName,
+} from '@/shared/ScheduleGamesLayout/scheduleGamesLayoutStyles';
 import { useScheduleWeekSummaryStuck } from '@/shared/ScheduleGamesLayout/useScheduleWeekSummaryStuck';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
@@ -1213,6 +1216,7 @@ const SeasonGamesTab = ({
               <MonthCalendar
                 month={calendarMonth}
                 loading={loading}
+                dayNumberClassName={scheduleCalendarDayNumberClassName}
                 getDayClassName={({ dateKey }) =>
                   isSeasonDate(dateKey) ? undefined : styles.outOfSeasonDay
                 }

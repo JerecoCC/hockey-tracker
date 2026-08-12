@@ -131,6 +131,11 @@
   }
 }
 
+.calendarDayNumber.calendarDayNumber {
+  line-height: 1;
+  padding-top: 0.125rem;
+}
+
 .dayTodayIndicator.dayTodayIndicator {
   --badge-bg: color-mix(in srgb, #{$accent} 16%, transparent);
   --badge-border-color: #{$accent};

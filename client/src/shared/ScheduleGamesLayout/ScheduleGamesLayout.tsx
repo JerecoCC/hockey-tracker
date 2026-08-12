@@ -376,6 +376,7 @@ export const ScheduleCalendarLoading = ({ month }: ScheduleCalendarLoadingProps)
     <MonthCalendar
       month={month}
       loading
+      dayNumberClassName={styles.calendarDayNumber}
       loadingSkeletonClassName={styles.calendarDaySkeleton}
       renderDayContent={() => null}
     />

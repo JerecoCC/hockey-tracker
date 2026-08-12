@@ -6,6 +6,7 @@ import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCa
 import PeriodPicker from '@jerecocc/tracker-ui/components/PeriodPicker/PeriodPicker';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import { ScheduleGamesTitle } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
+import { scheduleCalendarDayNumberClassName } from '@/shared/ScheduleGamesLayout/scheduleGamesLayoutStyles';
 import TeamCalendarGameCard from '@/shared/TeamCalendarGameCard/TeamCalendarGameCard';
 import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
@@ -321,6 +322,7 @@ const TeamGamesTab = ({
             ref={calendarGridRef}
             month={calendarMonth}
             loading={loading}
+            dayNumberClassName={scheduleCalendarDayNumberClassName}
             dayBodyClassName={styles.calendarDayBody}
             getDayClassName={({ dateKey }) =>
               gamesByDate.has(dateKey) ? styles.calendarDayGameCell : undefined
