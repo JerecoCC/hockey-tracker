@@ -1275,6 +1275,7 @@ router.get('/players/route-lookup', async (req, res) => {
           ti.code AS roster_team_code,
           COALESCE(latest_jnh.jersey_number, pt.jersey_number) AS jersey_number,
           pt.jersey_number AS roster_jersey_number,
+          COALESCE(historical_jnh.matches_player_slug, FALSE) AS historical_jersey_slug_match,
           pt.start_date,
           pt.end_date,
           pt.created_at,
@@ -1311,6 +1312,20 @@ router.get('/players/route-lookup', async (req, res) => {
           ORDER BY effective_from DESC, id DESC
           LIMIT 1
         ) latest_jnh ON true
+        LEFT JOIN LATERAL (
+          SELECT TRUE AS matches_player_slug
+          FROM jersey_number_history
+          WHERE player_teams_id = pt.id
+            AND (
+              jersey_number::text || '-' || trim(both '-' from regexp_replace(
+                lower(trim(concat_ws(' ', p.first_name, p.last_name))),
+                '[^a-z0-9]+',
+                '-',
+                'g'
+              ))
+            ) = ${playerSlug}
+          LIMIT 1
+        ) historical_jnh ON true
         WHERE lower(l.code) = lower(${leagueCode})
           AND (${teamCode || null}::text IS NULL OR lower(ti.code) = lower(${teamCode}))
       ),
@@ -1339,14 +1354,17 @@ router.get('/players/route-lookup', async (req, res) => {
             THEN 1
             WHEN league_player_slug = ${playerSlug}
             THEN 2
+            WHEN historical_jersey_slug_match
+            THEN 3
             WHEN roster_jersey_number IS NOT NULL
               AND (roster_jersey_number::text || '-' || name_slug) = ${playerSlug}
-            THEN 3
-            ELSE 4
+            THEN 4
+            ELSE 5
           END AS match_rank
         FROM candidate_routes
         WHERE name_slug = ${playerSlug}
           OR league_player_slug = ${playerSlug}
+          OR historical_jersey_slug_match
           OR (
             jersey_number IS NOT NULL
             AND (jersey_number::text || '-' || name_slug) = ${playerSlug}

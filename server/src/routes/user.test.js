@@ -250,6 +250,28 @@ describe('GET /api/user/players/route-lookup', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual(lookup);
   });
+
+  it('resolves a user player route using a historical jersey number', async () => {
+    const lookup = {
+      player_id: 'player-1',
+      team_id: 'team-1',
+      league_id: 'league-1',
+      league_code: 'NHL',
+      team_code: 'TOR',
+      player_slug: '34-auston-matthews',
+    };
+    sql.mockResolvedValueOnce([lookup]);
+
+    const res = await request(app).get(
+      '/api/user/players/route-lookup?league_code=nhl&team_code=tor&player_slug=16-auston-matthews',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(lookup);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('historical_jersey_slug_match');
+    expect(queryText).toContain('SELECT TRUE AS matches_player_slug');
+  });
 });
 
 describe('GET /api/user/players/:id/stats', () => {

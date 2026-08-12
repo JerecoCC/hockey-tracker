@@ -29,6 +29,11 @@ import PlayerDetails, {
 import { collapseSameTeamStints } from './playerStintHistory';
 
 const mockNavigate = jest.fn();
+const mockRouteParams = {
+  leagueCode: 'nhl',
+  teamCode: 'tor',
+  playerSlug: 'john-smith',
+};
 const mockUsePageBreadcrumbs = jest.fn();
 const mockJerseyHistoryEditModal = jest.fn(() => null);
 const mockChangePhotoModal = jest.fn(() => null);
@@ -51,11 +56,7 @@ jest.mock('@tanstack/react-query', () => ({
 }));
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
-  useParams: () => ({
-    leagueCode: 'nhl',
-    teamCode: 'tor',
-    playerSlug: 'john-smith',
-  }),
+  useParams: () => mockRouteParams,
 }));
 jest.mock('@/hooks/usePlayerDetails', () => ({
   __esModule: true,
@@ -333,6 +334,9 @@ beforeAll(() => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockRouteParams.leagueCode = 'nhl';
+  mockRouteParams.teamCode = 'tor';
+  mockRouteParams.playerSlug = 'john-smith';
   mockedAxios.get.mockReset();
   mockedAxios.patch.mockReset();
   mockedAxios.post.mockReset();
@@ -502,6 +506,30 @@ describe('PlayerDetails info tab', () => {
     unmount();
 
     expect(document.title).toBe('Hockey Tracker');
+  });
+
+  it('replaces a historical jersey-number route with the current canonical slug', async () => {
+    mockRouteParams.playerSlug = '16-john-smith';
+    mockUsePlayerRouteLookup.mockReturnValue({
+      routeLookup: {
+        player_id: 'player-1',
+        team_id: 'team-1',
+        league_id: 'league-1',
+        league_code: 'NHL',
+        team_code: 'TOR',
+        player_slug: '34-john-smith',
+      },
+      loading: false,
+    });
+
+    render(<PlayerDetails />);
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith(
+        '/admin/leagues/nhl/teams/tor/players/34-john-smith',
+        { replace: true },
+      );
+    });
   });
 
   it('defaults season stats to the latest ended season the player was part of', () => {
