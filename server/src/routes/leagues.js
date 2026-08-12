@@ -288,12 +288,22 @@ router.get('/', async (_req, res) => {
         l.best_of_playoff, l.best_of_shootout, l.scoring_system,
         l.goalie_min_regular_minutes, l.playoff_format,
         CASE
-          WHEN cs.id IS NULL OR cs.is_ended THEN 'postseason'
-          WHEN cs.playoffs_started THEN 'playoffs'
+          WHEN latest_season.id IS NULL OR latest_season.is_ended THEN 'postseason'
+          WHEN latest_season.playoffs_started THEN 'playoffs'
+          WHEN latest_season.id = l.current_season_id AND latest_season.started_at IS NULL
+            THEN 'preseason'
+          WHEN latest_season.started_at IS NULL THEN 'postseason'
           ELSE 'regular'
         END AS season_phase
       FROM leagues l
-      LEFT JOIN seasons cs ON cs.id = l.current_season_id
+      LEFT JOIN LATERAL (
+        SELECT s.id, s.started_at, s.playoffs_started, s.is_ended
+        FROM seasons s
+        WHERE s.league_id = l.id
+          AND (s.started_at IS NOT NULL OR s.is_ended OR s.id = l.current_season_id)
+        ORDER BY COALESCE(s.start_date, s.created_at::date) DESC, s.created_at DESC, s.id DESC
+        LIMIT 1
+      ) latest_season ON TRUE
       ORDER BY l.name ASC
     `;
     return res.json(leagues);
@@ -315,13 +325,23 @@ router.get('/:id', async (req, res) => {
         l.best_of_playoff, l.best_of_shootout, l.scoring_system,
         l.goalie_min_regular_minutes, l.playoff_format,
         CASE
-          WHEN cs.id IS NULL OR cs.is_ended THEN 'postseason'
-          WHEN cs.playoffs_started THEN 'playoffs'
+          WHEN latest_season.id IS NULL OR latest_season.is_ended THEN 'postseason'
+          WHEN latest_season.playoffs_started THEN 'playoffs'
+          WHEN latest_season.id = l.current_season_id AND latest_season.started_at IS NULL
+            THEN 'preseason'
+          WHEN latest_season.started_at IS NULL THEN 'postseason'
           ELSE 'regular'
         END AS season_phase,
         l.created_at
       FROM leagues l
-      LEFT JOIN seasons cs ON cs.id = l.current_season_id
+      LEFT JOIN LATERAL (
+        SELECT s.id, s.started_at, s.playoffs_started, s.is_ended
+        FROM seasons s
+        WHERE s.league_id = l.id
+          AND (s.started_at IS NOT NULL OR s.is_ended OR s.id = l.current_season_id)
+        ORDER BY COALESCE(s.start_date, s.created_at::date) DESC, s.created_at DESC, s.id DESC
+        LIMIT 1
+      ) latest_season ON TRUE
       WHERE l.id = ${id}
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'League not found' });

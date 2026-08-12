@@ -14,6 +14,7 @@ const LEAGUE_PHASE_TAGS: Record<
   LeagueRecord['season_phase'],
   { label: string; intent: 'info' | 'accent' | 'neutral' }
 > = {
+  preseason: { label: 'Pre-season', intent: 'neutral' },
   regular: { label: 'Regular Season', intent: 'info' },
   playoffs: { label: 'Playoffs', intent: 'accent' },
   postseason: { label: 'Post-season', intent: 'neutral' },

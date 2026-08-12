@@ -37,8 +37,8 @@ export interface LeagueRecord {
   goalie_min_regular_minutes: number;
   /** Ordered list of qualification rules. Null means no programmatic format is set. */
   playoff_format: PlayoffFormatRule[] | null;
-  /** Current league phase derived from the current season. */
-  season_phase: 'regular' | 'playoffs' | 'postseason';
+  /** League phase derived from its latest season. */
+  season_phase: 'preseason' | 'regular' | 'playoffs' | 'postseason';
 }
 
 export interface CreateLeagueData {

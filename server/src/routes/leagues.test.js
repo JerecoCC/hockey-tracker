@@ -63,8 +63,10 @@ describe('GET /api/admin/leagues', () => {
     expect(res.body).toEqual([LEAGUE]);
     const queryText = sql.mock.calls[0][0].join(' ');
     expect(queryText).toContain('AS season_phase');
-    expect(queryText).toContain('LEFT JOIN seasons cs');
-    expect(queryText).toContain('cs.playoffs_started');
+    expect(queryText).toContain('LEFT JOIN LATERAL');
+    expect(queryText).toContain('latest_season.id = l.current_season_id');
+    expect(queryText).toContain('s.id = l.current_season_id');
+    expect(queryText).toContain('COALESCE(s.start_date, s.created_at::date) DESC');
     expect(queryText).toContain('l.goalie_min_regular_minutes');
   });
 
