@@ -1,6 +1,11 @@
 @use 'styles/colors' as *;
 @use 'styles/mixins' as *;
 
+.modal > div:first-child h3,
+.section > div:first-child h3 {
+  font-size: $font-lg;
+}
+
 .tabContent {
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(14rem, 3fr);
@@ -191,8 +196,6 @@
 
 .loadingSearchToolbar {
   display: flex;
-  align-items: center;
-  gap: $space-sm;
   margin-bottom: $space-md;
 }
 

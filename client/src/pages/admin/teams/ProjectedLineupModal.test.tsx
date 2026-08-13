@@ -223,6 +223,17 @@ describe('ProjectedLineupModal', () => {
       within(forwardsTab)
         .getAllByLabelText(/^(Alex Wing|Casey Center|Zane Able)$/)
         .map((item) => item.getAttribute('aria-label'));
+    const sortControl = within(forwardsTab).getByRole('group', {
+      name: 'Sort available players',
+    });
+    const searchField = within(forwardsTab).getByPlaceholderText('Search forwards...');
+    const availableTitle = within(forwardsTab).getByRole('heading', {
+      name: 'Available forwards',
+    });
+
+    expect(sortControl.compareDocumentPosition(searchField)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(sortControl.parentElement).toBe(availableTitle.parentElement?.parentElement);
+
     expect(
       within(forwardsTab).getByRole('button', { name: 'Sort by jersey number' }),
     ).toHaveAttribute('data-active', 'true');

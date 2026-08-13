@@ -317,15 +317,17 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
         <Section
           className={`${styles.section} ${styles.listSection}`}
           title={tab.availableTitle}
+          action={
+            <Skeleton
+              variant="block"
+              className={styles.sortSkeleton}
+            />
+          }
         >
           <div className={styles.loadingSearchToolbar}>
             <Skeleton
               variant="block"
               className={styles.searchSkeleton}
-            />
-            <Skeleton
-              variant="block"
-              className={styles.sortSkeleton}
             />
           </div>
           <ResponsiveList className={styles.playerList}>
@@ -442,34 +444,34 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
           <Section
             className={`${styles.section} ${styles.listSection}`}
             title={tab.availableTitle}
+            action={
+              <SegmentedControl
+                className={styles.playerSortControl}
+                value={playerSort}
+                onChange={(value) => setPlayerSort(value as PlayerSort)}
+                disabled={saving}
+                ariaLabel="Sort available players"
+                options={[
+                  {
+                    value: 'jersey',
+                    label: '#',
+                    ariaLabel: 'Sort by jersey number',
+                    tooltip: 'Sort by jersey number',
+                  },
+                  {
+                    value: 'lastName',
+                    label: 'A–Z',
+                    ariaLabel: 'Sort by last name',
+                    tooltip: 'Sort by last name',
+                  },
+                ]}
+              />
+            }
           >
             <SearchableList
               items={availablePlayers}
               filterItem={playerMatchesSearch}
               placeholder={`Search ${tab.label.toLowerCase()}...`}
-              actions={
-                <SegmentedControl
-                  className={styles.playerSortControl}
-                  value={playerSort}
-                  onChange={(value) => setPlayerSort(value as PlayerSort)}
-                  disabled={saving}
-                  ariaLabel="Sort available players"
-                  options={[
-                    {
-                      value: 'jersey',
-                      label: '#',
-                      ariaLabel: 'Sort by jersey number',
-                      tooltip: 'Sort by jersey number',
-                    },
-                    {
-                      value: 'lastName',
-                      label: 'A–Z',
-                      ariaLabel: 'Sort by last name',
-                      tooltip: 'Sort by last name',
-                    },
-                  ]}
-                />
-              }
               emptyMessage="No unassigned players at this position."
               getNoResultsMessage={(query) => `No players match “${query}”.`}
               className={styles.searchablePlayers}
@@ -534,6 +536,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
     <Modal
       open={open}
       title={`Projected Lineup - ${teamName}`}
+      className={styles.modal}
       onClose={onClose}
       onConfirm={handleSave}
       confirmLabel="Save Projection"
