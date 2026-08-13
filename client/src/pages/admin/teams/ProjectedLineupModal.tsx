@@ -61,7 +61,6 @@ const DEFENSE_SLOTS: SlotDefinition[] = Array.from({ length: 3 }, (_, pairingInd
 const GOALIE_SLOTS: SlotDefinition[] = [
   { key: 'G1', detail: 'Goalie 1', dropLabel: 'Drop starter here' },
   { key: 'G2', detail: 'Goalie 2', dropLabel: 'Drop backup here' },
-  { key: 'G3', detail: 'Goalie 3', dropLabel: 'Drop third goalie here' },
 ];
 
 const POSITION_TABS: PositionTabDefinition[] = [
@@ -77,7 +76,7 @@ const POSITION_TABS: PositionTabDefinition[] = [
     group: 'D',
     label: 'Defense',
     lineupTitle: 'Defense pairings',
-    availableTitle: 'Available defensemen',
+    availableTitle: 'Available defense',
     columns: ['Left Defense', 'Right Defense'],
     slots: DEFENSE_SLOTS,
   },
@@ -93,7 +92,7 @@ const POSITION_TABS: PositionTabDefinition[] = [
 
 const ALL_SLOTS = POSITION_TABS.flatMap((tab) => tab.slots);
 const ALL_SLOT_KEYS = new Set(ALL_SLOTS.map((slot) => slot.key));
-const REQUIRED_SLOT_KEYS = ALL_SLOTS.map((slot) => slot.key).filter((slotKey) => slotKey !== 'G3');
+const REQUIRED_SLOT_KEYS = ALL_SLOTS.map((slot) => slot.key);
 const PLAYER_DRAG_TYPE = 'text/projected-lineup-player-id';
 
 const positionGroup = (position: string | null): PositionGroup => {
@@ -208,19 +207,13 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
       if (sourceKey === targetKey) return current;
       if (sourceKey) next[sourceKey] = displacedPlayerId ?? null;
       next[targetKey] = playerId;
-
-      if (!next.G1 || !next.G2) next.G3 = null;
       return next;
     });
   };
 
   const removeAssignment = (slotKey: string) => {
     if (saving) return;
-    setAssignments((current) => {
-      const next = { ...current, [slotKey]: null };
-      if (!next.G1 || !next.G2) next.G3 = null;
-      return next;
-    });
+    setAssignments((current) => ({ ...current, [slotKey]: null }));
   };
 
   const handleDragStart = (event: DragEvent, playerId: string) => {
@@ -354,10 +347,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
     const availablePlayers = players.filter(
       (player) => positionGroup(player.position) === tab.group && !assignedPlayerIds.has(player.id),
     );
-    const goalieThirdDisabled = tab.group === 'G' && (!assignments.G1 || !assignments.G2);
-    const hasOpenSlot =
-      tab.slots.some((slot) => !assignments[slot.key] && slot.key !== 'G3') ||
-      (tab.group === 'G' && !goalieThirdDisabled && !assignments.G3);
+    const hasOpenSlot = tab.slots.some((slot) => !assignments[slot.key]);
 
     return (
       <div className={styles.tabContent}>
@@ -376,7 +366,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
             {tab.slots.map((slot) => {
               const playerId = assignments[slot.key];
               const player = playerId ? playersById.get(playerId) : undefined;
-              const disabled = saving || (slot.key === 'G3' && goalieThirdDisabled);
+              const disabled = saving;
               return (
                 <Card
                   key={slot.key}

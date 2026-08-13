@@ -170,18 +170,18 @@ describe('ProjectedLineupModal', () => {
 
     const { container } = renderModal();
 
-    expect(container.querySelectorAll('.slotSkeleton')).toHaveLength(21);
+    expect(container.querySelectorAll('.slotSkeleton')).toHaveLength(20);
     expect(container.querySelectorAll('.playerSkeleton')).toHaveLength(15);
     expect(screen.getByLabelText('Loading forwards projection')).toBeInTheDocument();
     expect(screen.queryByText(/Loading projected lineup/)).not.toBeInTheDocument();
   });
 
-  it('renders a 12-slot forward grid, 6-slot defense grid, and 3-slot goalie grid', () => {
+  it('renders a 12-slot forward grid, 6-slot defense grid, and 2-slot goalie grid', () => {
     renderModal();
 
     expect(screen.getAllByTestId(/^lineup-slot-F/)).toHaveLength(12);
     expect(screen.getAllByTestId(/^lineup-slot-D/)).toHaveLength(6);
-    expect(screen.getAllByTestId(/^lineup-slot-G/)).toHaveLength(3);
+    expect(screen.getAllByTestId(/^lineup-slot-G/)).toHaveLength(2);
     expect(
       screen.getByText('Left Wing', { selector: '.columnHeaders > span' }),
     ).toBeInTheDocument();
@@ -199,7 +199,10 @@ describe('ProjectedLineupModal', () => {
     expect(screen.queryByText('Line 1')).not.toBeInTheDocument();
     expect(screen.queryByText('Pairing 1')).not.toBeInTheDocument();
     expect(screen.getByTestId('lineup-slot-G1').parentElement).toHaveClass('slotGridG');
-    expect(screen.getByTestId('lineup-slot-G1').parentElement?.children).toHaveLength(3);
+    expect(screen.getByTestId('lineup-slot-G1').parentElement?.children).toHaveLength(2);
+    expect(screen.queryByTestId('lineup-slot-G3')).not.toBeInTheDocument();
+    expect(screen.getByText('Available defense')).toBeInTheDocument();
+    expect(screen.queryByText('Available defensemen')).not.toBeInTheDocument();
   });
 
   it('filters the available player list with the tracker-ui search field', () => {
@@ -220,7 +223,6 @@ describe('ProjectedLineupModal', () => {
       within(forwardsTab)
         .getAllByLabelText(/^(Alex Wing|Casey Center|Zane Able)$/)
         .map((item) => item.getAttribute('aria-label'));
-
     expect(
       within(forwardsTab).getByRole('button', { name: 'Sort by jersey number' }),
     ).toHaveAttribute('data-active', 'true');
@@ -306,7 +308,7 @@ describe('ProjectedLineupModal', () => {
     ).toBeDisabled();
   });
 
-  it('only saves a changed, complete projection and treats the third goalie as optional', async () => {
+  it('only saves a changed, complete projection', async () => {
     renderModal();
     const saveButton = screen.getByRole('button', { name: 'Save Projection' });
 
@@ -318,7 +320,6 @@ describe('ProjectedLineupModal', () => {
     expect(assignedPlayer.getByText('Wing')).toHaveClass('name');
     expect(assignedPlayer.getByText('11')).toBeInTheDocument();
     expect(assignedPlayer.queryByText('Left Wing')).not.toBeInTheDocument();
-    expect(screen.getByTestId('lineup-slot-G3')).toHaveTextContent('Drop third goalie here');
     expect(saveButton).toBeEnabled();
 
     fireEvent.click(saveButton);
@@ -326,9 +327,6 @@ describe('ProjectedLineupModal', () => {
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     expect(save.mock.calls[0][0]).toHaveLength(REQUIRED_SLOT_ASSIGNMENTS.length);
     expect(save.mock.calls[0][0]).toEqual(expect.arrayContaining(REQUIRED_SLOT_ASSIGNMENTS));
-    expect(save.mock.calls[0][0]).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ slot_key: 'G3' })]),
-    );
   });
 
   it('does not allow saving a complete projection until it changes', async () => {
@@ -351,23 +349,12 @@ describe('ProjectedLineupModal', () => {
     expect(save).not.toHaveBeenCalled();
   });
 
-  it('keeps the third goalie slot disabled until starter and backup are filled', () => {
+  it('offers only starter and backup goalie slots', () => {
     renderModal();
-    const thirdSlot = screen.getByTestId('lineup-slot-G3');
 
-    expect(thirdSlot).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByTestId('lineup-slot-G1')).toHaveTextContent('Drop starter here');
     expect(screen.getByTestId('lineup-slot-G2')).toHaveTextContent('Drop backup here');
-    expect(thirdSlot).toHaveTextContent('Drop third goalie here');
-    dropPlayer('goalie-3', 'G3');
-    expect(thirdSlot).toHaveTextContent('Drop third goalie here');
-
-    dropPlayer('goalie-1', 'G1');
-    dropPlayer('goalie-2', 'G2');
-    expect(thirdSlot).toHaveAttribute('aria-disabled', 'false');
-
-    dropPlayer('goalie-3', 'G3');
-    expect(within(thirdSlot).getByLabelText('Terry Third')).toBeInTheDocument();
+    expect(screen.queryByTestId('lineup-slot-G3')).not.toBeInTheDocument();
   });
 
   it('maps legacy numbered slots into the new line and pairing positions', async () => {
