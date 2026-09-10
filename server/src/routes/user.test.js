@@ -274,6 +274,73 @@ describe('GET /api/user/players/route-lookup', () => {
   });
 });
 
+describe('DELETE /api/user/favorites/:teamId', () => {
+  it('requires confirmation when custom schedules would be lost', async () => {
+    sql.mockResolvedValueOnce([{ requires_confirmation: true, schedule_count: 2, cleared_game_ids: [], removed_count: 0 }]);
+    const res = await request(app).delete('/api/user/favorites/team-1').send({ time_zone: 'Asia/Manila' });
+    expect(res.status).toBe(409);
+    expect(res.body).toMatchObject({ code: 'scheduled_games_confirmation_required', schedule_count: 2 });
+    expect(sql).toHaveBeenCalledTimes(1);
+    expect(syncScheduledGameToGoogleCalendar).not.toHaveBeenCalled();
+  });
+
+  it('clears custom schedules and syncs only affected games after confirmation', async () => {
+    sql.mockResolvedValueOnce([{ requires_confirmation: false, schedule_count: 2, cleared_game_ids: ['game-1', 'game-2'], removed_count: 1 }]);
+    const res = await request(app).delete('/api/user/favorites/team-1').send({
+      time_zone: 'Asia/Manila', confirm_schedule_removal: true,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.cleared_schedule_count).toBe(2);
+    expect(syncScheduledGameToGoogleCalendar).toHaveBeenCalledTimes(2);
+    expect(syncScheduledGameToGoogleCalendar).toHaveBeenCalledWith({ userId: 'user-1', gameId: 'game-1' });
+    expect(syncScheduledGameToGoogleCalendar).toHaveBeenCalledWith({ userId: 'user-1', gameId: 'game-2' });
+    const query = sql.mock.calls[0][0].join(' ');
+    // The same guarded statement owns both changes and keeps watched history.
+    expect(query).toContain('UPDATE user_watched_games SET scheduled_for = NULL');
+    expect(query).not.toMatch(/SET\s+watched_|DELETE FROM user_watched_games/);
+    expect(query).toContain('AND NOT EXISTS');
+    expect(query).toContain('other_favorite.team_id <>');
+    expect(query).toContain('other_favorite.team_id = g.home_team_id OR other_favorite.team_id = g.away_team_id');
+    expect(query).toContain('scheduled_for IS DISTINCT FROM original_date');
+    expect(query).toContain('uwg.scheduled_for >=');
+  });
+
+  it('allows removal without a warning when no qualifying schedules remain', async () => {
+    sql.mockResolvedValueOnce([{ requires_confirmation: false, schedule_count: 0, cleared_game_ids: [], removed_count: 1 }]);
+    const res = await request(app).delete('/api/user/favorites/team-1').send({ time_zone: 'America/Los_Angeles' });
+    expect(res.status).toBe(200);
+    expect(res.body.cleared_schedule_count).toBe(0);
+    expect(syncScheduledGameToGoogleCalendar).not.toHaveBeenCalled();
+  });
+
+  it('uses the current date in the user timezone, including across midnight', async () => {
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'clearImmediate', 'setTimeout', 'clearTimeout'] });
+    jest.setSystemTime(new Date('2026-09-11T01:00:00Z'));
+    try {
+      sql.mockResolvedValue([{ requires_confirmation: false, schedule_count: 0, cleared_game_ids: [], removed_count: 1 }]);
+      await request(app).delete('/api/user/favorites/team-1').send({ time_zone: 'America/Los_Angeles' });
+      expect(sql.mock.calls[0].slice(1)).toContain('2026-09-10');
+      await request(app).delete('/api/user/favorites/team-1').send({ time_zone: 'Asia/Manila' });
+      expect(sql.mock.calls[1].slice(1)).toContain('2026-09-11');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('rejects invalid timezones without changing favorites or schedules', async () => {
+    const res = await request(app).delete('/api/user/favorites/team-1').send({ time_zone: 'Invalid/Zone', confirm_schedule_removal: true });
+    expect(res.status).toBe(400);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('does not treat a string as schedule-removal confirmation', async () => {
+    sql.mockResolvedValueOnce([{ requires_confirmation: true, schedule_count: 1, cleared_game_ids: [], removed_count: 0 }]);
+    const res = await request(app).delete('/api/user/favorites/team-1').send({ confirm_schedule_removal: 'true' });
+    expect(res.status).toBe(409);
+    expect(sql.mock.calls[0].slice(1)).toContain(false);
+  });
+});
+
 describe('GET /api/user/players/:id/stats', () => {
   it('returns career stats using the game_player_stats read model', async () => {
     sql.mockResolvedValueOnce([

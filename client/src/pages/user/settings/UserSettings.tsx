@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
+import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import InfoItem from '@jerecocc/tracker-ui/components/InfoItem/InfoItem';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
@@ -25,6 +26,7 @@ interface TeamCardProps {
   fullWidth?: boolean;
   showFavoriteIndicator?: boolean;
   onToggle: () => void;
+  disabled?: boolean;
 }
 
 const getUserInitials = (name: string, email?: string) => {
@@ -51,6 +53,7 @@ const TeamCard = ({
   fullWidth,
   showFavoriteIndicator = false,
   onToggle,
+  disabled,
 }: TeamCardProps) => (
   <ListItem
     fullWidth={fullWidth}
@@ -70,6 +73,7 @@ const TeamCard = ({
           intent: favorited ? 'danger' : 'warning',
           tooltip: favorited ? 'Remove from favorites' : 'Add to favorites',
           onClick: onToggle,
+          disabled,
         },
       ] satisfies ListItemAction[]
     }
@@ -81,7 +85,8 @@ const UserSettings = () => {
   const { isDarkMode, toggleTheme } = useTheme();
   const { leagues, loading: leaguesLoading } = useLeagues();
   const { teams, loading: teamsLoading } = useTeams();
-  const { isFavorite, toggle } = useFavoriteTeams();
+  const { isFavorite, toggle, busy, pendingRemoval, confirmRemoval, cancelRemoval } =
+    useFavoriteTeams();
   const [leagueSearch, setLeagueSearch] = useState('');
   const displayName = user?.display_name ?? user?.displayName ?? 'Player';
   const { firstName, lastName } = getUserNameParts(displayName);
@@ -229,6 +234,7 @@ const UserSettings = () => {
                             favorited={isFavorite(team.id)}
                             showFavoriteIndicator
                             onToggle={() => toggle(team.id)}
+                            disabled={busy || !!pendingRemoval}
                           />
                         ))}
                       </ResponsiveList>
@@ -253,6 +259,7 @@ const UserSettings = () => {
                     favorited
                     fullWidth
                     onToggle={() => toggle(team.id)}
+                    disabled={busy || !!pendingRemoval}
                   />
                 ))}
               </ResponsiveList>
@@ -260,6 +267,20 @@ const UserSettings = () => {
           </Section>
         </aside>
       </div>
+      <ConfirmModal
+        open={!!pendingRemoval}
+        title="Remove favorite team?"
+        body={
+          pendingRemoval
+            ? `Removing ${teams.find((team) => team.id === pendingRemoval.teamId)?.name ?? 'this team'} from favorites will delete ${pendingRemoval.scheduleCount} custom watch ${pendingRemoval.scheduleCount === 1 ? 'schedule' : 'schedules'} dated today or later in your local timezone. Games involving another favorite team will keep their schedules. Your watch history will be preserved.`
+            : ''
+        }
+        confirmLabel="Remove favorite and schedules"
+        intent="danger"
+        busy={busy}
+        onCancel={cancelRemoval}
+        onConfirm={() => void confirmRemoval()}
+      />
     </div>
   );
 };

@@ -63,12 +63,91 @@ router.post('/favorites/:teamId', async (req, res) => {
 router.delete('/favorites/:teamId', async (req, res) => {
   const userId = req.user.id;
   const { teamId } = req.params;
+  const timeZone = req.body?.time_zone ?? 'America/New_York';
+  const confirmed = req.body?.confirm_schedule_removal === true;
+  let today;
   try {
-    await sql`
-      DELETE FROM user_favorite_teams
-      WHERE user_id = ${userId} AND team_id = ${teamId}
+    if (typeof timeZone !== 'string' || !timeZone.trim()) throw new Error('Invalid timezone');
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(new Date());
+    today = ['year', 'month', 'day'].map((type) => parts.find((part) => part.type === type).value).join('-');
+  } catch {
+    return res.status(400).json({ error: 'time_zone must be a valid timezone' });
+  }
+  try {
+    // Evaluate the warning and both mutations in one statement. Without
+    // confirmation, an affected schedule prevents any changes to favorites.
+    const [result] = await sql`
+      WITH candidates AS (
+        SELECT uwg.game_id, uwg.scheduled_for,
+          CASE
+            WHEN NULLIF(BTRIM(g.scheduled_time), '') IS NULL THEN
+              CASE
+                WHEN (g.scheduled_at AT TIME ZONE 'UTC')::time = TIME '00:00:00'
+                  THEN (g.scheduled_at AT TIME ZONE 'UTC')::date
+                ELSE (g.scheduled_at AT TIME ZONE ${timeZone})::date
+              END
+            ELSE (
+              (
+                (
+                  CASE
+                    WHEN (g.scheduled_at AT TIME ZONE 'UTC')::time = TIME '00:00:00'
+                      AND g.scheduled_time <> '00:00'
+                      THEN (g.scheduled_at AT TIME ZONE 'UTC')::date
+                    ELSE (g.scheduled_at AT TIME ZONE 'America/New_York')::date
+                  END + g.scheduled_time::time
+                ) AT TIME ZONE 'America/New_York'
+              ) AT TIME ZONE ${timeZone}
+            )::date
+          END AS original_date
+        FROM user_watched_games uwg
+        JOIN games g ON g.id = uwg.game_id
+        WHERE uwg.user_id = ${userId}
+          AND uwg.scheduled_for >= ${today}::date
+          AND (g.home_team_id = ${teamId} OR g.away_team_id = ${teamId})
+          AND EXISTS (
+            SELECT 1 FROM user_favorite_teams current_favorite
+            WHERE current_favorite.user_id = ${userId}
+              AND current_favorite.team_id = ${teamId}
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM user_favorite_teams other_favorite
+            WHERE other_favorite.user_id = ${userId}
+              AND other_favorite.team_id <> ${teamId}
+              AND (other_favorite.team_id = g.home_team_id OR other_favorite.team_id = g.away_team_id)
+          )
+      ), affected AS (
+        SELECT game_id FROM candidates
+        WHERE scheduled_for IS DISTINCT FROM original_date
+      ), permission AS (
+        SELECT ${confirmed}::boolean OR NOT EXISTS (SELECT 1 FROM affected) AS allowed
+      ), cleared AS (
+        UPDATE user_watched_games SET scheduled_for = NULL
+        WHERE user_id = ${userId}
+          AND game_id IN (SELECT game_id FROM affected)
+          AND (SELECT allowed FROM permission)
+        RETURNING game_id
+      ), removed AS (
+        DELETE FROM user_favorite_teams
+        WHERE user_id = ${userId} AND team_id = ${teamId}
+          AND (SELECT allowed FROM permission)
+        RETURNING team_id
+      )
+      SELECT NOT (SELECT allowed FROM permission) AS requires_confirmation,
+        (SELECT COUNT(*)::int FROM affected) AS schedule_count,
+        COALESCE((SELECT json_agg(game_id) FROM cleared), '[]'::json) AS cleared_game_ids,
+        (SELECT COUNT(*)::int FROM removed) AS removed_count
     `;
-    return res.json({ message: 'Removed from favorites' });
+    if (result.requires_confirmation) {
+      return res.status(409).json({
+        code: 'scheduled_games_confirmation_required',
+        error: 'Removing this favorite will delete custom watch schedules for today or later.',
+        schedule_count: result.schedule_count,
+      });
+    }
+    await Promise.all(result.cleared_game_ids.map((gameId) => syncCalendarAfterUserGameChange(userId, gameId)));
+    return res.json({ message: 'Removed from favorites', cleared_schedule_count: result.cleared_game_ids.length });
   } catch (err) {
     console.error('user favorites remove error:', err);
     return res.status(500).json({ error: 'Internal server error' });
