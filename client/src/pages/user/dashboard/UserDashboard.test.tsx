@@ -359,6 +359,34 @@ describe('UserDashboard', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard/games-watched/bos-bruins');
   });
 
+  it('opens the game picker from the current day card', () => {
+    render(<UserDashboard />);
+    const button = screen.getByRole('button', { name: 'Add games' });
+    expect(button).toHaveAttribute('data-icon', 'add');
+    fireEvent.click(button);
+    expect(screen.getByRole('heading', { name: 'Add games' })).toBeInTheDocument();
+    expect(screen.getByText('Favorite teams')).toBeInTheDocument();
+    expect(screen.getByText('Other games')).toBeInTheDocument();
+  });
+
+  it('fetches surrounding days and retains explicitly scheduled nonfavorite games after reload', async () => {
+    render(<UserDashboard />);
+    const options = mockUseQuery.mock.calls.find(([options]) => options.queryKey[0] === 'user-dashboard-games')![0];
+    const today = options.queryKey[1];
+    const otherTeam = { ...makeGame().home_team, id: 'not-a-favorite' };
+    const added = makeGame({ id: 'added', home_team: otherTeam, away_team: otherTeam, scheduled_for: today });
+    const unselected = { ...added, id: 'unselected', scheduled_for: null };
+    const adjacent = makeGame({ id: 'adjacent', scheduled_at: '2026-06-24' });
+    const skipped = { ...added, id: 'skipped', skipped_by_user: true };
+    const localFavorite = makeGame({ scheduled_at: today, scheduled_time: null });
+    mockAxios.get.mockResolvedValueOnce({ data: [added, unselected, adjacent, skipped, localFavorite] });
+    const data = await options.queryFn();
+    expect(mockAxios.get).toHaveBeenCalledWith(expect.stringContaining('/user/games'), expect.objectContaining({
+      params: { week: today, all_teams: true },
+    }));
+    expect(options.select(data).map((game: any) => game.id)).toEqual(['added', 'game-1']);
+  });
+
   it('shows and clears the admin date override through the date picker', () => {
     mockAuthUser = {
       display_name: 'Taylor',

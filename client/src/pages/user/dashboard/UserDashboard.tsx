@@ -20,19 +20,17 @@ import { type GameRecord } from '@/hooks/useGames';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import {
   DATE_ONLY_RE,
+  getOriginalGameDateKey,
   getScheduledWatchDateKey,
   isInvalidWatchScheduleDate,
   type GameTimezone,
 } from '@/lib/gameSchedule';
-import {
-  canMarkGameWatched,
-  getOvertimeSuffix,
-  getScoreCardGame,
-} from '@/lib/gamePresentation';
+import { canMarkGameWatched, getOvertimeSuffix, getScoreCardGame } from '@/lib/gamePresentation';
 import { buildUserWatchedTeamPath } from '@/lib/routeSlugs';
 import { getWatchedTeamSummaries, type TeamWatchSummary } from '@/lib/watchedTeams';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './UserDashboard.module.scss';
+import AddDayGamesModal from './AddDayGamesModal';
 
 const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/ScoreImageModal'));
 
@@ -133,6 +131,7 @@ const UserDashboard = () => {
   const { favorites } = useFavoriteTeams();
   const { teams, loading: teamsLoading } = useTeams();
   const [actionGameId, setActionGameId] = useState<string | null>(null);
+  const [addGamesOpen, setAddGamesOpen] = useState(false);
   const [confirmSkipGame, setConfirmSkipGame] = useState<GameRecord | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
   const [scheduleDate, setScheduleDate] = useState('');
@@ -159,10 +158,23 @@ const UserDashboard = () => {
     queryFn: async () => {
       const { data } = await axios.get<GameRecord[]>(`${API}/user/games`, {
         headers: authHeaders(),
-        params: { date: todayKey },
+        // The week endpoint includes adjacent Eastern dates for local-day filtering.
+        params: { week: todayKey, all_teams: true },
       });
       return data;
     },
+    select: (data) =>
+      data.filter((game) => {
+        const watchDate = getScheduledWatchDateKey(game.scheduled_for);
+        const effectiveDate = watchDate ?? getOriginalGameDateKey(game, tzPref);
+        return (
+          effectiveDate === todayKey &&
+          !game.skipped_by_user &&
+          (watchDate === todayKey ||
+            favorites.includes(game.home_team.id) ||
+            favorites.includes(game.away_team.id))
+        );
+      }),
   });
 
   const { data: watchedGames = [], isLoading: watchedGamesLoading } = useQuery<GameRecord[]>({
@@ -176,8 +188,7 @@ const UserDashboard = () => {
     },
   });
 
-  // The API already returns only games for `todayKey` (effective date filter),
-  // so just order them for display.
+  // The query filters the effective watch date in the user's local timezone.
   const todayGames = useMemo(() => [...games].sort(sortGamesByTime), [games]);
   const watchedTeamCounts = useMemo(
     () =>
@@ -396,23 +407,35 @@ const UserDashboard = () => {
           <Section
             title={fmtDayHeading(todayKey)}
             action={
-              isAdmin ? (
-                <div className={styles.testDateControl}>
-                  <span
-                    id="dashboard-test-date-label"
-                    className={styles.srOnly}
-                  >
-                    Override the dashboard date for testing
-                  </span>
-                  <DatePicker
-                    value={dateOverride}
-                    onChange={updateDateOverride}
-                    granularity="day"
-                    placeholder="MM/DD/YYYY"
-                    ariaLabelledBy="dashboard-test-date-label"
-                  />
-                </div>
-              ) : undefined
+              <div className={styles.dayActions}>
+                {isAdmin && (
+                  <div className={styles.testDateControl}>
+                    <span
+                      id="dashboard-test-date-label"
+                      className={styles.srOnly}
+                    >
+                      Override the dashboard date for testing
+                    </span>
+                    <DatePicker
+                      value={dateOverride}
+                      onChange={updateDateOverride}
+                      granularity="day"
+                      placeholder="MM/DD/YYYY"
+                      ariaLabelledBy="dashboard-test-date-label"
+                    />
+                  </div>
+                )}
+                <Button
+                  variant="outlined"
+                  intent="neutral"
+                  size="medium"
+                  icon="add"
+                  tooltip="Add games"
+                  aria-label="Add games"
+                  disabled={gamesLoading}
+                  onClick={() => setAddGamesOpen(true)}
+                />
+              </div>
             }
           >
             {gamesLoading ? (
@@ -506,6 +529,24 @@ const UserDashboard = () => {
           </Section>
         </aside>
       </div>
+
+      {addGamesOpen && (
+        <AddDayGamesModal
+          key={todayKey}
+          dateKey={todayKey}
+          dateLabel={fmtDayHeading(todayKey)}
+          favoriteTeamIds={favorites}
+          scheduledGames={todayGames}
+          onClose={() => setAddGamesOpen(false)}
+          onAdded={(added) => {
+            setDashboardGames((existing) => [
+              ...existing.filter((game) => !added.some((next) => next.id === game.id)),
+              ...added,
+            ]);
+            void queryClient.invalidateQueries({ queryKey: ['user-dashboard-available-games'] });
+          }}
+        />
+      )}
 
       <Modal
         open={!!scheduleTarget}

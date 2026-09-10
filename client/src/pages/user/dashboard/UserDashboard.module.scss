@@ -370,6 +370,19 @@
   }
 }
 
+.dayActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-sm;
+  margin-left: auto;
+  min-width: 0;
+
+  > button {
+    flex-shrink: 0;
+  }
+}
+
 @container (max-width: 1040px) {
   .heroContent {
     grid-template-columns: minmax(0, 1fr);

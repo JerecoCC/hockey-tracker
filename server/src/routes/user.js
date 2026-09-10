@@ -252,7 +252,9 @@ router.post('/watched-games/:gameId/skip', async (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /api/user/games  – read-only game list for authenticated users
 // Query params: season_id, league_id, team_id/team_ids, game_type, status, include_skipped,
-// watched, all_teams, date, week (YYYY-MM-DD week start), month (YYYY-MM)
+// watched, all_teams, date, original_date, week (YYYY-MM-DD week start), month (YYYY-MM)
+// original_date fetches surrounding original game dates for client local-day filtering,
+// regardless of the user's personal watch schedule.
 // `date` (YYYY-MM-DD) filters to games whose effective user date matches — the
 // user's personal scheduled_for if set, otherwise the game's Eastern-time date.
 // Results default to the user's favourite teams; selected team filters override that scope.
@@ -280,6 +282,10 @@ router.get('/games', async (req, res) => {
   const allTeams = req.query.all_teams === 'true' || req.query.all_teams === '1';
   const week = req.query.week ?? req.query.week_start ?? null;
   const month = req.query.month ?? null;
+  const originalDate = req.query.original_date ?? null;
+  if (originalDate && !/^\d{4}-\d{2}-\d{2}$/.test(String(originalDate))) {
+    return res.status(400).json({ error: 'original_date must be a YYYY-MM-DD date' });
+  }
   if (week && !/^\d{4}-\d{2}-\d{2}$/.test(String(week))) {
     return res.status(400).json({ error: 'week must be a YYYY-MM-DD date' });
   }
@@ -556,6 +562,13 @@ router.get('/games', async (req, res) => {
         AND (${league_id ?? null}::uuid IS NULL OR l.id        = ${league_id ?? null}::uuid)
         AND (${game_type ?? null}::text IS NULL OR g.game_type = ${game_type ?? null})
         AND (${status ?? null}::text IS NULL OR g.status    = ${status ?? null})
+        AND (
+          ${originalDate}::date IS NULL
+          OR (
+            g.scheduled_at >= ((${originalDate}::date - INTERVAL '1 day') AT TIME ZONE 'UTC')
+            AND g.scheduled_at < ((${originalDate}::date + INTERVAL '2 days') AT TIME ZONE 'UTC')
+          )
+        )
         AND (
           ${dateFilter}::date IS NULL
           OR user_game_dates.effective_user_date = ${dateFilter}::date

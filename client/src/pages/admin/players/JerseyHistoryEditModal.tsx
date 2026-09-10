@@ -83,6 +83,7 @@ const JerseyHistoryEditModal = ({ open, entry, onClose, updateJerseyHistoryEntry
             placeholder="e.g. 97"
             min={0}
             max={99}
+            autoFocus
             required
             rules={{
               required: true,

@@ -490,6 +490,22 @@ describe('GET /api/user/games', () => {
     expect(queryText).toContain("INTERVAL '8 days'");
   });
 
+  it('fetches surrounding original game dates independently of personal watch dates', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+    const res = await request(app).get('/api/user/games?original_date=2026-06-22&all_teams=true&include_skipped=true');
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(res.status).toBe(200);
+    expect(sql.mock.calls[0].slice(1)).toContain('2026-06-22');
+    expect(queryText).toContain('g.scheduled_at >=');
+    expect(queryText).toContain("INTERVAL '2 days'");
+  });
+
+  it('rejects invalid original-date filters', async () => {
+    const res = await request(app).get('/api/user/games?original_date=June-22');
+    expect(res.status).toBe(400);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
   it('filters games by month using the effective user date', async () => {
     sql.mockResolvedValueOnce([GAME]);
 

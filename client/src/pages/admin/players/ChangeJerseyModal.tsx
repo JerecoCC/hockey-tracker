@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useMemo } from 'react';
+import { useCallback, useLayoutEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   ControlledDatePickerField,
@@ -19,32 +19,30 @@ interface Props {
   changeJerseyNumber: (jerseyNumber: number, effectiveDate?: string | null) => Promise<boolean>;
 }
 
-const ChangeJerseyModal = ({ open, currentJerseyNumber, onClose, changeJerseyNumber }: Props) => {
-  const formValues = useMemo<FormValues>(
-    () => ({
-      jersey_number: currentJerseyNumber != null ? String(currentJerseyNumber) : '',
-      effective_date: '',
-    }),
-    [currentJerseyNumber],
-  );
+const EMPTY_FORM_VALUES: FormValues = {
+  jersey_number: '',
+  effective_date: '',
+};
+
+const ChangeJerseyModal = ({ open, onClose, changeJerseyNumber }: Props) => {
   const {
     control,
     handleSubmit,
     reset,
     formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
-    defaultValues: formValues,
+    defaultValues: EMPTY_FORM_VALUES,
     mode: 'onChange',
   });
 
   useLayoutEffect(() => {
-    reset(formValues);
-  }, [formValues, reset]);
+    if (open) reset(EMPTY_FORM_VALUES);
+  }, [open, reset]);
 
   const handleClose = useCallback(() => {
-    reset(formValues);
+    reset(EMPTY_FORM_VALUES);
     onClose();
-  }, [formValues, onClose, reset]);
+  }, [onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     if (!data.effective_date) return;
@@ -76,6 +74,7 @@ const ChangeJerseyModal = ({ open, currentJerseyNumber, onClose, changeJerseyNum
             placeholder="e.g. 97"
             min={0}
             max={99}
+            autoFocus
             required
             rules={{
               required: true,
