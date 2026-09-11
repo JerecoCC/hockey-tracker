@@ -44,6 +44,8 @@ interface Props {
   live?: boolean;
   dragging?: boolean;
   draggable?: boolean;
+  /** Keeps trailing children visible in a vertical rail on mobile. */
+  mobileActionsAside?: boolean;
   style?: CSSProperties;
   className?: string;
   onDragStart?: DragEventHandler<HTMLDivElement>;
@@ -85,6 +87,7 @@ const CalendarGameListItem = ({
   live = false,
   dragging = false,
   draggable = false,
+  mobileActionsAside = false,
   style,
   className,
   onDragStart,
@@ -106,58 +109,60 @@ const CalendarGameListItem = ({
 
   const content = (
     <>
-      {draggable && (
-        <span
-          className={styles.dragHandle}
-          aria-hidden="true"
-        >
-          <FontAwesomeIcon icon={faGripLinesVertical} />
-        </span>
-      )}
-      {topLabel != null && <div className={styles.topLabel}>{topLabel}</div>}
-      <div className={styles.matchup}>
-        <span className={logoClassName(awayTeam.dimmed, 'away')}>
-          <TeamLogo
-            logo={awayTeam.logo}
-            logoDark={awayTeam.logoDark}
-            logoLight={awayTeam.logoLight}
-            code={awayTeam.code}
-            primaryColor={awayTeam.primaryColor}
-            textColor={awayTeam.textColor}
-            size={26}
-            shape="circle"
-          />
-        </span>
-        {scoreVisible && (
-          <span className={scoreClassName(awayTeam.scoreStatus, 'away')}>{awayTeam.score}</span>
+      <div className={styles.content}>
+        {draggable && (
+          <span
+            className={styles.dragHandle}
+            aria-hidden="true"
+          >
+            <FontAwesomeIcon icon={faGripLinesVertical} />
+          </span>
         )}
-        <span className={styles.center}>
-          {centerLabel != null && <span className={styles.centerLabel}>{centerLabel}</span>}
-          <span className={styles.atSymbol}>@</span>
-        </span>
-        {scoreVisible && (
-          <span className={scoreClassName(homeTeam.scoreStatus, 'home')}>{homeTeam.score}</span>
-        )}
-        <span className={logoClassName(homeTeam.dimmed, 'home')}>
-          <TeamLogo
-            logo={homeTeam.logo}
-            logoDark={homeTeam.logoDark}
-            logoLight={homeTeam.logoLight}
-            code={homeTeam.code}
-            primaryColor={homeTeam.primaryColor}
-            textColor={homeTeam.textColor}
-            size={26}
-            shape="circle"
-          />
-        </span>
-      </div>
-      {(awayTeam.meta != null || homeTeam.meta != null) && (
-        <div className={styles.metaRow}>
-          <span className={styles.awayMeta}>{awayTeam.meta}</span>
-          <span className={styles.homeMeta}>{homeTeam.meta}</span>
+        {topLabel != null && <div className={styles.topLabel}>{topLabel}</div>}
+        <div className={styles.matchup}>
+          <span className={logoClassName(awayTeam.dimmed, 'away')}>
+            <TeamLogo
+              logo={awayTeam.logo}
+              logoDark={awayTeam.logoDark}
+              logoLight={awayTeam.logoLight}
+              code={awayTeam.code}
+              primaryColor={awayTeam.primaryColor}
+              textColor={awayTeam.textColor}
+              size={26}
+              shape="circle"
+            />
+          </span>
+          {scoreVisible && (
+            <span className={scoreClassName(awayTeam.scoreStatus, 'away')}>{awayTeam.score}</span>
+          )}
+          <span className={styles.center}>
+            {centerLabel != null && <span className={styles.centerLabel}>{centerLabel}</span>}
+            <span className={styles.atSymbol}>@</span>
+          </span>
+          {scoreVisible && (
+            <span className={scoreClassName(homeTeam.scoreStatus, 'home')}>{homeTeam.score}</span>
+          )}
+          <span className={logoClassName(homeTeam.dimmed, 'home')}>
+            <TeamLogo
+              logo={homeTeam.logo}
+              logoDark={homeTeam.logoDark}
+              logoLight={homeTeam.logoLight}
+              code={homeTeam.code}
+              primaryColor={homeTeam.primaryColor}
+              textColor={homeTeam.textColor}
+              size={26}
+              shape="circle"
+            />
+          </span>
         </div>
-      )}
-      {bottomLabel != null && <div className={styles.bottomLabel}>{bottomLabel}</div>}
+        {(awayTeam.meta != null || homeTeam.meta != null) && (
+          <div className={styles.metaRow}>
+            <span className={styles.awayMeta}>{awayTeam.meta}</span>
+            <span className={styles.homeMeta}>{homeTeam.meta}</span>
+          </div>
+        )}
+        {bottomLabel != null && <div className={styles.bottomLabel}>{bottomLabel}</div>}
+      </div>
       {children}
     </>
   );
@@ -172,6 +177,7 @@ const CalendarGameListItem = ({
           to={href}
           className={itemClassName}
           style={style}
+          data-mobile-actions-layout={mobileActionsAside ? 'aside' : undefined}
         >
           {content}
         </Link>
@@ -183,6 +189,7 @@ const CalendarGameListItem = ({
     <div
       className={itemClassName}
       style={style}
+      data-mobile-actions-layout={mobileActionsAside ? 'aside' : undefined}
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}

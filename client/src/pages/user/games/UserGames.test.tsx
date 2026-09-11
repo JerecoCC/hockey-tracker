@@ -2495,6 +2495,7 @@ describe('UserGames schedule views', () => {
       .getAllByText('OPP')[0]
       .closest(`.${calendarItemStyles.item}`);
     expect(unwatchedCalendarGame).toHaveClass(styles.calendarGameUnwatched);
+    expect(unwatchedCalendarGame).toHaveAttribute('data-mobile-actions-layout', 'aside');
     expect(watchedCalendarGame).not.toHaveClass(styles.calendarGameUnwatched);
     expect(screen.getAllByRole('button', { name: 'View game details' })).toHaveLength(1);
 

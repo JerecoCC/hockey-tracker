@@ -1,9 +1,13 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 .wrap {
   display: flex;
   width: 100%;
+}
+
+.content {
+  display: contents;
 }
 
 .item {
@@ -345,5 +349,18 @@
   .topLabel,
   .bottomLabel {
     font-size: $font-xs;
+  }
+
+  .item[data-mobile-actions-layout='aside'] {
+    flex-direction: row;
+    align-items: stretch;
+    gap: $space-md;
+
+    .content {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-width: 0;
+    }
   }
 }

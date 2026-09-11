@@ -632,6 +632,7 @@ const CalendarGameCard = ({
       style={getLeagueStyle(game)}
       showScore={showScore}
       scorePresentation="plain"
+      mobileActionsAside
       live={game.status === 'in_progress'}
       dragging={dragging}
       draggable={draggable}
