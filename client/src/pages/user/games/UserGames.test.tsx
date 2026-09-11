@@ -2482,7 +2482,12 @@ describe('UserGames schedule views', () => {
       screen.getAllByText(formatNumericDate(localDateKeyForGame(games[0]) ?? scheduledWatchDate))
         .length,
     ).toBeGreaterThan(0);
-    expect(within(screen.getAllByLabelText('1 game')[0]).getByText('game')).toBeInTheDocument();
+    const firstGameCalendarDay = screen.getByLabelText(
+      `Calendar day ${localDateKeyForGame(games[0])}`,
+    );
+    const calendarGameCount = within(firstGameCalendarDay).getByLabelText('1 game');
+    expect(calendarGameCount).toHaveClass('metricTag', 'calendarDayGameCount');
+    expect(within(calendarGameCount).getByText('game')).toBeInTheDocument();
     const unwatchedCalendarGame = screen
       .getAllByText('AWY')[0]
       .closest(`.${calendarItemStyles.item}`);

@@ -20,6 +20,7 @@ import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
 import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
+import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
 import MoreActionsMenu from '@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu';
 import MultiSelect, {
@@ -28,7 +29,6 @@ import MultiSelect, {
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import {
   ScheduleCalendarCard,
-  ScheduleCalendarDayCount,
   ScheduleCalendarGameList,
   ScheduleFilters,
   ScheduleFilterSlot,
@@ -1710,9 +1710,12 @@ const UserGames = () => {
               getDayHeaderRight={({ dateKey }) => {
                 const gameCount = gamesByCalendarDate.get(dateKey)?.length ?? 0;
                 return gameCount > 0 ? (
-                  <ScheduleCalendarDayCount
-                    count={gameCount}
-                    showLabel
+                  <MetricTag
+                    className={styles.calendarDayGameCount}
+                    value={gameCount}
+                    label={gameCount === 1 ? 'game' : 'games'}
+                    position="postfix"
+                    aria-label={`${gameCount} ${gameCount === 1 ? 'game' : 'games'}`}
                   />
                 ) : undefined;
               }}

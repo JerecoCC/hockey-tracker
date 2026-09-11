@@ -108,6 +108,29 @@
 
 // ── Empty / loading ────────────────────────────────────────────────────
 // ── Games list ─────────────────────────────────────────────────────────
+.calendarDayGameCount.calendarDayGameCount {
+  gap: 2px;
+  height: 1.35rem;
+  min-height: 1.35rem;
+  padding: 1px;
+  line-height: 1;
+
+  > span {
+    box-sizing: border-box;
+    min-height: calc(1.35rem - 4px);
+    padding: 0 0.2rem;
+    line-height: 1;
+  }
+
+  > span:first-child {
+    min-width: calc(1.35rem - 4px);
+  }
+
+  > span:last-child {
+    text-transform: none;
+  }
+}
+
 .calendarGameUnwatched.calendarGameUnwatched,
 .calendarGameSkipped.calendarGameSkipped {
   border-style: dashed;
