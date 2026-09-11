@@ -1405,7 +1405,7 @@ describe('UserGames schedule views', () => {
     }
   });
 
-  it('orders calendar day games by watched postponed, watched, postponed, unwatched, then skipped', async () => {
+  it('orders week and calendar day games by watched postponed, watched, postponed, unwatched, then skipped', async () => {
     const user = userEvent.setup();
     const watchedSameDayGame = {
       ...games[1],
@@ -1479,13 +1479,31 @@ describe('UserGames schedule views', () => {
 
     render(<UserGames />);
     await user.click(screen.getByRole('switch', { name: 'Show skipped games' }));
+
+    const expectedCodes = ['SDW', 'SDP', 'SDS', 'SDA', 'SDK'];
+    const getGameCardByTeamCode = (code: string) =>
+      screen
+        .getAllByText(code)
+        .map((element) => element.closest('[data-game-card-variant]'))
+        .find((element): element is HTMLElement => element instanceof HTMLElement)!;
+    const weekItems = expectedCodes.map(getGameCardByTeamCode);
+    for (let index = 0; index < weekItems.length - 1; index += 1) {
+      expect(weekItems[index].compareDocumentPosition(weekItems[index + 1])).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    }
+
     await user.click(screen.getByRole('button', { name: 'Month view' }));
 
-    const orderedItems = ['SDW', 'SDP', 'SDS', 'SDA', 'SDK'].map(
-      (code) => screen.getByText(code).closest(`.${calendarItemStyles.item}`) as HTMLElement,
+    const calendarItems = expectedCodes.map(
+      (code) =>
+        screen
+          .getAllByText(code)
+          .map((element) => element.closest(`.${calendarItemStyles.item}`))
+          .find((element): element is HTMLElement => element instanceof HTMLElement)!,
     );
-    for (let index = 0; index < orderedItems.length - 1; index += 1) {
-      expect(orderedItems[index].compareDocumentPosition(orderedItems[index + 1])).toBe(
+    for (let index = 0; index < calendarItems.length - 1; index += 1) {
+      expect(calendarItems[index].compareDocumentPosition(calendarItems[index + 1])).toBe(
         Node.DOCUMENT_POSITION_FOLLOWING,
       );
     }

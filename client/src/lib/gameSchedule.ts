@@ -5,10 +5,15 @@ export interface ScheduledGame {
   scheduled_time: string | null;
 }
 
+export interface UserScheduledGame extends ScheduledGame {
+  scheduled_for?: string | null;
+  watched_by_user?: boolean;
+  skipped_by_user?: boolean;
+}
+
 export const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
 export const ISO_DATE_PREFIX_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
-export const ISO_MIDNIGHT_RE =
-  /[T ]00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}(?::?[0-9]{2})?)?$/;
+export const ISO_MIDNIGHT_RE = /[T ]00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}(?::?[0-9]{2})?)?$/;
 
 const EASTERN_TIME_ZONE = 'America/New_York';
 
@@ -86,16 +91,13 @@ export const getScheduledInstant = (
   }
 
   const easternDateKey =
-    getEasternDateKey(scheduledAt, scheduledTime) ??
-    toDateKeyInZone(new Date(), EASTERN_TIME_ZONE);
+    getEasternDateKey(scheduledAt, scheduledTime) ?? toDateKeyInZone(new Date(), EASTERN_TIME_ZONE);
   if (!easternDateKey) return null;
 
   return new Date(`${easternDateKey}T${scheduledTime}:00${getEasternOffset(easternDateKey)}`);
 };
 
-export const getScheduledWatchDateKey = (
-  value: string | null | undefined,
-): string | null => {
+export const getScheduledWatchDateKey = (value: string | null | undefined): string | null => {
   if (!value) return null;
   return getRawDateKey(value) ?? toLocalDateKey(value);
 };
@@ -136,6 +138,24 @@ export const isInvalidWatchScheduleDate = (
   if (!watchDateKey) return false;
   const gameDateKey = getOriginalGameDateKey(game, timezone);
   return !!gameDateKey && watchDateKey <= gameDateKey;
+};
+
+const getUserDayGameSortRank = (game: UserScheduledGame) => {
+  const hasScheduledWatchDate = !!getScheduledWatchDateKey(game.scheduled_for);
+  if (game.watched_by_user && hasScheduledWatchDate) return 0;
+  if (game.watched_by_user) return 1;
+  if (game.skipped_by_user) return 4;
+  if (hasScheduledWatchDate) return 2;
+  return 3;
+};
+
+export const sortUserDayGames = (a: UserScheduledGame, b: UserScheduledGame) => {
+  const rankDiff = getUserDayGameSortRank(a) - getUserDayGameSortRank(b);
+  if (rankDiff !== 0) return rankDiff;
+  if (!a.scheduled_time && !b.scheduled_time) return 0;
+  if (!a.scheduled_time) return 1;
+  if (!b.scheduled_time) return -1;
+  return a.scheduled_time.localeCompare(b.scheduled_time);
 };
 
 export const formatGameTime = (

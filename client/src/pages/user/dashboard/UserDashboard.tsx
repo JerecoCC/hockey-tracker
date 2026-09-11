@@ -24,6 +24,7 @@ import {
   getOriginalGameDateKey,
   getScheduledWatchDateKey,
   isInvalidWatchScheduleDate,
+  sortUserDayGames,
   type GameTimezone,
 } from '@/lib/gameSchedule';
 import { canMarkGameWatched, getOvertimeSuffix, getScoreCardGame } from '@/lib/gamePresentation';
@@ -51,13 +52,6 @@ const fmtDayHeading = (key: string) => {
     day: 'numeric',
     year: 'numeric',
   });
-};
-
-const sortGamesByTime = (a: GameRecord, b: GameRecord) => {
-  if (!a.scheduled_time && !b.scheduled_time) return 0;
-  if (!a.scheduled_time) return 1;
-  if (!b.scheduled_time) return -1;
-  return a.scheduled_time.localeCompare(b.scheduled_time);
 };
 
 const sortWatchedTeamSummaries = (a: TeamWatchSummary, b: TeamWatchSummary) => {
@@ -190,7 +184,7 @@ const UserDashboard = () => {
   });
 
   // The query filters the effective watch date in the user's local timezone.
-  const todayGames = useMemo(() => [...games].sort(sortGamesByTime), [games]);
+  const todayGames = useMemo(() => [...games].sort(sortUserDayGames), [games]);
   const watchedTeamCounts = useMemo(
     () =>
       new Map(

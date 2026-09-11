@@ -52,6 +52,7 @@ import {
   getOriginalGameDateKey,
   getScheduledWatchDateKey,
   isInvalidWatchScheduleDate,
+  sortUserDayGames,
   type GameTimezone,
 } from '@/lib/gameSchedule';
 import {
@@ -406,28 +407,6 @@ const getSeriesWinsForTeam = (game: GameRecord, teamId: string) => {
     return game.series_away_wins_at_game ?? null;
   }
   return null;
-};
-
-const sortGamesByTime = (a: GameRecord, b: GameRecord) => {
-  if (!a.scheduled_time && !b.scheduled_time) return 0;
-  if (!a.scheduled_time) return 1;
-  if (!b.scheduled_time) return -1;
-  return a.scheduled_time.localeCompare(b.scheduled_time);
-};
-
-const getCalendarDayGameSortRank = (game: GameRecord) => {
-  const hasScheduledWatchDate = !!getScheduledWatchDateKey(game.scheduled_for);
-  if (game.watched_by_user && hasScheduledWatchDate) return 0;
-  if (game.watched_by_user) return 1;
-  if (game.skipped_by_user) return 4;
-  if (hasScheduledWatchDate) return 2;
-  return 3;
-};
-
-const sortCalendarDayGames = (a: GameRecord, b: GameRecord) => {
-  const rankDiff = getCalendarDayGameSortRank(a) - getCalendarDayGameSortRank(b);
-  if (rankDiff !== 0) return rankDiff;
-  return sortGamesByTime(a, b);
 };
 
 const getLeagueStyle = (game: GameRecord) =>
@@ -925,7 +904,7 @@ const UserGames = () => {
     // Always include every day in the window, even days with no games.
     return Array.from({ length: 7 }, (_, i) => {
       const key = dateToISO(addDays(weekStart, i));
-      const dayGames = (map.get(key) ?? []).slice().sort(sortGamesByTime);
+      const dayGames = (map.get(key) ?? []).slice().sort(sortUserDayGames);
       return [key, dayGames] as [string, GameRecord[]];
     });
   }, [filteredGames, weekStart, weekEnd, tzPref]);
@@ -939,7 +918,7 @@ const UserGames = () => {
       map.get(key)!.push(game);
     });
     for (const [key, dayGames] of map.entries()) {
-      map.set(key, dayGames.slice().sort(sortCalendarDayGames));
+      map.set(key, dayGames.slice().sort(sortUserDayGames));
     }
     return map;
   }, [scheduledGames, tzPref]);

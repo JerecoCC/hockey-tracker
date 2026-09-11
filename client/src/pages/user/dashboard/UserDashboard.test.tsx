@@ -351,6 +351,53 @@ describe('UserDashboard', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/dashboard/games-watched');
   });
 
+  it('orders current-day games like the user games calendar day', () => {
+    const awayTeam = makeGame().away_team;
+    const watchedPostponed = makeGame({
+      id: 'watched-postponed',
+      away_team: { ...awayTeam, id: 'team-watched-postponed', code: 'WPS' },
+      scheduled_at: '2026-06-20',
+      scheduled_time: '22:00',
+      scheduled_for: '2026-06-21',
+      watched_by_user: true,
+      watched_on: '2026-06-21',
+    });
+    const watched = makeGame({
+      id: 'watched',
+      away_team: { ...awayTeam, id: 'team-watched', code: 'WAT' },
+      scheduled_time: null,
+      watched_by_user: true,
+      watched_on: '2026-06-21',
+    });
+    const postponed = makeGame({
+      id: 'postponed',
+      away_team: { ...awayTeam, id: 'team-postponed', code: 'PST' },
+      scheduled_at: '2026-06-20',
+      scheduled_time: '18:00',
+      scheduled_for: '2026-06-21',
+    });
+    const unwatched = makeGame({
+      id: 'unwatched',
+      away_team: { ...awayTeam, id: 'team-unwatched', code: 'UNW' },
+      scheduled_time: '16:00',
+    });
+    mockDashboardQueries({
+      todayGames: [unwatched, postponed, watched, watchedPostponed],
+    });
+
+    render(<UserDashboard />);
+
+    const orderedGames = ['WPS', 'WAT', 'PST', 'UNW'].map(
+      (code) =>
+        screen.getAllByText(code).find((element) => element.classList.contains('teamCode'))!,
+    );
+    for (let index = 0; index < orderedGames.length - 1; index += 1) {
+      expect(orderedGames[index].compareDocumentPosition(orderedGames[index + 1])).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    }
+  });
+
   it('opens a favorite team watched-games page from the watched list', () => {
     render(<UserDashboard />);
 
