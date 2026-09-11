@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import type { GameRecord } from '@/hooks/useGames';
 import GameCard from './GameCard';
 
@@ -91,6 +91,15 @@ describe('GameCard', () => {
     expect(card?.lastElementChild).toBe(actions);
   });
 
+  it('shows a tooltip for the watched ribbon', () => {
+    render(<GameCard game={{ ...game, watched_by_user: true }} />);
+
+    const ribbon = screen.getByRole('img', { name: 'Watched' });
+    fireEvent.mouseEnter(ribbon.parentElement as HTMLElement);
+
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Watched');
+  });
+
   it('uses a postponed-watch ribbon and omits the original game time', () => {
     const { container } = render(
       <GameCard
@@ -105,10 +114,11 @@ describe('GameCard', () => {
     );
 
     expect(container.querySelector('.gameMeta')).toHaveTextContent(/^05\/01\/2024$/);
-    expect(screen.getByRole('img', { name: 'Postponed watch' })).toHaveClass(
-      'watchedRibbon',
-      'postponedWatchRibbon',
-    );
+    const ribbon = screen.getByRole('img', { name: 'Postponed watch' });
+    expect(ribbon.parentElement).toHaveClass('watchedRibbon', 'postponedWatchRibbon');
     expect(screen.queryByRole('img', { name: 'Watched' })).not.toBeInTheDocument();
+
+    fireEvent.mouseEnter(ribbon.parentElement as HTMLElement);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Postponed watch');
   });
 });

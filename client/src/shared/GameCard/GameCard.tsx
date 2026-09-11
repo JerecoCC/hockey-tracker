@@ -6,6 +6,7 @@ import Card from '@jerecocc/tracker-ui/components/Card/Card';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import Tag, { type TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
+import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import { type GameRecord, type GameType } from '@/hooks/useGames';
 import {
   dateKeyToDate,
@@ -293,21 +294,30 @@ const GameCardVariant = ({
         />
       )}
       {showWatchedBanner && ribbonLabel && (
-        <span
+        <Tooltip
+          text={ribbonLabel}
           className={[
             styles.watchedRibbon,
             !isWatched && isPostponedWatch ? styles.postponedWatchRibbon : '',
           ]
             .filter(Boolean)
             .join(' ')}
-          role="img"
-          aria-label={ribbonLabel}
         >
-          <Icon
-            name={ribbonIcon}
-            size="0.72rem"
-          />
-        </span>
+          <span
+            className={styles.watchedRibbonContent}
+            role="img"
+            aria-label={ribbonLabel}
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+            }}
+          >
+            <Icon
+              name={ribbonIcon}
+              size="0.72rem"
+            />
+          </span>
+        </Tooltip>
       )}
       {hasTypeIndicator && (
         <span

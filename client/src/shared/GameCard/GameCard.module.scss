@@ -208,8 +208,14 @@
   clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 8px), 0 100%);
   color: var(--game-league-text, #ffffff);
   filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.16));
-  pointer-events: none;
+  pointer-events: auto;
   transition: right $transition-fast;
+}
+
+.watchedRibbonContent {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
 }
 
 .postponedWatchRibbon {
