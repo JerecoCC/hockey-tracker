@@ -366,6 +366,14 @@ const eventTimeForGame = (game, requestedTimeZone) => {
   };
 };
 
+const gameIsAfterToday = (game, requestedTimeZone, now = new Date()) => {
+  const timeZone = normalizeGoogleCalendarTimeZone(requestedTimeZone);
+  const today = dateTimePartsInZone(now, timeZone).date;
+  const eventStart = eventTimeForGame(game, timeZone).start;
+  const eventDate = eventStart.date || eventStart.dateTime?.slice(0, 10);
+  return Boolean(eventDate && eventDate > today);
+};
+
 const originalScheduleDateForGame = (game, requestedTimeZone) => {
   if (!game.game_date) return null;
   const calendarTime = normalizeCalendarTime(game.scheduled_time);
@@ -674,7 +682,7 @@ const calendarGameSelect = (userId, gameId = null) => sql`
     )
 `;
 
-const syncScheduledGameToGoogleCalendar = async ({ userId, gameId }) => {
+const syncScheduledGameToGoogleCalendar = async ({ userId, gameId, now = new Date() }) => {
   const connection = await getConnection(userId);
   if (!connection) return { status: 'not_connected' };
 
@@ -682,12 +690,13 @@ const syncScheduledGameToGoogleCalendar = async ({ userId, gameId }) => {
     const timeZone = normalizeGoogleCalendarTimeZone(connection.time_zone);
     const accessToken = await refreshAccessToken(connection.refresh_token_encrypted);
     const games = await calendarGameSelect(userId, gameId);
-    if (games[0]) {
+    const game = games.find((candidate) => gameIsAfterToday(candidate, timeZone, now));
+    if (game) {
       await upsertGameEvent({
         accessToken,
         calendarId: connection.calendar_id,
         userId,
-        game: games[0],
+        game,
         timeZone,
       });
     } else {
@@ -731,7 +740,9 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
     });
     const accessToken =
       context.accessToken || (await refreshAccessToken(connection.refresh_token_encrypted));
-    const games = await calendarGameSelect(userId);
+    const selectedGames = await calendarGameSelect(userId);
+    const now = context.now || new Date();
+    const games = selectedGames.filter((game) => gameIsAfterToday(game, timeZone, now));
     const calendarGameIds = new Set(games.map((game) => game.id));
 
     reportProgress({
@@ -939,6 +950,7 @@ module.exports = {
     eventForGame,
     eventIdForGame,
     eventTimeForGame,
+    gameIsAfterToday,
     googleRequest,
     refreshAccessToken,
     upsertGameEvent,

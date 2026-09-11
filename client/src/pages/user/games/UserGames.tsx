@@ -37,9 +37,7 @@ import {
   ScheduleWeekList,
   ScheduleWeekSummary,
 } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
-import {
-  scheduleViewSegmentedControlClassName,
-} from '@/shared/ScheduleGamesLayout/scheduleGamesLayoutStyles';
+import { scheduleViewSegmentedControlClassName } from '@/shared/ScheduleGamesLayout/scheduleGamesLayoutStyles';
 import { useScheduleWeekSummaryStuck } from '@/shared/ScheduleGamesLayout/useScheduleWeekSummaryStuck';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
@@ -170,20 +168,6 @@ const dateToISO = (d: Date) =>
 const fromISODate = (iso: string): Date => {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d);
-};
-
-const SHORT_FMT = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
-const SHORT_FMT_YEAR = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-});
-
-const fmtWeekRange = (start: Date, end: Date) => {
-  if (start.getFullYear() === end.getFullYear()) {
-    return `${SHORT_FMT.format(start)} – ${SHORT_FMT_YEAR.format(end)}`;
-  }
-  return `${SHORT_FMT_YEAR.format(start)} – ${SHORT_FMT_YEAR.format(end)}`;
 };
 
 const MONTH_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
@@ -514,10 +498,10 @@ const ScheduleWatchModal = ({
   return (
     <Modal
       open={open}
-      title="Schedule Watch"
+      title="Postpone watch"
       onClose={onClose}
       onConfirm={submit}
-      confirmLabel={busy ? 'Saving…' : 'Save Schedule'}
+      confirmLabel={busy ? 'Saving…' : 'Save postponement'}
       confirmDisabled={busy || !isDirty || !isValid || scheduleDateInvalid}
       busy={busy}
       footerStart={
@@ -532,15 +516,15 @@ const ScheduleWatchModal = ({
             }}
             disabled={busy}
           >
-            Clear Date
+            Clear postponement
           </Button>
         ) : undefined
       }
     >
       <div className={styles.scheduleModalBody}>
         <p className={styles.scheduleModalCopy}>
-          Choose when you plan to watch {game.away_team.code} @ {game.home_team.code}. Scheduled
-          dates are saved in your local timezone.
+          Choose a later date to watch {game.away_team.code} @ {game.home_team.code}. Dates use your
+          local timezone.
         </p>
         <Controller
           control={control}
@@ -557,9 +541,7 @@ const ScheduleWatchModal = ({
           )}
         />
         {scheduleDateInvalid && (
-          <p className={styles.scheduleModalError}>
-            Choose a watch date after the game&apos;s scheduled date.
-          </p>
+          <p className={styles.scheduleModalError}>Choose a watch date after the game date.</p>
         )}
       </div>
     </Modal>
@@ -688,7 +670,6 @@ const CalendarGameCard = ({
         <UserGameActions
           watched={!!game.watched_by_user}
           skipped={!!game.skipped_by_user}
-          scheduled={!!game.scheduled_for}
           canMarkWatched={canMarkWatched}
           busy={busy}
           onView={onOpen}
@@ -719,10 +700,7 @@ const UserGames = () => {
   );
   const [view, setView] = useState<'list' | 'calendar'>('list');
   const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
-  const {
-    setValue: setFilterValue,
-    watch: watchFilter,
-  } = useForm<{ showSkippedGames: boolean }>({
+  const { setValue: setFilterValue, watch: watchFilter } = useForm<{ showSkippedGames: boolean }>({
     defaultValues: { showSkippedGames: false },
   });
   const showSkippedGames = watchFilter('showSkippedGames');
@@ -1064,7 +1042,7 @@ const UserGames = () => {
     const gameId = game.id;
     if (actionGameId === gameId || scheduleBusy) return false;
     if (isInvalidWatchScheduleDate(game, scheduledFor, tzPref)) {
-      toast.error("Choose a watch date after the game's scheduled date");
+      toast.error('Choose a watch date after the game date');
       return false;
     }
     setActionGameId(gameId);
@@ -1086,12 +1064,12 @@ const UserGames = () => {
       }
       toast.success(
         scheduledFor
-          ? `${getGameMatchupLabel(game)} scheduled for ${formatScheduleToastDate(scheduledFor)}`
-          : `${getGameMatchupLabel(game)} watch schedule cleared`,
+          ? `${getGameMatchupLabel(game)} watch postponed to ${formatScheduleToastDate(scheduledFor)}`
+          : `${getGameMatchupLabel(game)} postponement cleared`,
       );
       return true;
     } catch {
-      toast.error('Failed to save watch schedule');
+      toast.error('Failed to postpone watch');
       return false;
     } finally {
       setActionGameId(null);
@@ -1342,7 +1320,6 @@ const UserGames = () => {
           <UserGameActions
             watched={watched}
             skipped={skipped}
-            scheduled={!!game.scheduled_for}
             canMarkWatched={canMarkWatched}
             busy={busy}
             onView={() => openGame(game)}

@@ -320,7 +320,7 @@ const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlP
           ) : connected ? (
             <>
               <p>
-                Favorite-team games and custom watch dates sync to your{' '}
+                Games after today for favorite teams and custom watch dates sync to your{' '}
                 <strong>{status?.calendar_name || 'Hockey Tracker'}</strong> calendar. Custom dates
                 appear as all-day events.
               </p>
@@ -340,7 +340,7 @@ const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlP
           ) : (
             <p>
               Create a separate Hockey Tracker calendar for favorite-team games and custom watch
-              dates.
+              dates after today.
             </p>
           )}
         </div>

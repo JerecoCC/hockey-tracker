@@ -5,7 +5,6 @@ type MaybePromise = void | Promise<void>;
 interface UserGameActionsProps {
   watched: boolean;
   skipped: boolean;
-  scheduled: boolean;
   canMarkWatched?: boolean;
   busy: boolean;
   onView: () => MaybePromise;
@@ -24,7 +23,6 @@ const run = (handler: () => MaybePromise) => {
 const UserGameActions = ({
   watched,
   skipped,
-  scheduled,
   canMarkWatched = true,
   busy,
   onView,
@@ -110,7 +108,7 @@ const UserGameActions = ({
         variant="outlined"
         intent="neutral"
         icon="calendar_month"
-        tooltip={scheduled ? 'Edit watch schedule' : 'Schedule watch'}
+        tooltip="Postpone watch"
         disabled={busy}
         onClick={(e) => {
           e.stopPropagation();

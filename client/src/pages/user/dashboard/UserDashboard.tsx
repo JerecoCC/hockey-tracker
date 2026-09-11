@@ -215,7 +215,7 @@ const UserDashboard = () => {
     const gameId = game.id;
     if (actionGameId === gameId || scheduleBusy) return false;
     if (isInvalidWatchScheduleDate(game, scheduledFor, tzPref)) {
-      toast.error("Choose a watch date after the game's scheduled date");
+      toast.error('Choose a watch date after the game date');
       return false;
     }
     setActionGameId(gameId);
@@ -234,7 +234,7 @@ const UserDashboard = () => {
       );
       return true;
     } catch {
-      toast.error('Failed to save watch schedule');
+      toast.error('Failed to postpone watch');
       return false;
     } finally {
       setActionGameId(null);
@@ -460,7 +460,6 @@ const UserDashboard = () => {
                         <UserGameActions
                           watched={watched}
                           skipped={skipped}
-                          scheduled={!!game.scheduled_for}
                           canMarkWatched={canMarkWatched}
                           busy={busy}
                           onView={() => navigate(`/games/${game.id}`)}
@@ -550,14 +549,14 @@ const UserDashboard = () => {
 
       <Modal
         open={!!scheduleTarget}
-        title="Schedule Watch"
+        title="Postpone watch"
         onClose={() => {
           if (scheduleBusy) return;
           setScheduleTarget(null);
           setScheduleDate('');
         }}
         onConfirm={() => void saveSchedule()}
-        confirmLabel={scheduleBusy ? 'Saving...' : 'Save Schedule'}
+        confirmLabel={scheduleBusy ? 'Saving...' : 'Save postponement'}
         confirmDisabled={scheduleBusy || scheduleDateInvalid}
         busy={scheduleBusy}
         footerStart={
@@ -569,7 +568,7 @@ const UserDashboard = () => {
               onClick={() => setScheduleDate('')}
               disabled={scheduleBusy}
             >
-              Clear Date
+              Clear postponement
             </Button>
           ) : undefined
         }
@@ -578,7 +577,7 @@ const UserDashboard = () => {
           <div className={styles.scheduleModalBody}>
             <p className={styles.scheduleModalCopy}>
               Choose when you plan to watch {scheduleTarget.away_team.code} @{' '}
-              {scheduleTarget.home_team.code}. Scheduled dates are saved in your local timezone.
+              {scheduleTarget.home_team.code} on a later date. Dates use your local timezone.
             </p>
             <DatePicker
               value={scheduleDate}
@@ -586,9 +585,7 @@ const UserDashboard = () => {
               placeholder="Watch date"
             />
             {scheduleDateInvalid && (
-              <p className={styles.scheduleModalError}>
-                Choose a watch date after the scheduled game date.
-              </p>
+              <p className={styles.scheduleModalError}>Choose a watch date after the game date.</p>
             )}
           </div>
         )}

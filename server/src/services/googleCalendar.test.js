@@ -16,6 +16,7 @@ const {
     eventForGame,
     eventIdForGame,
     googleRequest,
+    gameIsAfterToday,
     refreshAccessToken,
     upsertGameEvent,
   },
@@ -264,6 +265,34 @@ describe('Google Calendar service helpers', () => {
     expect(event.end).toEqual({ date: '2027-01-01' });
   });
 
+  it('only treats event dates after today in the user timezone as syncable', () => {
+    const now = new Date('2027-01-01T01:00:00Z');
+
+    expect(
+      gameIsAfterToday(
+        {
+          game_date: '2026-12-31',
+          calendar_date: '2026-12-31',
+          scheduled_time: '19:30',
+        },
+        'Asia/Manila',
+        now,
+      ),
+    ).toBe(false);
+    expect(
+      gameIsAfterToday(
+        {
+          game_date: '2026-12-31',
+          calendar_date: '2027-01-02',
+          scheduled_for: '2027-01-02',
+          scheduled_time: '19:30',
+        },
+        'Asia/Manila',
+        now,
+      ),
+    ).toBe(true);
+  });
+
   it('selects favorite-team games from the closest open season and all custom schedules', () => {
     calendarGameSelect('user-1');
 
@@ -333,6 +362,16 @@ describe('Google Calendar service helpers', () => {
           home_code: 'HOM',
           league_code: 'NHL',
         },
+        {
+          id: 'game-today',
+          game_date: '2026-01-01',
+          calendar_date: '2026-01-01',
+          scheduled_for: '2026-01-01',
+          scheduled_time: '19:30',
+          away_code: 'TDY',
+          home_code: 'NOW',
+          league_code: 'NHL',
+        },
       ])
       .mockResolvedValueOnce([]);
     global.fetch = jest
@@ -360,6 +399,7 @@ describe('Google Calendar service helpers', () => {
         },
         accessToken: 'access-token',
         onProgress,
+        now: new Date('2026-01-01T17:00:00Z'),
         writeIntervalMs: 0,
       }),
     ).resolves.toEqual({ status: 'synced', synced: 1, removed: 1 });

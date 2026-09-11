@@ -77,7 +77,6 @@ export const GameCards = {
               <UserGameActions
                 watched
                 skipped={false}
-                scheduled={false}
                 busy={false}
                 onView={noop}
                 onDownloadScoreCard={noop}
@@ -87,7 +86,12 @@ export const GameCards = {
                 onSkip={noop}
               />
             }
-            bottomLabel={<Tag label="Watched" intent="success" />}
+            bottomLabel={
+              <Tag
+                label="Watched"
+                intent="success"
+              />
+            }
           />
           <GameCard
             game={{
@@ -197,7 +201,10 @@ export const CalendarAndSchedule = {
           </ScheduleGamesActions>
           <ScheduleFilters visible>
             <ScheduleFilterSlot>
-              <Tag label="Team: MTL" intent="info" />
+              <Tag
+                label="Team: MTL"
+                intent="info"
+              />
             </ScheduleFilterSlot>
             <ScheduleFilterSlot wide>
               <Tag
@@ -212,7 +219,9 @@ export const CalendarAndSchedule = {
             activeDateKey="2026-01-12"
             onSelectDate={noop}
             formatDate={(dateKey) => dateKey.slice(5)}
-            formatWeekday={(dateKey) => new Date(`${dateKey}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short' })}
+            formatWeekday={(dateKey) =>
+              new Date(`${dateKey}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short' })
+            }
             formatHeading={(dateKey) => dateKey}
           />
           <ScheduleWeekList

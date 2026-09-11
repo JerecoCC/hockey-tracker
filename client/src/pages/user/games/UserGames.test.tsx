@@ -1219,10 +1219,7 @@ describe('UserGames schedule views', () => {
       within(skippedCard as HTMLElement).getByRole('button', { name: 'Undo skip' }),
     ).toBeInTheDocument();
     expect(
-      within(skippedCard as HTMLElement).queryByRole('button', { name: 'Schedule watch' }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(skippedCard as HTMLElement).queryByRole('button', { name: 'Edit watch schedule' }),
+      within(skippedCard as HTMLElement).queryByRole('button', { name: 'Postpone watch' }),
     ).not.toBeInTheDocument();
     expect(
       within(skippedCard as HTMLElement).queryByRole('button', { name: 'Mark as watched' }),
@@ -1268,14 +1265,14 @@ describe('UserGames schedule views', () => {
       within(gameCard as HTMLElement).queryByRole('button', { name: 'Mark as watched' }),
     ).not.toBeInTheDocument();
     expect(
-      within(gameCard as HTMLElement).getByRole('button', { name: 'Schedule watch' }),
+      within(gameCard as HTMLElement).getByRole('button', { name: 'Postpone watch' }),
     ).toBeInTheDocument();
     expect(
       within(gameCard as HTMLElement).getByRole('button', { name: 'Skip game' }),
     ).toBeInTheDocument();
   });
 
-  it('shows a scheduled watch game original date in the user timezone', async () => {
+  it("shows a postponed watch game's original date in the user timezone", async () => {
     const user = userEvent.setup();
     const originalEtDate = localDateString(1);
     const timezoneShiftedGame = {
@@ -1378,7 +1375,7 @@ describe('UserGames schedule views', () => {
     }
   });
 
-  it('orders calendar day games by watched scheduled, watched, scheduled watch, unwatched, then skipped', async () => {
+  it('orders calendar day games by watched postponed, watched, postponed, unwatched, then skipped', async () => {
     const user = userEvent.setup();
     const watchedSameDayGame = {
       ...games[1],
@@ -1868,7 +1865,7 @@ describe('UserGames schedule views', () => {
         scheduled_for: targetDate,
       }),
     );
-    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM scheduled for May 18, 2026');
+    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM watch postponed to May 18, 2026');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
@@ -1957,7 +1954,7 @@ describe('UserGames schedule views', () => {
         scheduled_for: null,
       }),
     );
-    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM watch schedule cleared');
+    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM postponement cleared');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
@@ -2070,19 +2067,19 @@ describe('UserGames schedule views', () => {
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
-  it('opens schedule watch and saves the selected watch date', async () => {
+  it('opens postpone watch and saves the selected watch date', async () => {
     const user = userEvent.setup();
     const targetDate = localDateString(3);
     render(<UserGames />);
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit watch schedule' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'Postpone watch' })[0]);
 
-    expect(screen.getByText('Schedule Watch')).toBeInTheDocument();
-    expect(screen.getByText(/saved in your local timezone/i)).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Postpone watch' })).toBeInTheDocument();
+    expect(screen.getByText(/dates use your local timezone/i)).toBeInTheDocument();
     const input = screen.getByLabelText('Watch date');
     await user.clear(input);
     await user.type(input, targetDate);
-    await user.click(screen.getByRole('button', { name: 'Save Schedule' }));
+    await user.click(screen.getByRole('button', { name: 'Save postponement' }));
 
     expect(mockAxios.put).toHaveBeenCalledWith(
       expect.stringContaining('/user/watched-games/game-1/schedule'),
@@ -2093,7 +2090,7 @@ describe('UserGames schedule views', () => {
       ['user-games', 'all', 'all', 'team-home,team-opp', false, localDateString(0), ''],
       expect.any(Function),
     );
-    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM scheduled for May 18, 2026');
+    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM watch postponed to May 18, 2026');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
@@ -2128,11 +2125,11 @@ describe('UserGames schedule views', () => {
 
     render(<UserGames />);
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit watch schedule' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'Postpone watch' })[0]);
     const input = screen.getByLabelText('Watch date');
     await user.clear(input);
     await user.type(input, targetDate);
-    await user.click(screen.getByRole('button', { name: 'Save Schedule' }));
+    await user.click(screen.getByRole('button', { name: 'Save postponement' }));
 
     const currentMonthUpdater = mockSetQueryData.mock.calls.find(
       ([queryKey]) => JSON.stringify(queryKey) === JSON.stringify(currentMonthKey),
@@ -2149,7 +2146,7 @@ describe('UserGames schedule views', () => {
         skipped_by_user: false,
       }),
     ]);
-    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM scheduled for Jun 19, 2026');
+    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM watch postponed to Jun 19, 2026');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
@@ -2185,11 +2182,11 @@ describe('UserGames schedule views', () => {
 
     render(<UserGames />);
 
-    await user.click(screen.getByRole('button', { name: 'Edit watch schedule' }));
+    await user.click(screen.getByRole('button', { name: 'Postpone watch' }));
     const input = screen.getByLabelText('Watch date');
     await user.clear(input);
     await user.type(input, targetDate);
-    await user.click(screen.getByRole('button', { name: 'Save Schedule' }));
+    await user.click(screen.getByRole('button', { name: 'Save postponement' }));
 
     const monthUpdater = mockSetQueryData.mock.calls.find(
       ([queryKey]) => JSON.stringify(queryKey) === JSON.stringify(currentMonthKey),
@@ -2205,22 +2202,22 @@ describe('UserGames schedule views', () => {
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
-  it('prevents scheduling a watch on or before the local game date', async () => {
+  it('prevents postponing a watch to on or before the local game date', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit watch schedule' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'Postpone watch' })[0]);
     const input = screen.getByLabelText('Watch date');
     await user.clear(input);
     await user.type(input, localDateKeyForGame(games[0]) ?? scheduledWatchDate);
 
-    expect(screen.getByText(/after the game's scheduled date/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save Schedule' })).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: 'Save Schedule' }));
+    expect(screen.getByText(/after the game date/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save postponement' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Save postponement' }));
     expect(mockAxios.put).not.toHaveBeenCalled();
   });
 
-  it('keeps the selected calendar month after saving a watch schedule', async () => {
+  it('keeps the selected calendar month after postponing a watch', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
@@ -2230,11 +2227,11 @@ describe('UserGames schedule views', () => {
       new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
     );
 
-    await user.click(screen.getAllByRole('button', { name: 'Edit watch schedule' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'Postpone watch' })[0]);
     const input = screen.getByLabelText('Watch date');
     await user.clear(input);
     await user.type(input, localDateString(3));
-    await user.click(screen.getByRole('button', { name: 'Save Schedule' }));
+    await user.click(screen.getByRole('button', { name: 'Save postponement' }));
 
     expect(screen.getByRole('button', { name: `Select month: ${monthLabel}` })).toBeInTheDocument();
   });
