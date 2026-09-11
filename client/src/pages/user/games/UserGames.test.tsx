@@ -2467,6 +2467,18 @@ describe('UserGames schedule views', () => {
     ).toBeInTheDocument();
   });
 
+  it('renders an empty-day message in calendar days without games', async () => {
+    const user = userEvent.setup();
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+
+    const emptyCalendarDay = screen.getByLabelText('Calendar day 2026-05-01');
+    expect(within(emptyCalendarDay).getByText('No games scheduled')).toHaveClass(
+      styles.calendarDayEmpty,
+    );
+  });
+
   it('renders compact calendar game cards and navigates when clicked', async () => {
     const user = userEvent.setup();
     render(<UserGames />);

@@ -1761,7 +1761,9 @@ const UserGames = () => {
                       />
                     ))}
                   </ScheduleCalendarGameList>
-                ) : null;
+                ) : (
+                  <span className={styles.calendarDayEmpty}>No games scheduled</span>
+                );
               }}
             />
           </ScheduleCalendarCard>

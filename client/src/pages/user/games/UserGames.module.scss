@@ -108,6 +108,10 @@
 
 // ── Empty / loading ────────────────────────────────────────────────────
 // ── Games list ─────────────────────────────────────────────────────────
+.calendarDayEmpty {
+  display: none;
+}
+
 .calendarDayGameCount.calendarDayGameCount {
   gap: 2px;
   height: 1.35rem;
@@ -368,6 +372,17 @@
     box-shadow: none;
     opacity: 1;
     pointer-events: auto;
+  }
+
+  .calendarDayEmpty {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.5rem;
+    color: var(--app-text-muted, #{$text-dim});
+    font-size: $font-sm;
+    text-align: center;
   }
 }
 
