@@ -76,4 +76,18 @@ describe('Google Calendar progress sync client', () => {
       }),
     ).rejects.toThrow('Calendar API unavailable');
   });
+
+  it('reports an invalid streamed response without exposing a JSON parse error', async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      body: streamBody('<!doctype html>Unexpected proxy response'),
+    });
+
+    await expect(
+      syncGoogleCalendarWithProgress({
+        endpoint: '/api/user/calendar/google/sync',
+        timeZone: 'Asia/Manila',
+      }),
+    ).rejects.toThrow('Google Calendar returned an invalid sync response');
+  });
 });

@@ -6,6 +6,7 @@ const { sql } = require('../db');
 
 const {
   getGoogleCalendarAuthorizationUrl,
+  getGoogleCalendarStatus,
   normalizeGoogleCalendarTimeZone,
   syncAllScheduledGamesForUser,
   _private: {
@@ -15,6 +16,7 @@ const {
     eventForGame,
     eventIdForGame,
     googleRequest,
+    refreshAccessToken,
     upsertGameEvent,
   },
 } = require('./googleCalendar');
@@ -94,6 +96,41 @@ describe('Google Calendar service helpers', () => {
     });
   });
 
+  it('turns a rejected refresh token into a reconnect-required error', async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      mockGoogleResponse(400, {
+        error: 'invalid_grant',
+        error_description: 'Bad Request',
+      }),
+    );
+
+    await expect(
+      refreshAccessToken(encryptRefreshToken('expired-refresh-token')),
+    ).rejects.toMatchObject({
+      status: 401,
+      code: 'reauthorization_required',
+      message:
+        'Google Calendar authorization has expired. Reconnect Google Calendar to continue syncing.',
+    });
+  });
+
+  it('reports when a saved connection requires Google reauthorization', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        calendar_id: 'calendar-1',
+        calendar_name: 'Hockey Tracker',
+        time_zone: 'Asia/Manila',
+        last_sync_error:
+          'Google Calendar authorization has expired. Reconnect Google Calendar to continue syncing.',
+      },
+    ]);
+
+    await expect(getGoogleCalendarStatus('user-1')).resolves.toMatchObject({
+      connected: true,
+      reauthorization_required: true,
+    });
+  });
+
   it('creates a stable valid event id and a timed three-hour event in Eastern Time', () => {
     const game = {
       id: 'game-1',
@@ -160,7 +197,7 @@ describe('Google Calendar service helpers', () => {
     });
   });
 
-  it('keeps a moved watch date on the chosen user-local day', () => {
+  it('syncs a custom watch date as an all-day event without the original game time', () => {
     const event = eventForGame({
       userId: 'user-1',
       timeZone: 'Asia/Manila',
@@ -173,10 +210,10 @@ describe('Google Calendar service helpers', () => {
       },
     });
 
-    expect(event.start).toEqual({
-      dateTime: '2027-01-05T08:30:00',
-      timeZone: 'Asia/Manila',
-    });
+    expect(event.start).toEqual({ date: '2027-01-05' });
+    expect(event.end).toEqual({ date: '2027-01-06' });
+    expect(event.start).not.toHaveProperty('dateTime');
+    expect(event.start).not.toHaveProperty('timeZone');
   });
 
   it('rejects invalid IANA timezones', () => {
@@ -198,7 +235,7 @@ describe('Google Calendar service helpers', () => {
     expect(event.end).toEqual({ date: '2027-01-01' });
   });
 
-  it('selects favorite-team games from the closest non-ended season', () => {
+  it('selects favorite-team games from the closest open season and all custom schedules', () => {
     calendarGameSelect('user-1');
 
     const queryText = sql.mock.calls[0][0].join(' ').replace(/\s+/g, ' ');
@@ -211,7 +248,9 @@ describe('Google Calendar service helpers', () => {
     expect(queryText).toContain('CURRENT_DATE < candidate.start_date');
     expect(queryText).toContain('LIMIT 1');
     expect(queryText).toContain('FROM games g');
-    expect(queryText).toContain('g.season_id = (SELECT id FROM closest_open_season)');
+    expect(queryText).toContain(
+      'uwg.scheduled_for IS NOT NULL OR ( g.season_id = (SELECT id FROM closest_open_season)',
+    );
     expect(queryText).toContain('FROM user_favorite_teams uft');
     expect(queryText).toContain('COALESCE( uwg.scheduled_for');
     expect(queryText).toContain('END::text AS game_date');
@@ -222,7 +261,6 @@ describe('Google Calendar service helpers', () => {
       "TO_CHAR(g.scheduled_at AT TIME ZONE 'America/New_York', 'HH24:MI')",
     );
     expect(queryText).toContain('uwg.skipped_at IS NULL');
-    expect(queryText).not.toContain('uwg.scheduled_for IS NOT NULL OR EXISTS');
   });
 
   it('restores a cancelled deterministic event when the game is scheduled again', async () => {

@@ -23,6 +23,7 @@ interface GoogleCalendarStatus {
   connected_at: string | null;
   last_synced_at: string | null;
   last_sync_error: string | null;
+  reauthorization_required: boolean;
 }
 
 interface GoogleCalendarSyncTriggerState {
@@ -108,9 +109,9 @@ const startSyncProgressToast = () => {
         progressClassName: styles.progressBar,
       });
     },
-    fail: () => {
+    fail: (message: string) => {
       toast.update(toastId, {
-        render: 'Failed to sync Google Calendar',
+        render: message,
         type: 'error',
         isLoading: false,
         autoClose: 12000,
@@ -201,8 +202,12 @@ const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlP
       });
       await queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
       progressToast.finish(result);
-    } catch {
-      progressToast.fail();
+    } catch (error) {
+      await queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
+      progressToast.fail(
+        error instanceof Error && error.message ? error.message : 'Failed to sync Google Calendar',
+      );
+      setOpen(true);
     } finally {
       setBusy(false);
     }
@@ -225,6 +230,8 @@ const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlP
 
   const connected = !!status?.connected;
   const configured = !!status?.configured;
+  const requiresReauthorization = !!status?.reauthorization_required;
+  const shouldConnect = !connected || requiresReauthorization;
   const lastSyncedAt = formatSyncTime(status?.last_synced_at ?? null);
 
   return (
@@ -276,15 +283,17 @@ const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlP
         onClose={() => {
           if (!busy) setOpen(false);
         }}
-        onConfirm={connected ? sync : connect}
+        onConfirm={shouldConnect ? connect : sync}
         confirmLabel={
           busy
-            ? connected
-              ? 'Syncing…'
-              : 'Connecting…'
-            : connected
-              ? 'Sync Now'
-              : 'Connect Google Calendar'
+            ? shouldConnect
+              ? 'Connecting…'
+              : 'Syncing…'
+            : requiresReauthorization
+              ? 'Reconnect Google Calendar'
+              : connected
+                ? 'Sync Now'
+                : 'Connect Google Calendar'
         }
         confirmDisabled={busy || !configured}
         busy={busy}
@@ -312,17 +321,24 @@ const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlP
             <>
               <p>
                 Games from the nearest season that is not marked done, filtered to your favorite
-                teams, sync as timed events converted to your local timezone in your{' '}
-                <strong>{status?.calendar_name || 'Hockey Tracker'}</strong> calendar. A scheduled
-                watch date moves the event; clearing that date moves it back to the original game
-                date, and skipping the game removes it.
+                teams, plus games you schedule yourself, sync to your{' '}
+                <strong>{status?.calendar_name || 'Hockey Tracker'}</strong> calendar. Original game
+                dates use their local start time. A custom watch date creates an all-day event on
+                the chosen date; clearing it restores the original game date and time. Skipping a
+                game removes it.
               </p>
               <p className={styles.status}>
                 {lastSyncedAt ? `Last synced ${lastSyncedAt}` : 'Connected — not synced yet'}
               </p>
-              {status?.last_sync_error && (
-                <p className={styles.error}>The last sync failed. Use Sync Now to retry.</p>
-              )}
+              {requiresReauthorization ? (
+                <p className={styles.error}>
+                  Google Calendar authorization has expired. Reconnect to continue syncing.
+                </p>
+              ) : status?.last_sync_error ? (
+                <p className={styles.error}>
+                  The last sync failed: {status.last_sync_error}. Use Sync Now to retry.
+                </p>
+              ) : null}
               <p className={styles.disconnectNote}>
                 Disconnecting also removes the app-created calendar and its synced events.
               </p>
@@ -330,8 +346,8 @@ const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlP
           ) : (
             <p>
               Connect Google Calendar to mirror games from the nearest season that is not marked
-              done, filtered to your favorite teams. Hockey Tracker creates a separate calendar and
-              can only manage events inside that calendar.
+              done, filtered to your favorite teams, plus games you schedule yourself. Hockey
+              Tracker creates a separate calendar and can only manage events inside that calendar.
             </p>
           )}
         </div>

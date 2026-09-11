@@ -8,6 +8,8 @@ const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.app.crea
 const DEFAULT_CALENDAR_NAME = 'Hockey Tracker';
 const DEFAULT_GAME_DURATION_MINUTES = 180;
 const GAME_TIME_ZONE = 'America/New_York';
+const REAUTHORIZATION_REQUIRED_MESSAGE =
+  'Google Calendar authorization has expired. Reconnect Google Calendar to continue syncing.';
 const dateTimeFormatters = new Map();
 
 class GoogleCalendarError extends Error {
@@ -180,12 +182,24 @@ const exchangeAuthorizationCode = (code) =>
 
 const refreshAccessToken = async (encryptedRefreshToken) => {
   requireGoogleCalendarConfig();
-  const data = await postTokenRequest({
-    client_id: process.env.GOOGLE_CLIENT_ID.trim(),
-    client_secret: process.env.GOOGLE_CLIENT_SECRET.trim(),
-    refresh_token: decryptRefreshToken(encryptedRefreshToken),
-    grant_type: 'refresh_token',
-  });
+  let data;
+  try {
+    data = await postTokenRequest({
+      client_id: process.env.GOOGLE_CLIENT_ID.trim(),
+      client_secret: process.env.GOOGLE_CLIENT_SECRET.trim(),
+      refresh_token: decryptRefreshToken(encryptedRefreshToken),
+      grant_type: 'refresh_token',
+    });
+  } catch (err) {
+    if (err instanceof GoogleCalendarError && err.code === 'invalid_grant') {
+      throw new GoogleCalendarError(REAUTHORIZATION_REQUIRED_MESSAGE, {
+        status: 401,
+        code: 'reauthorization_required',
+        details: err.details,
+      });
+    }
+    throw err;
+  }
   if (!data.access_token) {
     throw new GoogleCalendarError('Google did not return an access token', {
       status: 502,
@@ -281,9 +295,16 @@ const normalizeCalendarTime = (value) => {
 
 const eventTimeForGame = (game, requestedTimeZone) => {
   const timeZone = normalizeGoogleCalendarTimeZone(requestedTimeZone);
+  if (game.scheduled_for) {
+    return {
+      start: { date: game.scheduled_for },
+      end: { date: addOneDay(game.scheduled_for) },
+    };
+  }
+
   const calendarTime = normalizeCalendarTime(game.scheduled_time);
   if (!calendarTime) {
-    const calendarDate = game.scheduled_for || game.calendar_date;
+    const calendarDate = game.calendar_date;
     return {
       start: { date: calendarDate },
       end: { date: addOneDay(calendarDate) },
@@ -293,9 +314,7 @@ const eventTimeForGame = (game, requestedTimeZone) => {
   const gameDate = game.game_date || game.calendar_date;
   const scheduledInstant = zonedDateTimeToInstant(gameDate, calendarTime, GAME_TIME_ZONE);
   const scheduledInUserZone = dateTimePartsInZone(scheduledInstant, timeZone);
-  const startInstant = game.scheduled_for
-    ? zonedDateTimeToInstant(game.scheduled_for, scheduledInUserZone.time, timeZone)
-    : scheduledInstant;
+  const startInstant = scheduledInstant;
   const endInstant = new Date(startInstant.getTime() + DEFAULT_GAME_DURATION_MINUTES * 60_000);
   const start = dateTimePartsInZone(startInstant, timeZone);
   const end = dateTimePartsInZone(endInstant, timeZone);
@@ -452,6 +471,7 @@ const getGoogleCalendarStatus = async (userId) => {
     connected_at: connection?.connected_at || null,
     last_synced_at: connection?.last_synced_at || null,
     last_sync_error: connection?.last_sync_error || null,
+    reauthorization_required: connection?.last_sync_error === REAUTHORIZATION_REQUIRED_MESSAGE,
   };
 };
 
@@ -559,7 +579,6 @@ const calendarGameSelect = (userId, gameId = null) => sql`
   LEFT JOIN seasons s ON s.id = g.season_id
   LEFT JOIN leagues l ON l.id = s.league_id
   WHERE (${gameId}::uuid IS NULL OR g.id = ${gameId}::uuid)
-    AND g.season_id = (SELECT id FROM closest_open_season)
     AND uwg.skipped_at IS NULL
     AND COALESCE(
       uwg.scheduled_for,
@@ -569,11 +588,17 @@ const calendarGameSelect = (userId, gameId = null) => sql`
         ELSE (g.scheduled_at AT TIME ZONE 'America/New_York')::date
       END
     ) IS NOT NULL
-    AND EXISTS (
-      SELECT 1
-      FROM user_favorite_teams uft
-      WHERE uft.user_id = ${userId}
-        AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
+    AND (
+      uwg.scheduled_for IS NOT NULL
+      OR (
+        g.season_id = (SELECT id FROM closest_open_season)
+        AND EXISTS (
+          SELECT 1
+          FROM user_favorite_teams uft
+          WHERE uft.user_id = ${userId}
+            AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
+        )
+      )
     )
 `;
 
@@ -836,6 +861,7 @@ module.exports = {
     eventIdForGame,
     eventTimeForGame,
     googleRequest,
+    refreshAccessToken,
     upsertGameEvent,
   },
 };

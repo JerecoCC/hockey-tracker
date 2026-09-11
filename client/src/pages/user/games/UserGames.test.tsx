@@ -726,7 +726,9 @@ describe('UserGames schedule views', () => {
 
       expect(periodPicker).not.toHaveClass(styles.mobilePeriodPicker);
       expect(controlsCard).toHaveClass(styles.tabletControlsCard);
-      expect(within(controlsCard as HTMLElement).queryByRole('heading', { name: 'Games' })).not.toBeInTheDocument();
+      expect(
+        within(controlsCard as HTMLElement).queryByRole('heading', { name: 'Games' }),
+      ).not.toBeInTheDocument();
       expect(periodPicker?.parentElement).toHaveClass(scheduleLayoutStyles.weekNav);
       expect(controlsCard).toContainElement(viewControl);
       expect(viewControl).toHaveAttribute('data-full-width', 'false');
@@ -793,7 +795,9 @@ describe('UserGames schedule views', () => {
       expect(
         screen.getByRole('combobox', { name: 'Teams' }).closest(`.${scheduleLayoutStyles.filters}`),
       ).not.toHaveClass(scheduleLayoutStyles.filtersHidden);
-      expect(screen.queryByRole('button', { name: 'Google Calendar Sync' })).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Google Calendar Sync' }),
+      ).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Generate Score Card' })).not.toBeInTheDocument();
 
       const moreActionsButton = screen.getByRole('button', { name: 'More actions' });
@@ -882,9 +886,11 @@ describe('UserGames schedule views', () => {
         'wrap',
       );
       expect(within(filtersDrawer).getByText('Skipped games')).toBeInTheDocument();
-      expect(within(filtersDrawer).getByText('Show skipped games', {
-        selector: 'span',
-      })).toBeInTheDocument();
+      expect(
+        within(filtersDrawer).getByText('Show skipped games', {
+          selector: 'span',
+        }),
+      ).toBeInTheDocument();
       const skippedGamesSwitch = within(filtersDrawer).getByRole('switch', {
         name: 'Show skipped games',
       });
@@ -934,6 +940,39 @@ describe('UserGames schedule views', () => {
       screen.getByText(/creates a separate calendar and can only manage events inside/i),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Connect Google Calendar' })).toBeEnabled();
+  });
+
+  it('offers reconnection when Google rejects the saved refresh token', async () => {
+    const user = userEvent.setup();
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+      if (queryKey[0] === 'google-calendar-status')
+        return {
+          data: {
+            configured: true,
+            connected: true,
+            calendar_name: 'Hockey Tracker',
+            connected_at: null,
+            last_synced_at: null,
+            last_sync_error:
+              'Google Calendar authorization has expired. Reconnect Google Calendar to continue syncing.',
+            reauthorization_required: true,
+          },
+          isLoading: false,
+        };
+      if (queryKey[0] === 'user-games') return { data: games, isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Google Calendar Sync' }));
+
+    expect(screen.getByText(/authorization has expired/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reconnect Google Calendar' })).toBeEnabled();
   });
 
   it('shows determinate progress while syncing a connected Google Calendar', async () => {

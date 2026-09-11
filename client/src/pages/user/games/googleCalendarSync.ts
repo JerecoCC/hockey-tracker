@@ -74,7 +74,12 @@ export const syncGoogleCalendarWithProgress = async ({
 
   const processLine = (line: string) => {
     if (!line.trim()) return;
-    const item = JSON.parse(line) as GoogleCalendarSyncStreamItem | GoogleCalendarSyncResult;
+    let item: GoogleCalendarSyncStreamItem | GoogleCalendarSyncResult;
+    try {
+      item = JSON.parse(line) as GoogleCalendarSyncStreamItem | GoogleCalendarSyncResult;
+    } catch {
+      throw new Error('Google Calendar returned an invalid sync response');
+    }
     if (isSyncResult(item)) {
       result = item;
       return;

@@ -156,14 +156,18 @@ router.post('/sync', async (req, res) => {
     return res.json(result);
   } catch (err) {
     console.error('Google Calendar manual sync error:', err);
+    const message =
+      err instanceof GoogleCalendarError ? err.message : 'Failed to sync Google Calendar';
     if (streamProgress && res.headersSent) {
       writeStreamItem({
         type: 'error',
-        error: 'Failed to sync Google Calendar',
+        error: message,
       });
       return res.end();
     }
-    return res.status(502).json({ error: 'Failed to sync Google Calendar' });
+    return res
+      .status(err instanceof GoogleCalendarError ? err.status : 502)
+      .json({ error: message });
   }
 });
 

@@ -47,6 +47,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const { signGoogleCalendarState, verifyGoogleCalendarState } = require('../middleware/auth');
 const {
+  GoogleCalendarError,
   connectGoogleCalendar,
   disconnectGoogleCalendar,
   getGoogleCalendarAuthorizationUrl,
@@ -167,6 +168,38 @@ describe('Google Calendar routes', () => {
       timeZone: 'Asia/Manila',
       onProgress: expect.any(Function),
     });
+  });
+
+  it('streams an actionable Google Calendar error after sync progress has started', async () => {
+    syncAllScheduledGamesForUser.mockImplementationOnce(async (_userId, { onProgress }) => {
+      onProgress({
+        step: 'prepare',
+        message: 'Preparing scheduled games...',
+      });
+      throw new GoogleCalendarError('Google Calendar authorization has expired', {
+        status: 401,
+        code: 'invalid_grant',
+      });
+    });
+
+    const res = await request(app)
+      .post('/api/user/calendar/google/sync')
+      .set('Accept', 'application/x-ndjson');
+
+    expect(res.status).toBe(200);
+    expect(res.text.trim().split('\n').map(JSON.parse)).toEqual([
+      {
+        type: 'progress',
+        progress: {
+          step: 'prepare',
+          message: 'Preparing scheduled games...',
+        },
+      },
+      {
+        type: 'error',
+        error: 'Google Calendar authorization has expired',
+      },
+    ]);
   });
 
   it('disconnects and removes the app calendar', async () => {
