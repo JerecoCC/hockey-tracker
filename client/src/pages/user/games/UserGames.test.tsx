@@ -2229,7 +2229,7 @@ describe('UserGames schedule views', () => {
     const input = screen.getByLabelText('Watch date');
     await user.clear(input);
     await user.type(input, targetDate);
-    await user.click(screen.getByRole('button', { name: 'Save postponement' }));
+    await user.click(screen.getByRole('button', { name: 'Save date' }));
 
     expect(mockAxios.put).toHaveBeenCalledWith(
       expect.stringContaining('/user/watched-games/game-1/schedule'),
@@ -2286,7 +2286,7 @@ describe('UserGames schedule views', () => {
     const input = screen.getByLabelText('Watch date');
     await user.clear(input);
     await user.type(input, targetDate);
-    await user.click(screen.getByRole('button', { name: 'Save postponement' }));
+    await user.click(screen.getByRole('button', { name: 'Save date' }));
 
     const currentMonthUpdater = mockSetQueryData.mock.calls.find(
       ([queryKey]) => JSON.stringify(queryKey) === JSON.stringify(currentMonthKey),
@@ -2350,7 +2350,7 @@ describe('UserGames schedule views', () => {
     const input = screen.getByLabelText('Watch date');
     await user.clear(input);
     await user.type(input, targetDate);
-    await user.click(screen.getByRole('button', { name: 'Save postponement' }));
+    await user.click(screen.getByRole('button', { name: 'Save date' }));
 
     const monthUpdater = mockSetQueryData.mock.calls.find(
       ([queryKey]) => JSON.stringify(queryKey) === JSON.stringify(currentMonthKey),
@@ -2376,8 +2376,8 @@ describe('UserGames schedule views', () => {
     await user.type(input, localDateKeyForGame(games[0]) ?? scheduledWatchDate);
 
     expect(screen.getByText(/after the game date/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save postponement' })).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: 'Save postponement' }));
+    expect(screen.getByRole('button', { name: 'Save date' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Save date' }));
     expect(mockAxios.put).not.toHaveBeenCalled();
   });
 
@@ -2395,7 +2395,7 @@ describe('UserGames schedule views', () => {
     const input = screen.getByLabelText('Watch date');
     await user.clear(input);
     await user.type(input, localDateString(3));
-    await user.click(screen.getByRole('button', { name: 'Save postponement' }));
+    await user.click(screen.getByRole('button', { name: 'Save date' }));
 
     expect(screen.getByRole('button', { name: `Select month: ${monthLabel}` })).toBeInTheDocument();
   });

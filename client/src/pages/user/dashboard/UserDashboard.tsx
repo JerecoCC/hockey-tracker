@@ -576,7 +576,7 @@ const UserDashboard = () => {
           setScheduleDate('');
         }}
         onConfirm={() => void saveSchedule()}
-        confirmLabel={scheduleBusy ? 'Saving...' : 'Save postponement'}
+        confirmLabel={scheduleBusy ? 'Saving...' : 'Save date'}
         confirmDisabled={scheduleBusy || scheduleDateInvalid}
         busy={scheduleBusy}
         footerStart={
@@ -584,11 +584,11 @@ const UserDashboard = () => {
             <Button
               type="button"
               variant="ghost"
-              intent="neutral"
+              intent="danger"
               onClick={() => setScheduleDate('')}
               disabled={scheduleBusy}
             >
-              Clear postponement
+              Clear date
             </Button>
           ) : undefined
         }

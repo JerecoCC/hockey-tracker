@@ -547,8 +547,8 @@ describe('UserDashboard', () => {
     });
 
     expect(screen.getByText(/after the game date/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Save postponement' })).toBeDisabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Save postponement' }));
+    expect(screen.getByRole('button', { name: 'Save date' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Save date' }));
     expect(mockAxios.put).not.toHaveBeenCalled();
   });
 

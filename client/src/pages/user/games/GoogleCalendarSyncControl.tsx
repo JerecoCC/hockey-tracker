@@ -302,7 +302,7 @@ const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlP
             <Button
               type="button"
               variant="ghost"
-              intent="neutral"
+              intent="danger"
               onClick={disconnect}
               disabled={busy}
             >

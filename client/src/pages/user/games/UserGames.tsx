@@ -508,7 +508,7 @@ const ScheduleWatchModal = ({
       title="Postpone watch"
       onClose={onClose}
       onConfirm={submit}
-      confirmLabel={busy ? 'Saving…' : 'Save postponement'}
+      confirmLabel={busy ? 'Saving…' : 'Save date'}
       confirmDisabled={busy || !isDirty || !isValid || scheduleDateInvalid}
       busy={busy}
       footerStart={
@@ -516,14 +516,14 @@ const ScheduleWatchModal = ({
           <Button
             type="button"
             variant="ghost"
-            intent="neutral"
+            intent="danger"
             onClick={() => {
               setValue('scheduled_for', '', { shouldDirty: true, shouldValidate: true });
               onChange('');
             }}
             disabled={busy}
           >
-            Clear postponement
+            Clear date
           </Button>
         ) : undefined
       }
