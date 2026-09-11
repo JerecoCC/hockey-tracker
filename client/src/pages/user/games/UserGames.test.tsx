@@ -1842,12 +1842,17 @@ describe('UserGames schedule views', () => {
     expect(screen.getAllByText('EXH').length).toBeGreaterThan(0);
   });
 
-  it('allows dragging a calendar game to another date to schedule it', async () => {
+  it('moves a dragged calendar game immediately while scheduling is pending', async () => {
     const user = userEvent.setup();
+    let resolveSchedule!: (value: { data: Record<string, never> }) => void;
+    mockAxios.put.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveSchedule = resolve;
+      }),
+    );
     render(<UserGames />);
     await user.click(screen.getByRole('button', { name: 'Month view' }));
 
-    const originalDate = localDateKeyForGame(games[0]) ?? scheduledWatchDate;
     const targetDate = localDateString(3);
     const sourceCard = screen.getByText('AWY').closest('[draggable="true"]');
     const targetCell = document.querySelector(`[data-date-key="${targetDate}"]`);
@@ -1875,14 +1880,11 @@ describe('UserGames schedule views', () => {
     expect(targetCell).not.toHaveClass(styles.calendarDayDropTarget);
     fireEvent.dragEnd(sourceCard as HTMLElement, { dataTransfer });
 
-    await waitFor(() =>
-      expect(mockAxios.put).toHaveBeenCalledWith(
-        expect.stringContaining('/user/watched-games/game-1/schedule'),
-        { scheduled_for: targetDate },
-        expect.objectContaining({ headers: expect.any(Object) }),
-      ),
+    expect(mockAxios.put).toHaveBeenCalledWith(
+      expect.stringContaining('/user/watched-games/game-1/schedule'),
+      { scheduled_for: targetDate },
+      expect.objectContaining({ headers: expect.any(Object) }),
     );
-
     expect(mockSetQueryData).toHaveBeenCalledWith(
       ['user-games', 'all', 'all', 'team-home,team-opp', false, localDateString(0), ''],
       expect.any(Function),
@@ -1895,8 +1897,69 @@ describe('UserGames schedule views', () => {
         scheduled_for: targetDate,
       }),
     );
-    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM watch postponed to May 18, 2026');
+    expect(toast.success).not.toHaveBeenCalled();
+
+    resolveSchedule({ data: {} });
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith('AWY @ HOM watch postponed to May 18, 2026'),
+    );
+
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
+  });
+
+  it('restores a dragged calendar game when scheduling fails', async () => {
+    const user = userEvent.setup();
+    let rejectSchedule!: (reason: Error) => void;
+    let cachedGames = [...games];
+    const applyCacheUpdate = (
+      _queryKey: unknown,
+      updater: (games: typeof cachedGames) => typeof cachedGames,
+    ) => {
+      cachedGames = updater(cachedGames);
+      return cachedGames;
+    };
+    mockSetQueryData
+      .mockImplementationOnce(applyCacheUpdate)
+      .mockImplementationOnce(applyCacheUpdate);
+    mockAxios.put.mockReturnValueOnce(
+      new Promise((_resolve, reject) => {
+        rejectSchedule = reject;
+      }),
+    );
+    render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+
+    const targetDate = localDateString(3);
+    const sourceCard = screen.getByText('AWY').closest('[draggable="true"]');
+    const targetCell = document.querySelector(`[data-date-key="${targetDate}"]`);
+    const dataTransfer = {
+      store: {} as Record<string, string>,
+      effectAllowed: 'all',
+      dropEffect: 'move',
+      setData(type: string, value: string) {
+        this.store[type] = value;
+      },
+      getData(type: string) {
+        return this.store[type] ?? '';
+      },
+    };
+
+    fireEvent.dragStart(sourceCard as HTMLElement, { dataTransfer });
+    fireEvent.dragOver(targetCell as Element, { dataTransfer });
+    fireEvent.drop(targetCell as Element, { dataTransfer });
+
+    expect(cachedGames[0]).toEqual(
+      expect.objectContaining({ id: 'game-1', scheduled_for: targetDate }),
+    );
+
+    rejectSchedule(new Error('Schedule request failed'));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Failed to postpone watch'));
+
+    expect(cachedGames[0]).toEqual(
+      expect.objectContaining({ id: 'game-1', scheduled_for: scheduledWatchDate }),
+    );
+    expect(mockSetQueryData).toHaveBeenCalledTimes(2);
+    expect(toast.success).not.toHaveBeenCalled();
   });
 
   it('does not allow dropping a calendar game before its scheduled date', async () => {

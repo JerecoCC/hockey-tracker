@@ -339,6 +339,34 @@ const updateScheduledGameCache = (
   return changed ? nextGames : existing;
 };
 
+interface ScheduledGameCacheSnapshot {
+  queryKey: readonly unknown[];
+  previousGame: GameRecord | null;
+  previousIndex: number;
+  captured: boolean;
+}
+
+const restoreScheduledGameCache = (
+  existing: GameRecord[] | undefined,
+  gameId: string,
+  snapshot: ScheduledGameCacheSnapshot,
+) => {
+  if (!snapshot.captured || !Array.isArray(existing)) return existing;
+
+  const withoutOptimisticGame = existing.filter((game) => game.id !== gameId);
+  if (!snapshot.previousGame) {
+    return withoutOptimisticGame.length === existing.length ? existing : withoutOptimisticGame;
+  }
+
+  const restoredGames = [...withoutOptimisticGame];
+  restoredGames.splice(
+    Math.min(snapshot.previousIndex, restoredGames.length),
+    0,
+    snapshot.previousGame,
+  );
+  return restoredGames;
+};
+
 const getPlayoffRoundShortLabel = (game: GameRecord) => {
   if (game.game_type !== 'playoff' || game.playoff_round == null) return null;
   const customLabel = game.playoff_round_names?.[game.playoff_round] ?? null;
@@ -1046,13 +1074,43 @@ const UserGames = () => {
     setScheduleDate(getScheduledWatchDateKey(game.scheduled_for) ?? '');
   };
 
-  const saveScheduleForGame = async (game: GameRecord, scheduledFor: string | null) => {
+  const saveScheduleForGame = async (
+    game: GameRecord,
+    scheduledFor: string | null,
+    { optimistic = false }: { optimistic?: boolean } = {},
+  ) => {
     const gameId = game.id;
     if (actionGameId === gameId || scheduleBusy) return false;
     if (isInvalidWatchScheduleDate(game, scheduledFor, tzPref)) {
       toast.error('Choose a watch date after the game date');
       return false;
     }
+
+    const updatedGame = { ...game, scheduled_for: scheduledFor, skipped_by_user: false };
+    const userGameQueries = queryClient
+      .getQueryCache()
+      .findAll({ predicate: (query) => query.queryKey[0] === 'user-games' });
+    const cacheSnapshots: ScheduledGameCacheSnapshot[] = userGameQueries.map((query) => ({
+      queryKey: query.queryKey,
+      previousGame: null,
+      previousIndex: -1,
+      captured: false,
+    }));
+
+    if (optimistic) {
+      cacheSnapshots.forEach((snapshot) => {
+        queryClient.setQueryData<GameRecord[]>(snapshot.queryKey, (existing) => {
+          if (Array.isArray(existing)) {
+            snapshot.captured = true;
+            snapshot.previousIndex = existing.findIndex((cachedGame) => cachedGame.id === gameId);
+            snapshot.previousGame =
+              snapshot.previousIndex >= 0 ? existing[snapshot.previousIndex] : null;
+          }
+          return updateScheduledGameCache(existing, snapshot.queryKey, updatedGame, tzPref);
+        });
+      });
+    }
+
     setActionGameId(gameId);
     try {
       await axios.put(
@@ -1060,15 +1118,13 @@ const UserGames = () => {
         { scheduled_for: scheduledFor },
         { headers: authHeaders() },
       );
-      const updatedGame = { ...game, scheduled_for: scheduledFor, skipped_by_user: false };
-      const userGameQueries = queryClient
-        .getQueryCache()
-        .findAll({ predicate: (query) => query.queryKey[0] === 'user-games' });
 
-      for (const query of userGameQueries) {
-        queryClient.setQueryData<GameRecord[]>(query.queryKey, (existing) =>
-          updateScheduledGameCache(existing, query.queryKey, updatedGame, tzPref),
-        );
+      if (!optimistic) {
+        for (const query of userGameQueries) {
+          queryClient.setQueryData<GameRecord[]>(query.queryKey, (existing) =>
+            updateScheduledGameCache(existing, query.queryKey, updatedGame, tzPref),
+          );
+        }
       }
       toast.success(
         scheduledFor
@@ -1077,6 +1133,13 @@ const UserGames = () => {
       );
       return true;
     } catch {
+      if (optimistic) {
+        cacheSnapshots.forEach((snapshot) => {
+          queryClient.setQueryData<GameRecord[]>(snapshot.queryKey, (existing) =>
+            restoreScheduledGameCache(existing, gameId, snapshot),
+          );
+        });
+      }
       toast.error('Failed to postpone watch');
       return false;
     } finally {
@@ -1257,7 +1320,7 @@ const UserGames = () => {
     const normalizedScheduleDate = originalDateKey === dateKey ? null : dateKey;
     if (getScheduledWatchDateKey(draggedGame.scheduled_for) === normalizedScheduleDate) return;
 
-    await saveScheduleForGame(draggedGame, normalizedScheduleDate);
+    await saveScheduleForGame(draggedGame, normalizedScheduleDate, { optimistic: true });
   };
 
   const handleWeekNavigate = (offsetDays: number) => {
