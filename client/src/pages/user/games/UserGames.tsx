@@ -1096,6 +1096,33 @@ const UserGames = () => {
       previousIndex: -1,
       captured: false,
     }));
+    const matchupLabel = getGameMatchupLabel(game);
+    const scheduleToastId = toast.loading(
+      scheduledFor
+        ? `Postponing ${matchupLabel} watch...`
+        : `Clearing ${matchupLabel} postponement...`,
+      {
+        autoClose: false,
+        closeButton: false,
+        closeOnClick: false,
+        draggable: false,
+        hideProgressBar: true,
+        pauseOnHover: false,
+      },
+    );
+    const finishScheduleToast = (type: 'success' | 'error', message: string) => {
+      toast.update(scheduleToastId, {
+        render: message,
+        type,
+        isLoading: false,
+        autoClose: type === 'success' ? 4000 : 12000,
+        closeButton: true,
+        closeOnClick: true,
+        draggable: true,
+        hideProgressBar: true,
+        pauseOnHover: true,
+      });
+    };
 
     if (optimistic) {
       cacheSnapshots.forEach((snapshot) => {
@@ -1126,10 +1153,11 @@ const UserGames = () => {
           );
         }
       }
-      toast.success(
+      finishScheduleToast(
+        'success',
         scheduledFor
-          ? `${getGameMatchupLabel(game)} watch postponed to ${formatScheduleToastDate(scheduledFor)}`
-          : `${getGameMatchupLabel(game)} postponement cleared`,
+          ? `${matchupLabel} watch postponed to ${formatScheduleToastDate(scheduledFor)}`
+          : `${matchupLabel} postponement cleared`,
       );
       return true;
     } catch {
@@ -1140,7 +1168,7 @@ const UserGames = () => {
           );
         });
       }
-      toast.error('Failed to postpone watch');
+      finishScheduleToast('error', 'Failed to postpone watch');
       return false;
     } finally {
       setActionGameId(null);

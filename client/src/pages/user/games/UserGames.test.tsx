@@ -1897,11 +1897,22 @@ describe('UserGames schedule views', () => {
         scheduled_for: targetDate,
       }),
     );
-    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.loading).toHaveBeenCalledWith(
+      'Postponing AWY @ HOM watch...',
+      expect.objectContaining({ autoClose: false, closeButton: false }),
+    );
+    expect(toast.update).not.toHaveBeenCalled();
 
     resolveSchedule({ data: {} });
     await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith('AWY @ HOM watch postponed to May 18, 2026'),
+      expect(toast.update).toHaveBeenCalledWith(
+        'google-sync-toast',
+        expect.objectContaining({
+          render: 'AWY @ HOM watch postponed to May 18, 2026',
+          type: 'success',
+          isLoading: false,
+        }),
+      ),
     );
 
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
@@ -1952,14 +1963,31 @@ describe('UserGames schedule views', () => {
       expect.objectContaining({ id: 'game-1', scheduled_for: targetDate }),
     );
 
+    expect(toast.loading).toHaveBeenCalledWith(
+      'Postponing AWY @ HOM watch...',
+      expect.objectContaining({ autoClose: false, closeButton: false }),
+    );
+
     rejectSchedule(new Error('Schedule request failed'));
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Failed to postpone watch'));
+    await waitFor(() =>
+      expect(toast.update).toHaveBeenCalledWith(
+        'google-sync-toast',
+        expect.objectContaining({
+          render: 'Failed to postpone watch',
+          type: 'error',
+          isLoading: false,
+        }),
+      ),
+    );
 
     expect(cachedGames[0]).toEqual(
       expect.objectContaining({ id: 'game-1', scheduled_for: scheduledWatchDate }),
     );
     expect(mockSetQueryData).toHaveBeenCalledTimes(2);
-    expect(toast.success).not.toHaveBeenCalled();
+    expect(toast.update).not.toHaveBeenCalledWith(
+      'google-sync-toast',
+      expect.objectContaining({ type: 'success' }),
+    );
   });
 
   it('does not allow dropping a calendar game before its scheduled date', async () => {
@@ -2047,7 +2075,18 @@ describe('UserGames schedule views', () => {
         scheduled_for: null,
       }),
     );
-    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM postponement cleared');
+    expect(toast.loading).toHaveBeenCalledWith(
+      'Clearing AWY @ HOM postponement...',
+      expect.objectContaining({ autoClose: false, closeButton: false }),
+    );
+    expect(toast.update).toHaveBeenCalledWith(
+      'google-sync-toast',
+      expect.objectContaining({
+        render: 'AWY @ HOM postponement cleared',
+        type: 'success',
+        isLoading: false,
+      }),
+    );
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
@@ -2183,7 +2222,14 @@ describe('UserGames schedule views', () => {
       ['user-games', 'all', 'all', 'team-home,team-opp', false, localDateString(0), ''],
       expect.any(Function),
     );
-    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM watch postponed to May 18, 2026');
+    expect(toast.update).toHaveBeenCalledWith(
+      'google-sync-toast',
+      expect.objectContaining({
+        render: 'AWY @ HOM watch postponed to May 18, 2026',
+        type: 'success',
+        isLoading: false,
+      }),
+    );
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
@@ -2239,7 +2285,14 @@ describe('UserGames schedule views', () => {
         skipped_by_user: false,
       }),
     ]);
-    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM watch postponed to Jun 19, 2026');
+    expect(toast.update).toHaveBeenCalledWith(
+      'google-sync-toast',
+      expect.objectContaining({
+        render: 'AWY @ HOM watch postponed to Jun 19, 2026',
+        type: 'success',
+        isLoading: false,
+      }),
+    );
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
