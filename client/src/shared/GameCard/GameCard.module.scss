@@ -212,6 +212,16 @@
   transition: right $transition-fast;
 }
 
+.postponedWatchRibbon {
+  background: $info-light;
+  color: $bg-page;
+}
+
+:global(:root[data-theme='light']) .postponedWatchRibbon {
+  background: $info;
+  color: #fff;
+}
+
 .gameActions {
   position: static;
   z-index: 2;

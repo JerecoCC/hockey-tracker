@@ -90,4 +90,25 @@ describe('GameCard', () => {
     expect(actions).toHaveClass('gameActions');
     expect(card?.lastElementChild).toBe(actions);
   });
+
+  it('uses a postponed-watch ribbon and omits the original game time', () => {
+    const { container } = render(
+      <GameCard
+        game={{
+          ...game,
+          status: 'scheduled',
+          watched_by_user: false,
+          scheduled_for: '2024-05-03',
+        }}
+        tzPref="ET"
+      />,
+    );
+
+    expect(container.querySelector('.gameMeta')).toHaveTextContent(/^05\/01\/2024$/);
+    expect(screen.getByRole('img', { name: 'Postponed watch' })).toHaveClass(
+      'watchedRibbon',
+      'postponedWatchRibbon',
+    );
+    expect(screen.queryByRole('img', { name: 'Watched' })).not.toBeInTheDocument();
+  });
 });

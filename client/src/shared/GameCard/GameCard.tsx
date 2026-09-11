@@ -70,7 +70,7 @@ export interface GameCardProps {
   statusLabel?: string;
   statusIntent?: TagIntent;
   supplementalMeta?: string;
-  /** Controls the watched ribbon on the card variant. Defaults to true. */
+  /** Controls the watched and postponed-watch ribbons on the card variant. Defaults to true. */
   showWatchedBanner?: boolean;
   /** Renders a left accent stripe coloured by game type. */
   showTypeIndicator?: boolean;
@@ -223,6 +223,12 @@ const GameCardVariant = ({
   const awayDim = showScore && game.away_score < game.home_score;
   const homeDim = showScore && game.home_score < game.away_score;
   const isWatched = !!game.watched_by_user;
+  const scheduledWatchDateKey = getScheduledWatchDateKey(game.scheduled_for);
+  const originalGameDateKey = getOriginalGameDateKey(game, tzPref);
+  const isPostponedWatch =
+    !!scheduledWatchDateKey &&
+    !!originalGameDateKey &&
+    scheduledWatchDateKey !== originalGameDateKey;
   const hasTypeIndicator = showTypeIndicator || game.skipped_by_user;
   const isOpenable = canOpen ?? (!!href || isWatched);
   const timeLabel =
@@ -236,10 +242,14 @@ const GameCardVariant = ({
       ? getOriginalGameDateLabel(game, tzPref)
       : originalDateLabelProp;
   const primaryFallbackLabel = game.status === 'scheduled' ? 'TBD' : getStatusLabel(game);
-  const primaryMetaLabel = [originalDateLabel, timeLabel || primaryFallbackLabel]
+  const primaryMetaDetailLabel =
+    isPostponedWatch && originalDateLabel ? null : timeLabel || primaryFallbackLabel;
+  const primaryMetaLabel = [originalDateLabel, primaryMetaDetailLabel]
     .filter(Boolean)
     .join(' \u00b7 ');
   const playoffMetaLabel = getPlayoffGameMetaLabel(game);
+  const ribbonLabel = isWatched ? 'Watched' : isPostponedWatch ? 'Postponed watch' : null;
+  const ribbonIcon = isWatched ? 'visibility' : 'calendar_month';
 
   return (
     <Card
@@ -282,14 +292,19 @@ const GameCardVariant = ({
           aria-hidden="true"
         />
       )}
-      {showWatchedBanner && isWatched && (
+      {showWatchedBanner && ribbonLabel && (
         <span
-          className={styles.watchedRibbon}
+          className={[
+            styles.watchedRibbon,
+            !isWatched && isPostponedWatch ? styles.postponedWatchRibbon : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
           role="img"
-          aria-label="Watched"
+          aria-label={ribbonLabel}
         >
           <Icon
-            name="visibility"
+            name={ribbonIcon}
             size="0.72rem"
           />
         </span>

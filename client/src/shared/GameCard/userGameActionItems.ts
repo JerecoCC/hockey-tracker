@@ -74,7 +74,7 @@ export const getUserGameActions = ({
   !watched &&
     !skipped && {
       icon: 'calendar_month',
-      intent: 'neutral',
+      intent: 'info',
       tooltip: 'Postpone watch',
       disabled: busy,
       onClick: () => run(onSchedule),
