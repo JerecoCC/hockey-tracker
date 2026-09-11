@@ -1,5 +1,5 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 // The root element is the shared Card component (border variant), which supplies
 // the radius, padding and outline. GameCard only layers a subtle translucent
@@ -8,8 +8,13 @@
   --game-card-bg: #222d3f;
   --game-card-hover-bg: rgba(37, 99, 235, 0.06);
   --game-card-hover-border: rgba(37, 99, 235, 0.6);
-  --game-card-actions-bg: rgba(15, 23, 42, 0.9);
   --game-card-divider: var(--app-border, #{$border});
+  --game-card-inline-padding: #{$space-xl};
+  --game-card-action-gap: #{$space-md};
+  --game-card-action-rail-width: calc(2.5rem + var(--game-card-action-gap) + 1px);
+  --game-card-watched-action-offset: calc(
+    var(--game-card-action-rail-width) + var(--game-card-action-gap) + var(--game-card-action-gap)
+  );
   --game-card-league-bg-base: #{$bg-card};
   --game-card-league-border-base: #{$border};
   --game-card-league-meta-base: #{$text-bright};
@@ -32,9 +37,22 @@
     background: var(--game-card-hover-bg);
 
     .gameActions {
+      width: var(--game-card-action-rail-width);
+      margin-left: 0;
+      margin-right: calc(var(--game-card-action-gap) - var(--game-card-inline-padding));
+      padding-left: var(--game-card-action-gap);
+      border-left-width: 1px;
       opacity: 1;
       pointer-events: auto;
+      transform: translateX(0);
     }
+  }
+}
+
+.withActions:hover,
+.withActions:focus-within {
+  .watchedRibbon {
+    right: var(--game-card-watched-action-offset);
   }
 }
 
@@ -103,7 +121,6 @@
     var(--app-accent-light, #2563eb) 46%,
     var(--app-border, #cbd5e1)
   );
-  --game-card-actions-bg: color-mix(in srgb, var(--app-surface, #f8fafc) 94%, transparent);
   --game-card-league-bg-base: var(--app-surface, #fff);
   --game-card-league-border-base: var(--app-border, #cbd5e1);
   --game-card-league-meta-base: var(--app-text-strong, #0f172a);
@@ -177,7 +194,7 @@
 .watchedRibbon {
   position: absolute;
   top: 0;
-  right: $space-lg;
+  right: var(--game-card-inline-padding);
   z-index: 1;
   display: flex;
   align-items: flex-start;
@@ -192,23 +209,41 @@
   color: var(--game-league-text, #ffffff);
   filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.16));
   pointer-events: none;
+  transition: right $transition-fast;
 }
 
 .gameActions {
-  position: absolute;
-  inset: 0;
+  position: static;
   z-index: 2;
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
+  justify-content: space-around;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  align-self: stretch;
+  flex-direction: column;
+  flex-wrap: nowrap;
   gap: $space-xs;
-  border-radius: inherit;
-  background: var(--game-card-actions-bg);
-  box-shadow: inset 0 0 0 1px var(--app-border, #{$border});
+  width: 0;
+  min-width: 0;
+  margin-left: -$space-md;
+  margin-right: 0;
+  padding: 0;
+  overflow: hidden;
+  border-left: 0 solid var(--game-card-divider);
+  border-radius: 0;
+  background: transparent;
   opacity: 0;
   pointer-events: none;
-  transition: opacity $transition-fast;
+  transform: translateX($space-md);
+  transition:
+    width $transition-fast,
+    margin-left $transition-fast,
+    margin-right $transition-fast,
+    padding-left $transition-fast,
+    border-left-width $transition-fast,
+    opacity $transition-fast,
+    transform $transition-fast;
 }
 
 .gameMeta,
@@ -268,27 +303,26 @@
 }
 
 @media (max-width: $screen-mobile-only-max) {
+  .card {
+    --game-card-inline-padding: #{$space-md};
+  }
+
   .card[data-mobile-actions-layout='aside'] {
     .gameActions {
-      position: static;
-      inset: auto;
-      order: 3;
-      flex: 0 0 auto;
-      align-self: stretch;
-      flex-direction: column;
-      flex-wrap: nowrap;
-      justify-content: space-around;
-      padding-left: $space-md;
+      width: var(--game-card-action-rail-width);
+      margin-left: 0;
+      margin-right: calc(var(--game-card-action-gap) - var(--game-card-inline-padding));
+      padding-left: var(--game-card-action-gap);
       border-left: 1px solid var(--game-card-divider);
-      border-radius: 0;
-      background: transparent;
-      box-shadow: none;
+      overflow: visible;
       opacity: 1;
       pointer-events: auto;
+      transform: none;
+      transition: none;
     }
 
     .watchedRibbon {
-      right: calc(42px + #{$space-md} + #{$space-lg});
+      right: var(--game-card-watched-action-offset);
     }
   }
 }

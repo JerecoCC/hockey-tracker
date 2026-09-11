@@ -47,10 +47,10 @@ const isRenderableGameCardAction = (
 ): action is GameCardAction =>
   Boolean(
     action &&
-      typeof action.icon === 'string' &&
-      action.icon.trim().length > 0 &&
-      typeof action.tooltip === 'string' &&
-      action.tooltip.trim().length > 0,
+    typeof action.icon === 'string' &&
+    action.icon.trim().length > 0 &&
+    typeof action.tooltip === 'string' &&
+    action.tooltip.trim().length > 0,
   );
 
 export interface GameCardProps {
@@ -254,6 +254,7 @@ const GameCardVariant = ({
         game.status === 'in_progress' ? styles.live : '',
         game.skipped_by_user ? styles.skipped : '',
         isOpenable ? styles.clickable : '',
+        actions ? styles.withActions : '',
         className,
       ]
         .filter(Boolean)
@@ -280,14 +281,6 @@ const GameCardVariant = ({
           tabIndex={-1}
           aria-hidden="true"
         />
-      )}
-      {actions && (
-        <span
-          className={styles.gameActions}
-          data-game-card-actions
-        >
-          {renderActions(actions)}
-        </span>
       )}
       {showWatchedBanner && isWatched && (
         <span
@@ -330,6 +323,14 @@ const GameCardVariant = ({
           {playoffMetaLabel && <span>{playoffMetaLabel}</span>}
         </div>
       </div>
+      {actions && (
+        <span
+          className={styles.gameActions}
+          data-game-card-actions
+        >
+          {renderActions(actions)}
+        </span>
+      )}
     </Card>
   );
 };
@@ -478,9 +479,7 @@ const GameListItemVariant = ({
         intent={statusIntent ?? GAME_STATUS_TAG_INTENT[game.status]}
       />
       {actions && (
-        <ActionOverlay className={listStyles.actions}>
-          {renderActions(actions)}
-        </ActionOverlay>
+        <ActionOverlay className={listStyles.actions}>{renderActions(actions)}</ActionOverlay>
       )}
     </li>
   );
