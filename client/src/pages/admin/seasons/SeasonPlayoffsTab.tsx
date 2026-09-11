@@ -1208,7 +1208,7 @@ const SeasonPlayoffsTab = ({
                     variant="outlined"
                     intent="success"
                     icon="play_arrow"
-                    iconHeight="button"
+                    iconHeight="field"
                     size="medium"
                     tooltip={bracketActionTooltip}
                     aria-label={bracketActionLabel}
@@ -1499,6 +1499,7 @@ const SeasonPlayoffsTab = ({
                 tooltip={playoffSettingsActionTooltip}
                 disabled={playoffSettingsLocked || savingPlayoffSettings}
                 onClick={openPlayoffSettingsModal}
+                iconHeight="field"
               />
             }
           >

@@ -365,7 +365,7 @@ describe('UserDashboard', () => {
     expect(button).toHaveAttribute('data-icon', 'add');
     fireEvent.click(button);
     expect(screen.getByRole('heading', { name: 'Add games' })).toBeInTheDocument();
-    expect(screen.getByText('Favorite teams')).toBeInTheDocument();
+    expect(screen.getByText('Games to Watch')).toBeInTheDocument();
     expect(screen.getByText('Other games')).toBeInTheDocument();
   });
 
@@ -457,6 +457,37 @@ describe('UserDashboard', () => {
     expect(screen.queryByLabelText('Mark as watched')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Postpone watch')).toBeInTheDocument();
     expect(screen.getByLabelText('Skip game')).toBeInTheDocument();
+  });
+
+  it('cancels a custom nonfavorite watch instead of skipping the game', async () => {
+    const nonfavoriteTeam = {
+      ...makeGame().home_team,
+      id: 'team-nonfavorite',
+      name: 'Carolina Hurricanes',
+      code: 'CAR',
+    };
+    mockDashboardQueries({
+      todayGames: [
+        makeGame({
+          home_team: nonfavoriteTeam,
+          away_team: { ...nonfavoriteTeam, id: 'team-nonfavorite-away', code: 'FLA' },
+          scheduled_for: '2026-06-21',
+        }),
+      ],
+    });
+    mockAxios.put.mockResolvedValueOnce({ data: {} });
+
+    render(<UserDashboard />);
+
+    expect(screen.queryByLabelText('Skip game')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Cancel watch'));
+    await waitFor(() =>
+      expect(mockAxios.put).toHaveBeenCalledWith(
+        expect.stringContaining('/user/watched-games/game-1/schedule'),
+        { scheduled_for: null },
+        expect.any(Object),
+      ),
+    );
   });
 
   it('prevents postponing a watch to on or before the local game date', async () => {

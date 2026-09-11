@@ -338,7 +338,7 @@ const GameLineupsTab = ({
                   variant="outlined"
                   intent={finalLineupCorrectionActive ? 'neutral' : 'warning'}
                   icon={finalLineupCorrectionActive ? 'check' : 'edit'}
-                  iconHeight="button"
+                  iconHeight="field"
                   tooltip={
                     finalLineupCorrectionActive ? 'Done Correcting' : 'Correct Final Starting Goalie'
                   }

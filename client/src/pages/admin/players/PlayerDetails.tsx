@@ -3263,6 +3263,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
             icon="edit"
             size="medium"
             onClick={() => setEditPlayerInfoOpen(true)}
+            iconHeight="field"
           />
         ) : null
       }

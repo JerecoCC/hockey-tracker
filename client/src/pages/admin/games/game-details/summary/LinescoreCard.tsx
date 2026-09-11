@@ -97,6 +97,7 @@ const LinescoreCard = ({
               tooltip="Auto-fill game"
               disabled={!!busy}
               onClick={onAutofillGame}
+              iconHeight="field"
             />
           )}
           {game.status === 'scheduled' && onStartGame && onReschedule && onDelete && (
@@ -116,6 +117,7 @@ const LinescoreCard = ({
                 tooltipIntent={rosterReady && startingGoaliesReady ? undefined : 'error'}
                 disabled={!!busy || !rosterReady || !startingGoaliesReady}
                 onClick={onStartGame}
+                iconHeight="field"
               />
               <MoreActionsMenu
                 disabled={!!busy}
@@ -124,6 +126,7 @@ const LinescoreCard = ({
                   { label: 'Reschedule Game', icon: 'calendar', onClick: onReschedule },
                   { label: 'Delete Game', icon: 'delete', intent: 'danger', onClick: onDelete },
                 ]}
+                iconHeight="field"
               />
             </>
           )}
@@ -136,6 +139,7 @@ const LinescoreCard = ({
               tooltip="End Game"
               disabled={!!busy}
               onClick={onEndGame}
+              iconHeight="field"
             />
           )}
           {isFinal && (
@@ -146,6 +150,7 @@ const LinescoreCard = ({
               size="medium"
               tooltip="Download score card"
               onClick={onDownloadScoreCard}
+              iconHeight="field"
             />
           )}
           {game.status !== 'scheduled' && onDelete && (
@@ -160,6 +165,7 @@ const LinescoreCard = ({
                   onClick: onDelete,
                 },
               ]}
+              iconHeight="field"
             />
           )}
         </div>

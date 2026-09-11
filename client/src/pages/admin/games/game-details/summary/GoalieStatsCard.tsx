@@ -225,6 +225,7 @@ const GoalieStatsCard = ({
                 size="medium"
                 tooltip="Edit time on ice"
                 onClick={() => setToiOpen(true)}
+                iconHeight="field"
               />
               <Button
                 variant="outlined"
@@ -233,6 +234,7 @@ const GoalieStatsCard = ({
                 size="medium"
                 tooltip="Edit goalie stats"
                 onClick={() => setEditOpen(true)}
+                iconHeight="field"
               />
             </div>
           ) : undefined

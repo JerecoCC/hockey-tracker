@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import type { ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import type { GameRecord, TeamInfo } from '@/hooks/useGames';
 import { getOriginalGameDateKey, formatGameTime } from '@/lib/gameSchedule';
 import AddDayGamesModal from './AddDayGamesModal';
@@ -33,7 +34,11 @@ const favoriteGame = makeGame('favorite');
 // This becomes the next day in Manila, while remaining June 21 in North America.
 const dateKey = getOriginalGameDateKey(favoriteGame, 'local')!;
 
-const setup = (games: GameRecord[], scheduledGames: GameRecord[] = []) => {
+const setup = (
+  games: GameRecord[],
+  scheduledGames: GameRecord[] = [],
+  getGameActions?: (game: GameRecord) => (ListItemAction | false)[],
+) => {
   mockAxios.get.mockResolvedValue({ data: games });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -47,6 +52,7 @@ const setup = (games: GameRecord[], scheduledGames: GameRecord[] = []) => {
         dateLabel="Selected day"
         favoriteTeamIds={['favorite-away', 'favorite-home']}
         scheduledGames={scheduledGames}
+        getGameActions={getGameActions}
         onAdded={onAdded}
         onClose={onClose}
       />
@@ -57,7 +63,7 @@ const setup = (games: GameRecord[], scheduledGames: GameRecord[] = []) => {
 
 beforeEach(() => jest.resetAllMocks());
 
-it('shows favorite games without selection or schedule labels, with codes and full-name logo tooltips', async () => {
+it('shows games to watch with dashboard actions and full-name team tooltips', async () => {
   const game = makeGame('favorite', {
     away_team: {
       ...team('favorite-away'),
@@ -73,47 +79,51 @@ it('shows favorite games without selection or schedule labels, with codes and fu
       code: 'TOR',
     },
   });
-  setup([game], [game]);
-  const favorites = await screen.findByRole('list', { name: 'Favorite teams' });
-  expect(within(favorites).queryByRole('checkbox')).not.toBeInTheDocument();
-  expect(within(favorites).queryByText('Already scheduled')).not.toBeInTheDocument();
+  const onView = jest.fn();
+  setup([game], [game], () => [
+    { icon: 'open_in_new', tooltip: 'View game details', onClick: onView },
+  ]);
+  const watchList = await screen.findByRole('list', { name: 'Games to Watch' });
+  expect(within(watchList).queryByRole('checkbox')).not.toBeInTheDocument();
+  expect(within(watchList).queryByText('Already scheduled')).not.toBeInTheDocument();
   expect(
-    within(favorites)
+    within(watchList)
       .getAllByText('BOS')
       .some((element) => element.className === 'teamCode'),
   ).toBe(true);
   expect(
-    within(favorites)
+    within(watchList)
       .getAllByText('TOR')
       .some((element) => element.className === 'teamCode'),
   ).toBe(true);
-  expect(within(favorites).queryByText(/Boston|Toronto/)).not.toBeInTheDocument();
-  fireEvent.click(within(favorites).getByRole('listitem'));
-  expect(screen.getByRole('button', { name: 'Add selected games' })).toBeDisabled();
-  const awayLogo = within(favorites).getByLabelText('Boston Bruins');
-  fireEvent.mouseEnter(awayLogo);
+  expect(within(watchList).queryByText(/Boston|Toronto/)).not.toBeInTheDocument();
+  fireEvent.click(within(watchList).getByRole('button', { name: 'View game details' }));
+  expect(onView).toHaveBeenCalled();
+  const awayTeam = within(watchList).getByLabelText('Boston Bruins');
+  expect(awayTeam).toHaveTextContent('BOS');
+  fireEvent.mouseEnter(awayTeam);
   expect(await screen.findByRole('tooltip')).toHaveTextContent('Boston Bruins');
-  fireEvent.mouseLeave(awayLogo);
-  fireEvent.focus(within(favorites).getByLabelText('Toronto Maple Leafs'));
+  fireEvent.mouseLeave(awayTeam);
+  fireEvent.focus(within(watchList).getByLabelText('Toronto Maple Leafs'));
   expect(await screen.findByRole('tooltip')).toHaveTextContent('Toronto Maple Leafs');
 });
 
-it('groups all local-day games by favorites and includes skipped and rescheduled games', async () => {
+it('groups local-day games into games to watch and other games', async () => {
   const other = makeGame('other', { skipped_by_user: true, scheduled_for: '2026-07-10' });
   const outsideDay = makeGame('outside', { scheduled_at: '2026-06-23' });
   setup([other, favoriteGame, outsideDay]);
 
-  const favorites = await screen.findByRole('list', { name: 'Favorite teams' });
+  const watchList = await screen.findByRole('list', { name: 'Games to Watch' });
   const others = screen.getByRole('list', { name: 'Other games' });
-  expect(within(favorites).queryByRole('checkbox')).not.toBeInTheDocument();
-  expect(within(favorites).getAllByRole('listitem')).toHaveLength(1);
+  expect(within(watchList).queryByRole('checkbox')).not.toBeInTheDocument();
+  expect(within(watchList).getAllByRole('listitem')).toHaveLength(1);
   expect(
-    within(others).getByRole('checkbox', { name: 'other-away at other-home' }),
+    within(others).getByRole('listitem', { name: 'other-away at other-home' }),
   ).toBeInTheDocument();
-  expect(screen.queryByRole('checkbox', { name: /outside/ })).not.toBeInTheDocument();
-  expect(within(favorites).getByText('@')).toBeInTheDocument();
+  expect(screen.queryByRole('listitem', { name: /outside/ })).not.toBeInTheDocument();
+  expect(within(watchList).getByText('@')).toBeInTheDocument();
   expect(
-    within(favorites).getByText(
+    within(watchList).getByText(
       formatGameTime(favoriteGame.scheduled_at, favoriteGame.scheduled_time, 'local'),
     ),
   ).toHaveClass('time');
@@ -125,23 +135,44 @@ it('groups all local-day games by favorites and includes skipped and rescheduled
   );
 });
 
-it('adds selected nonfavorite games to the displayed date and keeps existing games checked', async () => {
+it('moves an added game into games to watch and keeps existing games out of other games', async () => {
   const other = makeGame('other', { skipped_by_user: true });
   const alreadyAdded = makeGame('existing');
   mockAxios.put.mockResolvedValue({ data: {} });
-  const { onAdded, onClose } = setup(
-    [favoriteGame, other, alreadyAdded],
-    [favoriteGame, alreadyAdded],
+  const { onAdded, onClose } = setup([favoriteGame, other], [favoriteGame, alreadyAdded]);
+
+  const watchList = await screen.findByRole('list', { name: 'Games to Watch' });
+  const others = screen.getByRole('list', { name: 'Other games' });
+  expect(
+    within(watchList).getByRole('listitem', { name: 'existing-away at existing-home' }),
+  ).toBeInTheDocument();
+  expect(
+    within(others).queryByRole('listitem', { name: 'existing-away at existing-home' }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText('Already scheduled')).not.toBeInTheDocument();
+
+  const otherRow = within(others).getByRole('listitem', { name: 'other-away at other-home' });
+  fireEvent.click(within(otherRow).getByRole('button', { name: 'Add to games to watch' }));
+
+  await waitFor(() =>
+    expect(
+      within(watchList).getByRole('listitem', { name: 'other-away at other-home' }),
+    ).toBeInTheDocument(),
   );
+  expect(mockAxios.put).not.toHaveBeenCalled();
+  expect(onAdded).not.toHaveBeenCalled();
+  expect(onClose).not.toHaveBeenCalled();
 
-  const existing = await screen.findByRole('checkbox', { name: 'existing-away at existing-home' });
-  expect(existing).toHaveAttribute('aria-checked', 'true');
-  expect(existing).toHaveAttribute('aria-disabled', 'true');
-  const checkbox = screen.getByRole('checkbox', { name: 'other-away at other-home' });
-  fireEvent.keyDown(checkbox, { key: ' ' });
-  expect(checkbox).toHaveAttribute('aria-checked', 'true');
-  fireEvent.click(screen.getByRole('button', { name: 'Add selected games' }));
-
+  const stagedRow = within(watchList).getByRole('listitem', {
+    name: 'other-away at other-home',
+  });
+  fireEvent.click(within(stagedRow).getByRole('button', { name: 'Cancel watch' }));
+  const restoredOthers = screen.getByRole('list', { name: 'Other games' });
+  expect(
+    within(restoredOthers).getByRole('listitem', { name: 'other-away at other-home' }),
+  ).toBeInTheDocument();
+  fireEvent.click(within(restoredOthers).getByRole('button', { name: 'Add to games to watch' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(onClose).toHaveBeenCalled());
   expect(mockAxios.put).toHaveBeenCalledTimes(1);
   expect(mockAxios.put).toHaveBeenCalledWith(
@@ -154,39 +185,63 @@ it('adds selected nonfavorite games to the displayed date and keeps existing gam
   ]);
 });
 
-it('allows row toggling and cancels without saving', async () => {
+it('does not add a game when its list row is clicked', async () => {
   const { onClose } = setup([makeGame('other')]);
-  const checkbox = await screen.findByRole('checkbox');
-  fireEvent.click(checkbox.closest('li')!);
-  expect(checkbox).toHaveAttribute('aria-checked', 'true');
-  fireEvent.click(checkbox);
-  expect(checkbox).toHaveAttribute('aria-checked', 'false');
-  expect(screen.getByRole('button', { name: 'Add selected games' })).toBeDisabled();
+  const row = await screen.findByRole('listitem', { name: 'other-away at other-home' });
+  fireEvent.click(row);
+  expect(mockAxios.put).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(onClose).toHaveBeenCalled();
-  expect(mockAxios.put).not.toHaveBeenCalled();
 });
 
-it('keeps failed selections available for retry without re-saving successful additions', async () => {
-  mockAxios.put.mockResolvedValueOnce({ data: {} }).mockRejectedValueOnce(new Error('Offline'));
-  const { onAdded, onClose } = setup([makeGame('first'), makeGame('other')]);
-  const checkboxes = await screen.findAllByRole('checkbox');
-  checkboxes.forEach((checkbox) => fireEvent.click(checkbox));
-  fireEvent.click(screen.getByRole('button', { name: 'Add selected games' }));
+it('keeps a game available for retry when adding it fails', async () => {
+  mockAxios.put.mockRejectedValueOnce(new Error('Offline'));
+  const { onAdded, onClose } = setup([makeGame('other')]);
+  const addButton = await screen.findByRole('button', { name: 'Add to games to watch' });
+  fireEvent.click(addButton);
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() => expect(toast.error).toHaveBeenCalled());
-  expect(onAdded).toHaveBeenCalledWith([expect.objectContaining({ id: 'first' })]);
+  expect(onAdded).not.toHaveBeenCalled();
   expect(onClose).not.toHaveBeenCalled();
   mockAxios.put.mockResolvedValueOnce({ data: {} });
-  fireEvent.click(screen.getByRole('button', { name: 'Add selected games' }));
-  await waitFor(() => expect(onClose).toHaveBeenCalled());
-  expect(mockAxios.put).toHaveBeenCalledTimes(3);
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  await waitFor(() =>
+    expect(onAdded).toHaveBeenCalledWith([expect.objectContaining({ id: 'other' })]),
+  );
+  expect(mockAxios.put).toHaveBeenCalledTimes(2);
+  expect(onClose).toHaveBeenCalled();
+});
+
+it('places postponed games first and shows their original local date instead of the time', async () => {
+  const postponed = makeGame('postponed', {
+    scheduled_at: '2026-06-18',
+    scheduled_for: dateKey,
+  });
+  setup([favoriteGame], [favoriteGame, postponed]);
+
+  const watchList = await screen.findByRole('list', { name: 'Games to Watch' });
+  const rows = within(watchList).getAllByRole('listitem');
+  expect(rows[0]).toHaveAccessibleName('postponed-away at postponed-home');
+  const originalDateKey = getOriginalGameDateKey(postponed, 'local')!;
+  const [year, month, day] = originalDateKey.split('-').map(Number);
+  const originalDateLabel = new Intl.DateTimeFormat('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+  }).format(new Date(year, month - 1, day));
+  expect(within(rows[0]).getByText(originalDateLabel)).toHaveClass('time');
+  expect(
+    within(rows[0]).queryByText(
+      formatGameTime(postponed.scheduled_at, postponed.scheduled_time, 'local'),
+    ),
+  ).not.toBeInTheDocument();
 });
 
 it('shows empty groups when no games fall on the local day', async () => {
   setup([]);
-  expect(await screen.findByText('No favorite-team games on this day.')).toBeInTheDocument();
+  expect(await screen.findByText('No games to watch on this day.')).toBeInTheDocument();
   expect(screen.getByText('No other games on this day.')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Add selected games' })).toBeDisabled();
 });
 
 it('offers a retry when loading fails', async () => {

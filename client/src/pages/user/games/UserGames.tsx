@@ -557,8 +557,10 @@ const CalendarGameCard = ({
   onDownloadScoreCard,
   onMarkWatched,
   onUnwatch,
+  onCancelWatch,
   onSchedule,
   onSkip,
+  favoriteTeamGame,
   onDragStart,
   onDragEnd,
   draggable,
@@ -571,8 +573,10 @@ const CalendarGameCard = ({
   onDownloadScoreCard: () => void;
   onMarkWatched: () => Promise<void>;
   onUnwatch: () => Promise<void>;
+  onCancelWatch: () => Promise<void>;
   onSchedule: () => void;
   onSkip: () => Promise<void>;
+  favoriteTeamGame: boolean;
   onDragStart?: (event: DragEvent<HTMLDivElement>) => void;
   onDragEnd?: () => void;
   draggable?: boolean;
@@ -670,6 +674,7 @@ const CalendarGameCard = ({
         <UserGameActions
           watched={!!game.watched_by_user}
           skipped={!!game.skipped_by_user}
+          favoriteTeamGame={favoriteTeamGame}
           canMarkWatched={canMarkWatched}
           busy={busy}
           onView={onOpen}
@@ -677,6 +682,7 @@ const CalendarGameCard = ({
           onMarkWatched={onMarkWatched}
           onUnwatch={onUnwatch}
           onUndoSkip={onUnwatch}
+          onCancelWatch={onCancelWatch}
           onSchedule={onSchedule}
           onSkip={onSkip}
         />
@@ -762,6 +768,8 @@ const UserGames = () => {
     },
   });
   const favoriteTeamIds = useMemo(() => favoriteTeamIdsData ?? [], [favoriteTeamIdsData]);
+  const isFavoriteTeamGame = (game: GameRecord) =>
+    favoriteTeamIds.includes(game.home_team.id) || favoriteTeamIds.includes(game.away_team.id);
 
   const leagueSelected = leagueId !== 'all';
   const selectedTeamIds = useMemo(() => [...appliedTeamFilter].sort(), [appliedTeamFilter]);
@@ -1320,6 +1328,7 @@ const UserGames = () => {
           <UserGameActions
             watched={watched}
             skipped={skipped}
+            favoriteTeamGame={isFavoriteTeamGame(game)}
             canMarkWatched={canMarkWatched}
             busy={busy}
             onView={() => openGame(game)}
@@ -1327,6 +1336,9 @@ const UserGames = () => {
             onMarkWatched={() => markGameWatched(game)}
             onUnwatch={() => unwatchGame(game, 'unwatch')}
             onUndoSkip={() => unwatchGame(game, 'undo-skip')}
+            onCancelWatch={async () => {
+              await saveScheduleForGame(game, null);
+            }}
             onSchedule={() => openScheduleModal(game)}
             onSkip={() => skipGame(game)}
           />
@@ -1465,7 +1477,7 @@ const UserGames = () => {
       renderTrigger={({ busy, openSettings }) => (
         <MoreActionsMenu
           size="medium"
-          iconHeight={isMobileView ? 'field' : 'button'}
+          iconHeight="field"
           iconSize="1.25rem"
           wrapperClassName={isMobileView ? styles.mobileMoreActions : undefined}
           items={[
@@ -1659,8 +1671,12 @@ const UserGames = () => {
                         onUnwatch={() =>
                           unwatchGame(game, game.skipped_by_user ? 'undo-skip' : 'unwatch')
                         }
+                        onCancelWatch={async () => {
+                          await saveScheduleForGame(game, null);
+                        }}
                         onSchedule={() => openScheduleModal(game)}
                         onSkip={() => skipGame(game)}
+                        favoriteTeamGame={isFavoriteTeamGame(game)}
                         onDragStart={handleCalendarDragStart(game)}
                         onDragEnd={handleCalendarDragEnd}
                         draggable={

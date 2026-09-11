@@ -760,6 +760,7 @@ const GameSummaryTab = ({
                       size="medium"
                       tooltip="Edit shots"
                       onClick={() => setShotsEditModalOpen(true)}
+                      iconHeight="field"
                     />
                   ) : undefined
                 }

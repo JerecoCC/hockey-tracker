@@ -553,7 +553,7 @@ const SeasonDayGamesPage = () => {
             intent="neutral"
             size="medium"
             icon={GAME_AUTOFILL_ACTION_ICON}
-            iconHeight="button"
+            iconHeight="field"
             iconSize="1rem"
             className={styles.sectionActionButton}
             tooltip={
@@ -578,7 +578,7 @@ const SeasonDayGamesPage = () => {
           intent="accent"
           size="medium"
           icon="playlist_add"
-          iconHeight="button"
+          iconHeight="field"
           iconSize="1rem"
           className={styles.sectionActionButton}
           tooltip="Bulk Create"
@@ -591,7 +591,7 @@ const SeasonDayGamesPage = () => {
           intent="accent"
           size="medium"
           icon="add"
-          iconHeight="button"
+          iconHeight="field"
           iconSize="1rem"
           className={styles.sectionActionButton}
           tooltip="Create Game"

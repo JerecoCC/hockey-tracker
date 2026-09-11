@@ -30,19 +30,13 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
 
-  // SelectableListItem requires a text name for its checkbox label. Keep that
-  // label accessible while the custom content supplies the visible matchup.
-  > li > div:has(> [id]) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+.gameRow {
+  // The matchup supplies the visible content while ListItem's name remains an
+  // accessible label for the row.
+  > div:first-of-type {
+    display: none;
   }
 }
 
@@ -64,11 +58,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.scheduled {
-  color: var(--app-text-muted, #{$text-dim});
-  font-size: $font-xs;
-}
-
 .matchup {
   display: grid;
   grid-template-columns: auto auto auto;
@@ -83,20 +72,21 @@
   align-items: center;
   gap: $space-xs;
   min-width: 0;
+  border-radius: $radius-sm;
 
   > :first-child {
     flex-shrink: 0;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--app-accent, #{$accent});
+    outline-offset: 2px;
   }
 }
 
 .logo {
   display: inline-flex;
   border-radius: 50%;
-
-  &:focus-visible {
-    outline: 2px solid var(--app-accent, #{$accent});
-    outline-offset: 2px;
-  }
 }
 
 .teamCode {
@@ -110,13 +100,4 @@
 .at {
   color: var(--app-text-muted, #{$text-dim});
   font-size: $font-sm;
-}
-
-.favoriteRow {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-md;
-  border: 1px solid var(--app-field-border, #{$border});
-  border-radius: $radius-md;
 }

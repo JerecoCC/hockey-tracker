@@ -53,6 +53,7 @@ const ThreeStarsCard = ({
             size="medium"
             tooltip="Edit three stars"
             onClick={onEdit}
+            iconHeight="field"
           />
         ) : undefined
       }

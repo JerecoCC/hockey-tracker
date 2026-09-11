@@ -10,6 +10,7 @@ import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
+import { getUserGameActions } from '@/shared/GameCard/userGameActionItems';
 import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
@@ -334,6 +335,26 @@ const UserDashboard = () => {
     ? isInvalidWatchScheduleDate(scheduleTarget, scheduleDate, tzPref)
     : false;
 
+  const isFavoriteTeamGame = (game: GameRecord) =>
+    favorites.includes(game.home_team.id) || favorites.includes(game.away_team.id);
+
+  const getDashboardGameActions = (game: GameRecord) =>
+    getUserGameActions({
+      watched: !!game.watched_by_user,
+      skipped: !!game.skipped_by_user,
+      favoriteTeamGame: isFavoriteTeamGame(game),
+      canMarkWatched: canMarkGameWatched(game),
+      busy: actionGameId === game.id,
+      onView: () => navigate(`/games/${game.id}`),
+      onDownloadScoreCard: () => setScoreCardTarget(getScoreCardGame(game)),
+      onMarkWatched: () => markGameWatched(game),
+      onUnwatch: () => unwatchGame(game.id),
+      onUndoSkip: () => unwatchGame(game.id),
+      onCancelWatch: () => void saveScheduleForGame(game, null),
+      onSchedule: () => openScheduleModal(game),
+      onSkip: () => setConfirmSkipGame(game),
+    });
+
   return (
     <div className={styles.page}>
       <section
@@ -434,6 +455,7 @@ const UserDashboard = () => {
                   aria-label="Add games"
                   disabled={gamesLoading}
                   onClick={() => setAddGamesOpen(true)}
+                  iconHeight="field"
                 />
               </div>
             }
@@ -460,6 +482,7 @@ const UserDashboard = () => {
                         <UserGameActions
                           watched={watched}
                           skipped={skipped}
+                          favoriteTeamGame={isFavoriteTeamGame(game)}
                           canMarkWatched={canMarkWatched}
                           busy={busy}
                           onView={() => navigate(`/games/${game.id}`)}
@@ -467,6 +490,7 @@ const UserDashboard = () => {
                           onMarkWatched={() => markGameWatched(game)}
                           onUnwatch={() => unwatchGame(game.id)}
                           onUndoSkip={() => unwatchGame(game.id)}
+                          onCancelWatch={() => void saveScheduleForGame(game, null)}
                           onSchedule={() => openScheduleModal(game)}
                           onSkip={() => setConfirmSkipGame(game)}
                         />
@@ -498,6 +522,7 @@ const UserDashboard = () => {
                 tooltip="View all games watched"
                 aria-label="View all games watched"
                 onClick={() => navigate('/dashboard/games-watched')}
+                iconHeight="field"
               />
             }
           >
@@ -536,6 +561,7 @@ const UserDashboard = () => {
           dateLabel={fmtDayHeading(todayKey)}
           favoriteTeamIds={favorites}
           scheduledGames={todayGames}
+          getGameActions={getDashboardGameActions}
           onClose={() => setAddGamesOpen(false)}
           onAdded={(added) => {
             setDashboardGames((existing) => [

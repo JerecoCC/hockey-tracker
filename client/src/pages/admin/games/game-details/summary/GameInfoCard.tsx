@@ -60,6 +60,7 @@ const GameInfoCard = ({
               size="medium"
               tooltip="Edit game info"
               onClick={() => setEditOpen(true)}
+              iconHeight="field"
             />
           ) : undefined
         }

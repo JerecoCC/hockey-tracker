@@ -1272,6 +1272,36 @@ describe('UserGames schedule views', () => {
     ).toBeInTheDocument();
   });
 
+  it('cancels a custom nonfavorite watch instead of skipping the game', async () => {
+    const customWatch = {
+      ...games[0],
+      status: 'scheduled',
+      home_team: { ...games[0].home_team, id: 'team-custom-home', code: 'CAR' },
+      away_team: { ...games[0].away_team, id: 'team-custom-away', code: 'FLA' },
+      scheduled_for: scheduledWatchDate,
+    };
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+      if (queryKey[0] === 'user-games') return { data: [customWatch], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    expect(screen.queryByRole('button', { name: 'Skip game' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel watch' }));
+    await waitFor(() =>
+      expect(mockAxios.put).toHaveBeenCalledWith(
+        expect.stringContaining('/user/watched-games/game-1/schedule'),
+        { scheduled_for: null },
+        expect.any(Object),
+      ),
+    );
+  });
+
   it("shows a postponed watch game's original date in the user timezone", async () => {
     const user = userEvent.setup();
     const originalEtDate = localDateString(1);

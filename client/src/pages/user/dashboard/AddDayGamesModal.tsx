@@ -3,25 +3,52 @@ import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
-import SelectableListItem from '@jerecocc/tracker-ui/components/SelectableListItem/SelectableListItem';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
+import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import type { GameRecord, TeamInfo } from '@/hooks/useGames';
 import { API, authHeaders } from '@/lib/apiClient';
-import { formatGameTime, getOriginalGameDateKey, getScheduledInstant } from '@/lib/gameSchedule';
+import {
+  dateKeyToDate,
+  formatGameTime,
+  getOriginalGameDateKey,
+  getScheduledInstant,
+  getScheduledWatchDateKey,
+} from '@/lib/gameSchedule';
 import styles from './AddDayGamesModal.module.scss';
 
+const ORIGINAL_DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  month: '2-digit',
+  day: '2-digit',
+  year: 'numeric',
+});
+
+const isPostponedGame = (game: GameRecord) => {
+  const watchDate = getScheduledWatchDateKey(game.scheduled_for);
+  const originalDate = getOriginalGameDateKey(game, 'local');
+  return !!watchDate && !!originalDate && watchDate !== originalDate;
+};
+
+const getOriginalDateLabel = (game: GameRecord) => {
+  const dateKey = getOriginalGameDateKey(game, 'local');
+  return dateKey ? ORIGINAL_DATE_FMT.format(dateKeyToDate(dateKey)) : 'Date TBD';
+};
+
+const sortGamesByTime = (a: GameRecord, b: GameRecord) =>
+  (getScheduledInstant(a.scheduled_at, a.scheduled_time)?.getTime() ?? Infinity) -
+  (getScheduledInstant(b.scheduled_at, b.scheduled_time)?.getTime() ?? Infinity);
+
 const MatchupTeam = ({ team }: { team: TeamInfo }) => (
-  <span className={styles.team}>
-    <Tooltip text={team.name}>
-      <span
-        className={styles.logo}
-        tabIndex={0}
-        aria-label={team.name}
-      >
+  <Tooltip text={team.name}>
+    <span
+      className={styles.team}
+      tabIndex={0}
+      aria-label={team.name}
+    >
+      <span className={styles.logo}>
         <TeamLogo
           code={team.code}
           logo={team.logo}
@@ -34,9 +61,9 @@ const MatchupTeam = ({ team }: { team: TeamInfo }) => (
           alt=""
         />
       </span>
-    </Tooltip>
-    <span className={styles.teamCode}>{team.code}</span>
-  </span>
+      <span className={styles.teamCode}>{team.code}</span>
+    </span>
+  </Tooltip>
 );
 
 interface Props {
@@ -45,6 +72,7 @@ interface Props {
   favoriteTeamIds: string[];
   scheduledGames: GameRecord[];
   onAdded: (games: GameRecord[]) => void;
+  getGameActions?: (game: GameRecord) => (ListItemAction | false | null | undefined)[];
   onClose: () => void;
 }
 
@@ -54,10 +82,11 @@ const AddDayGamesModal = ({
   favoriteTeamIds,
   scheduledGames,
   onAdded,
+  getGameActions,
   onClose,
 }: Props) => {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [busy, setBusy] = useState(false);
+  const [locallyAddedIds, setLocallyAddedIds] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
   const {
     data: games = [],
     isLoading,
@@ -75,43 +104,41 @@ const AddDayGamesModal = ({
       return data.filter((game) => getOriginalGameDateKey(game, 'local') === dateKey);
     },
   });
-  const existingIds = new Set(scheduledGames.map((game) => game.id));
+  const scheduledIds = useMemo(
+    () => new Set(scheduledGames.map((game) => game.id)),
+    [scheduledGames],
+  );
+  const availableGames = useMemo(() => {
+    const gamesById = new Map(games.map((game) => [game.id, game]));
+    scheduledGames.forEach((game) => gamesById.set(game.id, game));
+    return [...gamesById.values()];
+  }, [games, scheduledGames]);
+
   const groups = useMemo(() => {
     const favorites = new Set(favoriteTeamIds);
-    const ordered = [...games].sort(
-      (a, b) =>
-        (getScheduledInstant(a.scheduled_at, a.scheduled_time)?.getTime() ?? Infinity) -
-        (getScheduledInstant(b.scheduled_at, b.scheduled_time)?.getTime() ?? Infinity),
-    );
-    const favoriteGames: GameRecord[] = [];
+    const ordered = [...availableGames].sort(sortGamesByTime);
+    const gamesToWatch: GameRecord[] = [];
     const otherGames: GameRecord[] = [];
     for (const game of ordered) {
-      (favorites.has(game.home_team.id) || favorites.has(game.away_team.id)
-        ? favoriteGames
-        : otherGames
-      ).push(game);
+      const isFavoriteGame = favorites.has(game.home_team.id) || favorites.has(game.away_team.id);
+      const isDefaultWatch =
+        isFavoriteGame && !game.skipped_by_user && !getScheduledWatchDateKey(game.scheduled_for);
+      const isWatching =
+        scheduledIds.has(game.id) || locallyAddedIds.has(game.id) || isDefaultWatch;
+      (isWatching ? gamesToWatch : otherGames).push(game);
     }
-    return [favoriteGames, otherGames];
-  }, [games, favoriteTeamIds]);
-  const selectedGames = groups[1].filter(
-    (game) => selectedIds.has(game.id) && !existingIds.has(game.id),
-  );
-
-  const toggle = (id: string) => {
-    if (busy || existingIds.has(id)) return;
-    setSelectedIds((previous) => {
-      const next = new Set(previous);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+    gamesToWatch.sort(
+      (a, b) => Number(isPostponedGame(b)) - Number(isPostponedGame(a)) || sortGamesByTime(a, b),
+    );
+    return [gamesToWatch, otherGames];
+  }, [availableGames, favoriteTeamIds, locallyAddedIds, scheduledIds]);
 
   const save = async () => {
-    if (busy || selectedGames.length === 0) return;
-    setBusy(true);
+    if (saving || locallyAddedIds.size === 0) return;
+    setSaving(true);
+    const pendingGames = availableGames.filter((game) => locallyAddedIds.has(game.id));
     const results = await Promise.allSettled(
-      selectedGames.map(async (game) => {
+      pendingGames.map(async (game) => {
         await axios.put(
           `${API}/user/watched-games/${game.id}/schedule`,
           { scheduled_for: dateKey },
@@ -120,16 +147,15 @@ const AddDayGamesModal = ({
         return { ...game, scheduled_for: dateKey, skipped_by_user: false };
       }),
     );
-    const added = results.flatMap((result) =>
+    const addedGames = results.flatMap((result) =>
       result.status === 'fulfilled' ? [result.value] : [],
     );
-    if (added.length) {
-      onAdded(added);
-      setSelectedIds(
-        (previous) => new Set([...previous].filter((id) => !added.some((game) => game.id === id))),
-      );
+    if (addedGames.length > 0) {
+      onAdded(addedGames);
+      const addedIds = new Set(addedGames.map((game) => game.id));
+      setLocallyAddedIds((previous) => new Set([...previous].filter((id) => !addedIds.has(id))));
     }
-    setBusy(false);
+    setSaving(false);
     if (results.some((result) => result.status === 'rejected')) {
       toast.error('Some games could not be added. Please try again.');
     } else {
@@ -142,13 +168,13 @@ const AddDayGamesModal = ({
       open
       title="Add games"
       onClose={() => {
-        if (!busy) onClose();
+        if (!saving) onClose();
       }}
       onConfirm={() => void save()}
-      confirmLabel={busy ? 'Adding...' : 'Add selected games'}
-      confirmDisabled={isLoading || isError || selectedGames.length === 0}
-      busy={busy}
-      disableBackdropClose={busy}
+      confirmLabel={saving ? 'Saving...' : 'Save'}
+      confirmDisabled={isLoading || isError || locallyAddedIds.size === 0}
+      busy={saving}
+      disableBackdropClose={saving}
     >
       <p className={styles.date}>{dateLabel} · Local time</p>
       {isLoading ? (
@@ -172,13 +198,11 @@ const AddDayGamesModal = ({
                 id={`day-games-group-${index}`}
                 className={styles.heading}
               >
-                {index === 0 ? 'Favorite teams' : 'Other games'}
+                {index === 0 ? 'Games to Watch' : 'Other games'}
               </h4>
               {group.length === 0 ? (
                 <EmptyMessage>
-                  {index === 0
-                    ? 'No favorite-team games on this day.'
-                    : 'No other games on this day.'}
+                  {index === 0 ? 'No games to watch on this day.' : 'No other games on this day.'}
                 </EmptyMessage>
               ) : (
                 <ul
@@ -186,8 +210,6 @@ const AddDayGamesModal = ({
                   aria-labelledby={`day-games-group-${index}`}
                 >
                   {group.map((game) => {
-                    const existing = existingIds.has(game.id);
-                    const checked = existing || selectedIds.has(game.id);
                     const content = (
                       <>
                         <div className={styles.mainContent}>
@@ -196,36 +218,56 @@ const AddDayGamesModal = ({
                             <span className={styles.at}>@</span>
                             <MatchupTeam team={game.home_team} />
                           </div>
-                          {index !== 0 && existing && (
-                            <span className={styles.scheduled}>Already scheduled</span>
-                          )}
                         </div>
                         <span className={styles.time}>
-                          {game.scheduled_time
-                            ? formatGameTime(game.scheduled_at, game.scheduled_time, 'local')
-                            : 'Time TBD'}
+                          {isPostponedGame(game)
+                            ? getOriginalDateLabel(game)
+                            : game.scheduled_time
+                              ? formatGameTime(game.scheduled_at, game.scheduled_time, 'local')
+                              : 'Time TBD'}
                         </span>
                       </>
                     );
-                    if (index === 0) {
-                      return (
-                        <li
-                          key={game.id}
-                          className={styles.favoriteRow}
-                        >
-                          {content}
-                        </li>
-                      );
-                    }
                     return (
-                      <SelectableListItem
+                      <ListItem
                         key={game.id}
-                        checked={checked}
-                        onToggle={() => toggle(game.id)}
-                        disabled={busy || existing}
+                        fullWidth
+                        className={styles.gameRow}
                         hideImage
-                        name={`${game.away_team.name} at ${game.home_team.name}`}
+                        name=""
+                        ariaLabel={`${game.away_team.name} at ${game.home_team.name}`}
                         rightContent={content}
+                        actions={
+                          index === 0
+                            ? locallyAddedIds.has(game.id) && !scheduledIds.has(game.id)
+                              ? [
+                                  {
+                                    icon: 'remove_circle_outline',
+                                    intent: 'danger',
+                                    tooltip: 'Cancel watch',
+                                    disabled: saving,
+                                    onClick: () =>
+                                      setLocallyAddedIds((previous) => {
+                                        const next = new Set(previous);
+                                        next.delete(game.id);
+                                        return next;
+                                      }),
+                                  },
+                                ]
+                              : getGameActions?.(game)
+                            : [
+                                {
+                                  icon: 'add',
+                                  intent: 'accent',
+                                  tooltip: 'Add to games to watch',
+                                  disabled: saving,
+                                  onClick: () =>
+                                    setLocallyAddedIds((previous) =>
+                                      new Set(previous).add(game.id),
+                                    ),
+                                },
+                              ]
+                        }
                       />
                     );
                   })}

@@ -1139,7 +1139,7 @@ const SeasonDetailsPage = () => {
                             intent="neutral"
                             size="medium"
                             icon="ranking_star"
-                            iconHeight="button"
+                            iconHeight="field"
                             tooltip="All Leaders"
                             aria-label="View all forward leaders"
                             onClick={() => handleStatsSubTabChange('Forwards')}
@@ -1189,7 +1189,7 @@ const SeasonDetailsPage = () => {
                             intent="neutral"
                             size="medium"
                             icon="ranking_star"
-                            iconHeight="button"
+                            iconHeight="field"
                             tooltip="All Leaders"
                             aria-label="View all defense leaders"
                             onClick={() => handleStatsSubTabChange('Defense')}
@@ -1247,7 +1247,7 @@ const SeasonDetailsPage = () => {
                             intent="neutral"
                             size="medium"
                             icon="ranking_star"
-                            iconHeight="button"
+                            iconHeight="field"
                             tooltip="All Leaders"
                             aria-label="View all goalie leaders"
                             onClick={() => handleStatsSubTabChange('Goalies')}
