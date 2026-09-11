@@ -937,7 +937,7 @@ describe('UserGames schedule views', () => {
 
     expect(screen.getByText('Google Calendar Sync')).toBeInTheDocument();
     expect(
-      screen.getByText(/creates a separate calendar and can only manage events inside/i),
+      screen.getByText(/separate Hockey Tracker calendar for favorite-team games/i),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Connect Google Calendar' })).toBeEnabled();
   });

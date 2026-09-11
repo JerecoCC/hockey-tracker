@@ -7,6 +7,8 @@ const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 const GOOGLE_CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.app.created';
 const DEFAULT_CALENDAR_NAME = 'Hockey Tracker';
 const DEFAULT_GAME_DURATION_MINUTES = 180;
+const MAX_GOOGLE_REQUEST_RETRIES = 4;
+const GOOGLE_BULK_WRITE_INTERVAL_MS = 100;
 const GAME_TIME_ZONE = 'America/New_York';
 const REAUTHORIZATION_REQUIRED_MESSAGE =
   'Google Calendar authorization has expired. Reconnect Google Calendar to continue syncing.';
@@ -101,41 +103,74 @@ const readJsonResponse = async (response) => {
   }
 };
 
+const getGoogleApiErrorReasons = (data) =>
+  [
+    ...(Array.isArray(data?.error?.details) ? data.error.details : []),
+    ...(Array.isArray(data?.error?.errors) ? data.error.errors : []),
+  ]
+    .map((detail) => detail?.reason)
+    .filter((reason) => typeof reason === 'string');
+
 const getGoogleApiErrorCode = (data) => {
-  const reasons = Array.isArray(data?.error?.details)
-    ? data.error.details
-        .map((detail) => detail?.reason)
-        .filter((reason) => typeof reason === 'string')
-    : [];
+  const reasons = getGoogleApiErrorReasons(data);
+  const message = String(data?.error?.message || data?.message || '');
 
   if (reasons.includes('SERVICE_DISABLED')) return 'calendar_api_disabled';
   if (reasons.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT')) {
     return 'insufficient_calendar_scope';
   }
+  if (
+    reasons.some((reason) => ['rateLimitExceeded', 'userRateLimitExceeded'].includes(reason)) ||
+    /rate limit exceeded/i.test(message)
+  ) {
+    return 'rate_limit_exceeded';
+  }
   return data?.error?.status || 'calendar_api_error';
 };
 
-const googleRequest = async (url, { accessToken, method = 'GET', body } = {}) => {
-  const response = await fetch(url, {
-    method,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      ...(body ? { 'Content-Type': 'application/json' } : {}),
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
-  const data = await readJsonResponse(response);
-  if (!response.ok) {
-    throw new GoogleCalendarError(
-      data?.error?.message || data?.message || 'Google Calendar request failed',
-      {
-        status: response.status,
-        code: getGoogleApiErrorCode(data),
-        details: data,
-      },
-    );
+const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+const retryDelayMs = (response, attempt) => {
+  const retryAfter = response.headers?.get?.('retry-after');
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.min(8000, seconds * 1000);
+    const dateMs = Date.parse(retryAfter);
+    if (Number.isFinite(dateMs)) return Math.min(8000, Math.max(dateMs - Date.now(), 0));
   }
-  return data;
+  return Math.min(8000, 1000 * 2 ** attempt + Math.floor(Math.random() * 250));
+};
+
+const googleRequest = async (url, { accessToken, method = 'GET', body } = {}) => {
+  for (let attempt = 0; ; attempt += 1) {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    const data = await readJsonResponse(response);
+    if (response.ok) return data;
+
+    const code = getGoogleApiErrorCode(data);
+    const retryable =
+      response.status === 429 ||
+      code === 'rate_limit_exceeded' ||
+      [500, 502, 503, 504].includes(response.status);
+    if (!retryable || attempt >= MAX_GOOGLE_REQUEST_RETRIES) {
+      throw new GoogleCalendarError(
+        data?.error?.message || data?.message || 'Google Calendar request failed',
+        {
+          status: response.status,
+          code,
+          details: data,
+        },
+      );
+    }
+    await sleep(retryDelayMs(response, attempt));
+  }
 };
 
 const postTokenRequest = async (params) => {
@@ -331,6 +366,21 @@ const eventTimeForGame = (game, requestedTimeZone) => {
   };
 };
 
+const originalScheduleDateForGame = (game, requestedTimeZone) => {
+  if (!game.game_date) return null;
+  const calendarTime = normalizeCalendarTime(game.scheduled_time);
+  if (!calendarTime) return game.game_date;
+  const timeZone = normalizeGoogleCalendarTimeZone(requestedTimeZone);
+  const scheduledInstant = zonedDateTimeToInstant(game.game_date, calendarTime, GAME_TIME_ZONE);
+  return dateTimePartsInZone(scheduledInstant, timeZone).date;
+};
+
+const formatCalendarDate = (dateKey) =>
+  new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'long',
+    timeZone: 'UTC',
+  }).format(new Date(`${dateKey}T00:00:00Z`));
+
 const eventIdForGame = (userId, gameId) =>
   `ht${crypto.createHash('sha256').update(`${userId}:${gameId}`, 'utf8').digest('hex')}`;
 
@@ -338,11 +388,17 @@ const eventForGame = ({ userId, game, timeZone }) => {
   const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').trim().replace(/\/$/, '');
   const matchup = `${game.away_code || 'Away'} @ ${game.home_code || 'Home'}`;
   const eventTime = eventTimeForGame(game, timeZone);
+  const originalScheduleDate = game.scheduled_for
+    ? originalScheduleDateForGame(game, timeZone)
+    : null;
+  const originalScheduleNote = originalScheduleDate
+    ? `\nOriginal game date: ${formatCalendarDate(originalScheduleDate)}.`
+    : '';
   return {
     id: eventIdForGame(userId, game.id),
     status: 'confirmed',
     summary: game.league_code ? `${matchup} · ${game.league_code}` : matchup,
-    description: `Game synced from Hockey Tracker.\n\n${clientUrl}/games/${game.id}`,
+    description: `Game synced from Hockey Tracker.${originalScheduleNote}\n\n${clientUrl}/games/${game.id}`,
     ...eventTime,
     transparency: 'transparent',
     source: {
@@ -384,30 +440,46 @@ const calendarIsAccessible = async (accessToken, calendarId) => {
   }
 };
 
-const upsertGameEvent = async ({ accessToken, calendarId, userId, game, timeZone }) => {
+const upsertGameEvent = async ({
+  accessToken,
+  calendarId,
+  userId,
+  game,
+  timeZone,
+  eventExists,
+}) => {
   const event = eventForGame({ userId, game, timeZone });
   const eventUrl = calendarUrl(calendarId, `/events/${encodeURIComponent(event.id)}`);
+  const updateEvent = () => googleRequest(eventUrl, { accessToken, method: 'PUT', body: event });
+  const insertEvent = () =>
+    googleRequest(calendarUrl(calendarId, '/events'), {
+      accessToken,
+      method: 'POST',
+      body: event,
+    });
+
+  if (eventExists === false) {
+    try {
+      await insertEvent();
+      return event.id;
+    } catch (err) {
+      if (!(err instanceof GoogleCalendarError) || err.status !== 409) throw err;
+      await updateEvent();
+      return event.id;
+    }
+  }
+
   try {
-    // Google keeps deleted organizer events as cancelled tombstones. GET still
-    // returns those events, and a full update with status=confirmed restores
-    // them when a previously skipped game is scheduled again.
-    await googleRequest(eventUrl, { accessToken });
-    await googleRequest(eventUrl, { accessToken, method: 'PUT', body: event });
+    // A direct update restores cancelled deterministic events and avoids a
+    // separate lookup for every existing game during full reconciliation.
+    await updateEvent();
   } catch (err) {
     if (!(err instanceof GoogleCalendarError) || ![404, 410].includes(err.status)) throw err;
     try {
-      await googleRequest(calendarUrl(calendarId, '/events'), {
-        accessToken,
-        method: 'POST',
-        body: event,
-      });
+      await insertEvent();
     } catch (insertErr) {
       if (!(insertErr instanceof GoogleCalendarError) || insertErr.status !== 409) throw insertErr;
-      await googleRequest(eventUrl, {
-        accessToken,
-        method: 'PUT',
-        body: event,
-      });
+      await updateEvent();
     }
   }
   return event.id;
@@ -670,6 +742,7 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
       accessToken,
       calendarId: connection.calendar_id,
     });
+    const existingEventIds = new Set(existingEvents.map((event) => event.id).filter(Boolean));
     const staleGameIds = [
       ...new Set(
         existingEvents
@@ -679,6 +752,9 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
     ];
     const operationCount = games.length + staleGameIds.length;
     const progressTotal = Math.max(operationCount, 1);
+    const writeIntervalMs = Number.isFinite(context.writeIntervalMs)
+      ? Math.max(0, context.writeIntervalMs)
+      : GOOGLE_BULK_WRITE_INTERVAL_MS;
     let completed = 0;
 
     reportProgress({
@@ -698,6 +774,7 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
         userId,
         game,
         timeZone,
+        eventExists: existingEventIds.has(eventIdForGame(userId, game.id)),
       });
       completed += 1;
       reportProgress({
@@ -706,6 +783,7 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
         completed,
         total: progressTotal,
       });
+      if (completed < operationCount && writeIntervalMs > 0) await sleep(writeIntervalMs);
     }
 
     let removed = 0;
@@ -724,6 +802,7 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
         completed,
         total: progressTotal,
       });
+      if (completed < operationCount && writeIntervalMs > 0) await sleep(writeIntervalMs);
     }
 
     await markSyncSuccess(userId);

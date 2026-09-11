@@ -22,9 +22,12 @@ const {
 } = require('./googleCalendar');
 
 const originalFetch = global.fetch;
-const mockGoogleResponse = (status, body = null) => ({
+const mockGoogleResponse = (status, body = null, headers = {}) => ({
   status,
   ok: status >= 200 && status < 300,
+  headers: {
+    get: jest.fn((name) => headers[String(name).toLowerCase()] ?? null),
+  },
   text: jest.fn().mockResolvedValue(body == null ? '' : JSON.stringify(body)),
 });
 
@@ -94,6 +97,31 @@ describe('Google Calendar service helpers', () => {
       status: 403,
       code: 'calendar_api_disabled',
     });
+  });
+
+  it('retries Calendar rate limits returned as 403 responses', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(
+        mockGoogleResponse(
+          403,
+          {
+            error: {
+              code: 403,
+              message: 'Rate Limit Exceeded',
+            },
+          },
+          { 'retry-after': '0' },
+        ),
+      )
+      .mockResolvedValueOnce(mockGoogleResponse(200, { items: [] }));
+
+    await expect(
+      googleRequest('https://www.googleapis.com/calendar/v3/calendars/calendar-1/events', {
+        accessToken: 'access-token',
+      }),
+    ).resolves.toEqual({ items: [] });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
   it('turns a rejected refresh token into a reconnect-required error', async () => {
@@ -214,6 +242,7 @@ describe('Google Calendar service helpers', () => {
     expect(event.end).toEqual({ date: '2027-01-06' });
     expect(event.start).not.toHaveProperty('dateTime');
     expect(event.start).not.toHaveProperty('timeZone');
+    expect(event.description).toContain('Original game date: January 1, 2027.');
   });
 
   it('rejects invalid IANA timezones', () => {
@@ -266,12 +295,6 @@ describe('Google Calendar service helpers', () => {
   it('restores a cancelled deterministic event when the game is scheduled again', async () => {
     global.fetch = jest
       .fn()
-      .mockResolvedValueOnce(
-        mockGoogleResponse(200, {
-          id: eventIdForGame('user-1', 'game-1'),
-          status: 'cancelled',
-        }),
-      )
       .mockResolvedValueOnce(mockGoogleResponse(200, { status: 'confirmed' }));
 
     await upsertGameEvent({
@@ -290,16 +313,12 @@ describe('Google Calendar service helpers', () => {
     expect(global.fetch).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining('/events/ht'),
-      expect.objectContaining({ method: 'GET' }),
-    );
-    expect(global.fetch).toHaveBeenNthCalledWith(
-      2,
-      expect.stringContaining('/events/ht'),
       expect.objectContaining({
         method: 'PUT',
         body: expect.stringContaining('"status":"confirmed"'),
       }),
     );
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   it('reports completed upserts and removals during a full sync', async () => {
@@ -322,6 +341,7 @@ describe('Google Calendar service helpers', () => {
         mockGoogleResponse(200, {
           items: [
             {
+              id: eventIdForGame('user-1', 'game-1'),
               extendedProperties: {
                 private: { hockeyTrackerGameId: 'stale-game' },
               },
@@ -329,7 +349,6 @@ describe('Google Calendar service helpers', () => {
           ],
         }),
       )
-      .mockResolvedValueOnce(mockGoogleResponse(200, { status: 'confirmed' }))
       .mockResolvedValueOnce(mockGoogleResponse(200, { status: 'confirmed' }))
       .mockResolvedValueOnce(mockGoogleResponse(204));
 
@@ -341,8 +360,16 @@ describe('Google Calendar service helpers', () => {
         },
         accessToken: 'access-token',
         onProgress,
+        writeIntervalMs: 0,
       }),
     ).resolves.toEqual({ status: 'synced', synced: 1, removed: 1 });
+
+    expect(global.fetch).toHaveBeenCalledTimes(3);
+    expect(global.fetch).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/events/ht'),
+      expect.objectContaining({ method: 'PUT' }),
+    );
 
     expect(onProgress).toHaveBeenCalledWith({
       step: 'sync',

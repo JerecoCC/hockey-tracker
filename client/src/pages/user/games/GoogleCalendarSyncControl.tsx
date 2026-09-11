@@ -320,12 +320,9 @@ const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlP
           ) : connected ? (
             <>
               <p>
-                Games from the nearest season that is not marked done, filtered to your favorite
-                teams, plus games you schedule yourself, sync to your{' '}
-                <strong>{status?.calendar_name || 'Hockey Tracker'}</strong> calendar. Original game
-                dates use their local start time. A custom watch date creates an all-day event on
-                the chosen date; clearing it restores the original game date and time. Skipping a
-                game removes it.
+                Favorite-team games and custom watch dates sync to your{' '}
+                <strong>{status?.calendar_name || 'Hockey Tracker'}</strong> calendar. Custom dates
+                appear as all-day events.
               </p>
               <p className={styles.status}>
                 {lastSyncedAt ? `Last synced ${lastSyncedAt}` : 'Connected — not synced yet'}
@@ -339,15 +336,11 @@ const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlP
                   The last sync failed: {status.last_sync_error}. Use Sync Now to retry.
                 </p>
               ) : null}
-              <p className={styles.disconnectNote}>
-                Disconnecting also removes the app-created calendar and its synced events.
-              </p>
             </>
           ) : (
             <p>
-              Connect Google Calendar to mirror games from the nearest season that is not marked
-              done, filtered to your favorite teams, plus games you schedule yourself. Hockey
-              Tracker creates a separate calendar and can only manage events inside that calendar.
+              Create a separate Hockey Tracker calendar for favorite-team games and custom watch
+              dates.
             </p>
           )}
         </div>
