@@ -166,7 +166,7 @@ const AddDayGamesModal = ({
   return (
     <Modal
       open
-      title="Add games"
+      title="Edit games to watch"
       onClose={() => {
         if (!saving) onClose();
       }}

@@ -444,9 +444,9 @@ const UserDashboard = () => {
                   variant="outlined"
                   intent="neutral"
                   size="medium"
-                  icon="add"
-                  tooltip="Add games"
-                  aria-label="Add games"
+                  icon="edit"
+                  tooltip="Edit games to watch"
+                  aria-label="Edit games to watch"
                   disabled={gamesLoading}
                   onClick={() => setAddGamesOpen(true)}
                   iconHeight="field"

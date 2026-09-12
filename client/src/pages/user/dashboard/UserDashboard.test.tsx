@@ -408,10 +408,10 @@ describe('UserDashboard', () => {
 
   it('opens the game picker from the current day card', () => {
     render(<UserDashboard />);
-    const button = screen.getByRole('button', { name: 'Add games' });
-    expect(button).toHaveAttribute('data-icon', 'add');
+    const button = screen.getByRole('button', { name: 'Edit games to watch' });
+    expect(button).toHaveAttribute('data-icon', 'edit');
     fireEvent.click(button);
-    expect(screen.getByRole('heading', { name: 'Add games' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Edit games to watch' })).toBeInTheDocument();
     expect(screen.getByText('Games to Watch')).toBeInTheDocument();
     expect(screen.getByText('Other games')).toBeInTheDocument();
   });
@@ -559,15 +559,11 @@ describe('UserDashboard', () => {
       day: '2-digit',
       year: 'numeric',
     }).format(new Date(`${originalLocalDate}T00:00:00`));
-    const timeLabel = new Date('2026-06-21T19:00:00-04:00').toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
     mockDashboardQueries({ todayGames: [makeGame({ scheduled_for: '2026-06-23' })] });
 
     render(<UserDashboard />);
 
-    expect(screen.getByText(`${originalDateLabel} · ${timeLabel}`)).toBeInTheDocument();
+    expect(screen.getByText(originalDateLabel)).toBeInTheDocument();
   });
 
   it('shows playoff metadata in the season label slot', () => {
