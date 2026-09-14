@@ -19,6 +19,7 @@ import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameList
 import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
 import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
+import { getUserGameActions } from '@/shared/GameCard/userGameActionItems';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
@@ -66,6 +67,7 @@ import { buildUserGameDetailsPath } from '@/lib/routeSlugs';
 import { getScreenSize, type ScreenSize } from '@/lib/screenSize';
 import GoogleCalendarSyncControl from './GoogleCalendarSyncControl';
 import styles from './UserGames.module.scss';
+import AddDayGamesModal from '../dashboard/AddDayGamesModal';
 
 const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/ScoreImageModal'));
 
@@ -726,6 +728,7 @@ const UserGames = () => {
   const [actionGameId, setActionGameId] = useState<string | null>(null);
   const [dragGameId, setDragGameId] = useState<string | null>(null);
   const [calendarDropDateKey, setCalendarDropDateKey] = useState<string | null>(null);
+  const [addGamesDateKey, setAddGamesDateKey] = useState<string | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
   const [scoreCardTarget, setScoreCardTarget] = useState<GameRecord | null>(null);
   const [scoreImageOpen, setScoreImageOpen] = useState(false);
@@ -923,6 +926,11 @@ const UserGames = () => {
     }
     return map;
   }, [scheduledGames, tzPref]);
+
+  const addGamesScheduledGames = useMemo(() => {
+    if (!addGamesDateKey) return [];
+    return groupedByDate.find(([dateKey]) => dateKey === addGamesDateKey)?.[1] ?? [];
+  }, [addGamesDateKey, groupedByDate]);
 
   const todayKey = dateToISO(toDay(new Date()));
   const initialSummaryDay = groupedByDate.some(([dateKey]) => dateKey === todayKey)
@@ -1379,6 +1387,39 @@ const UserGames = () => {
     setView(nextView);
   };
 
+  const getWeekGameActions = (game: GameRecord) =>
+    getUserGameActions({
+      watched: !!game.watched_by_user,
+      skipped: !!game.skipped_by_user,
+      favoriteTeamGame: isFavoriteTeamGame(game),
+      canMarkWatched: canMarkGameWatched(game),
+      busy: actionGameId === game.id,
+      onView: () => openGame(game),
+      onDownloadScoreCard: () => openScoreCardModal(game),
+      onMarkWatched: () => markGameWatched(game),
+      onUnwatch: () => unwatchGame(game, 'unwatch'),
+      onUndoSkip: () => unwatchGame(game, 'undo-skip'),
+      onCancelWatch: async () => {
+        await saveScheduleForGame(game, null);
+      },
+      onSchedule: () => openScheduleModal(game),
+      onSkip: () => skipGame(game),
+    });
+
+  const handleAddDayGames = (addedGames: GameRecord[]) => {
+    const userGameQueries = queryClient
+      .getQueryCache()
+      .findAll({ predicate: (query) => query.queryKey[0] === 'user-games' });
+
+    for (const addedGame of addedGames) {
+      for (const query of userGameQueries) {
+        queryClient.setQueryData<GameRecord[]>(query.queryKey, (existing) =>
+          updateScheduledGameCache(existing, query.queryKey, addedGame, tzPref),
+        );
+      }
+    }
+  };
+
   const renderUserGameListItem = (game: GameRecord) => {
     const watched = !!game.watched_by_user;
     const skipped = !!game.skipped_by_user;
@@ -1678,6 +1719,20 @@ const UserGames = () => {
             loading={isLoading}
             dayRefs={dayRefs}
             formatHeading={fmtDayHeading}
+            renderDayAction={(dateKey) => (
+              <Button
+                type="button"
+                variant="outlined"
+                intent="neutral"
+                size="medium"
+                icon="edit"
+                iconHeight="field"
+                aria-label={`Edit games to watch for ${fmtDayHeading(dateKey)}`}
+                tooltip={`Edit games to watch for ${fmtDayHeading(dateKey)}`}
+                disabled={isLoading}
+                onClick={() => setAddGamesDateKey(dateKey)}
+              />
+            )}
             renderDayContent={(_dateKey, dayGames) => (
               <div className={styles.weekGameCards}>
                 {dayGames.map((game) => renderUserGameListItem(game))}
@@ -1768,6 +1823,19 @@ const UserGames = () => {
             />
           </ScheduleCalendarCard>
         </div>
+      )}
+
+      {addGamesDateKey && (
+        <AddDayGamesModal
+          key={addGamesDateKey}
+          dateKey={addGamesDateKey}
+          dateLabel={fmtDayHeading(addGamesDateKey)}
+          favoriteTeamIds={favoriteTeamIds}
+          scheduledGames={addGamesScheduledGames}
+          getGameActions={getWeekGameActions}
+          onAdded={handleAddDayGames}
+          onClose={() => setAddGamesDateKey(null)}
+        />
       )}
 
       {scheduleTarget && (

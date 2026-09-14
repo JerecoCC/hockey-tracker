@@ -1152,6 +1152,82 @@ describe('UserGames schedule views', () => {
     expect(calendarGameItem).toHaveStyle('--game-league-primary: #0a4fa3');
   });
 
+  it('opens a day edit modal in Week view and adds games to the current schedule cache', async () => {
+    const user = userEvent.setup();
+    const weekQueryKey = [
+      'user-games',
+      'all',
+      'all',
+      'team-home,team-opp',
+      false,
+      scheduledWatchDate,
+      '',
+    ];
+    const addableGame = {
+      ...games[0],
+      id: 'game-addable',
+      status: 'scheduled',
+      away_team: {
+        ...games[0].away_team,
+        id: 'team-addable-away',
+        name: 'Addable Away',
+        code: 'ADD',
+      },
+      home_team: games[0].home_team,
+      watched_by_user: false,
+      watched_on: null,
+      skipped_by_user: true,
+      scheduled_for: null,
+    };
+    mockFindAllQueries.mockReturnValue([{ queryKey: weekQueryKey }]);
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+      if (queryKey[0] === 'user-dashboard-available-games')
+        return { data: [addableGame], isLoading: false, isError: false };
+      if (queryKey[0] === 'user-games') return { data: games, isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    await user.click(
+      screen.getByRole('button', {
+        name: `Edit games to watch for ${formatHeading(scheduledWatchDate)}`,
+      }),
+    );
+    const modal = screen.getByRole('dialog', { name: 'Edit games to watch' });
+    const otherGames = within(modal).getByRole('list', { name: 'Other games' });
+    const addableRow = within(otherGames).getByRole('listitem', {
+      name: 'Addable Away at Home Team',
+    });
+    await user.click(within(addableRow).getByRole('button', { name: 'Add to games to watch' }));
+    await user.click(within(modal).getByRole('button', { name: 'Save' }));
+
+    await waitFor(() =>
+      expect(mockAxios.put).toHaveBeenCalledWith(
+        expect.stringContaining('/user/watched-games/game-addable/schedule'),
+        { scheduled_for: scheduledWatchDate },
+        expect.any(Object),
+      ),
+    );
+    const cacheUpdater = mockSetQueryData.mock.calls.find(
+      ([queryKey]) => queryKey === weekQueryKey,
+    )?.[1];
+    expect(cacheUpdater).toEqual(expect.any(Function));
+    expect(cacheUpdater(games)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'game-addable',
+          scheduled_for: scheduledWatchDate,
+          skipped_by_user: false,
+        }),
+      ]),
+    );
+  });
+
   it('renders ISO watch dates inside the literal first day in Week view', () => {
     const isoScheduledGame = {
       ...games[0],
