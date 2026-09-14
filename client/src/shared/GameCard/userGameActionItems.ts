@@ -65,7 +65,7 @@ export const getUserGameActions = ({
   },
   !watched &&
     !skipped && {
-      icon: 'remove_circle_outline',
+      icon: favoriteTeamGame ? 'remove_circle_outline' : 'cancel',
       intent: favoriteTeamGame ? 'warning' : 'danger',
       tooltip: favoriteTeamGame ? 'Skip game' : 'Cancel watch',
       disabled: busy,

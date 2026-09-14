@@ -242,7 +242,7 @@ const AddDayGamesModal = ({
                             ? locallyAddedIds.has(game.id) && !scheduledIds.has(game.id)
                               ? [
                                   {
-                                    icon: 'remove_circle_outline',
+                                    icon: 'cancel',
                                     intent: 'danger',
                                     tooltip: 'Cancel watch',
                                     disabled: saving,

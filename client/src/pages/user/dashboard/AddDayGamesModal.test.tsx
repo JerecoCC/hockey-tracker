@@ -166,7 +166,10 @@ it('moves an added game into games to watch and keeps existing games out of othe
   const stagedRow = within(watchList).getByRole('listitem', {
     name: 'other-away at other-home',
   });
-  fireEvent.click(within(stagedRow).getByRole('button', { name: 'Cancel watch' }));
+  const cancelWatchButton = within(stagedRow).getByRole('button', { name: 'Cancel watch' });
+  expect(cancelWatchButton.className).toContain('outlinedDanger');
+  expect(cancelWatchButton.querySelector('[data-icon="circle-xmark"]')).toBeInTheDocument();
+  fireEvent.click(cancelWatchButton);
   const restoredOthers = screen.getByRole('list', { name: 'Other games' });
   expect(
     within(restoredOthers).getByRole('listitem', { name: 'other-away at other-home' }),
