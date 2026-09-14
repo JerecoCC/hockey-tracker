@@ -1,0 +1,29 @@
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
+
+.playerCell,
+.teamCell {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-sm;
+  min-width: 0;
+}
+
+.playerName,
+.teamName {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text, #{$text-body});
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playerName {
+  max-width: 14rem;
+}
+
+.teamName {
+  max-width: 11rem;
+  font-weight: 500;
+}
