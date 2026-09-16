@@ -9,10 +9,10 @@ import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
 import MoreActionsMenu from '@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu';
 import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
+import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import PeriodPicker from '@jerecocc/tracker-ui/components/PeriodPicker/PeriodPicker';
 import {
   ScheduleCalendarCard,
-  ScheduleCalendarDayCount,
   ScheduleCalendarGameList,
   ScheduleFilters,
   ScheduleFilterSlot,
@@ -1225,9 +1225,12 @@ const SeasonGamesTab = ({
                   if (!isSeasonDate(dateKey)) return undefined;
                   const gameCount = calendarGamesByDate.get(dateKey)?.length ?? 0;
                   return gameCount > 0 ? (
-                    <ScheduleCalendarDayCount
-                      count={gameCount}
-                      showLabel
+                    <MetricTag
+                      className={styles.calendarDayGameCount}
+                      value={gameCount}
+                      label={gameCount === 1 ? 'game' : 'games'}
+                      position="postfix"
+                      aria-label={`${gameCount} ${gameCount === 1 ? 'game' : 'games'}`}
                     />
                   ) : undefined;
                 }}
