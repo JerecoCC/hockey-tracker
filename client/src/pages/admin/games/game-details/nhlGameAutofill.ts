@@ -1243,7 +1243,7 @@ async function ensureNhlPlayersRostered(
   const missing = candidates.filter(
     (candidate) => !hasLocalRosterCandidateMatch(candidate, localByLeagueNumber, localByJersey),
   );
-  const jerseyConflicts = candidates.flatMap((candidate) => {
+  const jerseyConflicts = game.game_type === 'preseason' ? [] : candidates.flatMap((candidate) => {
     const matchedLocal = localByLeagueNumber.get(candidate.leaguePlayerNumber);
     if (!matchedLocal) return [];
     return findNhlJerseyConflicts(
@@ -1662,11 +1662,9 @@ async function syncLeaguePlayerNumbers(
       `League player number mismatch: ${unsafeConflicts
         .map(
           (player) =>
-            `${leaguePlayerNumberLabel(player.localLeaguePlayerNumber)} conflicts with ${leaguePlayerNumberLabel(
-              player.playerId,
-            )}`,
+            `#${player.sweaterNumber} ${player.name} — stored as ${leaguePlayerNumberLabel(player.localLeaguePlayerNumber)} but NHL reports ${leaguePlayerNumberLabel(player.playerId)}`,
         )
-        .join('; ')}.`,
+        .join('; ')}. Fix the NHL player number on the player's profile page.`,
     );
   }
 

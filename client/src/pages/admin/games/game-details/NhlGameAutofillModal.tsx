@@ -22,7 +22,10 @@ const NHL_PROVIDER: GameAutofillProvider = {
   statusMessage: 'Filling game from NHL GameCenter data...',
   startMessage: 'Starting NHL auto-fill...',
   failureMessage: 'Unable to auto-fill game from NHL data.',
-  defaultInput: (game) => (game.game_number ? String(game.game_number) : ''),
+  defaultInput: (game) =>
+    game.game_type === 'preseason'
+      ? (game.league_game_number ?? '')
+      : (game.game_number ? String(game.game_number) : ''),
   autofill: autofillGameFromNhlGamecenter,
   errorMessage: nhlAutofillApiError,
 };

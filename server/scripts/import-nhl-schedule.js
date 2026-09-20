@@ -27,10 +27,15 @@ function readArg(name, fallback) {
 }
 
 const apply = process.argv.includes("--apply");
+const gameType = readArg("game-type", "regular");
+const nhlGameType = gameType === "preseason" ? 1 : 2;
 const seasonName = readArg("season", DEFAULT_SEASON_NAME);
 const nhlSeason = readArg("nhl-season", DEFAULT_NHL_SEASON);
 const expectedGames = Number(
-  readArg("expected-games", String(DEFAULT_EXPECTED_GAMES)),
+  readArg(
+    "expected-games",
+    String(gameType === "preseason" ? 65 : DEFAULT_EXPECTED_GAMES),
+  ),
 );
 
 function readDefault(value) {
@@ -165,6 +170,7 @@ async function loadOfficialSchedule(startDate) {
   const gamesById = new Map();
   let cursor = startDate;
   let metadata = null;
+  let preseasonStartLoaded = false;
 
   while (cursor) {
     const schedule = await fetchJson(
@@ -172,14 +178,33 @@ async function loadOfficialSchedule(startDate) {
       `NHL schedule ${cursor}`,
     );
     metadata ??= {
+      preSeasonStartDate: schedule.preSeasonStartDate,
       regularSeasonStartDate: schedule.regularSeasonStartDate,
       regularSeasonEndDate: schedule.regularSeasonEndDate,
       playoffEndDate: schedule.playoffEndDate,
     };
 
+    if (gameType === "preseason" && !metadata.preSeasonStartDate) {
+      throw new Error(
+        "The NHL API response did not include the preseason start date",
+      );
+    }
+    if (
+      gameType === "preseason" &&
+      !preseasonStartLoaded &&
+      cursor > metadata.preSeasonStartDate
+    ) {
+      preseasonStartLoaded = true;
+      cursor = metadata.preSeasonStartDate;
+      continue;
+    }
+
     for (const day of schedule.gameWeek ?? []) {
       for (const game of day.games ?? []) {
-        if (String(game.season) !== nhlSeason || Number(game.gameType) !== 2)
+        if (
+          String(game.season) !== nhlSeason ||
+          Number(game.gameType) !== nhlGameType
+        )
           continue;
         gamesById.set(String(game.id), {
           ...game,
@@ -189,7 +214,11 @@ async function loadOfficialSchedule(startDate) {
     }
 
     const next = schedule.nextStartDate ?? addDays(cursor, 7);
-    if (!next || next <= cursor || next > metadata.regularSeasonEndDate) break;
+    const endDate =
+      gameType === "preseason"
+        ? addDays(metadata.regularSeasonStartDate, -1)
+        : metadata.regularSeasonEndDate;
+    if (!next || next <= cursor || next > endDate) break;
     cursor = next;
   }
 
@@ -255,7 +284,9 @@ function validateOfficialSchedule({ metadata, games }, seasonTeams) {
       `Expected schedules for 32 teams, received ${teamCounts.size}`,
     );
   }
-  const invalidTeamCounts = [...teamCounts].filter(([, count]) => count !== 84);
+  const invalidTeamCounts = [...teamCounts].filter(
+    ([, count]) => gameType === "regular" && count !== 84,
+  );
   if (invalidTeamCounts.length > 0) {
     throw new Error(
       `Expected 84 games per team: ${invalidTeamCounts
@@ -288,7 +319,7 @@ async function loadExistingGames(seasonId) {
       status
     FROM games
     WHERE season_id = ${seasonId}
-      AND game_type = 'regular'
+      AND game_type = ${gameType}
   `;
 }
 
@@ -316,7 +347,7 @@ async function importSchedule(season, metadata, rows) {
         venue = source.venue
       FROM source
       WHERE g.season_id = ${season.id}
-        AND g.game_type = 'regular'
+        AND g.game_type = ${gameType}
         AND g.league_game_number = source.league_game_number
         AND g.status = 'scheduled'
       RETURNING g.id
@@ -340,7 +371,7 @@ async function importSchedule(season, metadata, rows) {
         source.scheduled_at::timestamptz,
         source.scheduled_time,
         source.venue,
-        'regular',
+        ${gameType},
         'scheduled',
         source.league_game_number
       FROM source
@@ -348,7 +379,7 @@ async function importSchedule(season, metadata, rows) {
         SELECT 1
         FROM games g
         WHERE g.season_id = ${season.id}
-          AND g.game_type = 'regular'
+          AND g.game_type = ${gameType}
           AND g.league_game_number = source.league_game_number
       )
       RETURNING id
@@ -359,6 +390,7 @@ async function importSchedule(season, metadata, rows) {
         start_date = ${metadata.regularSeasonStartDate}::date,
         end_date = ${metadata.playoffEndDate}::date
       WHERE id = ${season.id}
+        AND ${gameType} = 'regular'
       RETURNING id
     )
     SELECT
@@ -374,13 +406,13 @@ async function verifyImport(seasonId) {
     WITH team_games AS (
       SELECT home_team_id AS team_id
       FROM games
-      WHERE season_id = ${seasonId} AND game_type = 'regular'
+      WHERE season_id = ${seasonId} AND game_type = ${gameType}
 
       UNION ALL
 
       SELECT away_team_id AS team_id
       FROM games
-      WHERE season_id = ${seasonId} AND game_type = 'regular'
+      WHERE season_id = ${seasonId} AND game_type = ${gameType}
     ),
     per_team AS (
       SELECT team_id, COUNT(*)::int AS games
@@ -397,12 +429,15 @@ async function verifyImport(seasonId) {
       (SELECT COUNT(*)::int FROM per_team) AS team_count
     FROM games
     WHERE season_id = ${seasonId}
-      AND game_type = 'regular'
+      AND game_type = ${gameType}
   `;
   return summary[0];
 }
 
 async function main() {
+  if (!["regular", "preseason"].includes(gameType)) {
+    throw new Error(`Invalid --game-type value: ${gameType}`);
+  }
   if (!Number.isInteger(expectedGames) || expectedGames <= 0) {
     throw new Error(`Invalid --expected-games value: ${expectedGames}`);
   }
@@ -428,26 +463,34 @@ async function main() {
 
   if (unnumbered.length > 0) {
     throw new Error(
-      `Target season has ${unnumbered.length} regular-season game(s) without an NHL game number`,
+      `Target season has ${unnumbered.length} ${gameType} game(s) without an NHL game number`,
     );
   }
   if (unexpected.length > 0) {
     throw new Error(
-      `Target season has ${unexpected.length} regular-season game number(s) absent from the NHL schedule`,
+      `Target season has ${unexpected.length} ${gameType} game number(s) absent from the NHL schedule`,
     );
   }
 
   const existingNumbers = new Set(
     existing.map((game) => game.league_game_number),
   );
+  if (existingNumbers.size !== existing.length) {
+    throw new Error(`Target season has duplicate ${gameType} NHL game numbers`);
+  }
   const toInsert = rows.filter(
     (row) => !existingNumbers.has(row.league_game_number),
   ).length;
-  const toUpdate = rows.length - toInsert;
+  const toUpdate = existing.filter(
+    (game) => game.status === "scheduled",
+  ).length;
+  const dates = rows.map((row) => row.scheduled_at.slice(0, 10)).sort();
+  const firstGameDate = dates[0];
+  const lastGameDate = dates[dates.length - 1];
 
   console.log(
-    `Official NHL ${seasonName}: ${rows.length} games, ` +
-      `${official.metadata.regularSeasonStartDate} to ${official.metadata.regularSeasonEndDate}`,
+    `Official NHL ${seasonName} ${gameType}: ${rows.length} games, ` +
+      `${firstGameDate} to ${lastGameDate}`,
   );
   console.log(`Target season: ${season.id} (${seasonTeams.size} teams)`);
   console.log(`Database plan: insert ${toInsert}, update ${toUpdate}`);
@@ -468,16 +511,25 @@ async function main() {
     verification.game_count !== expectedGames ||
     verification.distinct_game_numbers !== expectedGames ||
     verification.team_count !== 32 ||
-    verification.min_team_games !== 84 ||
-    verification.max_team_games !== 84 ||
-    verification.first_game_date !== official.metadata.regularSeasonStartDate ||
-    verification.last_game_date !== official.metadata.regularSeasonEndDate
+    (gameType === "regular" && verification.min_team_games !== 84) ||
+    (gameType === "regular" && verification.max_team_games !== 84) ||
+    verification.first_game_date !== firstGameDate ||
+    verification.last_game_date !== lastGameDate
   ) {
     throw new Error("Post-import verification failed");
   }
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = {
+  loadOfficialSchedule,
+  validateOfficialSchedule,
+  buildImportRows,
+  importSchedule,
+};
