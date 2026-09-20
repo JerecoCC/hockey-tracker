@@ -131,6 +131,9 @@ const upsertCareerStint = async ({
   is_prospect = false,
   start_date = null,
   end_date = null,
+  // Asserts the affiliation already covered this date, so an open stint that
+  // starts later is pulled back to it. Left null the stint keeps its own start.
+  min_start_date = null,
 }) => {
   const rows =
     (await sql`
@@ -149,7 +152,14 @@ const upsertCareerStint = async ({
         position = COALESCE(${position}, pts.position),
         acquisition_type = COALESCE(${acquisition_type}, pts.acquisition_type),
         is_prospect = ${!!is_prospect},
-        start_date = COALESCE(pts.start_date, ${start_date}::date),
+        start_date = CASE
+          WHEN ${min_start_date}::date IS NULL
+            THEN COALESCE(pts.start_date, ${start_date}::date)
+          ELSE LEAST(
+            COALESCE(pts.start_date, ${min_start_date}::date),
+            ${min_start_date}::date
+          )
+        END,
         end_date = CASE WHEN ${end_date}::date IS NULL THEN pts.end_date ELSE ${end_date}::date END
       FROM existing
       WHERE pts.id = existing.id
@@ -180,6 +190,16 @@ const resolveSeasonStart = async (season_id) => {
     WHERE id = ${season_id}
   `) ?? [];
   return rows[0]?.start_date ?? null;
+};
+
+// A game can fall before its season's official start (preseason), so an
+// affiliation opened for that game has to start on the game's date instead.
+const earliestDate = (...dates) => {
+  const valid = dates.filter(
+    (date) => typeof date === "string" && /^\d{4}-\d{2}-\d{2}/.test(date),
+  );
+  if (valid.length === 0) return null;
+  return valid.map((date) => date.slice(0, 10)).sort()[0];
 };
 
 const setJerseyAssignment = async ({
@@ -694,13 +714,15 @@ const applyReconciliationPlan = async ({
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/player-teams/bulk
-// Body: { team_id, season_id, players: [{ player_id, jersey_number? }] }
+// Body: { team_id, season_id, start_date?, players: [{ player_id, jersey_number? }] }
 // Opens long-lived team affiliations. season_id supplies the effective start
 // date for newly added players; it no longer creates a duplicate row per year.
+// start_date wins when it is earlier, so rostering for a preseason game opens
+// the affiliation on the game date rather than after it.
 // Returns { created: [...], skipped: N }
 // ---------------------------------------------------------------------------
 router.post("/bulk", async (req, res) => {
-  const { team_id, season_id, players } = req.body;
+  const { team_id, season_id, players, start_date } = req.body;
 
   if (!team_id) return res.status(400).json({ error: "team_id is required" });
   if (!season_id)
@@ -717,9 +739,11 @@ router.post("/bulk", async (req, res) => {
 
   try {
     const created = [];
-    const effectiveStart = await resolveSeasonStart(season_id);
-    if (!effectiveStart)
+    const seasonStart = await resolveSeasonStart(season_id);
+    if (!seasonStart)
       return res.status(404).json({ error: "Season not found" });
+    const rosteredOn = earliestDate(start_date);
+    const effectiveStart = earliestDate(seasonStart, rosteredOn);
     for (const {
       player_id,
       jersey_number = null,
@@ -730,15 +754,18 @@ router.post("/bulk", async (req, res) => {
         team_id,
         is_prospect,
         start_date: effectiveStart,
+        min_start_date: rosteredOn,
       });
+      // A stint left over from an earlier run can start after the date being
+      // rostered for, so the jersey is refreshed even when nothing was created.
+      if (stint && jersey_number != null && (stint.created || rosteredOn)) {
+        await setJerseyAssignment({
+          player_id,
+          jersey_number,
+          effective_date: effectiveStart,
+        });
+      }
       if (stint?.created) {
-        if (jersey_number != null) {
-          await setJerseyAssignment({
-            player_id,
-            jersey_number,
-            effective_date: effectiveStart,
-          });
-        }
         created.push({
           id: stint.id,
           player_team_stint_id: stint.id,

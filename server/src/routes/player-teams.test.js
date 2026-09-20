@@ -145,6 +145,57 @@ describe("POST /api/admin/player-teams/bulk", () => {
       ),
     ).toBe(false);
   });
+
+  it("rosters a preseason game from the game date, not the later season start", async () => {
+    sql
+      .mockResolvedValueOnce([{ start_date: "2026-09-28" }])
+      // A stint an earlier run opened on the season start, after the game.
+      .mockResolvedValueOnce([
+        { id: "career-stint-1", player_id: "player-1", created: false },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app)
+      .post("/api/admin/player-teams/bulk")
+      .send({
+        team_id: "team-1",
+        season_id: "season-1",
+        start_date: "2026-09-19",
+        players: [{ player_id: "player-1", jersey_number: 12 }],
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.created).toHaveLength(0);
+    expect(res.body.skipped).toBe(1);
+
+    const [, stintCall, jerseyCall] = sql.mock.calls;
+    expect(stintCall[0].join(" ")).toContain("player_team_stints");
+    expect(stintCall.slice(1)).toContain("2026-09-19");
+    expect(stintCall.slice(1)).not.toContain("2026-09-28");
+    // The jersey has to cover the game date even though no stint was created.
+    expect(jerseyCall[0].join(" ")).toContain("player_jersey_stints");
+    expect(jerseyCall.slice(1)).toContain("2026-09-19");
+  });
+
+  it("keeps the season start when no roster date is given", async () => {
+    sql
+      .mockResolvedValueOnce([{ start_date: "2026-09-28" }])
+      .mockResolvedValueOnce([
+        { id: "career-stint-1", player_id: "player-1", created: false },
+      ]);
+
+    const res = await request(app)
+      .post("/api/admin/player-teams/bulk")
+      .send({
+        team_id: "team-1",
+        season_id: "season-1",
+        players: [{ player_id: "player-1", jersey_number: 12 }],
+      });
+
+    expect(res.status).toBe(201);
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql.mock.calls[1].slice(1)).toContain("2026-09-28");
+  });
 });
 
 describe("POST /api/admin/player-teams", () => {

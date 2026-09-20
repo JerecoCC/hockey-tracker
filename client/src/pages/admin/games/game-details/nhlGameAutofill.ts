@@ -1356,10 +1356,18 @@ async function ensureNhlPlayersRostered(
   if (playersToRoster.length > 0) {
     rosterAddResult = await apiPost<
       PlayerTeamBulkResult,
-      { team_id: string; season_id: string; players: Array<{ player_id: string; jersey_number: number }> }
+      {
+        team_id: string;
+        season_id: string;
+        start_date?: string;
+        players: Array<{ player_id: string; jersey_number: number }>;
+      }
     >('/admin/player-teams/bulk', {
       team_id: teamId,
       season_id: game.season_id,
+      // Preseason games fall before the season start, so the roster row has to
+      // open on the game date or the player is still missing from it below.
+      start_date: gameDate?.slice(0, 10),
       players: playersToRoster,
     });
   }
