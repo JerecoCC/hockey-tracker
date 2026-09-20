@@ -66,6 +66,12 @@ const SEASON_WEEK_SUMMARY_SCROLL_SETTLE_MS = 180;
 const AUTOFILL_RESULT_TOAST_MS = 4000;
 const AUTOFILL_FAILURE_TOAST_MS = 12000;
 
+/** Errors stay until dismissed: they name the games that still need manual work. */
+const autofillToastAutoClose = (type: TypeOptions): number | false => {
+  if (type === 'error') return false;
+  return type === 'success' ? AUTOFILL_RESULT_TOAST_MS : AUTOFILL_FAILURE_TOAST_MS;
+};
+
 const getSeasonWeekSummaryActiveMarker = (summaryCard: HTMLDivElement | null): number =>
   (summaryCard?.getBoundingClientRect().bottom ?? SEASON_WEEK_SUMMARY_STICKY_TOP_PX) +
   SEASON_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX;
@@ -775,7 +781,7 @@ const SeasonGamesTab = ({
         render: message,
         type,
         isLoading: false,
-        autoClose: type === 'success' ? AUTOFILL_RESULT_TOAST_MS : AUTOFILL_FAILURE_TOAST_MS,
+        autoClose: autofillToastAutoClose(type),
         closeButton: true,
         closeOnClick: true,
         draggable: true,

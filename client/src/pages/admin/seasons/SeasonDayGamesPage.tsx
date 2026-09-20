@@ -42,6 +42,11 @@ import { API, authHeaders, getAggregateErrorMessage as getErrorMessage } from '@
 const AUTOFILL_RESULT_TOAST_MS = 4000;
 const AUTOFILL_FAILURE_TOAST_MS = 12000;
 
+/** Errors stay until dismissed: they name the games that still need manual work. */
+const autofillToastAutoClose = (type: TypeOptions): number | false => {
+  if (type === 'error') return false;
+  return type === 'success' ? AUTOFILL_RESULT_TOAST_MS : AUTOFILL_FAILURE_TOAST_MS;
+};
 
 const STATUS_LABEL: Record<GameStatus, string> = {
   scheduled: 'Scheduled',
@@ -417,7 +422,7 @@ const SeasonDayGamesPage = () => {
         render: message,
         type,
         isLoading: false,
-        autoClose: type === 'success' ? AUTOFILL_RESULT_TOAST_MS : AUTOFILL_FAILURE_TOAST_MS,
+        autoClose: autofillToastAutoClose(type),
         closeButton: true,
         closeOnClick: true,
         draggable: true,

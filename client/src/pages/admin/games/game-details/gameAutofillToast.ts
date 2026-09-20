@@ -4,6 +4,12 @@ import type { GameAutofillProgress } from './gameAutofillTypes';
 export const AUTOFILL_RESULT_TOAST_MS = 4000;
 export const AUTOFILL_FAILURE_TOAST_MS = 12000;
 
+/** Errors stay until dismissed: they name the players or games that still need manual work. */
+export const autofillToastAutoClose = (type: TypeOptions): number | false => {
+  if (type === 'error') return false;
+  return type === 'success' ? AUTOFILL_RESULT_TOAST_MS : AUTOFILL_FAILURE_TOAST_MS;
+};
+
 interface GameAutofillProgressToastOptions {
   leagueLabel: string;
   progressClassName: string;
@@ -66,7 +72,7 @@ export const startGameAutofillProgressToast = ({
         render: message,
         type,
         isLoading: false,
-        autoClose: type === 'success' ? AUTOFILL_RESULT_TOAST_MS : AUTOFILL_FAILURE_TOAST_MS,
+        autoClose: autofillToastAutoClose(type),
         closeButton: true,
         closeOnClick: true,
         draggable: true,
