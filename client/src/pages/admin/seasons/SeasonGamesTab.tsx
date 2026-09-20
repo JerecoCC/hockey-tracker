@@ -477,7 +477,7 @@ const SeasonGamesTab = ({
           !teamFilter.includes(g.away_team.id)
         )
           return false;
-        if (g.scheduled_at && !isSeasonDate(toEasternDateKey(g.scheduled_at))) return false;
+        if (g.game_type !== 'preseason' && g.scheduled_at && !isSeasonDate(toEasternDateKey(g.scheduled_at))) return false;
         return true;
       })
       .sort((a, b) => {

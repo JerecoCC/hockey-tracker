@@ -56,6 +56,8 @@ export interface SeasonRecord {
   has_unfinished_regular_games: boolean;
   /** True when at least one season team has fewer final regular games than games_per_season. */
   has_incomplete_regular_team_games?: boolean;
+  /** Earliest scheduled preseason game date (YYYY-MM-DD), or null if no preseason games exist. */
+  preseason_start_date: string | null;
   created_at: string;
 }
 

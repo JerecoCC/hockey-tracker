@@ -1074,7 +1074,7 @@ const SeasonDetailsPage = () => {
                 leagueCode={season.league_code}
                 seasonId={id!}
                 seasonName={season.name}
-                seasonStartDate={season.start_date}
+                seasonStartDate={season.preseason_start_date ?? season.start_date}
                 seasonEndDate={season.end_date}
                 seasonTeams={effectiveSeasonTeams}
                 isEnded={season.is_ended}

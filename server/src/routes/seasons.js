@@ -445,7 +445,12 @@ router.get('/:id', async (req, res) => {
              l.scoring_system    AS league_scoring_system,
              l.best_of_playoff   AS league_best_of_playoff,
              l.best_of_shootout  AS league_best_of_shootout,
-             l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes
+             l.goalie_min_regular_minutes AS league_goalie_min_regular_minutes,
+             (
+               SELECT MIN(g.scheduled_at AT TIME ZONE 'UTC')::date::text
+               FROM games g
+               WHERE g.season_id = s.id AND g.game_type = 'preseason'
+             ) AS preseason_start_date
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
