@@ -14,7 +14,6 @@ import axios from 'axios';
 import { toPng } from 'html-to-image';
 import { toast } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
-import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
 import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
 import fieldStyles from '@/shared/trackerFieldStyles.module.scss';
 import FitText from '@jerecocc/tracker-ui/components/FitText/FitText';
@@ -26,7 +25,7 @@ import SeasonSelect from '@/shared/SeasonSelect/SeasonSelect';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
 import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
-import type { GameRecord } from '@/hooks/useGames';
+import type { GameRecord, GameType } from '@/hooks/useGames';
 import useLeagues, { type LeagueRecord } from '@/hooks/useLeagues';
 import { PERIOD_SUFFIX } from './constants';
 import { formatScheduledDate } from './formatUtils';
@@ -308,6 +307,12 @@ const LAST_PERIOD_OPTIONS: Array<{ value: ScoreCardLastPeriod; label: string }> 
   { value: 'so', label: 'SO' },
 ];
 
+const GAME_TYPE_OPTIONS: Array<{ value: GameType; label: string }> = [
+  { value: 'preseason', label: 'Preseason' },
+  { value: 'regular', label: 'Regular Season' },
+  { value: 'playoff', label: 'Playoffs' },
+];
+
 const DEFAULT_PLAYOFF_ROUND_COUNT = 4;
 
 const getPlayoffRoundLabel = (
@@ -538,7 +543,8 @@ const ScoreImageModal = ({
   const [formAwayTeamId, setFormAwayTeamId] = useState('');
   const [formHomeTeamId, setFormHomeTeamId] = useState('');
   const [formGameDate, setFormGameDate] = useState('');
-  const [formIsPlayoff, setFormIsPlayoff] = useState(false);
+  const [formGameType, setFormGameType] = useState<GameType>('regular');
+  const formIsPlayoff = formGameType === 'playoff';
   const [formPlayoffRound, setFormPlayoffRound] = useState('');
   const [formLastPeriod, setFormLastPeriod] = useState<ScoreCardLastPeriod>('regular');
   const [scoreCardTouchedFields, setScoreCardTouchedFields] = useState<
@@ -875,7 +881,7 @@ const ScoreImageModal = ({
       league_logo: formLeague?.logo ?? null,
       league_primary_color: formLeague?.primary_color ?? null,
       season_name: formSeason?.name ?? null,
-      game_type: formIsPlayoff ? 'playoff' : 'regular',
+      game_type: formGameType,
       series_games_to_win: formIsPlayoff ? formGamesToWin : null,
       series_home_wins: formIsPlayoff ? scoreCardNumberOrDefault(numVals.homeWins) : null,
       series_away_wins: formIsPlayoff ? scoreCardNumberOrDefault(numVals.awayWins) : null,
@@ -904,6 +910,7 @@ const ScoreImageModal = ({
     formHomeTeam,
     formLeague,
     formSeason,
+    formGameType,
     formIsPlayoff,
     formGamesToWin,
     numVals.homeWins,
@@ -953,7 +960,7 @@ const ScoreImageModal = ({
       setFormAwayTeamId('');
       setFormHomeTeamId('');
       setFormGameDate('');
-      setFormIsPlayoff(false);
+      setFormGameType('regular');
       setFormPlayoffRound('');
       setFormLastPeriod('regular');
       setScoreCardTouchedFields({});
@@ -1733,8 +1740,8 @@ const ScoreImageModal = ({
                 }));
                 return (
                   <>
-                    {/* Row: League | Season */}
-                    <div className={styles.formRow}>
+                    {/* Row: League | Season | Game Type */}
+                    <div className={styles.formRowTriple}>
                       <div className={styles.formField}>
                         <ScoreCardFieldLabel required>League</ScoreCardFieldLabel>
                         <Select
@@ -1749,7 +1756,7 @@ const ScoreImageModal = ({
                             setFormAwayTeamId('');
                             setFormHomeTeamId('');
                             setFormGameDate('');
-                            setFormIsPlayoff(false);
+                            setFormGameType('regular');
                             setFormPlayoffRound('');
                             setFormLastPeriod('regular');
                             resetNums();
@@ -1782,7 +1789,7 @@ const ScoreImageModal = ({
                             setFormSeasonId(value);
                             setFormAwayTeamId('');
                             setFormHomeTeamId('');
-                            setFormIsPlayoff(false);
+                            setFormGameType('regular');
                             setFormPlayoffRound('');
                           }}
                           disabled={!formLeagueId}
@@ -1792,6 +1799,32 @@ const ScoreImageModal = ({
                             ? scoreCardErrorMessage('season')
                             : null}
                         </ScoreCardFieldError>
+                      </div>
+                      <div className={styles.formField}>
+                        <ScoreCardFieldLabel
+                          id="score-card-game-type-label"
+                          required
+                        >
+                          Game Type
+                        </ScoreCardFieldLabel>
+                        <Select
+                          value={formGameType}
+                          options={GAME_TYPE_OPTIONS}
+                          ariaLabelledBy="score-card-game-type-label"
+                          onChange={(value) => {
+                            setFormGameType(value as GameType);
+                            setScoreCardValidationAttempted(false);
+                            if (value !== 'playoff') {
+                              clearScoreCardTouchedFields(
+                                'playoffRound',
+                                'playoffGameNum',
+                                'awayWins',
+                                'homeWins',
+                              );
+                            }
+                          }}
+                          disabled={formControlsDisabled}
+                        />
                       </div>
                     </div>
 
@@ -1901,27 +1934,12 @@ const ScoreImageModal = ({
                       </div>
                     </div>
 
-                    <Accordion
-                      variant="checkbox"
-                      checked={formIsPlayoff}
-                      label="Playoff Game"
-                      onCheckedChange={(checked) => {
-                        setFormIsPlayoff(checked);
-                        setScoreCardValidationAttempted(false);
-                        if (!checked) {
-                          clearScoreCardTouchedFields(
-                            'playoffRound',
-                            'playoffGameNum',
-                            'awayWins',
-                            'homeWins',
-                          );
-                        }
-                      }}
-                      disabled={formControlsDisabled}
-                    >
+                    {formIsPlayoff && (
                       <GroupedFields
                         className={styles.playoffSection}
                         fieldsClassName={styles.playoffFieldsRow}
+                        legend="Playoff Game"
+                        legendClassName={styles.playoffLegend}
                         variant="plain"
                       >
                         <div className={`${styles.formField} ${styles.playoffRoundField}`}>
@@ -1977,7 +1995,7 @@ const ScoreImageModal = ({
                           onTouched={() => markScoreCardFieldTouched('homeWins')}
                         />
                       </GroupedFields>
-                    </Accordion>
+                    )}
                   </>
                 );
               })()}

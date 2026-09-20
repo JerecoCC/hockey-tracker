@@ -845,6 +845,12 @@
     gap: $space-md;
   }
 
+  &RowTriple {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: $space-md;
+  }
+
 }
 
 .playoff {
@@ -855,6 +861,10 @@
 
   &FieldsRow {
     align-items: start;
+  }
+
+  &Legend {
+    padding-inline: 0;
   }
 
   &RoundField {
@@ -869,7 +879,8 @@
 }
 
 @media (max-width: $screen-phone-max) {
-  .formRow3 {
+  .formRow3,
+  .formRowTriple {
     grid-template-columns: 1fr;
   }
 

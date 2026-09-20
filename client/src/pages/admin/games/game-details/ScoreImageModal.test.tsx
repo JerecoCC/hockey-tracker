@@ -15,6 +15,15 @@ const mockUseQuery = useQuery as jest.Mock;
 const mockToPng = toPng as jest.Mock;
 const mockUseLeagues = useLeagues as jest.Mock;
 
+const selectGameType = async (
+  user: ReturnType<typeof userEvent.setup>,
+  label: 'Preseason' | 'Regular Season' | 'Playoffs',
+) => {
+  await user.click(screen.getByRole('combobox', { name: /Game Type/ }));
+  const option = await screen.findByRole('option', { name: label });
+  await user.click(within(option).getByRole('button'));
+};
+
 beforeAll(() => {
   window.scrollTo = jest.fn();
   Object.defineProperty(window, 'matchMedia', {
@@ -132,11 +141,14 @@ describe('ScoreImageModal', () => {
     );
 
     expect(screen.queryByPlaceholderText('e.g. Quarterfinals')).not.toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Playoff Game' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Playoff Game' })).not.toBeInTheDocument();
     const previewButton = screen.getByRole('button', { name: 'Preview Image' });
     expect(previewButton).toBeDisabled();
     expect(screen.getByText('Last Period')).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: 'Playoff Game' })).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: /Game Type/ })).toBeDisabled();
+    expect(screen.getByRole('combobox', { name: /Game Type/ })).toHaveTextContent(
+      'Regular Season',
+    );
     expect(screen.getByLabelText(/Game Date/)).toHaveAttribute('readonly');
     expect(screen.getByLabelText('Away Score')).toBeDisabled();
     expect(screen.getByLabelText('Home Score')).toBeDisabled();
@@ -153,8 +165,8 @@ describe('ScoreImageModal', () => {
     const leagueOption = await screen.findByRole('option', { name: /Hockey League/ });
     await user.click(within(leagueOption).getByRole('button'));
 
-    const playoffToggle = screen.getByRole('checkbox', { name: 'Playoff Game' });
-    await waitFor(() => expect(playoffToggle).not.toBeDisabled());
+    const gameTypeSelect = screen.getByRole('combobox', { name: /Game Type/ });
+    await waitFor(() => expect(gameTypeSelect).not.toBeDisabled());
     expect(screen.getByText(/2025-26/)).toBeInTheDocument();
     expect(downloadButton).toBeDisabled();
 
@@ -201,9 +213,14 @@ describe('ScoreImageModal', () => {
     await user.hover(screen.getByLabelText('Final in SO'));
     expect(await screen.findByRole('tooltip', { name: 'Final in SO' })).toBeInTheDocument();
 
-    await user.click(playoffToggle);
+    await selectGameType(user, 'Preseason');
 
-    expect(screen.getByRole('region', { name: 'Playoff Game' })).toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Playoff Game' })).not.toBeInTheDocument();
+    expect(screen.getAllByText('PRE-SEASON').length).toBeGreaterThan(0);
+
+    await selectGameType(user, 'Playoffs');
+
+    expect(screen.getByRole('group', { name: 'Playoff Game' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'SO' })).not.toBeInTheDocument();
     expect(screen.queryByText('Playoff Details')).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText('e.g. Quarterfinals')).not.toBeInTheDocument();
@@ -242,9 +259,9 @@ describe('ScoreImageModal', () => {
     await user.hover(screen.getByLabelText('Final in OT'));
     expect(await screen.findByRole('tooltip', { name: 'Final in OT' })).toBeInTheDocument();
 
-    await user.click(playoffToggle);
+    await selectGameType(user, 'Regular Season');
 
-    expect(screen.queryByRole('region', { name: 'Playoff Game' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Playoff Game' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'SO' })).toBeInTheDocument();
   });
 
@@ -388,9 +405,9 @@ describe('ScoreImageModal', () => {
     await user.type(screen.getByLabelText('Away Score'), '1');
     await user.type(screen.getByLabelText('Home Score'), '2');
     await user.click(screen.getByRole('button', { name: 'OT' }));
-    await user.click(screen.getByRole('checkbox', { name: 'Playoff Game' }));
+    await selectGameType(user, 'Playoffs');
 
-    expect(screen.getByRole('region', { name: 'Playoff Game' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Playoff Game' })).toBeInTheDocument();
 
     await user.click(screen.getAllByRole('combobox')[0]);
     await user.click(within(await screen.findByRole('option', { name: /Other League/ })).getByRole('button'));
@@ -401,7 +418,10 @@ describe('ScoreImageModal', () => {
     expect(screen.getByLabelText(/Game Date/)).toHaveDisplayValue('MM/DD/YYYY');
     expect(screen.getByLabelText('Away Score')).toHaveDisplayValue('');
     expect(screen.getByLabelText('Home Score')).toHaveDisplayValue('');
-    expect(screen.queryByRole('region', { name: 'Playoff Game' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Playoff Game' })).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /Game Type/ })).toHaveTextContent(
+      'Regular Season',
+    );
     expect(screen.getByRole('button', { name: 'Regular' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'SO' })).toBeInTheDocument();
   });
