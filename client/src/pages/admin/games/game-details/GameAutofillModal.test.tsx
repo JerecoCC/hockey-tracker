@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import { toast } from 'react-toastify';
 import type { GameRecord } from '@/hooks/useGames';
+import { ManualPlayerMovementRequiredError } from './gameAutofillTypes';
 import NhlGameAutofillModal from './NhlGameAutofillModal';
 import PwhlGameAutofillModal from './PwhlGameAutofillModal';
 import { autofillGameFromNhlGamecenter } from './nhlGameAutofill';
@@ -22,6 +24,11 @@ jest.mock('react-toastify', () => ({
     success: jest.fn(),
     error: jest.fn(),
   },
+}));
+
+// The real field pulls the tracker-ui barrel, which drags in tiptap ESM that Jest cannot parse.
+jest.mock('@/components/form/ControlledFields', () => ({
+  ControlledInputField: ({ label }: any) => <label>{label}</label>,
 }));
 
 jest.mock('./nhlGameAutofill', () => ({
@@ -202,6 +209,54 @@ describe('game autofill modals', () => {
           progressClassName: 'gameAutofillProgressBar',
         }),
       ),
+    );
+  });
+
+  it('reports manual player updates after the modal closes itself for the run', async () => {
+    const report = {
+      leagueCode: 'NHL',
+      gameId: 'game-1',
+      gameLabel: 'AWY @ HOM',
+      gameDate: '2024-10-10',
+      moves: [
+        {
+          playerName: 'John Smith',
+          jerseyNumber: 9,
+          position: 'C',
+          fromTeamCode: 'AWY',
+          toTeamCode: 'HOM',
+        },
+      ],
+      jerseyChanges: [],
+    };
+    (autofillGameFromNhlGamecenter as jest.Mock).mockRejectedValue(
+      new ManualPlayerMovementRequiredError(report),
+    );
+    const onManualMoveReport = jest.fn();
+
+    // The modal closes as soon as the run starts, exactly as the summary tab unmounts it.
+    const Harness = () => {
+      const [open, setOpen] = useState(true);
+      return open ? (
+        <NhlGameAutofillModal
+          open
+          game={baseGame}
+          onClose={() => setOpen(false)}
+          onManualMoveReport={onManualMoveReport}
+        />
+      ) : null;
+    };
+
+    render(<Harness />);
+    fireEvent.submit(document.getElementById('nhl-game-autofill-form') as HTMLFormElement);
+
+    await waitFor(() => expect(onManualMoveReport).toHaveBeenCalledWith(report));
+    expect(toast.update).toHaveBeenCalledWith(
+      'game-autofill-toast',
+      expect.objectContaining({
+        render: expect.stringContaining('manual player updates'),
+        type: 'error',
+      }),
     );
   });
 });

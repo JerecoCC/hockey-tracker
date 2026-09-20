@@ -11,7 +11,8 @@ import useGameGoalieStats from '@/hooks/useGameGoalieStats';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import useTabState from '@/hooks/useTabState';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
-import type { GameAutofillProgress } from './gameAutofillTypes';
+import type { GameAutofillManualMoveReport, GameAutofillProgress } from './gameAutofillTypes';
+import GameAutofillManualMoveReportModal from './GameAutofillManualMoveReportModal';
 import ScoreboardCard from './ScoreboardCard';
 import styles from './GameDetailsPage.module.scss';
 
@@ -180,7 +181,18 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const [gameAutofillProgress, setGameAutofillProgress] = useState<GameAutofillProgress | null>(
     null,
   );
+  const [gameAutofillManualMoveReports, setGameAutofillManualMoveReports] = useState<
+    GameAutofillManualMoveReport[]
+  >([]);
   const isGameAutofilling = !!gameAutofillProgress;
+  // Locking the page for a run flips the tab panel keepMounted flag, which remounts the summary
+  // tab, so the manual-update report is held here to survive the run that produced it.
+  const handleGameAutofillChange = (progress: GameAutofillProgress | null) => {
+    setGameAutofillProgress(progress);
+    if (progress) {
+      setGameAutofillManualMoveReports((current) => (current.length > 0 ? [] : current));
+    }
+  };
   const [isGoalScoring, setIsGoalScoring] = useState(false);
   const isGameInteractionLocked = isGameAutofilling || isGoalScoring;
   const isEditMode = isAdminView;
@@ -632,7 +644,8 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                     updateGameInfo={updateGameInfo}
                     updatePeriodShots={updatePeriodShots}
                     deleteGame={deleteGame}
-                    onGameAutofillChange={setGameAutofillProgress}
+                    onGameAutofillChange={handleGameAutofillChange}
+                    onGameAutofillManualMoveReport={setGameAutofillManualMoveReports}
                     onGoalScoringChange={setIsGoalScoring}
                   />
                 </Suspense>,
@@ -677,6 +690,12 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
           ]}
         />
       </div>
+
+      <GameAutofillManualMoveReportModal
+        open={gameAutofillManualMoveReports.length > 0}
+        reports={gameAutofillManualMoveReports}
+        onClose={() => setGameAutofillManualMoveReports([])}
+      />
     </>
   );
 };

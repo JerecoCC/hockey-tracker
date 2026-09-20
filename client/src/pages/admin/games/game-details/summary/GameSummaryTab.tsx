@@ -42,7 +42,6 @@ import { sumVisiblePeriodShots } from '../shotPeriods';
 import { buildSeasonDetailsPath } from '@/lib/routeSlugs';
 import GoalieSwitchReportCard from './GoalieSwitchReportCard';
 import type { GameAutofillManualMoveReport, GameAutofillProgress } from '../gameAutofillTypes';
-import GameAutofillManualMoveReportModal from '../GameAutofillManualMoveReportModal';
 
 const NhlGameAutofillModal = lazy(() => import('../NhlGameAutofillModal'));
 const PwhlGameAutofillModal = lazy(() => import('../PwhlGameAutofillModal'));
@@ -106,6 +105,12 @@ interface Props {
   updatePeriodShots: (period: string, home_shots: number, away_shots: number) => Promise<boolean>;
   deleteGame: () => Promise<boolean>;
   onGameAutofillChange?: (progress: GameAutofillProgress | null) => void;
+  /**
+   * Raised when auto-fill stops because players need manual updates. The page owns the report:
+   * starting a run flips the tab panel keepMounted flag, which remounts this component and would
+   * drop anything held in local state.
+   */
+  onGameAutofillManualMoveReport?: (reports: GameAutofillManualMoveReport[]) => void;
   onGoalScoringChange?: (active: boolean) => void;
 }
 
@@ -151,6 +156,7 @@ const GameSummaryTab = ({
   updatePeriodShots,
   deleteGame,
   onGameAutofillChange,
+  onGameAutofillManualMoveReport,
   onGoalScoringChange,
 }: Props) => {
   const navigate = useNavigate();
@@ -374,7 +380,6 @@ const GameSummaryTab = ({
   const [startGameModalOpen, setStartGameModalOpen] = useState(false);
   const [nhlAutofillModalOpen, setNhlAutofillModalOpen] = useState(false);
   const [pwhlAutofillModalOpen, setPwhlAutofillModalOpen] = useState(false);
-  const [manualMoveReports, setManualMoveReports] = useState<GameAutofillManualMoveReport[]>([]);
   const autofillGame = useMemo<GameRecord>(
     () => (game.league_id || !leagueId ? game : { ...game, league_id: leagueId }),
     [game, leagueId],
@@ -915,7 +920,7 @@ const GameSummaryTab = ({
             game={autofillGame}
             onClose={() => setNhlAutofillModalOpen(false)}
             onAutofillChange={onGameAutofillChange}
-            onManualMoveReport={(report) => setManualMoveReports([report])}
+            onManualMoveReport={(report) => onGameAutofillManualMoveReport?.([report])}
           />
         )}
 
@@ -925,7 +930,7 @@ const GameSummaryTab = ({
             game={autofillGame}
             onClose={() => setPwhlAutofillModalOpen(false)}
             onAutofillChange={onGameAutofillChange}
-            onManualMoveReport={(report) => setManualMoveReports([report])}
+            onManualMoveReport={(report) => onGameAutofillManualMoveReport?.([report])}
           />
         )}
 
@@ -1029,12 +1034,6 @@ const GameSummaryTab = ({
           />
         )}
       </Suspense>
-
-      <GameAutofillManualMoveReportModal
-        open={manualMoveReports.length > 0}
-        reports={manualMoveReports}
-        onClose={() => setManualMoveReports([])}
-      />
 
       {/* ── Delete Game confirm ── */}
       {editable && (

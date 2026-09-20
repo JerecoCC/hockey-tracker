@@ -12,9 +12,14 @@ import GameDetailsPage from './GameDetailsPage';
 const mockNavigate = jest.fn();
 const mockUseParams = jest.fn();
 const mockUsePageBreadcrumbs = jest.fn();
-const mockSummaryTab = jest.fn(() => <div>summary</div>);
+const mockSummaryTab = jest.fn((_props: any) => <div>summary</div>);
 const mockLineupsTab = jest.fn(() => <div>lineups</div>);
 const mockScoreboardCard = jest.fn(() => <div>scoreboard</div>);
+const mockManualMoveReportModal = jest.fn(({ open, reports }: any) =>
+  open ? (
+    <div>manual updates: {reports.map((report: any) => report.gameLabel).join(', ')}</div>
+  ) : null,
+);
 const mockTabs = jest.fn(({ tabs }: any) => (
   <div>
     {tabs.map((tab: any) => (
@@ -62,6 +67,9 @@ jest.mock('@jerecocc/tracker-ui/components/TitleRow/TitleRow', () => ({ left, ri
   </div>
 ));
 jest.mock('./ScoreboardCard', () => (props: any) => mockScoreboardCard(props));
+jest.mock('./GameAutofillManualMoveReportModal', () => (props: any) =>
+  mockManualMoveReportModal(props),
+);
 jest.mock('./summary/GameSummaryTab', () => (props: any) => mockSummaryTab(props));
 jest.mock('./lineups/GameLineupsTab', () => (props: any) => mockLineupsTab(props));
 
@@ -566,5 +574,44 @@ describe('GameDetailsPage', () => {
 
     expect(mockUseGameGoalieStats).toHaveBeenCalledWith('game-1', { enabled: true });
     expect(mockUseShootoutAttempts).toHaveBeenCalledWith('game-1', { enabled: true });
+  });
+
+  it('shows the manual player update report raised by an auto-fill run', async () => {
+    mockUseParams.mockReturnValue({ leagueId: 'league-1', seasonId: 'season-1', id: 'game-1' });
+    render(<GameDetailsPage />);
+    await waitForGameTabs();
+
+    // The summary tab remounts when a run locks the page, so the page owns the report.
+    const { onGameAutofillChange, onGameAutofillManualMoveReport } = mockSummaryTab.mock.calls[0][0];
+    expect(screen.queryByText(/manual updates:/)).not.toBeInTheDocument();
+
+    act(() => {
+      onGameAutofillManualMoveReport([
+        {
+          leagueCode: 'NHL',
+          gameId: 'game-1',
+          gameLabel: 'AWY @ HOM',
+          gameDate: '2024-10-10',
+          moves: [
+            {
+              playerName: 'John Smith',
+              jerseyNumber: 9,
+              position: 'C',
+              fromTeamCode: 'AWY',
+              toTeamCode: 'HOM',
+            },
+          ],
+        },
+      ]);
+    });
+
+    expect(screen.getByText('manual updates: AWY @ HOM')).toBeInTheDocument();
+
+    // Starting another run clears the previous report.
+    act(() => {
+      onGameAutofillChange({ step: 'start', message: 'Starting NHL auto-fill...' });
+    });
+
+    expect(screen.queryByText(/manual updates:/)).not.toBeInTheDocument();
   });
 });
