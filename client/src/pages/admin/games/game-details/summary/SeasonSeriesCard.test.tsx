@@ -121,6 +121,59 @@ const game = {
 beforeEach(() => jest.clearAllMocks());
 
 describe('SeasonSeriesCard', () => {
+  it.each([
+    ['regular', 'Season Series'],
+    ['preseason', 'Preseason Series'],
+    ['playoff', 'Playoff Series'],
+  ])('titles a %s game card %s', (gameType, title) => {
+    render(
+      <SeasonSeriesCard
+        game={{ ...game, game_type: gameType } as GameRecord}
+        gameHrefBuilder={(gameId) => `/games/${gameId}`}
+        liveAwayScore={1}
+        liveHomeScore={2}
+      />,
+    );
+
+    expect(screen.getByText(title)).toBeInTheDocument();
+  });
+
+  it('censors only the current game and drops its overtime suffix', () => {
+    const finalOvertimeGame = {
+      ...game,
+      status: 'final',
+      overtime_periods: 1,
+    } as GameRecord;
+
+    const { rerender } = render(
+      <SeasonSeriesCard
+        game={finalOvertimeGame}
+        gameHrefBuilder={(gameId) => `/games/${gameId}`}
+        liveAwayScore={1}
+        liveHomeScore={2}
+        censorCurrentGame
+      />,
+    );
+
+    // Both scores of the current row only, and no OT tell in its status.
+    expect(screen.getAllByText('?')).toHaveLength(2);
+    expect(screen.queryByText('FINAL/OT')).not.toBeInTheDocument();
+    // The past meeting keeps its real score.
+    expect(screen.getByText('4')).toBeInTheDocument();
+
+    rerender(
+      <SeasonSeriesCard
+        game={finalOvertimeGame}
+        gameHrefBuilder={(gameId) => `/games/${gameId}`}
+        liveAwayScore={1}
+        liveHomeScore={2}
+      />,
+    );
+
+    expect(screen.queryByText('?')).not.toBeInTheDocument();
+    expect(screen.getByText('FINAL/OT')).toBeInTheDocument();
+  });
+
   it('shows future season-series games in addition to past and current ones', async () => {
     const user = userEvent.setup();
     const { container } = render(

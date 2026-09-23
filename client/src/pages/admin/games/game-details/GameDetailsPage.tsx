@@ -484,6 +484,9 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
 
   const isFinal = game.status === 'final';
   const isInProgress = game.status === 'in_progress';
+  // A viewer can open a finished game they have not watched; the result is held
+  // back until they mark it watched.
+  const censorResult = !isAdminView && isFinal && !game.watched_by_user;
   // Use the backend-computed score as the canonical base.
   // For an in-progress shootout, the backend intentionally stays on the goal-based tied score,
   // so we still apply a temporary +1 client-side when the current attempts already reveal a winner.
@@ -581,6 +584,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
           leagueId={leagueId}
           leagueCode={game.league_code}
           mode={mode}
+          censorResult={censorResult}
           disabled={isGameInteractionLocked}
           useLocalTimezone={!isAdminView}
         />
@@ -644,6 +648,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                     updateGameInfo={updateGameInfo}
                     updatePeriodShots={updatePeriodShots}
                     deleteGame={deleteGame}
+                    censorResult={censorResult}
                     onGameAutofillChange={handleGameAutofillChange}
                     onGameAutofillManualMoveReport={setGameAutofillManualMoveReports}
                     onGoalScoringChange={setIsGoalScoring}

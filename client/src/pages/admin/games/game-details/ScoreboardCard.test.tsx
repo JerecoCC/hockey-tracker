@@ -98,6 +98,49 @@ const team = (side: 'home' | 'away') => ({
 });
 
 describe('ScoreboardCard', () => {
+  it('holds back the score and the overtime suffix for a censored result', () => {
+    const props = {
+      game: {
+        status: 'final',
+        scheduled_at: '2026-04-18 00:00:00+00',
+        scheduled_time: '15:00',
+        home_team: team('home'),
+        away_team: team('away'),
+      },
+      isFinal: true,
+      isInProgress: false,
+      liveAwayScore: 1,
+      liveHomeScore: 4,
+      overtimeSuffix: '/OT',
+      leagueId: 'league-1',
+      leagueCode: 'NHL',
+    } as const;
+
+    const { rerender } = render(
+      <MemoryRouter>
+        <ScoreboardCard
+          {...props}
+          censorResult
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByText('4')).not.toBeInTheDocument();
+    expect(screen.queryByText('1')).not.toBeInTheDocument();
+    expect(screen.getByText('Final')).toBeInTheDocument();
+    expect(screen.queryByText('Final/OT')).not.toBeInTheDocument();
+    expect(document.querySelectorAll(`.${styles.scoreNumberLoser}`)).toHaveLength(0);
+
+    rerender(
+      <MemoryRouter>
+        <ScoreboardCard {...props} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByText('Final/OT')).toBeInTheDocument();
+  });
+
   it('shows Postgres midnight placeholder dates on the stored schedule day', () => {
     render(
       <MemoryRouter>

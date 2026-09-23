@@ -198,4 +198,27 @@ describe('GameSummaryTab', () => {
     expect(screen.queryByRole('dialog', { name: /score goal/i })).not.toBeInTheDocument();
     expect(onGoalScoringChange).toHaveBeenLastCalledWith(false);
   });
+
+  it('swaps the result cards for blurred placeholders when the result is censored', () => {
+    render(
+      <GameSummaryTab
+        {...baseProps}
+        isFinal
+        isInProgress={false}
+        editable={false}
+        censorResult
+      />,
+    );
+
+    // The real cards never mount, so no scores reach the page.
+    expect(screen.queryByText('linescore')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /score goal/i })).not.toBeInTheDocument();
+    // The goalie card stays: it censors its own stats and keeps the goalies.
+    expect(screen.getByText('goalie stats')).toBeInTheDocument();
+
+    expect(screen.getByText('Linescore')).toBeInTheDocument();
+    expect(screen.getByText('Shots')).toBeInTheDocument();
+    expect(screen.getByText('Three Stars')).toBeInTheDocument();
+    expect(screen.getAllByText('Mark as watched to reveal').length).toBe(4);
+  });
 });

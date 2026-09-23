@@ -27,6 +27,8 @@ import {
   teamHasGoalieSwitch,
 } from '../goalieStatsOrdering';
 
+const CENSORED_STAT = '?';
+
 const PERIOD_LABEL: Record<string, string> = {
   [PERIOD.FIRST]: 'P1',
   [PERIOD.SECOND]: 'P2',
@@ -106,6 +108,11 @@ interface Props {
     jerseyNumber?: number | null,
   ) => string;
   isFinal: boolean;
+  /**
+   * Keeps the goalies on show but hides their numbers, and drops any mid-game
+   * switch: an extra line would say the starter was pulled.
+   */
+  censorStats?: boolean;
   updateGoalieStint?: (
     stintId: string,
     data: UpdateGoalieStintData,
@@ -126,6 +133,7 @@ const GoalieStatsCard = ({
   goals,
   getPlayerHref,
   isFinal,
+  censorStats = false,
   updateGoalieStint,
   addGoalieStint,
   removeGoalieStint,
@@ -198,7 +206,7 @@ const GoalieStatsCard = ({
             ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
             : '1.000',
         toi: toiSec > 0 ? secondsToMMSS(toiSec) : '--',
-        windows: teamSwitchedGoalies ? stintLabels(stat) : [],
+        windows: teamSwitchedGoalies && !censorStats ? stintLabels(stat) : [],
         isStarter: goalieStatIsStarter(stat),
         playerHref: getPlayerHref?.(
           goalie.team_id,
@@ -210,6 +218,8 @@ const GoalieStatsCard = ({
       },
     ];
   });
+
+  const visibleRows = censorStats ? goalieRows.filter((row) => row.isStarter) : goalieRows;
 
   return (
     <>
@@ -240,11 +250,11 @@ const GoalieStatsCard = ({
           ) : undefined
         }
       >
-        {goaliesWithStats.length === 0 ? (
+        {visibleRows.length === 0 ? (
           <p className={styles.empty}>No goalie stats recorded yet.</p>
         ) : (
         <ResponsiveList className={styles.goalieList}>
-            {goalieRows.map((row) => {
+            {visibleRows.map((row) => {
               const playerName = formatPlayerName(row.goalie.first_name, row.goalie.last_name);
               const initials =
                 `${row.goalie.first_name?.charAt(0) ?? ''}${row.goalie.last_name?.charAt(0) ?? ''}`.trim() ||
@@ -281,17 +291,19 @@ const GoalieStatsCard = ({
                   ariaLabel={`Open ${playerName}`}
                   className={[
                     styles.goalieListItem,
-                    row.isStarter && gameSwitchedGoalies ? styles.goalieRowStarterSwitch : '',
+                    row.isStarter && gameSwitchedGoalies && !censorStats
+                      ? styles.goalieRowStarterSwitch
+                      : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
                   rightContent={
                     <GoalieStatStrip
-                      sa={row.sa}
-                      sv={row.sv}
-                      ga={row.ga}
-                      svPct={row.svPct}
-                      toi={row.toi}
+                      sa={censorStats ? CENSORED_STAT : row.sa}
+                      sv={censorStats ? CENSORED_STAT : row.sv}
+                      ga={censorStats ? CENSORED_STAT : row.ga}
+                      svPct={censorStats ? CENSORED_STAT : row.svPct}
+                      toi={censorStats ? CENSORED_STAT : row.toi}
                     />
                   }
                 />
@@ -338,9 +350,9 @@ const GoalieStatStrip = ({
   svPct,
   toi,
 }: {
-  sa: number;
-  sv: number;
-  ga: number;
+  sa: number | string;
+  sv: number | string;
+  ga: number | string;
   svPct: string;
   toi: string;
 }) => (

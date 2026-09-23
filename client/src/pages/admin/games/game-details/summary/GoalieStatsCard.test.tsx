@@ -1,6 +1,12 @@
 import type { ComponentProps } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
+// The real field pulls the tracker-ui barrel, which drags in tiptap ESM that Jest cannot parse.
+jest.mock('@/components/form/ControlledFields', () => ({
+  ControlledInputField: ({ label }: { label: string }) => <label>{label}</label>,
+  ControlledSelectField: ({ label }: { label: string }) => <label>{label}</label>,
+}));
+
 import GoalieStatsCard from './GoalieStatsCard';
 
 type GoalieStatsCardProps = ComponentProps<typeof GoalieStatsCard>;
@@ -219,6 +225,33 @@ describe('GoalieStatsCard', () => {
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('.935')).toBeInTheDocument();
     expect(screen.getByText('60:00')).toBeInTheDocument();
+  });
+
+  it('keeps the starter on show but censors the stats and the switch', () => {
+    render(
+      <MemoryRouter>
+        <GoalieStatsCard
+          game={game}
+          awayRoster={[goalie, reliefGoalie]}
+          homeRoster={[]}
+          goalieStats={switchedGoalieStats}
+          goals={[]}
+          isFinal
+          censorStats
+        />
+      </MemoryRouter>,
+    );
+
+    // The starter stays named; the reliever would give away that they were pulled.
+    expect(screen.getByText('Sarah Nurse')).toBeInTheDocument();
+    expect(screen.queryByText('Marie-Philip Poulin')).not.toBeInTheDocument();
+    expect(screen.queryByText('P2 05:30 → End of game')).not.toBeInTheDocument();
+
+    // Labels stay, numbers do not.
+    expect(screen.getByText('SA')).toBeInTheDocument();
+    expect(screen.getByText('TOI')).toBeInTheDocument();
+    expect(screen.getAllByText('?')).toHaveLength(5);
+    expect(screen.queryByText('31')).not.toBeInTheDocument();
   });
 
   it('places goalie switch-in windows in the list item subtitle', () => {

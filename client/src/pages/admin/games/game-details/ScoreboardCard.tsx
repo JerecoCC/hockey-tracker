@@ -57,6 +57,8 @@ interface Props {
   leagueId?: string;
   leagueCode?: string | null;
   mode?: 'admin' | 'user';
+  /** Holds back the score and the OT/SO suffix for a game the viewer has not watched. */
+  censorResult?: boolean;
   disabled?: boolean;
   useLocalTimezone?: boolean;
 }
@@ -97,6 +99,9 @@ function teamTextShadow(textHex: string, bgHex: string, threshold = 3): string {
 const teamPlaceLabel = (team: TeamInfo) => team.place_name?.trim() || '';
 const teamNameLabel = (team: TeamInfo) => team.team_name?.trim() || team.name?.trim() || team.code;
 const teamScoreLabel = (team: TeamInfo) => team.name?.trim() || teamNameLabel(team);
+// Matches the placeholder the game cards use for an unwatched score.
+const CENSORED_SCORE = '-';
+
 const clampSeriesWins = (wins: number, total: number) =>
   Math.min(Math.max(Math.trunc(wins), 0), total);
 
@@ -147,6 +152,7 @@ const ScoreboardCard = ({
   leagueId,
   leagueCode,
   mode = 'admin',
+  censorResult = false,
   disabled = false,
   useLocalTimezone = false,
 }: Props) => {
@@ -158,6 +164,12 @@ const ScoreboardCard = ({
       : 0;
   const showSeriesScoreDots = !!seriesScore && seriesWinsNeeded > 0;
   const showNumberScore = !showSeriesScoreDots && (isFinal || isInProgress);
+  // Dimming the losing side would give the result away just as plainly as the score.
+  const awayLost = !censorResult && isFinal && liveAwayScore < liveHomeScore;
+  const homeLost = !censorResult && isFinal && liveHomeScore < liveAwayScore;
+  const awayScoreLabel = censorResult ? CENSORED_SCORE : liveAwayScore;
+  const homeScoreLabel = censorResult ? CENSORED_SCORE : liveHomeScore;
+  const finalLabel = censorResult ? 'Final' : `Final${overtimeSuffix}`;
   const buildTeamPath = (team: TeamInfo) =>
     mode === 'user'
       ? buildUserTeamDetailsPath({
@@ -184,7 +196,7 @@ const ScoreboardCard = ({
         <div
           className={[
             styles.teamSide,
-            isFinal && liveAwayScore < liveHomeScore ? styles.teamSideLoser : '',
+            awayLost ? styles.teamSideLoser : '',
           ]
             .filter(Boolean)
             .join(' ')}
@@ -265,18 +277,18 @@ const ScoreboardCard = ({
               label={teamScoreLabel(game.away_team)}
               wins={seriesScore.awayWins}
               total={seriesWinsNeeded}
-              isLoser={isFinal && liveAwayScore < liveHomeScore}
+              isLoser={awayLost}
             />
           ) : showNumberScore ? (
             <span
               className={[
                 styles.scoreNumber,
-                isFinal && liveAwayScore < liveHomeScore ? styles.scoreNumberLoser : '',
+                awayLost ? styles.scoreNumberLoser : '',
               ]
                 .filter(Boolean)
                 .join(' ')}
             >
-              {liveAwayScore}
+              {awayScoreLabel}
             </span>
           ) : null}
           <div className={styles.scoreBlock}>
@@ -298,7 +310,7 @@ const ScoreboardCard = ({
               ))}
             {isFinal ? (
               <Tag
-                label={`Final${overtimeSuffix}`}
+                label={finalLabel}
                 intent={GAME_STATUS_TAG_INTENT.final}
               />
             ) : (
@@ -324,18 +336,18 @@ const ScoreboardCard = ({
               label={teamScoreLabel(game.home_team)}
               wins={seriesScore.homeWins}
               total={seriesWinsNeeded}
-              isLoser={isFinal && liveHomeScore < liveAwayScore}
+              isLoser={homeLost}
             />
           ) : showNumberScore ? (
             <span
               className={[
                 styles.scoreNumber,
-                isFinal && liveHomeScore < liveAwayScore ? styles.scoreNumberLoser : '',
+                homeLost ? styles.scoreNumberLoser : '',
               ]
                 .filter(Boolean)
                 .join(' ')}
             >
-              {liveHomeScore}
+              {homeScoreLabel}
             </span>
           ) : null}
         </div>
@@ -345,7 +357,7 @@ const ScoreboardCard = ({
           className={[
             styles.teamSide,
             styles.teamSideHome,
-            isFinal && liveHomeScore < liveAwayScore ? styles.teamSideLoser : '',
+            homeLost ? styles.teamSideLoser : '',
           ]
             .filter(Boolean)
             .join(' ')}

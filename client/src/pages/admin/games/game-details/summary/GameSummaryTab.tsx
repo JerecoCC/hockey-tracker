@@ -42,6 +42,12 @@ import { sumVisiblePeriodShots } from '../shotPeriods';
 import { buildSeasonDetailsPath } from '@/lib/routeSlugs';
 import GoalieSwitchReportCard from './GoalieSwitchReportCard';
 import type { GameAutofillManualMoveReport, GameAutofillProgress } from '../gameAutofillTypes';
+import {
+  CensoredLinescoreCard,
+  CensoredScoringCard,
+  CensoredShotsCard,
+  CensoredThreeStarsCard,
+} from './CensoredSummaryCards';
 
 const NhlGameAutofillModal = lazy(() => import('../NhlGameAutofillModal'));
 const PwhlGameAutofillModal = lazy(() => import('../PwhlGameAutofillModal'));
@@ -104,6 +110,8 @@ interface Props {
   updateGameInfo: (data: UpdateGameInfoData) => Promise<boolean>;
   updatePeriodShots: (period: string, home_shots: number, away_shots: number) => Promise<boolean>;
   deleteGame: () => Promise<boolean>;
+  /** Replaces the result-revealing cards with blurred placeholders. */
+  censorResult?: boolean;
   onGameAutofillChange?: (progress: GameAutofillProgress | null) => void;
   /**
    * Raised when auto-fill stops because players need manual updates. The page owns the report:
@@ -155,6 +163,7 @@ const GameSummaryTab = ({
   updateGameInfo,
   updatePeriodShots,
   deleteGame,
+  censorResult = false,
   onGameAutofillChange,
   onGameAutofillManualMoveReport,
   onGoalScoringChange,
@@ -594,7 +603,9 @@ const GameSummaryTab = ({
         <div className={styles.summaryGrid}>
           {/* ── Left column: Three Stars + Scoring + Goalie Stats + Previous Meetings + Last 5 ── */}
           <div className={styles.summaryLeft}>
-            {hasStars && (
+            {censorResult && <CensoredThreeStarsCard />}
+
+            {!censorResult && hasStars && (
               <ThreeStarsCard
                 game={game}
                 roster={roster}
@@ -618,54 +629,58 @@ const GameSummaryTab = ({
               />
             )}
 
-            <ScoringCard
-              game={game}
-              goals={goals}
-              isFinal={isFinal}
-              isInProgress={isInProgress}
-              isEditMode={isEditMode}
-              busy={busy}
-              goalSavingPeriod={goalSavingPeriod}
-              liveAwayScore={liveAwayScore}
-              liveHomeScore={liveHomeScore}
-              tallyByGoalId={tallyByGoalId}
-              lastCurrentPeriodGoalId={lastCurrentPeriodGoalId}
-              attempts={attempts}
-              soComplete={soComplete}
-              deletingAttemptId={deletingAttemptId}
-              awayTeamId={game.away_team.id}
-              homeTeamId={game.home_team.id}
-              setAccordionRef={editable ? setAccordionRef : undefined}
-              onScoreGoal={editable ? openGoalModal : undefined}
-              onEditGoal={editable ? openEditGoalModal : undefined}
-              onDeleteGoal={editable ? requestDeleteGoal : undefined}
-              onOpenShotsModal={editable ? openShotsModal : undefined}
-              onAddAttempt={editable ? openAttemptModal : undefined}
-              onEditAttempt={editable ? openEditAttemptModal : undefined}
-              onDeleteAttempt={editable ? handleDeleteAttempt : undefined}
-              onGoBackPeriod={canUseEditControls ? (prev) => advancePeriod(prev) : undefined}
-              onGoBackOTPeriod={
-                canUseEditControls ? (targetNum) => revertOTPeriod(targetNum) : undefined
-              }
-              getPlayerHref={
-                playerHrefBuilder
-                  ? (playerId) => {
-                      const teamId = playerTeamMap.get(playerId);
-                      const entry = roster.find((player) => player.player_id === playerId);
-                      return teamId && entry
-                        ? playerHrefBuilder(
-                            teamId,
-                            playerId,
-                            entry.first_name,
-                            entry.last_name,
-                            entry.jersey_number,
-                          )
-                        : '#';
-                    }
-                  : undefined
-              }
-              showPlayerDataStatus={showPlayerDataStatus}
-            />
+            {censorResult && <CensoredScoringCard />}
+
+            {!censorResult && (
+              <ScoringCard
+                game={game}
+                goals={goals}
+                isFinal={isFinal}
+                isInProgress={isInProgress}
+                isEditMode={isEditMode}
+                busy={busy}
+                goalSavingPeriod={goalSavingPeriod}
+                liveAwayScore={liveAwayScore}
+                liveHomeScore={liveHomeScore}
+                tallyByGoalId={tallyByGoalId}
+                lastCurrentPeriodGoalId={lastCurrentPeriodGoalId}
+                attempts={attempts}
+                soComplete={soComplete}
+                deletingAttemptId={deletingAttemptId}
+                awayTeamId={game.away_team.id}
+                homeTeamId={game.home_team.id}
+                setAccordionRef={editable ? setAccordionRef : undefined}
+                onScoreGoal={editable ? openGoalModal : undefined}
+                onEditGoal={editable ? openEditGoalModal : undefined}
+                onDeleteGoal={editable ? requestDeleteGoal : undefined}
+                onOpenShotsModal={editable ? openShotsModal : undefined}
+                onAddAttempt={editable ? openAttemptModal : undefined}
+                onEditAttempt={editable ? openEditAttemptModal : undefined}
+                onDeleteAttempt={editable ? handleDeleteAttempt : undefined}
+                onGoBackPeriod={canUseEditControls ? (prev) => advancePeriod(prev) : undefined}
+                onGoBackOTPeriod={
+                  canUseEditControls ? (targetNum) => revertOTPeriod(targetNum) : undefined
+                }
+                getPlayerHref={
+                  playerHrefBuilder
+                    ? (playerId) => {
+                        const teamId = playerTeamMap.get(playerId);
+                        const entry = roster.find((player) => player.player_id === playerId);
+                        return teamId && entry
+                          ? playerHrefBuilder(
+                              teamId,
+                              playerId,
+                              entry.first_name,
+                              entry.last_name,
+                              entry.jersey_number,
+                            )
+                          : '#';
+                      }
+                    : undefined
+                }
+                showPlayerDataStatus={showPlayerDataStatus}
+              />
+            )}
 
             {/* ── Goalie Stats card ── */}
             {(isFinal || isInProgress) && (
@@ -682,6 +697,7 @@ const GameSummaryTab = ({
                     : undefined
                 }
                 isFinal={editable && isFinal && isEditMode}
+                censorStats={censorResult}
                 updateGoalieStint={editable ? updateGoalieStint : undefined}
                 addGoalieStint={editable ? switchGoalie : undefined}
                 removeGoalieStint={editable ? removeGoalieStint : undefined}
@@ -696,64 +712,71 @@ const GameSummaryTab = ({
               gameHrefBuilder={gameHrefBuilder}
             />
 
-            {/* ── Season / Playoff Series card ── */}
+            {/* ── Preseason / Season / Playoff Series card ── */}
             <SeasonSeriesCard
               game={game}
               gameHrefBuilder={gameHrefBuilder}
               liveAwayScore={liveAwayScore}
               liveHomeScore={liveHomeScore}
+              censorCurrentGame={censorResult}
             />
           </div>
           {/* end summaryLeft */}
 
           {/* ── Right column: Linescore + Shots + Game Info ── */}
           <div className={styles.summaryRight}>
-            <LinescoreCard
-              game={game}
-              isFinal={isFinal}
-              busy={busy}
-              liveAwayScore={liveAwayScore}
-              liveHomeScore={liveHomeScore}
-              linescorePeriods={linescorePeriods}
-              attempts={attempts}
-              rosterReady={rosterReady}
-              startingGoaliesReady={startingGoaliesReady}
-              canEndGame={
-                editable &&
-                isInProgress &&
-                [PERIOD.THIRD, PERIOD.OVERTIME, PERIOD.SHOOTOUT].includes(
-                  game.current_period ?? '',
-                ) &&
-                (game.current_period !== PERIOD.SHOOTOUT || soComplete) &&
-                (game.current_period !== PERIOD.OVERTIME ||
-                  goals.some((g) => g.period === PERIOD.OVERTIME)) &&
-                (game.current_period !== PERIOD.THIRD || liveAwayScore !== liveHomeScore)
-              }
-              onStartGame={editable ? openStartGameModal : undefined}
-              onAutofillGame={canAutofillGame ? openAutofillGame : undefined}
-              onReschedule={editable ? () => updateStatus('postponed') : undefined}
-              onDelete={editable ? () => setConfirmDeleteOpen(true) : undefined}
-              onEndGame={
-                editable
-                  ? () => {
-                      if (endGameReadyForStars) {
-                        setStarsEditMode(false);
-                        setStarsModalOpen(true);
-                      } else {
-                        openShotsModal(
-                          game.current_period ?? lastPlayedPeriod,
-                          { type: 'end-game' },
-                          true,
-                        );
+            {censorResult && <CensoredLinescoreCard game={game} />}
+
+            {!censorResult && (
+              <LinescoreCard
+                game={game}
+                isFinal={isFinal}
+                busy={busy}
+                liveAwayScore={liveAwayScore}
+                liveHomeScore={liveHomeScore}
+                linescorePeriods={linescorePeriods}
+                attempts={attempts}
+                rosterReady={rosterReady}
+                startingGoaliesReady={startingGoaliesReady}
+                canEndGame={
+                  editable &&
+                  isInProgress &&
+                  [PERIOD.THIRD, PERIOD.OVERTIME, PERIOD.SHOOTOUT].includes(
+                    game.current_period ?? '',
+                  ) &&
+                  (game.current_period !== PERIOD.SHOOTOUT || soComplete) &&
+                  (game.current_period !== PERIOD.OVERTIME ||
+                    goals.some((g) => g.period === PERIOD.OVERTIME)) &&
+                  (game.current_period !== PERIOD.THIRD || liveAwayScore !== liveHomeScore)
+                }
+                onStartGame={editable ? openStartGameModal : undefined}
+                onAutofillGame={canAutofillGame ? openAutofillGame : undefined}
+                onReschedule={editable ? () => updateStatus('postponed') : undefined}
+                onDelete={editable ? () => setConfirmDeleteOpen(true) : undefined}
+                onEndGame={
+                  editable
+                    ? () => {
+                        if (endGameReadyForStars) {
+                          setStarsEditMode(false);
+                          setStarsModalOpen(true);
+                        } else {
+                          openShotsModal(
+                            game.current_period ?? lastPlayedPeriod,
+                            { type: 'end-game' },
+                            true,
+                          );
+                        }
                       }
-                    }
-                  : undefined
-              }
-              onDownloadScoreCard={() => setScoreImageOpen(true)}
-            />
+                    : undefined
+                }
+                onDownloadScoreCard={() => setScoreImageOpen(true)}
+              />
+            )}
 
             {/* ── Shots breakdown card ── */}
-            {(game.period_shots.length > 0 || isInProgress || isFinal) && (
+            {censorResult && <CensoredShotsCard game={game} />}
+
+            {!censorResult && (game.period_shots.length > 0 || isInProgress || isFinal) && (
               <Section
                 title="Shots"
                 action={

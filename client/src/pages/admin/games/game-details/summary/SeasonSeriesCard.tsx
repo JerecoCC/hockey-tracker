@@ -13,9 +13,22 @@ interface Props {
   gameHrefBuilder: (gameId: string) => string;
   liveAwayScore: number;
   liveHomeScore: number;
+  /** Hides the current game's score from a viewer who has not watched it yet. */
+  censorCurrentGame?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+// Meetings come back already narrowed to the current game's type, so the title
+// names the run of games the card is actually showing.
+const CARD_TITLE: Record<GameRecord['game_type'], string> = {
+  preseason: 'Preseason Series',
+  regular: 'Season Series',
+  playoff: 'Playoff Series',
+};
+
+// Sits in the score slot, which the row already pins to the far right.
+const CENSORED_SCORE = '?';
 
 const DATE_FMT_SERIES = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -42,7 +55,13 @@ const compareMeetings = (a: PreviousMeeting, b: PreviousMeeting) => {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore }: Props) => {
+const SeasonSeriesCard = ({
+  game,
+  gameHrefBuilder,
+  liveAwayScore,
+  liveHomeScore,
+  censorCurrentGame = false,
+}: Props) => {
   const navigate = useNavigate();
   const meetings = game.previous_meetings ?? [];
 
@@ -87,7 +106,7 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
         ? `${game.away_team.code} leads ${awayWins}–${homeWins}`
         : `Tied ${homeWins}–${awayWins}`;
 
-  const cardTitle = game.game_type === 'playoff' ? 'Playoff Series' : 'Season Series';
+  const cardTitle = CARD_TITLE[game.game_type] ?? CARD_TITLE.regular;
 
   return (
     <Section
@@ -97,19 +116,23 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
       <div className={styles.prevMeetingsRows}>
         {seriesMeetings.map((pm: PreviousMeeting) => {
           const isCurrentGame = pm.game_id === game.id;
+          const censored = censorCurrentGame && isCurrentGame;
           const status = pm.status;
           const showScores = status === 'final' || (isCurrentGame && status === 'in_progress');
           const leftNumericScore = pm.away_score;
           const rightNumericScore = pm.home_score;
           const leftScore = showScores ? leftNumericScore : '-';
           const rightScore = showScores ? rightNumericScore : '-';
-          const leftLost = !showScores || leftNumericScore < rightNumericScore;
-          const rightLost = !showScores || rightNumericScore < leftNumericScore;
-          const suffix = pm.shootout
-            ? PERIOD_SUFFIX.SHOOTOUT
-            : (pm.overtime_periods ?? 0) > 0
-              ? PERIOD_SUFFIX.OVERTIME
-              : null;
+          // Dimming the loser and the OT/SO suffix both give the result away.
+          const leftLost = !censored && (!showScores || leftNumericScore < rightNumericScore);
+          const rightLost = !censored && (!showScores || rightNumericScore < leftNumericScore);
+          const suffix = censored
+            ? null
+            : pm.shootout
+              ? PERIOD_SUFFIX.SHOOTOUT
+              : (pm.overtime_periods ?? 0) > 0
+                ? PERIOD_SUFFIX.OVERTIME
+                : null;
 
           return (
             <div
@@ -144,7 +167,7 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
                   shape={pm.away_team.logo ? 'square' : 'circle'}
                 />
                 <span className={styles.teamCode}>{pm.away_team.code}</span>
-                <span className={styles.teamScore}>{leftScore}</span>
+                <span className={styles.teamScore}>{censored ? CENSORED_SCORE : leftScore}</span>
               </div>
               <div
                 className={[styles.teamInfo, rightLost && styles.teamInfoDim]
@@ -162,7 +185,7 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
                   shape={pm.home_team.logo ? 'square' : 'circle'}
                 />
                 <span className={styles.teamCode}>{pm.home_team.code}</span>
-                <span className={styles.teamScore}>{rightScore}</span>
+                <span className={styles.teamScore}>{censored ? CENSORED_SCORE : rightScore}</span>
               </div>
               <div className={styles.gameInfo}>
                 <span className={styles.gameStatus}>{formatStatusLabel(status, suffix)}</span>

@@ -1,0 +1,37 @@
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
+
+.spoiler {
+  position: relative;
+  isolation: isolate;
+}
+
+// Holds placeholder content only — never the real game data.
+.filler {
+  filter: blur(7px);
+  opacity: 0.6;
+  pointer-events: none;
+  user-select: none;
+}
+
+.veil {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-xs;
+  padding: $space-md;
+  border-radius: $radius-md;
+  background: color-mix(in srgb, var(--app-bg-card, #{$bg-card}) 45%, transparent);
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-sm;
+  font-weight: 600;
+  text-align: center;
+}
+
+.veilIcon {
+  opacity: 0.8;
+}
