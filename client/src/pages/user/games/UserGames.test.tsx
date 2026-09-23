@@ -1114,9 +1114,10 @@ describe('UserGames schedule views', () => {
       ),
     ).toBeInTheDocument();
     expect(within(firstGameCard as HTMLElement).getByText('R2 - G3')).toBeInTheDocument();
+    // Details stay reachable before the game is watched; the page censors the result.
     expect(
-      within(firstGameCard as HTMLElement).queryByRole('button', { name: 'View game details' }),
-    ).not.toBeInTheDocument();
+      within(firstGameCard as HTMLElement).getByRole('button', { name: 'View game details' }),
+    ).toBeInTheDocument();
     expect(
       within(firstGameCard as HTMLElement).getByRole('button', { name: 'Mark as watched' }),
     ).toBeInTheDocument();

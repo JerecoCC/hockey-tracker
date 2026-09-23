@@ -471,6 +471,7 @@ const UserDashboard = () => {
                       game={game}
                       tzPref={tzPref}
                       useLeagueColors
+                      canOpen
                       onOpen={() => navigate(`/games/${game.id}`)}
                       actions={
                         <UserGameActions

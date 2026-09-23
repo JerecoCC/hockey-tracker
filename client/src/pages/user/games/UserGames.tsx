@@ -1423,7 +1423,6 @@ const UserGames = () => {
   const renderUserGameListItem = (game: GameRecord) => {
     const watched = !!game.watched_by_user;
     const skipped = !!game.skipped_by_user;
-    const canOpen = watched || skipped;
     const canMarkWatched = canMarkGameWatched(game);
     const busy = actionGameId === game.id;
 
@@ -1432,7 +1431,7 @@ const UserGames = () => {
         key={game.id}
         game={game}
         tzPref={tzPref}
-        canOpen={canOpen}
+        canOpen
         useLeagueColors
         mobileActionsAside
         onOpen={() => openGame(game)}
