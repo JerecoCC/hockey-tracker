@@ -37,7 +37,8 @@ export const getUserGameActions = ({
   onSchedule,
   onSkip,
 }: UserGameActionsProps): (ListItemAction | false)[] => [
-  (watched || skipped) && {
+  // Details stay open to everyone: an unwatched result is censored on the page.
+  {
     icon: 'open_in_new',
     intent: 'neutral',
     tooltip: 'View game details',
@@ -83,7 +84,7 @@ export const getUserGameActions = ({
     !skipped &&
     canMarkWatched && {
       icon: 'visibility',
-      intent: 'accent',
+      intent: 'success',
       tooltip: 'Mark as watched',
       disabled: busy,
       onClick: () => run(onMarkWatched),

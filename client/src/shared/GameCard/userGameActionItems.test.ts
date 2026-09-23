@@ -34,4 +34,11 @@ describe('getUserGameActions', () => {
     expect(skipGame).toMatchObject({ icon: 'remove_circle_outline', intent: 'warning' });
     expect(cancelWatch).toMatchObject({ icon: 'cancel', intent: 'danger' });
   });
+
+  it('uses a success action for mark as watched', () => {
+    expect(getActionByTooltip({}, 'Mark as watched')).toMatchObject({
+      icon: 'visibility',
+      intent: 'success',
+    });
+  });
 });

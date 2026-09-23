@@ -121,4 +121,22 @@ describe('GameCard', () => {
     fireEvent.mouseEnter(ribbon.parentElement as HTMLElement);
     expect(screen.getByRole('tooltip')).toHaveTextContent('Postponed watch');
   });
+
+  it('marks the watched ribbon with its own colour', () => {
+    render(<GameCard game={{ ...game, watched_by_user: true }} />);
+
+    const ribbon = screen.getByRole('img', { name: 'Watched' });
+    expect(ribbon.parentElement).toHaveClass('watchedRibbon', 'watchedGameRibbon');
+  });
+
+  it('holds the overtime suffix back until the game is watched', () => {
+    const overtimeGame = { ...game, overtime_periods: 1 };
+    const { rerender } = render(<GameCard game={overtimeGame} />);
+
+    expect(screen.getByText('FINAL')).toBeInTheDocument();
+
+    rerender(<GameCard game={{ ...overtimeGame, watched_by_user: true }} />);
+
+    expect(screen.getByText('FINAL/OT')).toBeInTheDocument();
+  });
 });

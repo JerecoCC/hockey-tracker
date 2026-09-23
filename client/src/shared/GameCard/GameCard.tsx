@@ -128,9 +128,11 @@ const getOriginalGameDateLabel = (game: GameRecord, tzPref: GameCardTimezone) =>
   return ORIGINAL_GAME_DATE_FMT.format(dateKeyToDate(originalDateKey));
 };
 
-const getStatusLabel = (game: GameRecord) => {
+// The OT/SO suffix gives away how a game ended, so it is held back with the
+// score until the viewer has watched it.
+const getStatusLabel = (game: GameRecord, revealResult = true) => {
   if (game.status === 'in_progress') return 'LIVE';
-  if (game.status === 'final') return `FINAL${getOvertimeSuffix(game)}`;
+  if (game.status === 'final') return `FINAL${revealResult ? getOvertimeSuffix(game) : ''}`;
   return game.status.replace(/_/g, ' ').toUpperCase();
 };
 
@@ -242,7 +244,7 @@ const GameCardVariant = ({
     originalDateLabelProp === undefined
       ? getOriginalGameDateLabel(game, tzPref)
       : originalDateLabelProp;
-  const primaryFallbackLabel = game.status === 'scheduled' ? 'TBD' : getStatusLabel(game);
+  const primaryFallbackLabel = game.status === 'scheduled' ? 'TBD' : getStatusLabel(game, showScore);
   const primaryMetaDetailLabel =
     isPostponedWatch && originalDateLabel ? null : timeLabel || primaryFallbackLabel;
   const primaryMetaLabel = [originalDateLabel, primaryMetaDetailLabel]
@@ -298,7 +300,11 @@ const GameCardVariant = ({
           text={ribbonLabel}
           className={[
             styles.watchedRibbon,
-            !isWatched && isPostponedWatch ? styles.postponedWatchRibbon : '',
+            isWatched
+              ? styles.watchedGameRibbon
+              : isPostponedWatch
+                ? styles.postponedWatchRibbon
+                : '',
           ]
             .filter(Boolean)
             .join(' ')}
@@ -342,10 +348,13 @@ const GameCardVariant = ({
         {bottomLabel && <div className={styles.bottomLabel}>{bottomLabel}</div>}
         <div className={styles.gameFooter}>
           <Tag
-            label={statusLabelProp ?? getStatusLabel(game)}
+            label={statusLabelProp ?? getStatusLabel(game, showScore)}
             intent={statusIntent ?? GAME_STATUS_TAG_INTENT[game.status]}
           />
           {playoffMetaLabel && <span>{playoffMetaLabel}</span>}
+          {!playoffMetaLabel && game.game_type === 'preseason' && (
+            <span className={styles.preseasonLabel}>Preseason</span>
+          )}
         </div>
       </div>
       {actions && (
@@ -500,7 +509,7 @@ const GameListItemVariant = ({
         {game.venue && <span className={listStyles.venue}>{game.venue}</span>}
       </div>
       <Tag
-        label={statusLabelProp ?? getStatusLabel(game)}
+        label={statusLabelProp ?? getStatusLabel(game, showScore)}
         intent={statusIntent ?? GAME_STATUS_TAG_INTENT[game.status]}
       />
       {actions && (

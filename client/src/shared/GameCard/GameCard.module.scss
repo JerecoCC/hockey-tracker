@@ -218,6 +218,16 @@
   justify-content: center;
 }
 
+.watchedGameRibbon {
+  background: $success-light;
+  color: $bg-page;
+}
+
+:global(:root[data-theme='light']) .watchedGameRibbon {
+  background: $success;
+  color: #fff;
+}
+
 .postponedWatchRibbon {
   background: $info-light;
   color: $bg-page;
@@ -275,6 +285,14 @@
   align-items: center;
   text-transform: uppercase;
   font-weight: 600;
+}
+
+.preseasonLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.5;
+  letter-spacing: 0.03em;
 }
 
 .team {
