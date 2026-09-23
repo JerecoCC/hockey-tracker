@@ -1017,7 +1017,7 @@ router.get('/games/:id', async (req, res) => {
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
             AND g2.status = 'final'
-            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
+            AND g2.game_type = g.game_type
             AND (g2.home_team_id = g.home_team_id OR g2.away_team_id = g.home_team_id)
             AND g2.scheduled_at < g.scheduled_at
           ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
@@ -1083,7 +1083,7 @@ router.get('/games/:id', async (req, res) => {
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
             AND g2.status = 'final'
-            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
+            AND g2.game_type = g.game_type
             AND (g2.home_team_id = g.away_team_id OR g2.away_team_id = g.away_team_id)
             AND g2.scheduled_at < g.scheduled_at
           ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
@@ -1151,7 +1151,7 @@ router.get('/games/:id', async (req, res) => {
           FROM games g2
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
-            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
+            AND g2.game_type = g.game_type
             AND (
               (g2.home_team_id = g.home_team_id AND g2.away_team_id = g.away_team_id)
               OR

@@ -1235,7 +1235,7 @@ router.get('/:id', async (req, res) => {
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
             AND g2.status = 'final'
-            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
+            AND g2.game_type = g.game_type
             AND (g2.home_team_id = g.home_team_id OR g2.away_team_id = g.home_team_id)
             AND g2.scheduled_at < g.scheduled_at
           ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
@@ -1301,7 +1301,7 @@ router.get('/:id', async (req, res) => {
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
             AND g2.status = 'final'
-            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
+            AND g2.game_type = g.game_type
             AND (g2.home_team_id = g.away_team_id OR g2.away_team_id = g.away_team_id)
             AND g2.scheduled_at < g.scheduled_at
           ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
@@ -1369,7 +1369,7 @@ router.get('/:id', async (req, res) => {
           FROM games g2
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
-            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
+            AND g2.game_type = g.game_type
             AND (
               (g2.home_team_id = g.home_team_id AND g2.away_team_id = g.away_team_id)
               OR
@@ -2563,7 +2563,7 @@ router.get('/:id/goals', async (req, res) => {
           WHERE g2.scorer_id = go.scorer_id
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
-            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.game_type = g.game_type
             AND gm2.scheduled_at < g.scheduled_at
         ) AS scorer_prior_goals,
         (SELECT COUNT(*)::int
@@ -2573,7 +2573,7 @@ router.get('/:id/goals', async (req, res) => {
             AND (g2.assist_1_id = go.assist_1_id OR g2.assist_2_id = go.assist_1_id)
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
-            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.game_type = g.game_type
             AND gm2.scheduled_at < g.scheduled_at
         ) AS assist_1_prior_assists,
         (SELECT COUNT(*)::int
@@ -2583,7 +2583,7 @@ router.get('/:id/goals', async (req, res) => {
             AND (g2.assist_1_id = go.assist_2_id OR g2.assist_2_id = go.assist_2_id)
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
-            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.game_type = g.game_type
             AND gm2.scheduled_at < g.scheduled_at
         ) AS assist_2_prior_assists
       FROM goals go
@@ -2721,7 +2721,7 @@ router.post('/:id/goals', async (req, res) => {
           WHERE g2.scorer_id = go.scorer_id
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
-            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.game_type = g.game_type
             AND gm2.scheduled_at < g.scheduled_at
         ) AS scorer_prior_goals,
         (SELECT COUNT(*)::int
@@ -2731,7 +2731,7 @@ router.post('/:id/goals', async (req, res) => {
             AND (g2.assist_1_id = go.assist_1_id OR g2.assist_2_id = go.assist_1_id)
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
-            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.game_type = g.game_type
             AND gm2.scheduled_at < g.scheduled_at
         ) AS assist_1_prior_assists,
         (SELECT COUNT(*)::int
@@ -2741,7 +2741,7 @@ router.post('/:id/goals', async (req, res) => {
             AND (g2.assist_1_id = go.assist_2_id OR g2.assist_2_id = go.assist_2_id)
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
-            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.game_type = g.game_type
             AND gm2.scheduled_at < g.scheduled_at
         ) AS assist_2_prior_assists
       FROM goals go
@@ -2899,7 +2899,7 @@ router.put('/:id/goals/:goalId', async (req, res) => {
           WHERE g2.scorer_id = go.scorer_id
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
-            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.game_type = g.game_type
             AND gm2.scheduled_at < g.scheduled_at
         ) AS scorer_prior_goals,
         (SELECT COUNT(*)::int
@@ -2909,7 +2909,7 @@ router.put('/:id/goals/:goalId', async (req, res) => {
             AND (g2.assist_1_id = go.assist_1_id OR g2.assist_2_id = go.assist_1_id)
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
-            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.game_type = g.game_type
             AND gm2.scheduled_at < g.scheduled_at
         ) AS assist_1_prior_assists,
         (SELECT COUNT(*)::int
@@ -2919,7 +2919,7 @@ router.put('/:id/goals/:goalId', async (req, res) => {
             AND (g2.assist_1_id = go.assist_2_id OR g2.assist_2_id = go.assist_2_id)
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
-            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.game_type = g.game_type
             AND gm2.scheduled_at < g.scheduled_at
         ) AS assist_2_prior_assists
       FROM goals go
