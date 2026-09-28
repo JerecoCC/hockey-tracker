@@ -9,6 +9,7 @@ const {
   getGoogleCalendarStatus,
   normalizeGoogleCalendarTimeZone,
   syncAllScheduledGamesForUser,
+  syncScheduledGameToGoogleCalendar,
   _private: {
     decryptRefreshToken,
     encryptRefreshToken,
@@ -23,6 +24,15 @@ const {
 } = require('./googleCalendar');
 
 const originalFetch = global.fetch;
+const PAST_WATCHED_GAME = {
+  id: 'watched-game',
+  game_date: '2025-12-30',
+  calendar_date: '2025-12-30',
+  scheduled_time: '19:30',
+  away_code: 'OLD',
+  home_code: 'WAT',
+  league_code: 'NHL',
+};
 const mockGoogleResponse = (status, body = null, headers = {}) => ({
   status,
   ok: status >= 200 && status < 300,
@@ -428,6 +438,93 @@ describe('Google Calendar service helpers', () => {
       message: 'Google Calendar is up to date.',
       completed: 2,
       total: 2,
+    });
+  });
+
+  it('keeps events for past games that still match the calendar during a full sync', async () => {
+    sql
+      .mockResolvedValueOnce([PAST_WATCHED_GAME])
+      .mockResolvedValueOnce([]);
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(
+        mockGoogleResponse(200, {
+          items: [
+            {
+              id: eventIdForGame('user-1', 'watched-game'),
+              extendedProperties: { private: { hockeyTrackerGameId: 'watched-game' } },
+            },
+            {
+              id: eventIdForGame('user-1', 'skipped-game'),
+              extendedProperties: { private: { hockeyTrackerGameId: 'skipped-game' } },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(mockGoogleResponse(204));
+
+    await expect(
+      syncAllScheduledGamesForUser('user-1', {
+        connection: { calendar_id: 'calendar-1', refresh_token_encrypted: 'unused' },
+        accessToken: 'access-token',
+        now: new Date('2026-01-01T17:00:00Z'),
+        writeIntervalMs: 0,
+      }),
+    ).resolves.toEqual({ status: 'synced', synced: 0, removed: 1 });
+
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(global.fetch).toHaveBeenLastCalledWith(
+      expect.stringContaining(`/events/${eventIdForGame('user-1', 'skipped-game')}`),
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+  });
+
+  describe('single game sync', () => {
+    const connection = () => ({
+      calendar_id: 'calendar-1',
+      time_zone: 'America/New_York',
+      refresh_token_encrypted: encryptRefreshToken('refresh-token'),
+    });
+
+    it('leaves the event for a past game that still matches the calendar', async () => {
+      sql
+        .mockResolvedValueOnce([connection()])
+        .mockResolvedValueOnce([PAST_WATCHED_GAME])
+        .mockResolvedValueOnce([]);
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce(mockGoogleResponse(200, { access_token: 'access-token' }));
+
+      await expect(
+        syncScheduledGameToGoogleCalendar({
+          userId: 'user-1',
+          gameId: 'watched-game',
+          now: new Date('2026-01-01T17:00:00Z'),
+        }),
+      ).resolves.toEqual({ status: 'synced' });
+      // Only the token refresh — no DELETE for the watched game.
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('deletes the event when the game no longer matches the calendar', async () => {
+      sql
+        .mockResolvedValueOnce([connection()])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce(mockGoogleResponse(200, { access_token: 'access-token' }))
+        .mockResolvedValueOnce(mockGoogleResponse(204));
+
+      await syncScheduledGameToGoogleCalendar({
+        userId: 'user-1',
+        gameId: 'skipped-game',
+        now: new Date('2026-01-01T17:00:00Z'),
+      });
+      expect(global.fetch).toHaveBeenLastCalledWith(
+        expect.stringContaining(`/events/${eventIdForGame('user-1', 'skipped-game')}`),
+        expect.objectContaining({ method: 'DELETE' }),
+      );
     });
   });
 });

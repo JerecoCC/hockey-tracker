@@ -699,7 +699,9 @@ const syncScheduledGameToGoogleCalendar = async ({ userId, gameId, now = new Dat
         game,
         timeZone,
       });
-    } else {
+    } else if (games.length === 0) {
+      // Past games that still match the calendar (e.g. watched games) keep their event;
+      // only skipped, unfavorited, or out-of-season games are removed.
       await deleteGameEvent({
         accessToken,
         calendarId: connection.calendar_id,
@@ -743,7 +745,9 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
     const selectedGames = await calendarGameSelect(userId);
     const now = context.now || new Date();
     const games = selectedGames.filter((game) => gameIsAfterToday(game, timeZone, now));
-    const calendarGameIds = new Set(games.map((game) => game.id));
+    // Stale means no longer selected (skipped, unfavorited, or outside the calendar season).
+    // Past selected games such as watched ones keep their events but are not rewritten.
+    const calendarGameIds = new Set(selectedGames.map((game) => game.id));
 
     reportProgress({
       step: 'prepare',
