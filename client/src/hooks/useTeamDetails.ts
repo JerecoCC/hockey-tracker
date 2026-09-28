@@ -68,6 +68,7 @@ export interface TeamSeasonRecord {
   name: string;
   league_id: string;
   start_date: string | null;
+  preseason_start_date?: string | null;
   started_at: string | null;
   end_date: string | null;
   is_current: boolean;

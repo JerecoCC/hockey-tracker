@@ -10,6 +10,10 @@ const {
 // All season routes require the admin role
 router.use(requireAdmin);
 
+// Both values are YYYY-MM-DD strings, so lexical comparison matches date order.
+const isPreseasonAfterSeasonStart = (preseasonStartDate, startDate) =>
+  Boolean(preseasonStartDate && startDate && preseasonStartDate > startDate);
+
 const fetchAwardPlayerEligibilityRow = async (seasonId, playerId) => {
   const rows = await sql`
     SELECT
@@ -361,6 +365,7 @@ router.get('/', async (req, res) => {
                  (l.current_season_id = s.id) AS is_current,
                  s.is_ended, s.playoffs_started, s.started_at::text AS started_at,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.preseason_start_date::text AS preseason_start_date,
                  s.games_per_season,
                  s.goalie_min_regular_minutes,
                  COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
@@ -386,6 +391,7 @@ router.get('/', async (req, res) => {
                  (l.current_season_id = s.id) AS is_current,
                  s.is_ended, s.playoffs_started, s.started_at::text AS started_at,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.preseason_start_date::text AS preseason_start_date,
                  s.games_per_season,
                  s.goalie_min_regular_minutes,
                  COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
@@ -423,6 +429,7 @@ router.get('/:id', async (req, res) => {
              (l.current_season_id = s.id) AS is_current,
              s.is_ended, s.playoffs_started, s.started_at::text AS started_at,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.preseason_start_date::text AS preseason_start_date,
              s.games_per_season,
              COALESCE(pqf.rules, s.playoff_format, l.playoff_format) AS playoff_format,
              COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
@@ -450,7 +457,7 @@ router.get('/:id', async (req, res) => {
                SELECT MIN(g.scheduled_at AT TIME ZONE 'UTC')::date::text
                FROM games g
                WHERE g.season_id = s.id AND g.game_type = 'preseason'
-             ) AS preseason_start_date
+             ) AS first_preseason_game_date
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
@@ -475,6 +482,7 @@ router.post('/', async (req, res) => {
     league_id,
     name,
     start_date,
+    preseason_start_date,
     end_date,
     games_per_season,
     goalie_min_regular_minutes,
@@ -484,6 +492,11 @@ router.post('/', async (req, res) => {
 
   if (!league_id) return res.status(400).json({ error: 'league_id is required' });
   if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });
+  if (isPreseasonAfterSeasonStart(preseason_start_date, start_date)) {
+    return res
+      .status(400)
+      .json({ error: 'preseason_start_date must be on or before start_date' });
+  }
   if (
     goalie_min_regular_minutes !== undefined &&
     goalie_min_regular_minutes !== null &&
@@ -525,7 +538,7 @@ router.post('/', async (req, res) => {
 
     const rows = await sql`
       INSERT INTO seasons (
-        name, league_id, start_date, end_date, games_per_season,
+        name, league_id, start_date, preseason_start_date, end_date, games_per_season,
         goalie_min_regular_minutes,
         playoff_qualification_format_id, group_alignment_set_id
       )
@@ -533,6 +546,7 @@ router.post('/', async (req, res) => {
         ${name.trim()},
         ${league_id},
         ${start_date ?? null},
+        ${preseason_start_date || null},
         ${end_date ?? null},
         ${games_per_season ?? null},
         ${goalie_min_regular_minutes ?? null},
@@ -542,6 +556,7 @@ router.post('/', async (req, res) => {
       RETURNING id, name, league_id, FALSE AS is_current,
                 NULL::text AS started_at,
                 start_date::text AS start_date, end_date::text AS end_date,
+                preseason_start_date::text AS preseason_start_date,
                 games_per_season, goalie_min_regular_minutes,
                 playoff_qualification_format_id, group_alignment_set_id,
                 FALSE AS has_scheduled_games,
@@ -568,6 +583,7 @@ router.patch('/:id', async (req, res) => {
     league_id,
     name,
     start_date,
+    preseason_start_date,
     end_date,
     games_per_season,
     playoff_format,
@@ -585,6 +601,7 @@ router.patch('/:id', async (req, res) => {
     const existing = await sql`
       SELECT id, name, league_id,
              start_date::text AS start_date, started_at::text AS started_at,
+             preseason_start_date::text AS preseason_start_date,
              end_date::text AS end_date, is_ended, playoffs_started,
              games_per_season, playoff_format,
              playoff_qualification_format_id,
@@ -603,6 +620,10 @@ router.patch('/:id', async (req, res) => {
     const mergedName = name !== undefined ? name.trim() : cur.name;
     const mergedLeagueId = league_id !== undefined ? league_id : cur.league_id;
     const mergedStartDate = start_date !== undefined ? start_date || null : cur.start_date;
+    const mergedPreseasonStartDate =
+      preseason_start_date !== undefined
+        ? preseason_start_date || null
+        : cur.preseason_start_date;
     const mergedEndDate = end_date !== undefined ? end_date || null : cur.end_date;
     const mergedGamesPerSeason =
       games_per_season !== undefined ? games_per_season || null : cur.games_per_season;
@@ -650,6 +671,11 @@ router.patch('/:id', async (req, res) => {
     }
 
     if (!mergedName) return res.status(400).json({ error: 'name is required' });
+    if (isPreseasonAfterSeasonStart(mergedPreseasonStartDate, mergedStartDate)) {
+      return res
+        .status(400)
+        .json({ error: 'preseason_start_date must be on or before start_date' });
+    }
     if (
       mergedGoalieMinRegularMinutes != null &&
       (!Number.isInteger(Number(mergedGoalieMinRegularMinutes)) ||
@@ -728,6 +754,7 @@ router.patch('/:id', async (req, res) => {
         name                 = ${mergedName},
         league_id            = ${mergedLeagueId},
         start_date           = ${mergedStartDate},
+        preseason_start_date = ${mergedPreseasonStartDate},
         end_date             = ${mergedEndDate},
         is_ended             = ${mergedIsEnded},
         games_per_season     = ${mergedGamesPerSeason},
@@ -756,6 +783,7 @@ router.patch('/:id', async (req, res) => {
              (l.current_season_id = s.id) AS is_current,
              s.is_ended, s.playoffs_started, s.started_at::text AS started_at,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.preseason_start_date::text AS preseason_start_date,
              s.games_per_season,
              s.goalie_min_regular_minutes,
              COALESCE(pqf.rules, s.playoff_format, l.playoff_format) AS playoff_format,
@@ -837,6 +865,7 @@ router.patch('/:id/current', async (req, res) => {
              (l.current_season_id = s.id) AS is_current,
              s.is_ended, s.playoffs_started, s.started_at::text AS started_at,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.preseason_start_date::text AS preseason_start_date,
              s.goalie_min_regular_minutes,
              EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id) AS has_scheduled_games,
              EXISTS (
@@ -963,6 +992,7 @@ router.patch('/:id/playoffs', async (req, res) => {
              (l.current_season_id = s.id) AS is_current,
              s.is_ended, s.playoffs_started, s.started_at::text AS started_at,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.preseason_start_date::text AS preseason_start_date,
              s.games_per_season,
              s.goalie_min_regular_minutes,
              COALESCE(pqf.rules, s.playoff_format, l.playoff_format) AS playoff_format,

@@ -23,6 +23,7 @@ const SCORING_SYSTEM_OPTIONS: SelectOption[] = [
 interface FormValues {
   league_id: string | null;
   name: string;
+  preseason_start_date: string;
   start_date: string;
   end_date: string;
   games_per_season: string;
@@ -68,6 +69,7 @@ const SeasonFormModal = (props: Props) => {
     () => ({
       league_id: lockedLeagueId ?? editTarget?.league_id ?? null,
       name: editTarget?.name ?? '',
+      preseason_start_date: editTarget?.preseason_start_date?.slice(0, 10) ?? '',
       start_date: editTarget?.start_date?.slice(0, 10) ?? '',
       end_date: editTarget?.end_date?.slice(0, 10) ?? '',
       games_per_season:
@@ -90,6 +92,7 @@ const SeasonFormModal = (props: Props) => {
     control,
     handleSubmit,
     reset,
+    getValues,
     formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
@@ -109,6 +112,7 @@ const SeasonFormModal = (props: Props) => {
     const payload: CreateSeasonData = {
       league_id: data.league_id!,
       name: data.name.trim(),
+      preseason_start_date: data.preseason_start_date || null,
       start_date: data.start_date || null,
       end_date: data.end_date || null,
     };
@@ -172,12 +176,28 @@ const SeasonFormModal = (props: Props) => {
           placeholder="e.g. NHL 2024–25"
           autoFocus
         />
+        <div className={styles.fullWidthField}>
+          <ControlledDatePickerField
+            label="Preseason Start Date"
+            control={control}
+            name="preseason_start_date"
+            placeholder="Select preseason start…"
+            rules={{
+              validate: (value) =>
+                !value ||
+                !getValues('start_date') ||
+                value <= getValues('start_date') ||
+                'Must be on or before the start date',
+            }}
+          />
+        </div>
         <div className={styles.dateRow}>
           <ControlledDatePickerField
             label="Start Date"
             control={control}
             name="start_date"
             placeholder="Select start date…"
+            rules={{ deps: 'preseason_start_date' }}
           />
           <ControlledDatePickerField
             label="End Date"

@@ -56,8 +56,10 @@ export interface SeasonRecord {
   has_unfinished_regular_games: boolean;
   /** True when at least one season team has fewer final regular games than games_per_season. */
   has_incomplete_regular_team_games?: boolean;
-  /** Earliest scheduled preseason game date (YYYY-MM-DD), or null if no preseason games exist. */
+  /** Admin-set preseason start date (YYYY-MM-DD). Null when not set. */
   preseason_start_date: string | null;
+  /** Earliest scheduled preseason game date (YYYY-MM-DD). Only returned by the season details endpoint. */
+  first_preseason_game_date?: string | null;
   created_at: string;
 }
 
@@ -65,6 +67,7 @@ export interface CreateSeasonData {
   league_id: string;
   name: string;
   start_date?: string | null;
+  preseason_start_date?: string | null;
   end_date?: string | null;
   games_per_season?: number | null;
   playoff_format?: PlayoffFormatRule[] | null;

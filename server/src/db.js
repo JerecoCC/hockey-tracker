@@ -568,6 +568,8 @@ async function initSchema() {
         REFERENCES group_alignment_sets(id) ON DELETE SET NULL
   `;
 
+  await sql`ALTER TABLE seasons ADD COLUMN IF NOT EXISTS preseason_start_date DATE`;
+
   // Which teams are participating in a given season (season-level roster)
   await sql`
     CREATE TABLE IF NOT EXISTS season_teams (

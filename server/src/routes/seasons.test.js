@@ -453,6 +453,33 @@ describe('POST /api/admin/seasons', () => {
       .send({ league_id: 'league-1', name: '  NHL 2024–25  ' });
     expect(res.status).toBe(201);
   });
+
+  it('stores the preseason start date', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'league-1' }])
+      .mockResolvedValueOnce([{ ...SEASON, preseason_start_date: '2024-08-20' }]);
+    const res = await request(app).post('/api/admin/seasons').send({
+      league_id: 'league-1',
+      name: 'NHL 2024–25',
+      start_date: '2024-09-01',
+      preseason_start_date: '2024-08-20',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.preseason_start_date).toBe('2024-08-20');
+    expect(sql.mock.calls[1]).toContain('2024-08-20');
+  });
+
+  it('returns 400 when the preseason starts after the season', async () => {
+    const res = await request(app).post('/api/admin/seasons').send({
+      league_id: 'league-1',
+      name: 'NHL 2024–25',
+      start_date: '2024-09-01',
+      preseason_start_date: '2024-09-02',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/preseason_start_date/);
+    expect(sql).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -495,6 +522,29 @@ describe('PATCH /api/admin/seasons/:id', () => {
     expect(res.status).toBe(200);
     // Only 3 SQL calls — no UPDATE leagues step when end_date is absent
     expect(sql).toHaveBeenCalledTimes(3);
+  });
+
+  it('updates the preseason start date', async () => {
+    sql
+      .mockResolvedValueOnce([{ ...SEASON, end_date: null, preseason_start_date: null }])
+      .mockResolvedValueOnce([]) // UPDATE seasons
+      .mockResolvedValueOnce([{ ...SEASON, end_date: null, preseason_start_date: '2024-08-20' }]);
+    const res = await request(app)
+      .patch('/api/admin/seasons/season-1')
+      .send({ preseason_start_date: '2024-08-20' });
+    expect(res.status).toBe(200);
+    expect(res.body.preseason_start_date).toBe('2024-08-20');
+    expect(sql.mock.calls[1]).toContain('2024-08-20');
+  });
+
+  it('rejects a preseason start date after the existing season start date', async () => {
+    sql.mockResolvedValueOnce([{ ...SEASON, end_date: null, preseason_start_date: null }]);
+    const res = await request(app)
+      .patch('/api/admin/seasons/season-1')
+      .send({ preseason_start_date: '2024-09-15' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/preseason_start_date/);
+    expect(sql).toHaveBeenCalledTimes(1);
   });
 
   it('blocks changing team alignment after games have been scheduled', async () => {

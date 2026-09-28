@@ -150,6 +150,7 @@ router.get('/:id/seasons', async (req, res) => {
       SELECT
         s.id, s.name, s.league_id,
         s.start_date::text AS start_date,
+        s.preseason_start_date::text AS preseason_start_date,
         s.started_at::text AS started_at,
         s.end_date::text AS end_date,
         (s.id = l.current_season_id) AS is_current,
