@@ -39,7 +39,7 @@ interface Props {
   onClose: () => void;
   /** Called in edit mode — save updated stars */
   onSave: (payload: StarPayload) => Promise<boolean>;
-  /** Called in end-game mode — finalise the game with 3 stars */
+  /** Called in end-game mode — finalise the game; stars are optional */
   onEndGame: (payload: StarPayload) => Promise<boolean>;
 }
 
@@ -67,7 +67,6 @@ const ThreeStarsModal = ({
     control,
     handleSubmit,
     reset,
-    watch,
     formState: { isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
@@ -82,9 +81,6 @@ const ThreeStarsModal = ({
     reset(formValues);
     onClose();
   }, [formValues, onClose, reset]);
-
-  const [star1, star2, star3] = watch(['star1', 'star2', 'star3']);
-  const canConfirm = !!star1 && !!star2 && !!star3;
 
   const teamMap: Record<string, TeamMeta> = {
     [awayTeam.id]: awayTeam,
@@ -124,7 +120,7 @@ const ThreeStarsModal = ({
       onClose={handleClose}
       confirmLabel={editMode ? (busy ? 'Saving…' : 'Save') : 'End Game'}
       confirmIcon={editMode ? 'save' : undefined}
-      confirmDisabled={!canConfirm || busy || !isDirty || !isValid}
+      confirmDisabled={busy || (editMode && !isDirty) || !isValid}
       confirmForm="three-stars-form"
     >
       <form
@@ -140,8 +136,6 @@ const ThreeStarsModal = ({
           placeholder="— Select player —"
           searchable
           disabled={busy}
-          required
-          rules={{ required: '1st star is required' }}
         />
         <ControlledSelectField
           label="2nd Star"
@@ -151,8 +145,6 @@ const ThreeStarsModal = ({
           placeholder="— Select player —"
           searchable
           disabled={busy}
-          required
-          rules={{ required: '2nd star is required' }}
         />
         <ControlledSelectField
           label="3rd Star"
@@ -162,8 +154,6 @@ const ThreeStarsModal = ({
           placeholder="— Select player —"
           searchable
           disabled={busy}
-          required
-          rules={{ required: '3rd star is required' }}
         />
       </form>
     </Modal>

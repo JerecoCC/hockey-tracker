@@ -1677,7 +1677,8 @@ router.patch('/:id', async (req, res) => {
     : normalizeGameEasternTimestamp(time_end);
   const leagueGameNumberInBody = 'league_game_number' in req.body;
   const normalizedLeagueGameNumber = normalizeLeagueNumber(league_game_number);
-  const hasStarId = (value) => value != null && String(value).trim() !== '';
+  // Stars are optional; blank ids count as "not provided" so they never overwrite existing picks.
+  const normalizeStarId = (value) => (value != null && String(value).trim() !== '' ? value : null);
 
   try {
     const existing = await sql`
@@ -1687,26 +1688,10 @@ router.patch('/:id', async (req, res) => {
         home_team_id,
         away_team_id,
         scheduled_at,
-        playoff_series_id,
-        star_1_id,
-        star_2_id,
-        star_3_id
+        playoff_series_id
       FROM games WHERE id = ${id}
     `;
     if (existing.length === 0) return res.status(404).json({ error: 'Game not found' });
-
-    if (status === 'final') {
-      const finalStarIds = [
-        star_1_id ?? existing[0].star_1_id,
-        star_2_id ?? existing[0].star_2_id,
-        star_3_id ?? existing[0].star_3_id,
-      ];
-      if (!finalStarIds.every(hasStarId)) {
-        return res.status(400).json({
-          error: 'All three stars are required before a game can be finalized.',
-        });
-      }
-    }
 
     // Reject editing a game into a duplicate matchup on the same calendar date.
     // Games with a null date are exempt (the date is nullable).
@@ -1762,9 +1747,9 @@ router.patch('/:id', async (req, res) => {
         league_game_number    = CASE WHEN ${leagueGameNumberInBody} THEN ${normalizedLeagueGameNumber} ELSE league_game_number END,
         notes                 = COALESCE(${notes                 ?? null}, notes),
         current_period        = COALESCE(${effectivePeriod},             current_period),
-        star_1_id             = COALESCE(${star_1_id             ?? null}, star_1_id),
-        star_2_id             = COALESCE(${star_2_id             ?? null}, star_2_id),
-        star_3_id                = COALESCE(${star_3_id                ?? null}, star_3_id),
+        star_1_id             = COALESCE(${normalizeStarId(star_1_id)}, star_1_id),
+        star_2_id             = COALESCE(${normalizeStarId(star_2_id)}, star_2_id),
+        star_3_id             = COALESCE(${normalizeStarId(star_3_id)}, star_3_id),
         time_start               = COALESCE(${normalizedTimeStart      ?? null}, time_start),
         time_end                 = COALESCE(${normalizedTimeEnd        ?? null}, time_end),
         shootout_first_team_id   = COALESCE(${shootout_first_team_id   ?? null}, shootout_first_team_id)

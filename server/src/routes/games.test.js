@@ -448,9 +448,6 @@ describe('PATCH /api/admin/games/:id', () => {
         away_team_id: 'team-2',
         scheduled_at: null,
         playoff_series_id: null,
-        star_1_id: 'player-1',
-        star_2_id: 'player-2',
-        star_3_id: 'player-3',
       }]) // existence check
       .mockResolvedValueOnce([])                             // UPDATE
       .mockResolvedValueOnce([{ playoff_series_id: null, home_team_id: 'team-1', away_team_id: 'team-2' }]) // final-status follow-up
@@ -462,25 +459,28 @@ describe('PATCH /api/admin/games/:id', () => {
     expect(res.body.home_score).toBe(3);
   });
 
-  it('requires all three stars before finalizing a game', async () => {
-    sql.mockResolvedValueOnce([{
-      id: 'game-1',
-      season_id: 'season-1',
-      home_team_id: 'team-1',
-      away_team_id: 'team-2',
-      scheduled_at: null,
-      playoff_series_id: null,
-      star_1_id: 'player-1',
-      star_2_id: 'player-2',
-      star_3_id: null,
-    }]);
+  it('finalizes a game without three stars and ignores blank star ids', async () => {
+    sql
+      .mockResolvedValueOnce([{
+        id: 'game-1',
+        season_id: 'season-1',
+        home_team_id: 'team-1',
+        away_team_id: 'team-2',
+        scheduled_at: null,
+        playoff_series_id: null,
+      }]) // existence check
+      .mockResolvedValueOnce([])                             // UPDATE
+      .mockResolvedValueOnce([{ playoff_series_id: null, home_team_id: 'team-1', away_team_id: 'team-2' }]) // final-status follow-up
+      .mockResolvedValueOnce([{ ...GAME, status: 'final', star_1_id: 'player-1' }]); // re-fetch
 
     const res = await request(app).patch('/api/admin/games/game-1')
-      .send({ status: 'final' });
+      .send({ status: 'final', star_1_id: 'player-1', star_2_id: '', star_3_id: null });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/three stars/i);
-    expect(sql).toHaveBeenCalledTimes(1);
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('final');
+    const updateValues = sql.mock.calls[1].slice(1);
+    expect(updateValues).toContain('player-1');
+    expect(updateValues).not.toContain('');
   });
 
   it('returns 404 when game not found', async () => {

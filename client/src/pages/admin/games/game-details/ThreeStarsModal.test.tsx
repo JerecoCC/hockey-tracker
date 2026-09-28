@@ -28,7 +28,7 @@ const roster: GameRosterEntry[] = [
   },
 ];
 
-const renderModal = () =>
+const renderModal = (onEndGame = jest.fn().mockResolvedValue(true)) =>
   render(
     <ThemeContext.Provider
       value={{
@@ -63,7 +63,7 @@ const renderModal = () =>
         }}
         onClose={jest.fn()}
         onSave={jest.fn().mockResolvedValue(true)}
-        onEndGame={jest.fn().mockResolvedValue(true)}
+        onEndGame={onEndGame}
       />
     </ThemeContext.Provider>,
   );
@@ -80,5 +80,17 @@ describe('ThreeStarsModal', () => {
       'src',
       '/logos/away-light.png',
     );
+  });
+
+  it('ends the game without any stars selected', async () => {
+    const user = userEvent.setup();
+    const onEndGame = jest.fn().mockResolvedValue(true);
+    renderModal(onEndGame);
+
+    const endGameButton = screen.getByRole('button', { name: /end game/i });
+    expect(endGameButton).toBeEnabled();
+    await user.click(endGameButton);
+
+    expect(onEndGame).toHaveBeenCalledWith({ star1: '', star2: '', star3: '' });
   });
 });

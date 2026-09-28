@@ -11,6 +11,11 @@
   }
 }
 
+.empty {
+  margin: 0;
+  color: var(--app-text-muted, #{$text-dim});
+}
+
 .starItem {
   display: flex;
   flex-direction: column;

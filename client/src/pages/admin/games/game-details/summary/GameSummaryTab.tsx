@@ -543,7 +543,9 @@ const GameSummaryTab = ({
     }
   }, [busy, focusCurrentPeriodAction]);
 
-  const hasStars = isFinal && !!(game.star_1_id && game.star_2_id && game.star_3_id);
+  // Stars are optional, so show the card when any star is set, or when an editor can add them.
+  const hasStars =
+    isFinal && (!!(game.star_1_id || game.star_2_id || game.star_3_id) || (editable && isEditMode));
   const leagueCode = game.league_code?.toUpperCase();
   const showNhlAdminTools = editable && leagueCode === 'NHL';
   const showPwhlAdminTools = editable && leagueCode === 'PWHL';

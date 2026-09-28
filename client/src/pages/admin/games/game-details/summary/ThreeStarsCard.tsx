@@ -35,11 +35,12 @@ const ThreeStarsCard = ({
   onEdit,
   showPlayerDataStatus = false,
 }: Props) => {
+  // Stars are optional, so any of them may be unset.
   const starDefs = [
-    { starCount: 1, playerId: game.star_1_id! },
-    { starCount: 2, playerId: game.star_2_id! },
-    { starCount: 3, playerId: game.star_3_id! },
-  ];
+    { starCount: 1, playerId: game.star_1_id },
+    { starCount: 2, playerId: game.star_2_id },
+    { starCount: 3, playerId: game.star_3_id },
+  ].filter((def): def is { starCount: number; playerId: string } => !!def.playerId);
 
   return (
     <Section
@@ -58,42 +59,46 @@ const ThreeStarsCard = ({
         ) : undefined
       }
     >
-      <div className={styles.starsRow}>
-        {starDefs.map(({ starCount, playerId }) => {
-          const player = roster.find((e) => e.player_id === playerId);
-          if (!player) return null;
+      {starDefs.length === 0 ? (
+        <p className={styles.empty}>No stars selected.</p>
+      ) : (
+        <div className={styles.starsRow}>
+          {starDefs.map(({ starCount, playerId }) => {
+            const player = roster.find((e) => e.player_id === playerId);
+            if (!player) return null;
 
-          const isAway = player.team_id === game.away_team.id;
-          const team = isAway ? game.away_team : game.home_team;
-          const stats = playerGameStats.get(playerId) ?? { goals: 0, assists: 0 };
-          const goalieStatRecord = goalieStats.find((s) => s.goalie_id === playerId) ?? null;
+            const isAway = player.team_id === game.away_team.id;
+            const team = isAway ? game.away_team : game.home_team;
+            const stats = playerGameStats.get(playerId) ?? { goals: 0, assists: 0 };
+            const goalieStatRecord = goalieStats.find((s) => s.goalie_id === playerId) ?? null;
 
-          return (
-            <StarCard
-              key={starCount}
-              starCount={starCount}
-              player={player}
-              playerHref={getPlayerHref?.(
-                player.team_id,
-                player.player_id,
-                player.first_name,
-                player.last_name,
-                player.jersey_number,
-              )}
-              primaryColor={team.primary_color}
-              textColor={team.text_color}
-              teamCode={team.code}
-              teamLogo={team.logo}
-              teamLogoDark={team.logo_dark}
-              teamLogoLight={team.logo_light}
-              teamName={team.name}
-              stats={stats}
-              goalieStatRecord={goalieStatRecord}
-              showPlayerDataStatus={showPlayerDataStatus}
-            />
-          );
-        })}
-      </div>
+            return (
+              <StarCard
+                key={starCount}
+                starCount={starCount}
+                player={player}
+                playerHref={getPlayerHref?.(
+                  player.team_id,
+                  player.player_id,
+                  player.first_name,
+                  player.last_name,
+                  player.jersey_number,
+                )}
+                primaryColor={team.primary_color}
+                textColor={team.text_color}
+                teamCode={team.code}
+                teamLogo={team.logo}
+                teamLogoDark={team.logo_dark}
+                teamLogoLight={team.logo_light}
+                teamName={team.name}
+                stats={stats}
+                goalieStatRecord={goalieStatRecord}
+                showPlayerDataStatus={showPlayerDataStatus}
+              />
+            );
+          })}
+        </div>
+      )}
     </Section>
   );
 };
