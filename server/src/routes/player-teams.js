@@ -1621,6 +1621,19 @@ router.patch("/:id", async (req, res) => {
     `) ?? [];
 
     if (stintRows.length > 0) {
+      // Rosters read numbers from the jersey timeline, so an edit has to land
+      // there; the legacy snapshot below no longer reaches any roster. Games
+      // already played keep the number recorded on their own roster.
+      if (jerseyInBody) {
+        const effectiveDate = isValidDateOnly(req.body.effective_date)
+          ? req.body.effective_date
+          : (await sql`SELECT CURRENT_DATE::text AS today`)[0].today;
+        await setJerseyAssignment({
+          player_id: stintRows[0].player_id,
+          jersey_number: jersey_number ?? null,
+          effective_date: effectiveDate,
+        });
+      }
       let [roster] =
         (await sql`
         SELECT id, team_id, season_id, jersey_number, is_prospect, position
@@ -1665,7 +1678,7 @@ router.patch("/:id", async (req, res) => {
         ...stintRows[0],
         season_id: roster?.season_id ?? (seasonInBody ? season_id : null),
         roster_player_team_id: roster?.id ?? null,
-        jersey_number: roster?.jersey_number ?? null,
+        jersey_number: jerseyInBody ? (jersey_number ?? null) : (roster?.jersey_number ?? null),
         is_prospect: roster?.is_prospect ?? stintRows[0].is_prospect ?? false,
         photo: photoInBody ? (photo ?? null) : null,
       });

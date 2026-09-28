@@ -336,12 +336,9 @@ export async function autofillGameFromPwhlGamecenter(
       })),
     ];
     if (conflicts.length > 0) {
-      await moveCrossTeamPlayerConflicts(
-        game,
-        conflicts,
-        null,
-        warnings,
-      );
+      // Dressing for a team is proof they belonged to it by that date, so the
+      // game moves them, dated to the game rather than the real transaction.
+      await moveCrossTeamPlayerConflicts(game, conflicts, rosterDate, warnings);
       [baseAwayPlayers, baseHomePlayers] = await Promise.all([
         fetchTeamPlayers(game.away_team.id, game.season_id, rosterDate),
         fetchTeamPlayers(game.home_team.id, game.season_id, rosterDate),
@@ -964,24 +961,6 @@ function buildManualMoveReport(
   };
 }
 
-function buildManualJerseyChangeReport(
-  game: GameRecord,
-  teamCode: string,
-  teamName: string | null | undefined,
-  conflicts: Array<{ player: PwhlPlayer; local: TeamPlayerRecord }>,
-): GameAutofillManualMoveReport {
-  return {
-    leagueCode: 'PWHL',
-    gameId: game.id,
-    gameLabel: gameLabel(game),
-    gameDate: (game.scheduled_at ?? '').slice(0, 10) || null,
-    moves: [],
-    jerseyChanges: conflicts.flatMap(({ player, local }) =>
-      buildPwhlJerseyChangeRows(teamCode, teamName, player, [local]),
-    ),
-  };
-}
-
 function buildPwhlJerseyChangeRows(
   teamCode: string,
   teamName: string | null | undefined,
@@ -1014,14 +993,13 @@ async function ensurePwhlPlayersRostered(
     return findPwhlJerseyConflicts(player, localPlayers).map((local) => ({ player, local }));
   });
   if (jerseyConflicts.length > 0) {
-    const teamName =
-      teamId === game.away_team.id
-        ? game.away_team.name
-        : teamId === game.home_team.id
-          ? game.home_team.name
-          : null;
-    throw new ManualPlayerMovementRequiredError(
-      buildManualJerseyChangeReport(game, teamCode, teamName, jerseyConflicts),
+    // The game is the record of who wore which number, so a clash no longer
+    // stops the run: the dressed player keeps the number from this game. The
+    // other holder is left alone, because the game cannot say what they wear now.
+    warnings.push(
+      `${teamCode} numbers worn in this game are still recorded for other players: ${jerseyConflicts
+        .map(({ player, local }) => `#${player.sweaterNumber} ${local.first_name} ${local.last_name}`)
+        .join(', ')}. Update their numbers if they changed.`,
     );
   }
 
@@ -1176,23 +1154,39 @@ async function syncJerseyNumberHistory(players: MatchedPlayer[], gameDate: strin
   );
 }
 
+type GameRosterPayload = {
+  team_id: string;
+  player_ids: string[];
+  jersey_numbers: Record<string, number>;
+};
+
+/** The numbers worn in this game, so the game roster keeps its own record of them. */
+const wornJerseyNumbers = (players: Array<{ localId: string; sweaterNumber?: number | null }>) =>
+  Object.fromEntries(
+    players
+      .filter((player) => Number.isInteger(player.sweaterNumber))
+      .map((player) => [player.localId, player.sweaterNumber as number]),
+  );
+
 async function syncGameRoster(
   game: GameRecord,
-  matched: Record<TeamSide, Array<{ localId: string }>>,
+  matched: Record<TeamSide, Array<{ localId: string; sweaterNumber?: number | null }>>,
 ) {
   const desired = {
     away: new Set(matched.away.map((player) => player.localId)),
     home: new Set(matched.home.map((player) => player.localId)),
   };
 
-  await apiPost<GameRosterEntry[], { team_id: string; player_ids: string[] }>(
-    `/admin/games/${game.id}/roster`,
-    { team_id: game.away_team.id, player_ids: [...desired.away] },
-  );
-  await apiPost<GameRosterEntry[], { team_id: string; player_ids: string[] }>(
-    `/admin/games/${game.id}/roster`,
-    { team_id: game.home_team.id, player_ids: [...desired.home] },
-  );
+  await apiPost<GameRosterEntry[], GameRosterPayload>(`/admin/games/${game.id}/roster`, {
+    team_id: game.away_team.id,
+    player_ids: [...desired.away],
+    jersey_numbers: wornJerseyNumbers(matched.away),
+  });
+  await apiPost<GameRosterEntry[], GameRosterPayload>(`/admin/games/${game.id}/roster`, {
+    team_id: game.home_team.id,
+    player_ids: [...desired.home],
+    jersey_numbers: wornJerseyNumbers(matched.home),
+  });
 
   const latestRoster = await apiGet<GameRosterEntry[]>(`/admin/games/${game.id}/roster`);
   for (const entry of latestRoster) {

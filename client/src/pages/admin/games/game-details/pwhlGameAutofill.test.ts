@@ -256,6 +256,26 @@ describe('autofillGameFromPwhlGamecenter', () => {
         }
         return Promise.resolve({ data: { created: postBody.players ?? [], skipped: 0 } });
       }
+      if (u.endsWith('/admin/player-teams/trade')) {
+        // Apply the move so the next roster read sees the player on the new team.
+        const player =
+          leagueRosterPlayers.find((leaguePlayer) => leaguePlayer.id === postBody.player_id) ?? {};
+        extraPlayers.push({
+          id: postBody.player_id,
+          team_id: postBody.to_team_id,
+          jersey_number: postBody.jersey_number,
+          league_player_number: player.league_player_number,
+          first_name: player.first_name,
+          last_name: player.last_name,
+          position: postBody.position,
+        });
+        leagueRosterPlayers = leagueRosterPlayers.map((leaguePlayer) =>
+          leaguePlayer.id === postBody.player_id
+            ? { ...leaguePlayer, team_id: postBody.to_team_id }
+            : leaguePlayer,
+        );
+        return Promise.resolve({ data: {} });
+      }
       if (u.endsWith('/admin/games/game-1/roster')) return Promise.resolve({ data: [] });
       if (u.endsWith('/admin/games/game-1/goals')) {
         return Promise.resolve({ data: { id: 'goal-1', game_id: 'game-1', ...postBody } });
@@ -510,7 +530,7 @@ describe('autofillGameFromPwhlGamecenter', () => {
     );
   });
 
-  it('reports manual PWHL moves from the latest dated league-player row', async () => {
+  it('moves a PWHL player off the latest dated league-player row as of the game date', async () => {
     leagueRosterPlayers = [
       {
         id: 'kendall-coyne-schofield',
@@ -536,29 +556,24 @@ describe('autofillGameFromPwhlGamecenter', () => {
       },
     ];
 
-    try {
-      await autofillGameFromPwhlGamecenter(game, '210');
-      throw new Error('Expected PWHL autofill to require manual player movement');
-    } catch (err) {
-      expect(isManualPlayerMovementRequiredError(err)).toBe(true);
-      if (!isManualPlayerMovementRequiredError(err)) throw err;
-      expect(err.report).toMatchObject({
-        leagueCode: 'PWHL',
-        gameId: 'game-1',
-        moves: [
-          expect.objectContaining({
-            playerName: 'Kendall Coyne Schofield',
-            leaguePlayerNumber: '20',
-            fromTeamCode: 'OTT',
-            fromTeamName: 'Ottawa Charge',
-            toTeamCode: 'MIN',
-          }),
-        ],
-      });
-    }
+    const result = await autofillGameFromPwhlGamecenter(game, '210');
+
+    // The latest dated row (OTT) is the one being left, not the older BOS one.
+    const trades = mockedAxios.post.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/player-teams/trade'),
+    );
+    expect(trades).toHaveLength(1);
+    expect(trades[0][1]).toMatchObject({
+      player_id: 'kendall-coyne-schofield',
+      to_team_id: 'min-team',
+      trade_date: '2025-11-21',
+    });
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('Auto-recorded 1 PWHL player movement')]),
+    );
   });
 
-  it('reports PWHL jersey conflicts with league player numbers when available', async () => {
+  it('flags the other holder of a number worn in the game instead of stopping', async () => {
     extraPlayers.push({
       id: 'wrong-player',
       team_id: 'min-team',
@@ -569,28 +584,12 @@ describe('autofillGameFromPwhlGamecenter', () => {
       position: 'F',
     });
 
-    try {
-      await autofillGameFromPwhlGamecenter(game, '210');
-      throw new Error('Expected PWHL autofill to require manual jersey updates');
-    } catch (err) {
-      expect(isManualPlayerMovementRequiredError(err)).toBe(true);
-      if (!isManualPlayerMovementRequiredError(err)) throw err;
-      expect(err.report).toMatchObject({
-        leagueCode: 'PWHL',
-        gameId: 'game-1',
-        moves: [],
-        jerseyChanges: [
-          expect.objectContaining({
-            playerName: 'Wrong Player',
-            leaguePlayerNumber: '999',
-            teamCode: 'MIN',
-            currentJerseyNumber: 26,
-            conflictingJerseyNumber: 26,
-            conflictingPlayerName: 'Kendall Coyne Schofield',
-            conflictingLeaguePlayerNumber: '20',
-          }),
-        ],
-      });
-    }
+    const result = await autofillGameFromPwhlGamecenter(game, '210');
+
+    // The name has to agree for a number-only match, so Wrong Player can never be
+    // mistaken for Coyne Schofield; the clash is only reported.
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('#26 Wrong Player')]),
+    );
   });
 });

@@ -2286,7 +2286,8 @@ router.get('/:id/roster', async (req, res) => {
         COALESCE(pts.start_date, pt.start_date) AS start_date,
         COALESCE(pts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'pt')}) AS acquisition_type,
         COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, gr.team_id), NULLIF(p.photo, '')) AS photo,
-        COALESCE(pt.position, p.position) AS position, COALESCE(pjs.jersey_number, pt.jersey_number) AS jersey_number,
+        COALESCE(pt.position, p.position) AS position,
+        COALESCE(gr.jersey_number, pjs.jersey_number, pt.jersey_number) AS jersey_number,
         false AS inherited
       FROM game_rosters gr
       JOIN games g ON g.id = gr.game_id
@@ -2319,7 +2320,7 @@ router.get('/:id/roster', async (req, res) => {
         LIMIT 1
       ) pjs ON true
       WHERE gr.game_id = ${id}
-      ORDER BY COALESCE(pjs.jersey_number, pt.jersey_number) ASC NULLS LAST, p.last_name ASC
+      ORDER BY jersey_number ASC NULLS LAST, p.last_name ASC
     `;
 
     // 3. Determine which teams still need a roster.
@@ -2350,7 +2351,12 @@ router.get('/:id/roster', async (req, res) => {
           COALESCE(pts.start_date, pt.start_date) AS start_date,
           COALESCE(pts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'pt')}) AS acquisition_type,
           COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, gr.team_id), NULLIF(p.photo, '')) AS photo,
-          COALESCE(pt.position, p.position) AS position, COALESCE(pjs.jersey_number, pt.jersey_number) AS jersey_number,
+          COALESCE(pt.position, p.position) AS position,
+          -- Default to what was worn last, unless the number changed after that game.
+          CASE
+            WHEN pjs.start_date > g.scheduled_at::date THEN pjs.jersey_number
+            ELSE COALESCE(gr.jersey_number, pjs.jersey_number, pt.jersey_number)
+          END AS jersey_number,
           true AS inherited
         FROM game_rosters gr
         JOIN games g ON g.id = gr.game_id
@@ -2375,7 +2381,7 @@ router.get('/:id/roster', async (req, res) => {
           LIMIT 1
         ) pts ON true
         LEFT JOIN LATERAL (
-          SELECT jersey_number
+          SELECT jersey_number, start_date
           FROM player_jersey_stints pjs
           WHERE pjs.player_id = gr.player_id
             AND pjs.start_date <= COALESCE(target_game.scheduled_at::date, CURRENT_DATE)
@@ -2384,7 +2390,7 @@ router.get('/:id/roster', async (req, res) => {
           LIMIT 1
         ) pjs ON true
         WHERE gr.game_id = ${lastGameRows[0].game_id} AND gr.team_id = ${teamId}
-        ORDER BY COALESCE(pjs.jersey_number, pt.jersey_number) ASC NULLS LAST, p.last_name ASC
+        ORDER BY jersey_number ASC NULLS LAST, p.last_name ASC
       `;
       inheritedRows.push(...rows);
     }
@@ -2398,17 +2404,32 @@ router.get('/:id/roster', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/games/:id/roster  – add players to game roster
-// Body: { team_id, player_ids: string[] }
+// Body: { team_id, player_ids: string[], jersey_numbers?: { [player_id]: number } }
+// jersey_numbers records what each player wore in this game; a re-sent number
+// replaces the recorded one, and an omitted one leaves it untouched.
 // ---------------------------------------------------------------------------
 router.post('/:id/roster', async (req, res) => {
   const { id } = req.params;
   const { team_id, player_ids } = req.body;
+  const jerseyNumbers =
+    req.body.jersey_numbers && typeof req.body.jersey_numbers === 'object'
+      ? req.body.jersey_numbers
+      : {};
   if (!team_id) return res.status(400).json({ error: 'team_id is required' });
   if (!Array.isArray(player_ids) || player_ids.length === 0) {
     return res.status(400).json({ error: 'player_ids must be a non-empty array' });
   }
+  const invalidJersey = Object.entries(jerseyNumbers).find(
+    ([, number]) => !Number.isInteger(number) || number < 0 || number > 99,
+  );
+  if (invalidJersey) {
+    return res
+      .status(400)
+      .json({ error: `jersey_numbers[${invalidJersey[0]}] must be a whole number from 0 to 99` });
+  }
   try {
     for (const player_id of player_ids) {
+      const jerseyNumber = jerseyNumbers[player_id] ?? null;
       await sql`
         UPDATE player_team_stints pt
         SET is_prospect = FALSE
@@ -2421,9 +2442,10 @@ router.post('/:id/roster', async (req, res) => {
           AND (pt.end_date IS NULL OR pt.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       `;
       await sql`
-        INSERT INTO game_rosters (game_id, team_id, player_id)
-        VALUES (${id}, ${team_id}, ${player_id})
-        ON CONFLICT (game_id, team_id, player_id) DO NOTHING
+        INSERT INTO game_rosters (game_id, team_id, player_id, jersey_number)
+        VALUES (${id}, ${team_id}, ${player_id}, ${jerseyNumber})
+        ON CONFLICT (game_id, team_id, player_id) DO UPDATE
+          SET jersey_number = COALESCE(EXCLUDED.jersey_number, game_rosters.jersey_number)
       `;
     }
     const hasAcquisitionType = await hasPlayerTeamsAcquisitionType();
@@ -2434,7 +2456,7 @@ router.post('/:id/roster', async (req, res) => {
         COALESCE(pts.start_date, pt.start_date) AS start_date,
         COALESCE(pts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'pt')}) AS acquisition_type,
         COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, gr.team_id), NULLIF(p.photo, '')) AS photo, COALESCE(pt.position, p.position) AS position,
-        COALESCE(pjs.jersey_number, pt.jersey_number) AS jersey_number
+        COALESCE(gr.jersey_number, pjs.jersey_number, pt.jersey_number) AS jersey_number
       FROM game_rosters gr
       JOIN games g ON g.id = gr.game_id
       JOIN players p ON p.id = gr.player_id
@@ -2466,7 +2488,7 @@ router.post('/:id/roster', async (req, res) => {
         LIMIT 1
       ) pjs ON true
       WHERE gr.game_id = ${id} AND gr.team_id = ${team_id}
-      ORDER BY COALESCE(pjs.jersey_number, pt.jersey_number) ASC NULLS LAST, p.last_name ASC
+      ORDER BY jersey_number ASC NULLS LAST, p.last_name ASC
     `;
     await refreshGameStatSnapshots(id);
     return res.status(201).json(rows);

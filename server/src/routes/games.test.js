@@ -1013,6 +1013,42 @@ describe('POST /api/admin/games/:id/roster', () => {
     expect(queries[2]).not.toMatch(/jersey_number_history/);
     expect(queries[2]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
   });
+
+  it('records the number each player wore and reads it back first', async () => {
+    sql
+      .mockResolvedValueOnce([]) // UPDATE prospect
+      .mockResolvedValueOnce([]) // INSERT game_rosters
+      .mockResolvedValueOnce([]); // SELECT roster
+
+    const res = await request(app).post('/api/admin/games/game-1/roster').send({
+      team_id: 'team-1',
+      player_ids: ['player-1'],
+      jersey_numbers: { 'player-1': 91 },
+    });
+
+    expect(res.status).toBe(201);
+    const [insertStrings, ...insertValues] = sql.mock.calls[1];
+    const insertText = insertStrings.join(' ');
+    expect(insertText).toMatch(/INSERT INTO game_rosters \(game_id, team_id, player_id, jersey_number\)/);
+    // A re-sent number corrects the recorded one; an omitted one keeps it.
+    expect(insertText).toMatch(/COALESCE\(EXCLUDED\.jersey_number, game_rosters\.jersey_number\)/);
+    expect(insertValues).toEqual(['game-1', 'team-1', 'player-1', 91]);
+    expect(sql.mock.calls[2][0].join(' ')).toMatch(
+      /COALESCE\(gr\.jersey_number, pjs\.jersey_number, pt\.jersey_number\) AS jersey_number/,
+    );
+  });
+
+  it('rejects a jersey number outside 0-99', async () => {
+    const res = await request(app).post('/api/admin/games/game-1/roster').send({
+      team_id: 'team-1',
+      player_ids: ['player-1'],
+      jersey_numbers: { 'player-1': 100 },
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/jersey_numbers\[player-1\]/);
+    expect(sql).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------

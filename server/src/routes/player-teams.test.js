@@ -1090,6 +1090,7 @@ describe("PATCH /api/admin/player-teams/:id", () => {
           end_date: null,
         },
       ])
+      .mockResolvedValueOnce([]) // jersey timeline
       .mockResolvedValueOnce([
         {
           id: "roster-1",
@@ -1116,6 +1117,7 @@ describe("PATCH /api/admin/player-teams/:id", () => {
       .patch("/api/admin/player-teams/career-stint-1")
       .send({
         jersey_number: 19,
+        effective_date: "2026-09-26",
         photo: "https://example.com/new-player.png",
       });
 
@@ -1127,7 +1129,11 @@ describe("PATCH /api/admin/player-teams/:id", () => {
       jersey_number: 19,
       photo: "https://example.com/new-player.png",
     });
-    expect(sql).toHaveBeenCalledTimes(4);
+    expect(sql.mock.calls[1][0].join(" ")).toContain("player_jersey_stints");
+    expect(sql.mock.calls[1].slice(1)).toEqual(
+      expect.arrayContaining([19, "2026-09-26"]),
+    );
+    expect(sql).toHaveBeenCalledTimes(5);
   });
 
   it("updates the submitted season roster when editing a career stint jersey number", async () => {
@@ -1143,6 +1149,7 @@ describe("PATCH /api/admin/player-teams/:id", () => {
           end_date: null,
         },
       ])
+      .mockResolvedValueOnce([]) // jersey timeline
       .mockResolvedValueOnce([
         {
           id: "roster-season-2",
@@ -1169,6 +1176,7 @@ describe("PATCH /api/admin/player-teams/:id", () => {
       .send({
         season_id: "season-2",
         jersey_number: 88,
+        effective_date: "2026-09-26",
       });
 
     expect(res.status).toBe(200);
@@ -1178,13 +1186,13 @@ describe("PATCH /api/admin/player-teams/:id", () => {
       season_id: "season-2",
       jersey_number: 88,
     });
-    expect(sql.mock.calls[1].slice(1)).toEqual(
+    expect(sql.mock.calls[2].slice(1)).toEqual(
       expect.arrayContaining(["season-2"]),
     );
-    expect(sql).toHaveBeenCalledTimes(3);
+    expect(sql).toHaveBeenCalledTimes(4);
   });
 
-  it("saves career stint edits without reporting a jersey number when no season roster exists", async () => {
+  it("records the jersey on the timeline even when no season roster exists", async () => {
     sql
       .mockResolvedValueOnce([
         {
@@ -1197,7 +1205,9 @@ describe("PATCH /api/admin/player-teams/:id", () => {
           end_date: null,
         },
       ])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce([{ today: "2026-09-26" }])
+      .mockResolvedValueOnce([]) // jersey timeline
+      .mockResolvedValueOnce([]); // no legacy season snapshot
 
     const res = await request(app)
       .patch("/api/admin/player-teams/career-stint-1")
@@ -1206,14 +1216,20 @@ describe("PATCH /api/admin/player-teams/:id", () => {
         jersey_number: 88,
       });
 
+    // Before, the edit was accepted but went nowhere a roster reads from.
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       id: "career-stint-1",
       season_id: "season-2",
       roster_player_team_id: null,
-      jersey_number: null,
+      jersey_number: 88,
     });
-    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql.mock.calls[1][0].join(" ")).toContain("CURRENT_DATE");
+    expect(sql.mock.calls[2][0].join(" ")).toContain("player_jersey_stints");
+    expect(sql.mock.calls[2].slice(1)).toEqual(
+      expect.arrayContaining([88, "2026-09-26"]),
+    );
+    expect(sql).toHaveBeenCalledTimes(4);
   });
 
   it("updates prospect status on a legacy season roster row", async () => {

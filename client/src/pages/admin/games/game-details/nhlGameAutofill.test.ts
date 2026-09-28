@@ -238,6 +238,29 @@ describe('autofillGameFromNhlGamecenter', () => {
         }
         return Promise.resolve({ data: { created: [], skipped } });
       }
+      if (u.endsWith('/admin/player-teams/trade')) {
+        // Apply the move so the next roster read sees the player on the new team.
+        const player = leagueRosterPlayers.find((leaguePlayer) => leaguePlayer.id === body.player_id) ?? {};
+        extraPlayers.push({
+          id: body.player_id,
+          player_team_id: body.player_id,
+          player_id: body.player_id,
+          team_id: body.to_team_id,
+          jersey_number: body.jersey_number,
+          league_player_number: player.league_player_number,
+          first_name: player.first_name,
+          last_name: player.last_name,
+          position: body.position,
+          primary_color: null,
+          text_color: null,
+          team_name: null,
+          is_prospect: false,
+        });
+        leagueRosterPlayers = leagueRosterPlayers.map((leaguePlayer) =>
+          leaguePlayer.id === body.player_id ? { ...leaguePlayer, team_id: body.to_team_id } : leaguePlayer,
+        );
+        return Promise.resolve({ data: {} });
+      }
       return Promise.resolve({ data: {} });
     });
     mockedAxios.patch.mockResolvedValue({ data: {} });
@@ -985,10 +1008,10 @@ describe('autofillGameFromNhlGamecenter', () => {
     expect((error as Error).message).not.toMatch(/Missing MIN player matches/i);
   });
 
-  it('reports manual player moves when a missing player already exists on another team', async () => {
+  it('moves a player who dressed for another team as of the game date', async () => {
     const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
     // #19 is dressed for MIN in the report, but the same player ("Nicholas Mystery")
-    // is already rostered on CAR. Auto-fill must not use the game date as the move date.
+    // is still on SEA locally. Dressing for MIN is the proof, so the game moves him.
     leagueRosterPlayers = [
       {
         id: 'mystery-existing',
@@ -1028,33 +1051,25 @@ describe('autofillGameFromNhlGamecenter', () => {
       </body></html>
     `;
 
-    try {
-      await autofillGameFromNhlGamecenter(gameWithLeague, '317');
-      throw new Error('Expected NHL autofill to require manual player movement');
-    } catch (err) {
-      expect(isManualPlayerMovementRequiredError(err)).toBe(true);
-      if (!isManualPlayerMovementRequiredError(err)) throw err;
-      expect(err.report).toMatchObject({
-        leagueCode: 'NHL',
-        gameId: 'game-1',
-        moves: [
-          expect.objectContaining({
-            playerName: 'Nick Mystery',
-            jerseyNumber: 19,
-            position: 'LW',
-            fromTeamCode: 'SEA',
-            fromTeamName: 'Seattle Kraken',
-            toTeamCode: 'MIN',
-          }),
-        ],
-      });
-    }
+    const result = await autofillGameFromNhlGamecenter(gameWithLeague, '317');
+
+    const trades = mockedAxios.post.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/player-teams/trade'),
+    );
+    expect(trades).toHaveLength(1);
+    expect(trades[0][1]).toMatchObject({
+      player_id: 'mystery-existing',
+      to_team_id: game.home_team.id,
+      trade_date: '2025-11-19',
+      jersey_number: 19,
+      position: 'LW',
+    });
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('Auto-recorded 1 NHL player movement')]),
+    );
     // No duplicate player is created.
     expect(
       mockedAxios.post.mock.calls.filter(([url]) => String(url).endsWith('/admin/players/bulk')),
-    ).toHaveLength(0);
-    expect(
-      mockedAxios.post.mock.calls.filter(([url]) => String(url).endsWith('/admin/player-teams/trade')),
     ).toHaveLength(0);
   });
 
@@ -1206,7 +1221,7 @@ describe('autofillGameFromNhlGamecenter', () => {
     ).toHaveLength(0);
   });
 
-  it('includes jersey changes when a manual move player takes an occupied local number', async () => {
+  it('moves a player into an occupied number and flags the other holder', async () => {
     const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
     boxscoreData = {
       ...boxscore,
@@ -1251,36 +1266,23 @@ describe('autofillGameFromNhlGamecenter', () => {
       </body></html>
     `;
 
-    try {
-      await autofillGameFromNhlGamecenter(gameWithLeague, '317');
-      throw new Error('Expected NHL autofill to require manual player updates');
-    } catch (err) {
-      expect(isManualPlayerMovementRequiredError(err)).toBe(true);
-      if (!isManualPlayerMovementRequiredError(err)) throw err;
-      expect(err.report).toMatchObject({
-        leagueCode: 'NHL',
-        gameId: 'game-1',
-        moves: [
-          expect.objectContaining({
-            playerName: 'Nick Mystery',
-            leaguePlayerNumber: '700007',
-            jerseyNumber: 7,
-            fromTeamCode: 'CAR',
-            toTeamCode: 'MIN',
-          }),
-        ],
-        jerseyChanges: [
-          expect.objectContaining({
-            playerName: 'Brock Faber',
-            teamCode: 'MIN',
-            currentJerseyNumber: 7,
-            conflictingJerseyNumber: 7,
-            conflictingPlayerName: 'Nick Mystery',
-            conflictingLeaguePlayerNumber: '700007',
-          }),
-        ],
-      });
-    }
+    const result = await autofillGameFromNhlGamecenter(gameWithLeague, '317');
+
+    const trades = mockedAxios.post.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/player-teams/trade'),
+    );
+    expect(trades).toHaveLength(1);
+    expect(trades[0][1]).toMatchObject({
+      player_id: 'mystery-existing',
+      to_team_id: game.home_team.id,
+      trade_date: '2025-11-19',
+      jersey_number: 7,
+    });
+    // Faber still holds #7 locally; the game cannot say what he wears now, so he
+    // is named rather than changed.
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('#7 Brock Faber')]),
+    );
   });
 
   it('allows a dressed player to share a jersey number with a prospect', async () => {
