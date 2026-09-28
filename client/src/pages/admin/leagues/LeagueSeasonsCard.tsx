@@ -3,7 +3,7 @@ import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/L
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import { useLeagueDetailsContext } from './leagueDetailsState';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
-import { getSeasonPhase, seasonPhasePresentation } from '@/lib/seasonPhase';
+import { getSeasonTagPhase, seasonPhasePresentation } from '@/lib/seasonPhase';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -51,7 +51,7 @@ const LeagueSeasonsCard = (props: Props) => {
           className={`${styles.seasonList} ${seasons.length > 5 ? styles.seasonListLimited : ''}`}
         >
           {seasons.map((s) => {
-            const phase = getSeasonPhase(s);
+            const phase = getSeasonTagPhase(s);
             const phasePresentation = seasonPhasePresentation(phase);
             return (
               <ListItem

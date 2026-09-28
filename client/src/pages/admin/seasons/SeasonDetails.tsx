@@ -41,7 +41,7 @@ import useSeasonStats, {
 } from '@/hooks/useSeasonStats';
 import Select from '@jerecocc/tracker-ui/components/Select/Select';
 import useTabState from '@/hooks/useTabState';
-import { getSeasonPhase, seasonPhasePresentation } from '@/lib/seasonPhase';
+import { getSeasonPhase, getSeasonTagPhase, seasonPhasePresentation } from '@/lib/seasonPhase';
 import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import SeasonEndModal from './SeasonEndModal';
@@ -128,9 +128,7 @@ function getAllTeamIds(groupId: string, allGroups: SeasonGroupRecord[]): Set<str
   return ids;
 }
 
-const standingsGroupTitle = (
-  group: Pick<SeasonGroupRecord, 'name' | 'role'>,
-): string => {
+const standingsGroupTitle = (group: Pick<SeasonGroupRecord, 'name' | 'role'>): string => {
   const roleLabel =
     group.role === 'conference' ? 'Conference' : group.role === 'division' ? 'Division' : null;
   if (!roleLabel || new RegExp(`\\b${roleLabel}\\b`, 'i').test(group.name)) {
@@ -884,7 +882,7 @@ const SeasonDetailsPage = () => {
   }
 
   const seasonPhase = getSeasonPhase(season);
-  const phasePresentation = seasonPhasePresentation(seasonPhase);
+  const phasePresentation = seasonPhasePresentation(getSeasonTagPhase(season));
   const regularSeasonEndBlocked = hasUnfinishedRegularGames || hasIncompleteRegularTeamGames;
   const canStartSeason = season.is_current && seasonPhase === 'upcoming';
   const canStartPlayoffs = season.is_current && seasonPhase === 'in_progress';
@@ -1000,6 +998,12 @@ const SeasonDetailsPage = () => {
                     <span className={styles.leagueInfoValue}>{season.league_name}</span>
                   </InfoItem>
                   <InfoItem
+                    label="Preseason Start"
+                    value={
+                      season.preseason_start_date ? formatDate(season.preseason_start_date) : null
+                    }
+                  />
+                  <InfoItem
                     label="Games Per Season"
                     value={season.games_per_season != null ? String(season.games_per_season) : null}
                   />
@@ -1074,7 +1078,11 @@ const SeasonDetailsPage = () => {
                 leagueCode={season.league_code}
                 seasonId={id!}
                 seasonName={season.name}
-                seasonStartDate={season.preseason_start_date ?? season.start_date}
+                seasonStartDate={
+                  season.preseason_start_date ??
+                  season.first_preseason_game_date ??
+                  season.start_date
+                }
                 seasonEndDate={season.end_date}
                 seasonTeams={effectiveSeasonTeams}
                 isEnded={season.is_ended}
@@ -1092,9 +1100,7 @@ const SeasonDetailsPage = () => {
                   title={
                     <>
                       Statistics
-                      <Divider
-                        orientation="vertical"
-                      />
+                      <Divider orientation="vertical" />
                       <div className={styles.statsFilterField}>
                         <Select
                           value={statsCompetition}

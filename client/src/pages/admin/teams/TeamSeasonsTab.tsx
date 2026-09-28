@@ -4,7 +4,7 @@ import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import { useTeamSeasons } from '@/hooks/useTeamDetails';
 import { buildTeamSeasonDetailsPath } from '@/lib/routeSlugs';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
-import { getSeasonPhase, seasonPhasePresentation } from '@/lib/seasonPhase';
+import { getSeasonTagPhase, seasonPhasePresentation } from '@/lib/seasonPhase';
 import styles from './TeamDetails.module.scss';
 
 interface Props {
@@ -43,7 +43,7 @@ const TeamSeasonsTab = ({ teamId, teamCode, leagueId, leagueCode }: Props) => {
       ) : (
         <ResponsiveList>
           {seasons.map((season) => {
-            const phase = getSeasonPhase(season);
+            const phase = getSeasonTagPhase(season);
             const phasePresentation = seasonPhasePresentation(phase);
             return (
               <ListItem
