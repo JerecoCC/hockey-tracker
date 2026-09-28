@@ -50,6 +50,12 @@
   --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 }
 
+.dayActions {
+  display: flex;
+  gap: $space-sm;
+  align-items: center;
+}
+
 .weekGameCards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

@@ -109,8 +109,9 @@ const formatTimestampTime = (iso: string): string => {
   }).format(date);
 };
 
-const formatGameTime = (game: GameRecord): string | undefined => {
-  if (game.status === 'final' && game.time_start && game.time_end) {
+/** `hideResult` skips the actual start-end range, since a long game hints at OT/SO. */
+const formatGameTime = (game: GameRecord, hideResult = false): string | undefined => {
+  if (!hideResult && game.status === 'final' && game.time_start && game.time_end) {
     return `${formatTimestampTime(game.time_start)} - ${formatTimestampTime(game.time_end)}`;
   }
   return game.scheduled_time ? formatTime(game.scheduled_time, game.scheduled_at) : undefined;
@@ -440,6 +441,29 @@ const SeasonGamesTab = ({
   useEffect(() => {
     sessionStorage.setItem(teamKey, JSON.stringify(teamFilter));
   }, [teamKey, teamFilter]);
+
+  // Week-view days whose final scores are hidden behind "?".
+  const hiddenScoreDaysKey = `season-games-hidden-score-days:${seasonId}`;
+  const [hiddenScoreDays, setHiddenScoreDays] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(sessionStorage.getItem(hiddenScoreDaysKey) ?? '[]'));
+    } catch {
+      return new Set();
+    }
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem(hiddenScoreDaysKey, JSON.stringify([...hiddenScoreDays]));
+  }, [hiddenScoreDaysKey, hiddenScoreDays]);
+
+  const toggleDayScoresHidden = (dateKey: string) => {
+    setHiddenScoreDays((current) => {
+      const next = new Set(current);
+      if (next.has(dateKey)) next.delete(dateKey);
+      else next.add(dateKey);
+      return next;
+    });
+  };
 
   const { games, loading, createGame, updateGame, bulkCreateGames } = useGames({
     seasonId,
@@ -1034,8 +1058,11 @@ const SeasonGamesTab = ({
     </div>
   );
 
-  const renderGameCard = (game: GameRecord) => {
+  const renderGameCard = (game: GameRecord, hideScores = false) => {
     if (autofillingGameIds.has(game.id)) return renderWeekGameAutofillSkeleton(game);
+
+    // With scores hidden, GameCard also drops the OT/SO suffix so the tag reads plain "Final".
+    const hideResult = hideScores && game.status === 'final';
 
     return (
       <GameCard
@@ -1044,8 +1071,9 @@ const SeasonGamesTab = ({
         tzPref="ET"
         canOpen
         originalDateLabel={null}
-        timeLabel={formatGameTime(game) ?? null}
-        showScore={shouldShowGameScore(game)}
+        timeLabel={formatGameTime(game, hideResult) ?? null}
+        showScore={!hideResult && shouldShowGameScore(game)}
+        scorePlaceholder={hideResult ? '?' : undefined}
         showTypeIndicator
         onOpen={() => openGame(game)}
       />
@@ -1053,7 +1081,8 @@ const SeasonGamesTab = ({
   };
 
   const renderWeekGameList = (dateKey: string, dayGames: GameRecord[]) => {
-    if (autofillDay !== dateKey) return dayGames.map((game) => renderGameCard(game));
+    const hideScores = hiddenScoreDays.has(dateKey);
+    if (autofillDay !== dateKey) return dayGames.map((game) => renderGameCard(game, hideScores));
 
     const { revealedGames, loadingGames } = partitionAutofillingGames(
       dayGames,
@@ -1061,7 +1090,7 @@ const SeasonGamesTab = ({
     );
 
     return [
-      ...revealedGames.map((game) => renderGameCard(game)),
+      ...revealedGames.map((game) => renderGameCard(game, hideScores)),
       ...loadingGames.map((game) => renderWeekGameAutofillSkeleton(game)),
     ];
   };
@@ -1290,16 +1319,35 @@ const SeasonGamesTab = ({
                       } on ${fmtDayHeading(dateKey)}`
                     : `View games on ${fmtDayHeading(dateKey)}`,
               })}
-              renderDayAction={(dateKey, dayGames) =>
-                !isEnded && (
-                  <MoreActionsMenu
-                    size="medium"
-                    iconHeight="field"
-                    disabled={autofillDay === dateKey}
-                    items={buildDayActions(dateKey, dayGames)}
-                  />
-                )
-              }
+              renderDayAction={(dateKey, dayGames) => {
+                const hasFinalGames = dayGames.some((game) => game.status === 'final');
+                if (!hasFinalGames && isEnded) return undefined;
+                const scoresHidden = hiddenScoreDays.has(dateKey);
+                return (
+                  <div className={styles.dayActions}>
+                    {hasFinalGames && (
+                      <Toggle
+                        variant="toggle"
+                        active={!scoresHidden}
+                        onActiveChange={() => toggleDayScoresHidden(dateKey)}
+                        activeIcon="visibility"
+                        inactiveIcon="visibility_off"
+                        activeTooltip="Hide final scores"
+                        inactiveTooltip="Show final scores"
+                        ariaLabel={`${scoresHidden ? 'Show' : 'Hide'} final scores for ${fmtDayHeading(dateKey)}`}
+                      />
+                    )}
+                    {!isEnded && (
+                      <MoreActionsMenu
+                        size="medium"
+                        iconHeight="field"
+                        disabled={autofillDay === dateKey}
+                        items={buildDayActions(dateKey, dayGames)}
+                      />
+                    )}
+                  </div>
+                );
+              }}
               getEmptyMessage={() =>
                 hasActiveFilters ? 'No games match the filters.' : 'No games scheduled.'
               }
