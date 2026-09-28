@@ -67,6 +67,8 @@ export interface GameCardProps {
   bottomLabel?: ReactNode;
   actions?: ReactNode | (GameCardAction | false | null | undefined)[];
   showScore?: boolean;
+  /** Shown in place of each score when `showScore` is false. Defaults to "-". */
+  scorePlaceholder?: string;
   timeLabel?: string | null;
   statusLabel?: string;
   statusIntent?: TagIntent;
@@ -212,6 +214,7 @@ const GameCardVariant = ({
   bottomLabel,
   actions,
   showScore: showScoreProp,
+  scorePlaceholder = '-',
   timeLabel: timeLabelProp,
   statusLabel: statusLabelProp,
   statusIntent,
@@ -221,8 +224,8 @@ const GameCardVariant = ({
   onOpen,
 }: GameCardProps) => {
   const showScore = showScoreProp ?? shouldShowWatchedScore(game);
-  const homeScore = showScore ? game.home_score : '-';
-  const awayScore = showScore ? game.away_score : '-';
+  const homeScore = showScore ? game.home_score : scorePlaceholder;
+  const awayScore = showScore ? game.away_score : scorePlaceholder;
   const awayDim = showScore && game.away_score < game.home_score;
   const homeDim = showScore && game.home_score < game.away_score;
   const isWatched = !!game.watched_by_user;

@@ -139,4 +139,18 @@ describe('GameCard', () => {
 
     expect(screen.getByText('FINAL/OT')).toBeInTheDocument();
   });
+
+  it('shows the score placeholder and a plain FINAL when the score is hidden', () => {
+    render(
+      <GameCard
+        game={{ ...game, watched_by_user: true, overtime_periods: 1 }}
+        showScore={false}
+        scorePlaceholder="?"
+      />,
+    );
+
+    expect(screen.getAllByText('?')).toHaveLength(2);
+    expect(screen.getByText('FINAL')).toBeInTheDocument();
+    expect(screen.queryByText('FINAL/OT')).not.toBeInTheDocument();
+  });
 });

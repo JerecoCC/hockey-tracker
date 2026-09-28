@@ -127,6 +127,7 @@ describe('ScoreboardCard', () => {
 
     expect(screen.queryByText('4')).not.toBeInTheDocument();
     expect(screen.queryByText('1')).not.toBeInTheDocument();
+    expect(screen.getAllByText('?')).toHaveLength(2);
     expect(screen.getByText('Final')).toBeInTheDocument();
     expect(screen.queryByText('Final/OT')).not.toBeInTheDocument();
     expect(document.querySelectorAll(`.${styles.scoreNumberLoser}`)).toHaveLength(0);

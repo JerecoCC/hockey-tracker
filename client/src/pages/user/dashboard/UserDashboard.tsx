@@ -472,6 +472,7 @@ const UserDashboard = () => {
                       tzPref={tzPref}
                       useLeagueColors
                       canOpen
+                      scorePlaceholder={!watched && game.status === 'final' ? '?' : undefined}
                       onOpen={() => navigate(`/games/${game.id}`)}
                       actions={
                         <UserGameActions

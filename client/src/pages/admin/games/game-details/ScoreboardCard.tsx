@@ -100,7 +100,7 @@ const teamPlaceLabel = (team: TeamInfo) => team.place_name?.trim() || '';
 const teamNameLabel = (team: TeamInfo) => team.team_name?.trim() || team.name?.trim() || team.code;
 const teamScoreLabel = (team: TeamInfo) => team.name?.trim() || teamNameLabel(team);
 // Matches the placeholder the game cards use for an unwatched score.
-const CENSORED_SCORE = '-';
+const CENSORED_SCORE = '?';
 
 const clampSeriesWins = (wins: number, total: number) =>
   Math.min(Math.max(Math.trunc(wins), 0), total);
