@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback } from 'react';
+import { type MutableRefObject, type ReactNode, useCallback, useEffect, useRef } from 'react';
 import {
   ControlledDatePickerField,
   ControlledInputField,
@@ -8,8 +8,9 @@ import BulkCreateModal, {
   type BulkCreateRowRenderProps,
 } from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
 import type { SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
-import { type CreateGameData } from '@/hooks/useGames';
+import { type CreateGameData, type GameType } from '@/hooks/useGames';
 import { type SeasonTeam } from '@/hooks/useSeasonDetails';
+import { CREATE_GAME_TYPE_OPTIONS } from './gameTypeOptions';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,6 +18,7 @@ interface RowValues {
   away_team_id: string | null;
   home_team_id: string | null;
   scheduled_date: string;
+  game_type: GameType;
   venue: string;
 }
 
@@ -24,7 +26,22 @@ const EMPTY_ROW: RowValues = {
   away_team_id: null,
   home_team_id: null,
   scheduled_date: '',
+  game_type: 'regular',
   venue: '',
+};
+
+// Keeps the latest rows available to createRow, which the modal calls without arguments.
+const RowsTracker = ({
+  rows,
+  rowsRef,
+}: {
+  rows: RowValues[];
+  rowsRef: MutableRefObject<RowValues[]>;
+}) => {
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows, rowsRef]);
+  return null;
 };
 
 const fmtModalDate = (iso: string) => {
@@ -74,6 +91,14 @@ const GameRow = ({
         placeholder="Date…"
         disabled={isSubmitting || dateDisabled}
         autoFocus={autoFocus && !dateDisabled}
+      />
+      <ControlledSelectField
+        control={control}
+        name={`rows.${index}.game_type`}
+        required
+        rules={{ required: 'Game type is required' }}
+        options={CREATE_GAME_TYPE_OPTIONS}
+        disabled={isSubmitting}
       />
       <ControlledSelectField
         control={control}
@@ -129,8 +154,13 @@ const BulkCreateGamesModal = ({
   onClose,
   defaultDate,
 }: Props) => {
+  const rowsRef = useRef<RowValues[]>([]);
   const createRow = useCallback(
-    () => ({ ...EMPTY_ROW, scheduled_date: defaultDate ?? '' }),
+    () => ({
+      ...EMPTY_ROW,
+      scheduled_date: defaultDate ?? '',
+      game_type: rowsRef.current[rowsRef.current.length - 1]?.game_type ?? EMPTY_ROW.game_type,
+    }),
     [defaultDate],
   );
   const shouldConfirmRemove = useCallback(
@@ -154,14 +184,15 @@ const BulkCreateGamesModal = ({
       onClose={onClose}
       formId="bulk-create-games-form"
       createRow={createRow}
-      columnsTemplate="0.9fr 1.1fr 1.1fr 1.2fr"
+      columnsTemplate="0.9fr 0.9fr 1.1fr 1.1fr 1.2fr"
       headerCells={[
         { label: 'Date', required: true },
+        { label: 'Game Type', required: true },
         { label: 'Away Team', required: true },
         { label: 'Home Team', required: true },
         { label: 'Venue' },
       ]}
-      requiredRowFields={['scheduled_date', 'away_team_id', 'home_team_id']}
+      requiredRowFields={['scheduled_date', 'game_type', 'away_team_id', 'home_team_id']}
       addRowLabel="Add Game"
       itemLabel="game"
       getConfirmLabel={(count, isSubmitting) =>
@@ -174,7 +205,7 @@ const BulkCreateGamesModal = ({
           season_id: seasonId,
           home_team_id: row.home_team_id!,
           away_team_id: row.away_team_id!,
-          game_type: 'regular',
+          game_type: row.game_type,
           status: 'scheduled',
           scheduled_at: row.scheduled_date || null,
           scheduled_time: null,
@@ -182,6 +213,12 @@ const BulkCreateGamesModal = ({
         }));
         return bulkCreateGames(payload);
       }}
+      renderAfterRows={({ rows }) => (
+        <RowsTracker
+          rows={rows}
+          rowsRef={rowsRef}
+        />
+      )}
       renderRow={({ index, control, setValue, isSubmitting, autoFocus, deleteButton }) => (
         <GameRow
           index={index}

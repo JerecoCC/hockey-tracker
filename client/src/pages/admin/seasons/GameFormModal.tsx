@@ -17,6 +17,7 @@ import useGames, {
   type GameType,
 } from '@/hooks/useGames';
 import { scheduledDateInputValue } from '@/pages/admin/games/game-details/formatUtils';
+import { CREATE_GAME_TYPE_OPTIONS } from './gameTypeOptions';
 import styles from './GameFormModal.module.scss';
 
 export interface GameFormTeam {
@@ -261,7 +262,20 @@ const GameFormModal = ({
           />
         </div>
 
-        {/* Row 2: Team choices */}
+        {/* Row 2: Game type — full width, create only */}
+        {!editTarget && (
+          <ControlledSelectField
+            label="Game Type"
+            required
+            control={control}
+            name="game_type"
+            rules={{ required: true }}
+            options={CREATE_GAME_TYPE_OPTIONS}
+            disabled={isSubmitting}
+          />
+        )}
+
+        {/* Row 3: Team choices */}
         {isTeamContextCreate ? (
           <div className={styles.teamRow}>
             <ControlledFieldGroup
@@ -322,7 +336,7 @@ const GameFormModal = ({
           </div>
         )}
 
-        {/* Row 3: Venue — full width */}
+        {/* Row 4: Venue — full width */}
         <ControlledInputField
           label="Venue"
           control={control}
