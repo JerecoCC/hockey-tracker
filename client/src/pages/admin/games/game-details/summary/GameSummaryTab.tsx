@@ -41,6 +41,7 @@ import { formatPlayerName } from '../formatUtils';
 import { sumVisiblePeriodShots } from '../shotPeriods';
 import { buildSeasonDetailsPath } from '@/lib/routeSlugs';
 import GoalieSwitchReportCard from './GoalieSwitchReportCard';
+import UserGameWatchActions from './UserGameWatchActions';
 import type { GameAutofillManualMoveReport, GameAutofillProgress } from '../gameAutofillTypes';
 import {
   CensoredLinescoreCard,
@@ -883,6 +884,14 @@ const GameSummaryTab = ({
               busy={busy}
               useLocalTimezone={useLocalTimezone}
               showScheduledWatchDate={!editable}
+              watchActions={
+                editable ? undefined : (
+                  <UserGameWatchActions
+                    game={game}
+                    onDownloadScoreCard={() => setScoreImageOpen(true)}
+                  />
+                )
+              }
               updateGameInfo={
                 editable && (isEditMode || game.status === 'scheduled') ? updateGameInfo : undefined
               }

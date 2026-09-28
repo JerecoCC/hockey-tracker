@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import InfoItem from '@jerecocc/tracker-ui/components/InfoItem/InfoItem';
@@ -24,6 +24,8 @@ interface Props {
   updateGameInfo?: (data: UpdateGameInfoData) => Promise<boolean>;
   useLocalTimezone?: boolean;
   showScheduledWatchDate?: boolean;
+  /** Watch controls for the viewer, shown in place of the admin edit button. */
+  watchActions?: ReactNode;
 }
 
 const GameInfoCard = ({
@@ -32,6 +34,7 @@ const GameInfoCard = ({
   updateGameInfo,
   useLocalTimezone = false,
   showScheduledWatchDate = false,
+  watchActions,
 }: Props) => {
   const [editOpen, setEditOpen] = useState(false);
   const playoffRoundLabel =
@@ -62,7 +65,9 @@ const GameInfoCard = ({
               onClick={() => setEditOpen(true)}
               iconHeight="field"
             />
-          ) : undefined
+          ) : (
+            watchActions
+          )
         }
       >
         <div className={styles.infoGrid}>
