@@ -2594,6 +2594,13 @@ async function initSchema() {
       ADD COLUMN IF NOT EXISTS matchup_names JSONB
   `;
 
+  // Optional series length for each playoff round, keyed by round number string.
+  // e.g. PWHL: { "1": 3, "2": 5, "3": 5 }. Rounds left out use the season/league best_of_playoff.
+  await sql`
+    ALTER TABLE bracket_rule_sets
+      ADD COLUMN IF NOT EXISTS round_best_of JSONB
+  `;
+
   // Game-rule overrides per season — nullable, falls back to league defaults when NULL.
   // best_of_playoff: number of games needed to win a series (2=Bo3, 3=Bo5, 4=Bo7).
   await sql`

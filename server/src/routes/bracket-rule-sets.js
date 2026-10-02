@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
 const { and, asc, eq, inArray } = require('drizzle-orm');
 const { db, schema } = require('../db');
+const { normalizeRoundBestOf } = require('../lib/playoffSeriesLength');
 
 const { bracketRuleSets, bracketSlotRules, playoffQualificationFormats } = schema;
 
@@ -16,6 +17,7 @@ const ruleSetSelectShape = {
   qualification_rules: playoffQualificationFormats.rules,
   round_names: bracketRuleSets.roundNames,
   matchup_names: bracketRuleSets.matchupNames,
+  round_best_of: bracketRuleSets.roundBestOf,
   created_at: bracketRuleSets.createdAt,
 };
 
@@ -26,6 +28,7 @@ const ruleSetReturningShape = {
   qualification_format_id: bracketRuleSets.qualificationFormatId,
   round_names: bracketRuleSets.roundNames,
   matchup_names: bracketRuleSets.matchupNames,
+  round_best_of: bracketRuleSets.roundBestOf,
   created_at: bracketRuleSets.createdAt,
 };
 
@@ -165,7 +168,7 @@ router.get('/:id', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/bracket-rule-sets  – create a rule set (optionally with slots)
-// Body: { league_id, name, slots?: SlotRule[], round_names?, matchup_names? }
+// Body: { league_id, name, slots?: SlotRule[], round_names?, matchup_names?, round_best_of? }
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
   const {
@@ -175,10 +178,12 @@ router.post('/', async (req, res) => {
     slots = [],
     round_names = null,
     matchup_names = null,
+    round_best_of = null,
   } = req.body;
   if (!league_id) return res.status(400).json({ error: 'league_id is required' });
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
   try {
+    const roundBestOf = normalizeRoundBestOf(round_best_of);
     await assertQualificationFormatBelongsToLeague(qualification_format_id, league_id);
     const sets = await db
       .insert(bracketRuleSets)
@@ -188,6 +193,7 @@ router.post('/', async (req, res) => {
         qualificationFormatId: qualification_format_id || null,
         roundNames: round_names ?? null,
         matchupNames: matchup_names ?? null,
+        roundBestOf,
       })
       .returning(ruleSetReturningShape);
     const savedSlots = await upsertSlots(sets[0].id, slots);
@@ -203,11 +209,11 @@ router.post('/', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // PATCH /api/admin/bracket-rule-sets/:id  – rename a rule set
-// Body: { name, round_names?, matchup_names? }
+// Body: { name, round_names?, matchup_names?, round_best_of? }
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, qualification_format_id, round_names, matchup_names } = req.body;
+  const { name, qualification_format_id, round_names, matchup_names, round_best_of } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
   try {
     const current = await db
@@ -226,6 +232,7 @@ router.patch('/:id', async (req, res) => {
     }
     if (round_names !== undefined) changes.roundNames = round_names;
     if (matchup_names !== undefined) changes.matchupNames = matchup_names;
+    if (round_best_of !== undefined) changes.roundBestOf = normalizeRoundBestOf(round_best_of);
 
     const rows = await db
       .update(bracketRuleSets)

@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
 const { sql } = require('../db');
 const { normalizeSeasonBracketSlotKeys } = require('../lib/playoffBracketSlots');
+const { resolveSeriesGamesToWin } = require('../lib/playoffSeriesLength');
 const {
   playerMatchesAwardEligibility,
   teamMatchesAwardEligibility,
@@ -1117,13 +1118,7 @@ router.post('/:id/advance-bracket', async (req, res) => {
         const nextRound = roundMatch ? Number(roundMatch[1]) : null;
         if (!nextRound) continue;
 
-        const gtwRows = await sql`
-          SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
-          FROM seasons s JOIN leagues l ON l.id = s.league_id
-          WHERE s.id = ${seasonId}
-        `;
-        const bestOf = gtwRows[0]?.best_of ?? 7;
-        const gamesToWin = Math.ceil(bestOf / 2);
+        const gamesToWin = await resolveSeriesGamesToWin(seasonId, nextRound);
 
         await sql`
           INSERT INTO playoff_series

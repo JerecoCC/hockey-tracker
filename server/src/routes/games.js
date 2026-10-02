@@ -7,6 +7,7 @@ const { and, eq, or, sql: ormSql } = require('drizzle-orm');
 const { alias } = require('drizzle-orm/pg-core');
 const { normalizeSeasonBracketSlotKeys } = require('../lib/playoffBracketSlots');
 const { rebuildGameStats } = require('../lib/gameStatsSnapshots');
+const { resolveSeriesGamesToWin } = require('../lib/playoffSeriesLength');
 
 router.use(requireAdmin);
 
@@ -714,18 +715,11 @@ router.post('/playoff-series', async (req, res) => {
   }
 
   try {
-    // Derive games_to_win from the explicit body value, or look up the season's
-    // best_of_playoff setting (falling back to the league default).
+    // Derive games_to_win from the explicit body value, or from the round's
+    // series length (rule set round, then season, then league default).
     let games_to_win = req.body.games_to_win ? Number(req.body.games_to_win) : null;
     if (!games_to_win) {
-      const seasonRows = await sql`
-        SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
-        FROM seasons s
-        JOIN leagues l ON l.id = s.league_id
-        WHERE s.id = ${season_id}
-      `;
-      const bestOf = seasonRows[0]?.best_of ?? 7;
-      games_to_win = Math.ceil(bestOf / 2);
+      games_to_win = await resolveSeriesGamesToWin(season_id, round);
     }
 
     const rows = await sql`
@@ -885,11 +879,7 @@ router.post('/playoff-series/:seriesId/force-advance', async (req, res) => {
     const nextRound  = roundMatch ? Number(roundMatch[1]) : null;
     if (!nextRound) return res.status(500).json({ error: 'Invalid next matchup key' });
 
-    const [gtwRow] = await sql`
-      SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
-      FROM seasons s JOIN leagues l ON l.id = s.league_id WHERE s.id = ${series.season_id}
-    `;
-    const gamesToWin = Math.ceil((gtwRow?.best_of ?? 7) / 2);
+    const gamesToWin = await resolveSeriesGamesToWin(series.season_id, nextRound);
     const winnerId   = series.winner_team_id;
 
     const [existing] = await sql`
@@ -1914,13 +1904,7 @@ router.patch('/:id', async (req, res) => {
                   const nextRound = roundMatch ? Number(roundMatch[1]) : null;
                   if (!nextRound) continue;
 
-                  const gtwRows = await sql`
-                    SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
-                    FROM seasons s JOIN leagues l ON l.id = s.league_id
-                    WHERE s.id = ${seriesSeasonId}
-                  `;
-                  const bestOf = gtwRows[0]?.best_of ?? 7;
-                  const gamesToWin = Math.ceil(bestOf / 2);
+                  const gamesToWin = await resolveSeriesGamesToWin(seriesSeasonId, nextRound);
                   // Which side of the next matchup this series feeds (team1 = home).
                   const isTeam1 = depSlot.endsWith('team1');
 

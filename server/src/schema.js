@@ -514,6 +514,7 @@ const bracketRuleSets = pgTable("bracket_rule_sets", {
   ),
   roundNames: jsonb("round_names"),
   matchupNames: jsonb("matchup_names"),
+  roundBestOf: jsonb("round_best_of"),
   createdAt: createdAt(),
 });
 
