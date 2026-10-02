@@ -598,8 +598,8 @@ const SeasonDetailsPage = () => {
     });
 
   const summarySkaters = useMemo(
-    () => sortBySkaterStat(skaters, summarySkaterStat),
-    [skaters, summarySkaterStat],
+    () => sortBySkaterStat(forwards, summarySkaterStat),
+    [forwards, summarySkaterStat],
   );
   const handleFwdSort = (key: string, dir: 'asc' | 'desc') => {
     setFwdSort({ key, dir });

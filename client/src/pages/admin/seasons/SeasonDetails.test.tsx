@@ -732,6 +732,39 @@ describe('SeasonDetails stats tab', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor/players/19-john-smith');
   });
 
+  it('only lists forwards in the summary forwards card', () => {
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    const forward = mockUseSeasonStats().skaters[0];
+    mockUseSeasonStats.mockReturnValue({
+      skaters: [
+        forward,
+        {
+          ...forward,
+          player_id: 'player-2',
+          first_name: 'Morgan',
+          last_name: 'Rielly',
+          position: 'D',
+          jersey_number: 44,
+          points: 90,
+        },
+      ],
+      goalies: [],
+      loading: false,
+    });
+
+    render(<SeasonDetails />);
+
+    const forwardsCard = screen
+      .getByRole('button', { name: 'View all forward leaders' })
+      .closest('section') as HTMLElement;
+    const defenseCard = screen
+      .getByRole('button', { name: 'View all defense leaders' })
+      .closest('section') as HTMLElement;
+    expect(within(forwardsCard).queryByRole('button', { name: 'View Morgan Rielly' })).toBeNull();
+    expect(within(forwardsCard).getByRole('button', { name: 'View John Smith' })).toBeInTheDocument();
+    expect(within(defenseCard).getByRole('button', { name: 'View Morgan Rielly' })).toBeInTheDocument();
+  });
+
   it('opens full leader lists from the summary header icon buttons', async () => {
     const user = userEvent.setup();
     mockUseTabState.mockReturnValue([4, jest.fn()]);
