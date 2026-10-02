@@ -734,7 +734,7 @@ describe('UserGames schedule views', () => {
       expect(viewControl).toHaveAttribute('data-full-width', 'false');
       const moreActionsButton = screen.getByRole('button', { name: 'More actions' });
       expect(controlsCard).toContainElement(moreActionsButton);
-      expect(moreActionsButton).toHaveAttribute('data-icon-size', '1.25rem');
+      expect(moreActionsButton).toHaveAttribute('data-icon-size', '1.35rem');
       expect(screen.queryByRole('switch', { name: 'Hide filters' })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: 'Open filters' })).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Show filters' })).toHaveAttribute(
@@ -801,7 +801,7 @@ describe('UserGames schedule views', () => {
       expect(screen.queryByRole('button', { name: 'Generate Score Card' })).not.toBeInTheDocument();
 
       const moreActionsButton = screen.getByRole('button', { name: 'More actions' });
-      expect(moreActionsButton).toHaveAttribute('data-icon-size', '1.25rem');
+      expect(moreActionsButton).toHaveAttribute('data-icon-size', '1.35rem');
       await user.click(moreActionsButton);
 
       expect(screen.getByRole('button', { name: 'Google Calendar Sync' })).toBeInTheDocument();
@@ -862,7 +862,7 @@ describe('UserGames schedule views', () => {
       expect(within(monthViewButton).getByText('Month view')).toBeInTheDocument();
 
       const moreActionsButton = screen.getByRole('button', { name: 'More actions' });
-      expect(moreActionsButton).toHaveAttribute('data-icon-size', '1.25rem');
+      expect(moreActionsButton).toHaveAttribute('data-icon-size', '1.35rem');
       expect(moreActionsButton.parentElement).toHaveClass(styles.mobileMoreActions);
       const mobileActions = moreActionsButton.parentElement?.parentElement;
       const viewRow = viewControl?.closest(`.${styles.mobileToolbarViewRow}`);

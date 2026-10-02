@@ -95,6 +95,7 @@ const UserGameWatchActions = ({ game, onDownloadScoreCard }: Props) => {
             disabled={busy}
             size="medium"
             iconHeight="field"
+            iconSize="1.35rem"
           />
         )}
       </div>

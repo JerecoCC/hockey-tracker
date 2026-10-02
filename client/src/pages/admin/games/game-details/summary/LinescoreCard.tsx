@@ -122,6 +122,7 @@ const LinescoreCard = ({
               <MoreActionsMenu
                 disabled={!!busy}
                 size="medium"
+                iconSize="1.35rem"
                 items={[
                   { label: 'Reschedule Game', icon: 'calendar', onClick: onReschedule },
                   { label: 'Delete Game', icon: 'delete', intent: 'danger', onClick: onDelete },
@@ -157,6 +158,7 @@ const LinescoreCard = ({
             <MoreActionsMenu
               disabled={!!busy}
               size="medium"
+              iconSize="1.35rem"
               items={[
                 {
                   label: 'Delete Game',

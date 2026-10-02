@@ -202,7 +202,7 @@ describe('TeamPlayersTab', () => {
     const projectedLineupButton = screen.getByRole('button', { name: 'Projected Lineup' });
 
     expect(mockMoreActionsMenu).toHaveBeenLastCalledWith(
-      expect.objectContaining({ iconHeight: 'button', iconSize: '1.25rem' }),
+      expect.objectContaining({ iconHeight: 'button', iconSize: '1.35rem' }),
     );
     expect(projectedLineupButton).toHaveClass('filledAccent');
     expect(projectedLineupButton.querySelector('svg')).toBeInTheDocument();

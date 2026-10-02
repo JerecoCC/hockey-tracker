@@ -324,7 +324,7 @@ const TeamPlayersTab = ({
       </Button>
       <MoreActionsMenu
         iconHeight="button"
-        iconSize="1.25rem"
+        iconSize="1.35rem"
         items={[
           {
             label: 'Create Players',

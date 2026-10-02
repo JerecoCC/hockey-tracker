@@ -1492,7 +1492,7 @@ const UserGames = () => {
         <MoreActionsMenu
           size="medium"
           iconHeight="field"
-          iconSize="1.25rem"
+          iconSize="1.35rem"
           wrapperClassName={isMobileView ? styles.mobileMoreActions : undefined}
           items={[
             {
