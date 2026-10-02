@@ -31,6 +31,8 @@ export interface BracketRuleSet {
   round_names: Record<string, string> | null;
   /** Optional display labels keyed by matchup slot, e.g. { "r3m0": "Eastern Conference Final" }. Null = use round labels. */
   matchup_names?: Record<string, string> | null;
+  /** Series length per round keyed by round number string, e.g. { "1": 3, "2": 5 }. Missing rounds use the season length. */
+  round_best_of?: Record<string, number> | null;
   created_at: string;
   slots: BracketSlotRule[];
 }
@@ -97,6 +99,7 @@ const useBracketRuleSets = (leagueId: string | undefined) => {
     round_names?: Record<string, string> | null,
     matchup_names?: Record<string, string> | null,
     qualification_format_id?: string | null,
+    round_best_of?: Record<string, number> | null,
   ): Promise<BracketRuleSet | null> => {
     try {
       const { data } = await axios.post<BracketRuleSet>(
@@ -108,6 +111,7 @@ const useBracketRuleSets = (leagueId: string | undefined) => {
           round_names: round_names ?? null,
           matchup_names: matchup_names ?? null,
           qualification_format_id: qualification_format_id ?? null,
+          round_best_of: round_best_of ?? null,
         },
         { headers: authHeaders() },
       );
@@ -127,17 +131,20 @@ const useBracketRuleSets = (leagueId: string | undefined) => {
     round_names?: Record<string, string> | null,
     matchup_names?: Record<string, string> | null,
     qualification_format_id?: string | null,
+    round_best_of?: Record<string, number> | null,
   ): Promise<boolean> => {
     try {
       const ruleSetPayload: {
         name: string;
         round_names: Record<string, string> | null;
         matchup_names: Record<string, string> | null;
+        round_best_of: Record<string, number> | null;
         qualification_format_id?: string | null;
       } = {
         name,
         round_names: round_names ?? null,
         matchup_names: matchup_names ?? null,
+        round_best_of: round_best_of ?? null,
       };
       if (qualification_format_id !== undefined) {
         ruleSetPayload.qualification_format_id = qualification_format_id;

@@ -5,7 +5,8 @@ import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
 import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
-import Select from '@jerecocc/tracker-ui/components/Select/Select';
+import SelectField from '@jerecocc/tracker-ui/components/Select/SelectField';
+import Tabs from '@jerecocc/tracker-ui/components/Tabs/Tabs';
 import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
 /** Minimal group shape used for scope filtering — satisfied by both SeasonGroupRecord and GroupRecord. */
 export interface GroupEntry {
@@ -24,6 +25,7 @@ import {
   SPECIFIC_SCOPES,
   deriveBracketStructureFromSize,
   getRoundLabel,
+  inferBracketSizeFromSlots,
   makeSlotKey,
   slotKeyToLabel,
   type BracketRound,
@@ -60,19 +62,17 @@ const BRACKET_SIZE_OPTIONS = [
   { value: '32', label: '32 teams' },
 ];
 
+const SEASON_DEFAULT_BEST_OF_VALUE = '__default__';
+
+const ROUND_BEST_OF_OPTIONS = [
+  { value: SEASON_DEFAULT_BEST_OF_VALUE, label: 'Season default' },
+  { value: '3', label: 'Best of 3' },
+  { value: '5', label: 'Best of 5' },
+  { value: '7', label: 'Best of 7' },
+];
+
 const AUTO_ADVANCE_TOOLTIP = 'Rounds 2 and beyond automatically advance winners in bracket order.';
 const NO_QUALIFICATION_FORMAT_VALUE = '__none__';
-
-// ── Bracket structure ─────────────────────────────────────────────────────────
-
-const inferBracketSizeFromSlots = (slots: BracketSlotRule[]): number => {
-  const round1Matchups = new Set(
-    slots
-      .map((s) => s.slot_key.match(/^r1m(\d+)/)?.[1])
-      .filter((v): v is string => v !== undefined),
-  ).size;
-  return Math.max(4, round1Matchups * 2);
-};
 
 // ── Form types & helpers ──────────────────────────────────────────────────────
 
@@ -95,6 +95,8 @@ interface BracketRulesFormValues {
   roundNames: Record<string, string>;
   /** Custom display name per matchup, keyed by matchup slot like r3m0. Empty string = use round label. */
   matchupNames: Record<string, string>;
+  /** Series length per round, keyed by round number string. Sentinel = use the season length. */
+  roundBestOf: Record<string, string>;
 }
 
 const blankSlotItem = (key: string): SlotFormItem => ({
@@ -183,6 +185,25 @@ const cleanLabelMap = (
   return Object.keys(cleaned).length > 0 ? cleaned : null;
 };
 
+const toRoundBestOfForm = (
+  roundBestOf: Record<string, number> | null | undefined,
+): Record<string, string> =>
+  Object.fromEntries(
+    Object.entries(roundBestOf ?? {}).map(([round, bestOf]) => [round, String(bestOf)]),
+  );
+
+// Like roundNames, numeric-keyed paths arrive as a sparse array, so skip empty entries.
+const cleanRoundBestOf = (
+  roundBestOf: Record<string, string> | undefined,
+): Record<string, number> | null => {
+  const cleaned = Object.fromEntries(
+    Object.entries(roundBestOf ?? {})
+      .filter(([, value]) => !!value && value !== SEASON_DEFAULT_BEST_OF_VALUE)
+      .map(([round, value]) => [round, Number(value)]),
+  );
+  return Object.keys(cleaned).length > 0 ? cleaned : null;
+};
+
 const hasRoundMatchupLabels = (
   roundInfo: BracketRound,
   matchupNames?: Record<string, string> | null,
@@ -252,24 +273,36 @@ const PoolEditor = ({ control, slotIndex, groups }: PoolEditorProps) => {
         return (
           <div
             key={field.id}
-            className={styles.poolSeedRow}
+            className={styles.poolSeed}
           >
-            <div className={styles.poolSeedRank}>
-              <ControlledSelectField
-                control={control}
-                name={`slots.${slotIndex}.pool.${i}.rank`}
-                options={RANK_OPTIONS}
-              />
-            </div>
-            <div className={styles.poolSeedScope}>
-              <ControlledSelectField
-                control={control}
-                name={`slots.${slotIndex}.pool.${i}.scope`}
-                options={SLOT_SCOPE_OPTIONS}
+            <div className={styles.poolSeedRow}>
+              <div className={styles.poolSeedRank}>
+                <ControlledSelectField
+                  control={control}
+                  name={`slots.${slotIndex}.pool.${i}.rank`}
+                  options={RANK_OPTIONS}
+                />
+              </div>
+              <div className={styles.poolSeedScope}>
+                <ControlledSelectField
+                  control={control}
+                  name={`slots.${slotIndex}.pool.${i}.scope`}
+                  options={SLOT_SCOPE_OPTIONS}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outlined"
+                intent="danger"
+                icon="delete"
+                iconHeight="field"
+                tooltip="Remove position"
+                aria-label="Remove position"
+                onClick={() => remove(i)}
               />
             </div>
             {needsGroup && (
-              <div className={styles.poolSeedScope}>
+              <div className={styles.poolSeedGroup}>
                 <ControlledSelectField
                   control={control}
                   name={`slots.${slotIndex}.pool.${i}.groupId`}
@@ -278,16 +311,6 @@ const PoolEditor = ({ control, slotIndex, groups }: PoolEditorProps) => {
                 />
               </div>
             )}
-            <Button
-              type="button"
-              variant="outlined"
-              intent="danger"
-              icon="delete"
-              iconHeight="field"
-              tooltip="Remove position"
-              aria-label="Remove position"
-              onClick={() => remove(i)}
-            />
           </div>
         );
       })}
@@ -478,6 +501,7 @@ const BracketRulesModal = ({
 
   // When no external structure is provided (league context), the user picks a size.
   const [selectedSize, setSelectedSize] = useState<number>(8);
+  const [selectedTab, setSelectedTab] = useState(0);
 
   // Fetched rule set data (null = create mode or loading)
   const [loadedRuleSet, setLoadedRuleSet] = useState<BracketRuleSet | null>(null);
@@ -493,6 +517,7 @@ const BracketRulesModal = ({
   const {
     control,
     setValue,
+    getValues,
     reset,
     handleSubmit,
     formState: { isSubmitting, isDirty, isValid },
@@ -503,6 +528,7 @@ const BracketRulesModal = ({
       slots: [],
       roundNames: {},
       matchupNames: {},
+      roundBestOf: {},
     },
     mode: 'onChange',
   });
@@ -512,6 +538,7 @@ const BracketRulesModal = ({
   // reset() compete for the same React render cycle.
   useEffect(() => {
     if (!open) return;
+    setSelectedTab(0);
     if (ruleSetId) {
       // Clear stale data immediately so Effect 2 doesn't flash old values
       setLoadedRuleSet(null);
@@ -545,6 +572,7 @@ const BracketRulesModal = ({
         slots: mergeApiSlots(structure, loadedRuleSet.slots),
         roundNames: loadedRuleSet.round_names ?? {},
         matchupNames: loadedRuleSet.matchup_names ?? {},
+        roundBestOf: toRoundBestOfForm(loadedRuleSet.round_best_of),
       });
       setExpandedMatchupLabelRounds(
         getExpandedMatchupLabelRounds(structure, loadedRuleSet.matchup_names),
@@ -557,6 +585,7 @@ const BracketRulesModal = ({
         slots: buildDefaultSlots(effectiveStructure),
         roundNames: {},
         matchupNames: {},
+        roundBestOf: {},
       });
       setExpandedMatchupLabelRounds({});
     }
@@ -574,6 +603,22 @@ const BracketRulesModal = ({
     setExpandedMatchupLabelRounds({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSize]);
+
+  // Create mode rebuilds blank slots in Effect 3. When editing, resize here instead so the
+  // initial load doesn't trigger it, and keep any Round 1 slot that still exists.
+  const handleBracketSizeChange = (value: string) => {
+    const size = Number(value);
+    setSelectedSize(size);
+    if (!ruleSetId) return;
+    const existingByKey = new Map((getValues('slots') ?? []).map((slot) => [slot.key, slot]));
+    setValue(
+      'slots',
+      buildDefaultSlots(deriveBracketStructureFromSize(size)).map(
+        (blank) => existingByKey.get(blank.key) ?? blank,
+      ),
+      { shouldDirty: true, shouldValidate: true },
+    );
+  };
 
   // Build a lookup: slot key → flat index in the slots array
   const slotIndexMap = useMemo(() => {
@@ -604,12 +649,19 @@ const BracketRulesModal = ({
   );
 
   const onSubmit = handleSubmit(
-    async ({ name, qualificationFormatId, slots, roundNames, matchupNames }) => {
+    async ({ name, qualificationFormatId, slots, roundNames, matchupNames, roundBestOf }) => {
       const payload = [...serializeSlots(slots), ...buildAutoWinnerSlots(effectiveStructure)];
       // roundNames arrives as a sparse array (numeric-keyed paths → RHF array treatment),
       // so index 0 may be undefined. Guard against that before calling .trim().
-      const roundNamesPayload = cleanLabelMap(roundNames);
+      // Drop settings left behind by rounds removed when the bracket was resized.
+      const bracketRounds = new Set(effectiveStructure.rounds.map((r) => String(r.round)));
+      const inBracket = <T,>(values: Record<string, T> | undefined) =>
+        Object.fromEntries(
+          Object.entries(values ?? {}).filter(([round]) => bracketRounds.has(round)),
+        );
+      const roundNamesPayload = cleanLabelMap(inBracket(roundNames));
       const matchupNamesPayload = cleanLabelMap(matchupNames);
+      const roundBestOfPayload = cleanRoundBestOf(inBracket(roundBestOf));
       const qualificationFormatIdPayload =
         qualificationFormatId === NO_QUALIFICATION_FORMAT_VALUE ? null : qualificationFormatId;
       let savedId = ruleSetId;
@@ -621,6 +673,7 @@ const BracketRulesModal = ({
           roundNamesPayload,
           matchupNamesPayload,
           qualificationFormatIdPayload,
+          roundBestOfPayload,
         );
       } else {
         const created = await createRuleSet(
@@ -629,6 +682,7 @@ const BracketRulesModal = ({
           roundNamesPayload,
           matchupNamesPayload,
           qualificationFormatIdPayload,
+          roundBestOfPayload,
         );
         if (!created) return;
         savedId = created.id;
@@ -652,150 +706,181 @@ const BracketRulesModal = ({
       confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
-      <div className={styles.bracketRulesStack}>
-        <ControlledInputField
-          label="Rule Set Name"
-          control={control}
-          name="name"
-          placeholder="e.g. PWHL 2025 Bracket Rules"
-          disabled={isSubmitting}
-        />
-        {/* ── Round Labels (optional) ── */}
-        <ControlledSelectField
-          label="Qualification Format"
-          control={control}
-          name="qualificationFormatId"
-          options={qualificationFormatOptions}
-          placeholder={qualificationFormatsLoading ? 'Loading formats...' : 'Select a format...'}
-          disabled={isSubmitting || qualificationFormatsLoading}
-        />
-        {effectiveStructure.rounds.map((r) => {
-          const defaultLabel = getRoundLabel(r.round, effectiveStructure.rounds.length);
-          const matchupLabelsOpen = !!expandedMatchupLabelRounds[r.round];
-          const hasCustomMatchupLabels = hasRoundMatchupLabels(r, watchedMatchupNames);
-          return (
-            <div
-              key={r.round}
-              className={styles.bracketRulesLabelGroup}
-            >
-              <div className={styles.bracketRulesLabelControl}>
+      <Tabs
+        selectedIndex={selectedTab}
+        onSelectedIndexChange={setSelectedTab}
+        keepMounted
+        tabs={[
+          {
+            label: 'Details',
+            content: (
+              <div className={styles.bracketRulesStack}>
                 <ControlledInputField
-                  type="text"
-                  label={`${defaultLabel} Label`}
-                  placeholder={`e.g. ${defaultLabel}`}
+                  label="Rule Set Name"
                   control={control}
-                  name={`roundNames.${r.round}`}
+                  name="name"
+                  placeholder="e.g. PWHL 2025 Bracket Rules"
                   disabled={isSubmitting}
                 />
-                {r.series > 1 && (
-                  <Toggle
-                    active={matchupLabelsOpen}
-                    variant="button"
-                    icon="account_tree"
-                    activeTooltip="Hide matchup labels"
-                    inactiveTooltip={
-                      hasCustomMatchupLabels ? 'Edit matchup labels' : 'Add matchup labels'
-                    }
+                {/* ── Round Labels (optional) ── */}
+                <ControlledSelectField
+                  label="Qualification Format"
+                  control={control}
+                  name="qualificationFormatId"
+                  options={qualificationFormatOptions}
+                  placeholder={
+                    qualificationFormatsLoading ? 'Loading formats...' : 'Select a format...'
+                  }
+                  disabled={isSubmitting || qualificationFormatsLoading}
+                />
+                {!externalStructure && (
+                  <SelectField
+                    label="Bracket Size"
+                    value={String(selectedSize)}
+                    options={BRACKET_SIZE_OPTIONS}
+                    onChange={(value) => {
+                      if (value) handleBracketSizeChange(value);
+                    }}
                     disabled={isSubmitting}
-                    onActiveChange={() =>
-                      setExpandedMatchupLabelRounds((prev) => ({
-                        ...prev,
-                        [r.round]: !prev[r.round],
-                      }))
-                    }
                   />
                 )}
-              </div>
-              {r.series > 1 && (
-                <div
-                  className={[
-                    styles.bracketRulesMatchupLabelRegion,
-                    matchupLabelsOpen ? styles.bracketRulesMatchupLabelRegionOpen : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  aria-hidden={!matchupLabelsOpen}
-                  inert={!matchupLabelsOpen}
-                >
-                  <div className={styles.bracketRulesMatchupLabelFields}>
-                    {Array.from({ length: r.series }, (_, mi) => {
-                      const matchupKey = `r${r.round}m${mi}`;
-                      return (
+                {effectiveStructure.rounds.map((r) => {
+                  const defaultLabel = getRoundLabel(r.round, effectiveStructure.rounds.length);
+                  const matchupLabelsOpen = !!expandedMatchupLabelRounds[r.round];
+                  const hasCustomMatchupLabels = hasRoundMatchupLabels(r, watchedMatchupNames);
+                  return (
+                    <div
+                      key={r.round}
+                      className={styles.bracketRulesLabelGroup}
+                    >
+                      <div className={styles.bracketRulesLabelControl}>
                         <ControlledInputField
-                          key={matchupKey}
                           type="text"
-                          label={`Matchup ${mi + 1} Label`}
+                          label={`${defaultLabel} Label`}
                           placeholder={`e.g. ${defaultLabel}`}
                           control={control}
-                          name={`matchupNames.${matchupKey}`}
+                          name={`roundNames.${r.round}`}
                           disabled={isSubmitting}
                         />
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-
-        {!externalStructure && (
-          <label className={styles.bracketSizeLabel}>
-            <span>Bracket Size</span>
-            <Select
-              value={String(selectedSize)}
-              options={BRACKET_SIZE_OPTIONS}
-              onChange={(v) => setSelectedSize(Number(v))}
-              disabled={isSubmitting || !!ruleSetId}
-            />
-          </label>
-        )}
-        {(() => {
-          const round1 = effectiveStructure.rounds.find((r) => r.round === 1);
-          if (!round1) return null;
-          return (
-            <div className={styles.bracketRulesRound}>
-              <div className={styles.bracketRulesRoundLabel}>
-                <span>{round1.label}</span>
-                <InfoTooltip
-                  text={AUTO_ADVANCE_TOOLTIP}
-                  size="0.9rem"
-                />
+                        <ControlledSelectField
+                          label="Series Length"
+                          control={control}
+                          name={`roundBestOf.${r.round}`}
+                          options={ROUND_BEST_OF_OPTIONS}
+                          placeholder="Season default"
+                          wrapperClassName={styles.bracketRulesBestOfField}
+                          disabled={isSubmitting}
+                        />
+                        {r.series > 1 && (
+                          <Toggle
+                            active={matchupLabelsOpen}
+                            variant="button"
+                            icon="account_tree"
+                            activeTooltip="Hide matchup labels"
+                            inactiveTooltip={
+                              hasCustomMatchupLabels ? 'Edit matchup labels' : 'Add matchup labels'
+                            }
+                            disabled={isSubmitting}
+                            onActiveChange={() =>
+                              setExpandedMatchupLabelRounds((prev) => ({
+                                ...prev,
+                                [r.round]: !prev[r.round],
+                              }))
+                            }
+                          />
+                        )}
+                      </div>
+                      {r.series > 1 && (
+                        <div
+                          className={[
+                            styles.bracketRulesMatchupLabelRegion,
+                            matchupLabelsOpen ? styles.bracketRulesMatchupLabelRegionOpen : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
+                          aria-hidden={!matchupLabelsOpen}
+                          inert={!matchupLabelsOpen}
+                        >
+                          <div className={styles.bracketRulesMatchupLabelFields}>
+                            {Array.from({ length: r.series }, (_, mi) => {
+                              const matchupKey = `r${r.round}m${mi}`;
+                              return (
+                                <ControlledInputField
+                                  key={matchupKey}
+                                  type="text"
+                                  label={`Matchup ${mi + 1} Label`}
+                                  placeholder={`e.g. ${defaultLabel}`}
+                                  control={control}
+                                  name={`matchupNames.${matchupKey}`}
+                                  disabled={isSubmitting}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              <div className={styles.bracketRulesMatchups}>
-                {Array.from({ length: round1.series }, (_, mi) => (
-                  <BorderedFieldset
-                    key={mi}
-                    className={styles.bracketRulesMatchup}
-                  >
-                    <legend className={styles.bracketRulesMatchupLabel}>Matchup {mi + 1}</legend>
-                    <SingleSlotEditor
-                      label="Team 1"
-                      slotIndex={slotIndexMap[makeSlotKey(1, mi, 'team1')] ?? 0}
-                      round={1}
-                      control={control}
-                      setValue={setValue}
-                      groups={groups}
-                      choiceSlotOptions={choiceSlotOptions}
-                      prevRoundMatchupOptions={[]}
-                    />
-                    <SingleSlotEditor
-                      label="Team 2"
-                      slotIndex={slotIndexMap[makeSlotKey(1, mi, 'team2')] ?? 0}
-                      round={1}
-                      control={control}
-                      setValue={setValue}
-                      groups={groups}
-                      choiceSlotOptions={choiceSlotOptions}
-                      prevRoundMatchupOptions={[]}
-                    />
-                  </BorderedFieldset>
-                ))}
+            ),
+          },
+          {
+            label: 'Round 1',
+            content: (
+              <div className={styles.bracketRulesStack}>
+                {(() => {
+                  const round1 = effectiveStructure.rounds.find((r) => r.round === 1);
+                  if (!round1) return null;
+                  return (
+                    <div className={styles.bracketRulesRound}>
+                      <div className={styles.bracketRulesRoundLabel}>
+                        <span>{round1.label}</span>
+                        <InfoTooltip
+                          text={AUTO_ADVANCE_TOOLTIP}
+                          size="0.9rem"
+                        />
+                      </div>
+                      <div className={styles.bracketRulesMatchups}>
+                        {Array.from({ length: round1.series }, (_, mi) => (
+                          <BorderedFieldset
+                            key={mi}
+                            className={styles.bracketRulesMatchup}
+                          >
+                            <legend className={styles.bracketRulesMatchupLabel}>
+                              Matchup {mi + 1}
+                            </legend>
+                            <SingleSlotEditor
+                              label="Team 1"
+                              slotIndex={slotIndexMap[makeSlotKey(1, mi, 'team1')] ?? 0}
+                              round={1}
+                              control={control}
+                              setValue={setValue}
+                              groups={groups}
+                              choiceSlotOptions={choiceSlotOptions}
+                              prevRoundMatchupOptions={[]}
+                            />
+                            <SingleSlotEditor
+                              label="Team 2"
+                              slotIndex={slotIndexMap[makeSlotKey(1, mi, 'team2')] ?? 0}
+                              round={1}
+                              control={control}
+                              setValue={setValue}
+                              groups={groups}
+                              choiceSlotOptions={choiceSlotOptions}
+                              prevRoundMatchupOptions={[]}
+                            />
+                          </BorderedFieldset>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
-            </div>
-          );
-        })()}
-      </div>
+            ),
+          },
+        ]}
+      />
     </Modal>
   );
 };

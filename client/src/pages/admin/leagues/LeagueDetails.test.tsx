@@ -70,6 +70,10 @@ jest.mock('../../../hooks/useLeagueAwards', () => ({
     deleteAward: jest.fn(async () => true),
   })),
 }));
+jest.mock('../../../hooks/usePlayoffRuleGroups', () => ({
+  __esModule: true,
+  default: jest.fn(() => []),
+}));
 jest.mock('../../../hooks/useGroupAlignmentSets', () => ({
   __esModule: true,
   default: jest.fn(() => ({

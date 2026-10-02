@@ -240,9 +240,15 @@ $bracket-line: color-mix(
 
   &RulesLabelControl {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-columns: auto;
+    grid-auto-flow: column;
     align-items: end;
     gap: $space-xs;
+  }
+
+  &RulesBestOfField {
+    width: 10rem;
   }
 
   &RulesMatchupToggle {
@@ -266,7 +272,7 @@ $bracket-line: color-mix(
 
   &RulesMatchupLabelFields {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: $space-sm;
     min-height: 0;
     overflow: hidden;
@@ -363,7 +369,7 @@ $bracket-line: color-mix(
 
 // Rank selector — narrow, just for #1–#16
 .slotRankField {
-  width: 5.5rem;
+  width: 7rem;
   flex-shrink: 0;
 }
 
@@ -392,15 +398,24 @@ $bracket-line: color-mix(
 
 // Rank column in pool rows
 .poolSeedRank {
-  width: 5.5rem;
+  width: 7rem;
   flex-shrink: 0;
 }
 
-// Scope column in pool rows
+// One pool position: rank/scope row, then its conference/division on its own row
 .poolSeed {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+
   &Scope {
     flex: 1;
     min-width: 9rem;
+  }
+
+  &Group {
+    width: 100%;
+    min-width: 0;
   }
 }
 

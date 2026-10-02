@@ -4,11 +4,12 @@ import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmMo
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import useBracketRuleSets, { type BracketRuleSet } from '@/hooks/useBracketRuleSets';
-import useLeagueGroups from '@/hooks/useLeagueGroups';
+import usePlayoffRuleGroups from '@/hooks/usePlayoffRuleGroups';
 import usePlayoffQualificationFormats, {
   type PlayoffQualificationFormat,
 } from '@/hooks/usePlayoffQualificationFormats';
 import BracketRulesModal from '../seasons/BracketRulesModal';
+import { inferBracketSizeFromSlots } from '../seasons/bracketRules';
 import PlayoffQualificationFormatModal from '../seasons/PlayoffQualificationFormatModal';
 import {
   LeagueListRowSkeleton,
@@ -23,17 +24,8 @@ interface Props {
   className?: string;
 }
 
-const inferBracketSizeFromSlots = (slots: BracketRuleSet['slots'] | undefined): number => {
-  const round1Matchups = new Set(
-    (slots ?? [])
-      .map((slot) => slot.slot_key.match(/^r1m(\d+)/)?.[1])
-      .filter((value): value is string => value !== undefined),
-  ).size;
-  return Math.max(4, round1Matchups * 2);
-};
-
 const describeRuleSet = (ruleSet: BracketRuleSet): string => {
-  const bracketLabel = `${inferBracketSizeFromSlots(ruleSet.slots)}-team bracket`;
+  const bracketLabel = `${inferBracketSizeFromSlots(ruleSet.slots ?? [])}-team bracket`;
   const qualificationLabel = ruleSet.qualification_format_name ?? 'No qualification format';
   return `${bracketLabel} - ${qualificationLabel}`;
 };
@@ -67,7 +59,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
     updateFormat,
     deleteFormat,
   } = usePlayoffQualificationFormats(leagueId);
-  const { groups } = useLeagueGroups(leagueId);
+  const groups = usePlayoffRuleGroups(leagueId);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<BracketRuleSet | null>(null);

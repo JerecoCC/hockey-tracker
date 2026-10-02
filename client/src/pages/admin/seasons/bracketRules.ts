@@ -52,6 +52,23 @@ export const deriveBracketStructureFromSize = (totalTeams: number): BracketStruc
   };
 };
 
+/**
+ * Bracket size implied by a rule set's slots (minimum 4). Blank Round 1 slots aren't saved,
+ * but every later round keeps its auto-generated winner slots, so the deepest round counts too.
+ */
+export const inferBracketSizeFromSlots = (slots: Array<{ slot_key: string }>): number => {
+  const round1Matchups = new Set(
+    slots
+      .map((s) => s.slot_key.match(/^r1m(\d+)/)?.[1])
+      .filter((v): v is string => v !== undefined),
+  ).size;
+  const deepestRound = Math.max(
+    0,
+    ...slots.map((s) => Number(s.slot_key.match(/^r(\d+)m/)?.[1] ?? 0)),
+  );
+  return Math.max(4, round1Matchups * 2, 2 ** deepestRound);
+};
+
 export const makeSlotKey = (round: number, matchup: number, position: 'team1' | 'team2') =>
   `r${round}m${matchup}${position}`;
 

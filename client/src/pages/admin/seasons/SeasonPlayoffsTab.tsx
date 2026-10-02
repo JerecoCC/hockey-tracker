@@ -25,6 +25,7 @@ import {
   deriveBracketStructureFromSize,
   getMatchupLabel,
   getRoundLabel,
+  inferBracketSizeFromSlots,
   makeSlotKey,
 } from './bracketRules';
 import {
@@ -857,10 +858,16 @@ const SeasonPlayoffsTab = ({
   );
   const activePlayoffFormat =
     (activeRuleSet ? activeRuleSet.qualification_rules : playoffFormat) ?? null;
-  const bracketStructure = useMemo(
-    () => deriveBracketStructure(activePlayoffFormat, groups),
-    [activePlayoffFormat, groups],
-  );
+  // An assigned rule set defines its bracket explicitly, so size it from its Round 1
+  // matchups. Counting qualifiers undercounts when the season lacks the groups
+  // (e.g. conferences) the qualification rules are scoped to.
+  const bracketStructure = useMemo(() => {
+    const ruleSetSlots = activeRuleSet?.slots ?? [];
+    if (ruleSetSlots.some((slot) => slot.slot_key.startsWith('r1m'))) {
+      return deriveBracketStructureFromSize(inferBracketSizeFromSlots(ruleSetSlots));
+    }
+    return deriveBracketStructure(activePlayoffFormat, groups);
+  }, [activeRuleSet, activePlayoffFormat, groups]);
   const roundNames = activeRuleSet?.round_names ?? null;
   const matchupNames = activeRuleSet?.matchup_names ?? null;
 
@@ -912,10 +919,16 @@ const SeasonPlayoffsTab = ({
   const hasRoundOneSeries = series.some((s) => s.round === 1);
   const hasAnyRecordedRegularSeasonGame = hasRecordedRegularSeasonGame(standings);
   const playoffSettingsLocked = isEnded || playoffsStarted;
+  // A rule set can set its own length per round; rounds it leaves out use the season length.
+  const ruleSetRoundBestOf = activeRuleSet?.round_best_of ?? null;
   const playoffSeriesFormatLabel =
-    bestOfPlayoff != null
-      ? `Best of ${bestOfPlayoff}`
-      : `Best of ${leagueBestOfPlayoff} (league default)`;
+    bracketStructure && ruleSetRoundBestOf && Object.keys(ruleSetRoundBestOf).length > 0
+      ? `Best of ${bracketStructure.rounds
+          .map((r) => ruleSetRoundBestOf[String(r.round)] ?? bestOfPlayoff ?? leagueBestOfPlayoff)
+          .join(' / ')} by round`
+      : bestOfPlayoff != null
+        ? `Best of ${bestOfPlayoff}`
+        : `Best of ${leagueBestOfPlayoff} (league default)`;
   const playoffSettingsLockedTitle = playoffsStarted
     ? 'Playoff settings cannot be changed after playoffs start.'
     : 'Playoff settings cannot be changed after the season ends.';
