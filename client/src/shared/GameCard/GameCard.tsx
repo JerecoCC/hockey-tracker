@@ -278,7 +278,9 @@ const GameCardVariant = ({
       style={useLeagueColors ? getLeagueStyle(game) : undefined}
       role={isOpenable && onOpen ? 'button' : undefined}
       tabIndex={isOpenable && onOpen ? 0 : undefined}
-      onClick={isOpenable && onOpen ? () => run(onOpen) : undefined}
+      // With an href, the link overlay handles clicks (so the browser offers
+      // "Open link in new tab"); onOpen then only serves the keyboard.
+      onClick={isOpenable && onOpen && !href ? () => run(onOpen) : undefined}
       onKeyDown={
         isOpenable
           ? (e) => {

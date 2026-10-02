@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { GameRecord } from '@/hooks/useGames';
 import GameCard from './GameCard';
 
@@ -55,6 +56,27 @@ const game: GameRecord = {
 };
 
 describe('GameCard', () => {
+  it('renders the card variant as a real link when given an href', () => {
+    const onOpen = jest.fn();
+    const { container } = render(
+      <MemoryRouter>
+        <GameCard
+          game={game}
+          canOpen
+          href="/games/game-1"
+          onOpen={onOpen}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(container.querySelector('a[href="/games/game-1"]')).toBeInTheDocument();
+    // The link handles clicks, so the card must not navigate a second time.
+    fireEvent.click(screen.getByRole('button'));
+    expect(onOpen).not.toHaveBeenCalled();
+    fireEvent.keyDown(screen.getByRole('button'), { key: 'Enter' });
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
   it('renders the card variant status with the default Tag intent', () => {
     render(<GameCard game={game} />);
 

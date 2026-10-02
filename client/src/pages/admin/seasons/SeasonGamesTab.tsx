@@ -442,7 +442,7 @@ const SeasonGamesTab = ({
     sessionStorage.setItem(teamKey, JSON.stringify(teamFilter));
   }, [teamKey, teamFilter]);
 
-  // Week-view days whose final scores are hidden behind "?".
+  // Week-view days whose scores are hidden behind "?".
   const hiddenScoreDaysKey = `season-games-hidden-score-days:${seasonId}`;
   const [hiddenScoreDays, setHiddenScoreDays] = useState<Set<string>>(() => {
     try {
@@ -1061,8 +1061,9 @@ const SeasonGamesTab = ({
   const renderGameCard = (game: GameRecord, hideScores = false) => {
     if (autofillingGameIds.has(game.id)) return renderWeekGameAutofillSkeleton(game);
 
-    // With scores hidden, GameCard also drops the OT/SO suffix so the tag reads plain "Final".
-    const hideResult = hideScores && game.status === 'final';
+    // A hidden day covers live games too, so a score never shows while a game is played.
+    // GameCard also drops the OT/SO suffix so a final tag reads plain "Final".
+    const hideResult = hideScores && shouldShowGameScore(game);
 
     return (
       <GameCard
@@ -1075,6 +1076,7 @@ const SeasonGamesTab = ({
         showScore={!hideResult && shouldShowGameScore(game)}
         scorePlaceholder={hideResult ? '?' : undefined}
         showTypeIndicator
+        href={gameDetailsPath(game)}
         onOpen={() => openGame(game)}
       />
     );
@@ -1320,21 +1322,22 @@ const SeasonGamesTab = ({
                     : `View games on ${fmtDayHeading(dateKey)}`,
               })}
               renderDayAction={(dateKey, dayGames) => {
-                const hasFinalGames = dayGames.some((game) => game.status === 'final');
-                if (!hasFinalGames && isEnded) return undefined;
+                // Offered for any day with games, so scores can be hidden before they exist.
+                const hasGames = dayGames.length > 0;
+                if (!hasGames && isEnded) return undefined;
                 const scoresHidden = hiddenScoreDays.has(dateKey);
                 return (
                   <div className={styles.dayActions}>
-                    {hasFinalGames && (
+                    {hasGames && (
                       <Toggle
                         variant="toggle"
                         active={!scoresHidden}
                         onActiveChange={() => toggleDayScoresHidden(dateKey)}
                         activeIcon="visibility"
                         inactiveIcon="visibility_off"
-                        activeTooltip="Hide final scores"
-                        inactiveTooltip="Show final scores"
-                        ariaLabel={`${scoresHidden ? 'Show' : 'Hide'} final scores for ${fmtDayHeading(dateKey)}`}
+                        activeTooltip="Hide scores"
+                        inactiveTooltip="Show scores"
+                        ariaLabel={`${scoresHidden ? 'Show' : 'Hide'} scores for ${fmtDayHeading(dateKey)}`}
                       />
                     )}
                     {!isEnded && (
