@@ -736,9 +736,8 @@ const bracketSlotRules = pgTable(
     ruleType: text("rule_type").notNull(),
     rank: smallint("rank"),
     scope: text("scope"),
-    groupId: uuid("group_id").references(() => groups.id, {
-      onDelete: "set null",
-    }),
+    // A league group or an alignment-set group, so no foreign key.
+    groupId: uuid("group_id"),
     pool: jsonb("pool")
       .notNull()
       .default(sql`'[]'::jsonb`),

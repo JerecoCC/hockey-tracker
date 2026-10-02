@@ -50,11 +50,14 @@ async function assertQualificationFormatBelongsToLeague(qualificationFormatId, l
   }
 }
 
-// Helper: insert/replace all slot rules for a rule set
+// Helper: insert/replace all slot rules for a rule set. The delete and insert run as one
+// batch (a single transaction) so a rejected insert can't leave the rule set without slots.
 async function upsertSlots(ruleSetId, slots) {
-  await db.delete(bracketSlotRules).where(eq(bracketSlotRules.ruleSetId, ruleSetId));
-  if (slots.length > 0) {
-    await db.insert(bracketSlotRules).values(slots.map((slot) => ({
+  const removeSlots = db.delete(bracketSlotRules).where(eq(bracketSlotRules.ruleSetId, ruleSetId));
+  if (slots.length === 0) {
+    await removeSlots;
+  } else {
+    await db.batch([removeSlots, db.insert(bracketSlotRules).values(slots.map((slot) => ({
       ruleSetId,
       slotKey: slot.slot_key,
       ruleType: slot.rule_type,
@@ -64,7 +67,7 @@ async function upsertSlots(ruleSetId, slots) {
       pool: slot.pool ?? [],
       choiceRef: slot.choice_ref ?? null,
       matchupRef: slot.matchup_ref ?? null,
-    })));
+    })))]);
   }
   return db
     .select({

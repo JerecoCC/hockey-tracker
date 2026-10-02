@@ -2500,13 +2500,20 @@ async function initSchema() {
                      CHECK (rule_type IN ('seed', 'choice', 'unchosen', 'winner')),
       rank         SMALLINT CHECK (rank BETWEEN 1 AND 16),
       scope        TEXT CHECK (scope IN ('league', 'conference', 'division', 'specific_conference', 'specific_division')),
-      group_id     UUID REFERENCES groups(id) ON DELETE SET NULL,
+      group_id     UUID,
       pool         JSONB NOT NULL DEFAULT '[]',
       choice_ref   TEXT,
       matchup_ref  TEXT,
       created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (rule_set_id, slot_key)
     )
+  `;
+
+  // group_id may point at a league group (groups) or an alignment-set group
+  // (group_alignment_groups), like pool[].group_id, so it can't keep a foreign key to groups.
+  await sql`
+    ALTER TABLE bracket_slot_rules
+      DROP CONSTRAINT IF EXISTS bracket_slot_rules_group_id_fkey
   `;
 
   // ── Migrate slot_key suffix: home→team2, away→team1 ─────────────────────────
