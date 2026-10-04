@@ -5,6 +5,7 @@ import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import StickyHeroCard from '@jerecocc/tracker-ui/components/StickyHeroCard/StickyHeroCard';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import type { GameStatus, TeamInfo } from '@/hooks/useGames';
+import { contrastRatio } from '@/lib/color';
 import { GAME_STATUS_TAG_INTENT } from '@/lib/gamePresentation';
 import { buildTeamDetailsPath, buildUserTeamDetailsPath } from '@/lib/routeSlugs';
 import {
@@ -64,29 +65,6 @@ interface Props {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-/** WCAG relative luminance of a hex color. */
-function relativeLuminance(hex: string): number {
-  const h = hex.replace('#', '');
-  const toLinear = (c: number) => {
-    const s = c / 255;
-    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-  };
-  return (
-    0.2126 * toLinear(parseInt(h.slice(0, 2), 16)) +
-    0.7152 * toLinear(parseInt(h.slice(2, 4), 16)) +
-    0.0722 * toLinear(parseInt(h.slice(4, 6), 16))
-  );
-}
-
-/** WCAG contrast ratio between two hex colors (1–21). */
-function contrastRatio(hex1: string, hex2: string): number {
-  const l1 = relativeLuminance(hex1);
-  const l2 = relativeLuminance(hex2);
-  const lighter = Math.max(l1, l2);
-  const darker = Math.min(l1, l2);
-  return (lighter + 0.05) / (darker + 0.05);
-}
 
 /**
  * Returns a shadow color string when the text/background contrast is below

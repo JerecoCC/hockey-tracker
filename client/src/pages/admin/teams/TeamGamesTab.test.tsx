@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event';
 import { toPng } from 'html-to-image';
 import { toast } from 'react-toastify';
 import useGames from '@/hooks/useGames';
+import { ThemeContext } from '@/context/ThemeContext';
+import { contrastRatio, ensureContrast, mixHex, relativeLuminance } from '@/lib/color';
 import TeamGamesTab from './TeamGamesTab';
 
 const mockNavigate = jest.fn();
@@ -382,9 +384,97 @@ describe('TeamGamesTab', () => {
     expect(homeGameDay).toHaveStyle(
       '--month-calendar-day-number-border: var(--month-calendar-day-bg)',
     );
-    expect(homeGameDay).toHaveStyle(
-      '--month-calendar-day-number-color: var(--team-calendar-card-text, #ffffff)',
-    );
+    expect(homeGameDay).toHaveStyle('--month-calendar-day-number-color: #ffffff');
+  });
+
+  describe('home day colors', () => {
+    const homeDayColors = (theme: 'dark' | 'light', teamId: string, label: string) => {
+      const { unmount } = render(
+        <ThemeContext.Provider
+          value={{
+            theme,
+            isDarkMode: theme === 'dark',
+            setTheme: jest.fn(),
+            toggleTheme: jest.fn(),
+          }}
+        >
+          <TeamGamesTab
+            teamId={teamId}
+            teamName="Team"
+            leagueId="league-1"
+          />
+        </ThemeContext.Provider>,
+      );
+      const day = screen.getByLabelText(label).closest('.calendarDayGameCell') as HTMLElement;
+      const colors = {
+        background: day.style.getPropertyValue('--team-calendar-day-bg'),
+        text: day.style.getPropertyValue('--team-calendar-card-text'),
+        header: day.style.getPropertyValue('--team-calendar-day-accent'),
+      };
+      unmount();
+      return colors;
+    };
+
+    const asHomeTeam = (primary: string, text: string) =>
+      mockUseGames.mockReturnValue({
+        games: [
+          {
+            ...games[0],
+            home_team: { ...games[0].home_team, primary_color: primary, text_color: text },
+          },
+        ],
+        loading: false,
+      });
+
+    it.each([
+      ['light text on a dark primary', '#123456', '#ffffff'],
+      ['dark text on a light primary', '#abcdef', '#111111'],
+      ['maroon text on gold', '#F5A623', '#6B1D2A'],
+      ["San Jose's off-white on orange", '#F69245', '#F7F6F4'],
+    ])('follows the theme with %s', (_, primary, text) => {
+      asHomeTeam(primary, text);
+      const dark = homeDayColors('dark', 'team-1', 'Open game vs Away Team');
+      const light = homeDayColors('light', 'team-1', 'Open game vs Away Team');
+
+      for (const colors of [dark, light]) {
+        // The text reads on the tile, and the tile stays apart from the solid header/outline.
+        expect(contrastRatio(colors.text, colors.background)).toBeGreaterThanOrEqual(4.5);
+        expect(colors.header).toBe(primary);
+        expect(contrastRatio(colors.background, primary)).toBeGreaterThan(1.3);
+      }
+      expect(relativeLuminance(dark.background)).toBeLessThan(
+        relativeLuminance(light.background),
+      );
+    });
+
+    it('keeps the team text and default theme tint when both fit', () => {
+      asHomeTeam('#F69245', '#F7F6F4');
+      expect(homeDayColors('dark', 'team-1', 'Open game vs Away Team')).toEqual({
+        background: mixHex('#F69245', '#1e293b', 0.3),
+        text: '#F7F6F4',
+        header: '#F69245',
+      });
+    });
+
+    it("shades the team's text just enough to read when no tint fits it", () => {
+      // PWHL Hamilton: maroon text on gold, viewed in dark mode.
+      asHomeTeam('#F1A40E', '#64111D');
+      const { background, text } = homeDayColors('dark', 'team-1', 'Open game vs Away Team');
+      const [r, g, b] = [1, 3, 5].map((i) => parseInt(text.slice(i, i + 2), 16));
+
+      expect(text).not.toBe('#64111D');
+      expect(text).not.toBe('#ffffff');
+      expect(r).toBeGreaterThan(g);
+      expect(r).toBeGreaterThan(b);
+      expect(text).toBe(ensureContrast('#64111D', background, 4.5));
+      expect(contrastRatio(text, background)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it('moves a dark primary off the dark surface so the tile stays distinct', () => {
+      const { background } = homeDayColors('dark', 'team-1', 'Open game vs Away Team');
+      expect(background).not.toBe(mixHex('#123456', '#1e293b', 0.3));
+      expect(contrastRatio(background, '#123456')).toBeGreaterThanOrEqual(1.3);
+    });
   });
 
   it('uses the reusable calendar loading grid in month view', () => {

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useContext, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
@@ -9,6 +9,8 @@ import { ScheduleGamesTitle } from '@/shared/ScheduleGamesLayout/ScheduleGamesLa
 import TeamCalendarGameCard from '@/shared/TeamCalendarGameCard/TeamCalendarGameCard';
 import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
+import { contrastRatio, ensureContrast, mixHex } from '@/lib/color';
+import { ThemeContext } from '@/context/ThemeContext';
 import { buildGameDetailsPath, buildUserGameDetailsPath } from '@/lib/routeSlugs';
 import { toEasternDateKey } from '@/pages/admin/seasons/seasonDateUtils';
 import styles from './TeamGamesTab.module.scss';
@@ -72,32 +74,89 @@ const formatWinnerFirstScore = (away: number, home: number) =>
 
 type CalendarDayStyle = CSSProperties & {
   '--team-calendar-day-accent'?: string;
+  '--team-calendar-day-bg'?: string;
   '--team-calendar-card-text'?: string;
   '--month-calendar-day-number-border'?: string;
   '--month-calendar-day-number-bg'?: string;
   '--month-calendar-day-number-color'?: string;
 };
 
-const getTeamCalendarDayStyle = (game: GameRecord, teamId: string): CalendarDayStyle => {
-  const isHomeGame = game.home_team.id === teamId;
-  const homeTextColor = game.home_team.text_color || '#ffffff';
-  const dayAccent = isHomeGame
-    ? game.home_team.primary_color || '#334155'
-    : 'var(--team-calendar-away-day-accent, #ffffff)';
-  const dayBodyText = isHomeGame
-    ? `var(--team-calendar-card-text, ${homeTextColor})`
-    : 'var(--app-text, #e2e8f0)';
+// Theme colors from index.scss home days are tinted from: the surface, then the deeper page
+// background (dark) or white (light).
+const HOME_DAY_THEME_BASES = {
+  dark: ['#1e293b', '#0f172a'],
+  light: ['#f5f9ff', '#ffffff'],
+};
+// Primary shares to try, closest to the default tint first. The cap keeps the tile apart from
+// the solid primary header and outline.
+const HOME_DAY_PRIMARY_SHARES = [0.3, 0.35, 0.4, 0.45, 0.25, 0.2];
+const HOME_DAY_MIN_TEXT_CONTRAST = 4.5;
+// How far the tile must sit from the header/outline color, like away days.
+const HOME_DAY_MIN_HEADER_CONTRAST = 1.3;
 
+/**
+ * A home day's background and text. The tile is the theme surface tinted with the team's
+ * primary, as long as the team's text reads on it and the tile stays distinguishable from the
+ * primary header and outline; otherwise other tints of the theme are tried. If the team's text
+ * can't read on any distinct tile, it's lightened or darkened just enough to read, keeping its hue.
+ */
+const getHomeDayColors = (primary: string, text: string, isDarkMode: boolean) => {
+  const bases = isDarkMode ? HOME_DAY_THEME_BASES.dark : HOME_DAY_THEME_BASES.light;
+  const candidates = bases.flatMap((base) =>
+    HOME_DAY_PRIMARY_SHARES.map((share) => mixHex(primary, base, share)),
+  );
+  // Non-hex team colors can't be measured, so use the default tint as given.
+  if (candidates.some((candidate) => !candidate) || !mixHex(text, text, 1)) {
+    return {
+      background: `color-mix(in srgb, ${primary} 30%, var(--app-surface, ${bases[0]}))`,
+      text,
+    };
+  }
+  const tiles = candidates as string[];
+  const distinct = (tile: string) =>
+    contrastRatio(tile, primary) >= HOME_DAY_MIN_HEADER_CONTRAST;
+  const fitting = tiles.find(
+    (tile) => distinct(tile) && contrastRatio(text, tile) >= HOME_DAY_MIN_TEXT_CONTRAST,
+  );
+  if (fitting) return { background: fitting, text };
+
+  const background =
+    tiles.find(distinct) ??
+    tiles.reduce((best, tile) =>
+      contrastRatio(tile, primary) > contrastRatio(best, primary) ? tile : best,
+    );
+  return { background, text: ensureContrast(text, background, HOME_DAY_MIN_TEXT_CONTRAST) };
+};
+
+const getTeamCalendarDayStyle = (
+  game: GameRecord,
+  teamId: string,
+  isDarkMode: boolean,
+): CalendarDayStyle => {
+  const isHomeGame = game.home_team.id === teamId;
+  const homePrimaryColor = game.home_team.primary_color || '#334155';
+
+  if (!isHomeGame) {
+    return {
+      '--team-calendar-day-accent': 'var(--team-calendar-away-day-accent, #ffffff)',
+      '--month-calendar-day-number-border': 'var(--month-calendar-day-bg)',
+      '--month-calendar-day-number-bg': 'var(--month-calendar-day-bg)',
+      '--month-calendar-day-number-color': 'var(--app-text, #e2e8f0)',
+    };
+  }
+
+  const homeDay = getHomeDayColors(
+    homePrimaryColor,
+    game.home_team.text_color || '#ffffff',
+    isDarkMode,
+  );
   return {
-    '--team-calendar-day-accent': dayAccent,
+    '--team-calendar-day-accent': homePrimaryColor,
+    '--team-calendar-day-bg': homeDay.background,
+    '--team-calendar-card-text': homeDay.text,
     '--month-calendar-day-number-border': 'var(--month-calendar-day-bg)',
     '--month-calendar-day-number-bg': 'var(--month-calendar-day-bg)',
-    '--month-calendar-day-number-color': dayBodyText,
-    ...(isHomeGame
-      ? {
-          '--team-calendar-card-text': `var(--team-calendar-home-card-text, ${homeTextColor})`,
-        }
-      : {}),
+    '--month-calendar-day-number-color': homeDay.text,
   };
 };
 
@@ -106,16 +165,22 @@ const TeamCalendarGame = ({
   teamId,
   onOpen,
   dayNumber,
+  isDarkMode,
 }: {
   game: GameRecord;
   teamId: string;
   onOpen: (game: GameRecord) => void;
   dayNumber?: number;
+  isDarkMode: boolean;
 }) => {
   const isHomeGame = game.home_team.id === teamId;
   const team = isHomeGame ? game.home_team : game.away_team;
   const opponent = isHomeGame ? game.away_team : game.home_team;
-  const logoAccentColor = isHomeGame ? team.text_color || '#ffffff' : '#ffffff';
+  // Matches the day's text, which can fall back to the theme's when the team's doesn't read.
+  const logoAccentColor = isHomeGame
+    ? getHomeDayColors(team.primary_color || '#334155', team.text_color || '#ffffff', isDarkMode)
+        .text
+    : '#ffffff';
   const { home, away, winnerTeamId } = displayScore(game);
   const teamGoals = isHomeGame ? home : away;
   const opponentGoals = isHomeGame ? away : home;
@@ -192,6 +257,8 @@ const TeamGamesTab = ({
   onCalendarMonthChange,
   mode = 'admin',
 }: Props) => {
+  // Read directly so the calendar still renders outside a ThemeProvider; dark is the default.
+  const isDarkMode = useContext(ThemeContext)?.isDarkMode ?? true;
   const navigate = useNavigate();
   const [exportingMonthImage, setExportingMonthImage] = useState(false);
   const [internalCalendarMonth, setInternalCalendarMonth] = useState<Date>(() =>
@@ -328,7 +395,7 @@ const TeamGamesTab = ({
             getDayProps={({ dateKey }) => {
               const dayGame = gamesByDate.get(dateKey);
               if (!dayGame) return {};
-              return { style: getTeamCalendarDayStyle(dayGame, teamId) };
+              return { style: getTeamCalendarDayStyle(dayGame, teamId, isDarkMode) };
             }}
             renderDayContent={({ dateKey }) => {
               const dayGame = gamesByDate.get(dateKey);
@@ -339,6 +406,7 @@ const TeamGamesTab = ({
                     game={dayGame}
                     teamId={teamId}
                     onOpen={openGame}
+                    isDarkMode={isDarkMode}
                   />
                 </div>
               ) : null;
