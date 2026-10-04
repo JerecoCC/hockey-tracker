@@ -9,10 +9,10 @@ import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
 import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import GameCard from '@/shared/GameCard/GameCard';
+import ScheduleWatchModal from '@/shared/ScheduleWatchModal/ScheduleWatchModal';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import { getUserGameActions } from '@/shared/GameCard/userGameActionItems';
 import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
-import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import StatItem from '@jerecocc/tracker-ui/components/StatItem/StatItem';
 import { useAuth } from '@/context/AuthContext';
@@ -325,10 +325,6 @@ const UserDashboard = () => {
     }
   };
 
-  const scheduleDateInvalid = scheduleTarget
-    ? isInvalidWatchScheduleDate(scheduleTarget, scheduleDate, tzPref)
-    : false;
-
   const isFavoriteTeamGame = (game: GameRecord) =>
     favorites.includes(game.home_team.id) || favorites.includes(game.away_team.id);
 
@@ -569,49 +565,19 @@ const UserDashboard = () => {
         />
       )}
 
-      <Modal
+      <ScheduleWatchModal
         open={!!scheduleTarget}
-        title="Postpone watch"
+        game={scheduleTarget}
+        value={scheduleDate}
+        busy={scheduleBusy}
+        onChange={setScheduleDate}
         onClose={() => {
           if (scheduleBusy) return;
           setScheduleTarget(null);
           setScheduleDate('');
         }}
-        onConfirm={() => void saveSchedule()}
-        confirmLabel={scheduleBusy ? 'Saving...' : 'Save date'}
-        confirmDisabled={scheduleBusy || scheduleDateInvalid}
-        busy={scheduleBusy}
-        footerStart={
-          scheduleDate ? (
-            <Button
-              type="button"
-              variant="ghost"
-              intent="danger"
-              onClick={() => setScheduleDate('')}
-              disabled={scheduleBusy}
-            >
-              Clear date
-            </Button>
-          ) : undefined
-        }
-      >
-        {scheduleTarget && (
-          <div className={styles.scheduleModalBody}>
-            <p className={styles.scheduleModalCopy}>
-              Choose when you plan to watch {scheduleTarget.away_team.code} @{' '}
-              {scheduleTarget.home_team.code} on a later date. Dates use your local timezone.
-            </p>
-            <DatePicker
-              value={scheduleDate}
-              onChange={setScheduleDate}
-              placeholder="Watch date"
-            />
-            {scheduleDateInvalid && (
-              <p className={styles.scheduleModalError}>Choose a watch date after the game date.</p>
-            )}
-          </div>
-        )}
-      </Modal>
+        onSave={() => void saveSchedule()}
+      />
 
       <ConfirmModal
         open={!!confirmSkipGame}

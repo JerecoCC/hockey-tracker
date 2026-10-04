@@ -537,13 +537,15 @@ describe('UserDashboard', () => {
     );
   });
 
-  it('prevents postponing a watch to on or before the local game date', async () => {
+  it('prevents postponing a watch to before the local game date', async () => {
     render(<UserDashboard />);
 
     fireEvent.click(screen.getByLabelText('Postpone watch'));
     const input = screen.getByLabelText('Watch date');
+    // The picker starts on the game date, which means "not postponed"; the day before is invalid.
+    expect(input).toHaveValue(toLocalDateKey(new Date('2026-06-21T19:00:00-04:00')));
     fireEvent.change(input, {
-      target: { value: toLocalDateKey(new Date('2026-06-21T19:00:00-04:00')) },
+      target: { value: toLocalDateKey(new Date('2026-06-20T19:00:00-04:00')) },
     });
 
     expect(screen.getByText(/after the game date/i)).toBeInTheDocument();

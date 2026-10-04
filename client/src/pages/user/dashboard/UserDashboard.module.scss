@@ -325,26 +325,6 @@
   }
 }
 
-.scheduleModal {
-  &Body {
-    display: flex;
-    flex-direction: column;
-    gap: $space-md;
-  }
-
-  &Copy {
-    margin: 0;
-    color: var(--app-text-muted, #{$text-dim});
-    font-size: $font-sm;
-  }
-
-  &Error {
-    margin: 0;
-    color: $danger-light;
-    font-size: $font-sm;
-  }
-}
-
 .srOnly {
   position: absolute;
   width: 1px;

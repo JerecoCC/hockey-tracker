@@ -2443,14 +2443,22 @@ describe('UserGames schedule views', () => {
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
-  it('prevents postponing a watch to on or before the local game date', async () => {
+  it('prevents postponing a watch to before the local game date', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
     await user.click(screen.getAllByRole('button', { name: 'Postpone watch' })[0]);
-    const input = screen.getByLabelText('Watch date');
+    const input = screen.getByLabelText('Watch date') as HTMLInputElement;
+    // The picker starts on the game date ("not postponed"); the day before is invalid.
+    const [year, month, day] = input.value.split('-').map(Number);
+    const dayBefore = new Date(year, month - 1, day - 1);
     await user.clear(input);
-    await user.type(input, localDateKeyForGame(games[0]) ?? scheduledWatchDate);
+    await user.type(
+      input,
+      `${dayBefore.getFullYear()}-${String(dayBefore.getMonth() + 1).padStart(2, '0')}-${String(
+        dayBefore.getDate(),
+      ).padStart(2, '0')}`,
+    );
 
     expect(screen.getByText(/after the game date/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save date' })).toBeDisabled();
