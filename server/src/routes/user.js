@@ -371,8 +371,18 @@ router.get('/games', async (req, res) => {
   if (month && !/^\d{4}-\d{2}$/.test(String(month))) {
     return res.status(400).json({ error: 'month must be a YYYY-MM value' });
   }
+  // Inclusive date range, e.g. a month calendar grid that shows the neighbouring months' days.
+  const from = req.query.from ?? null;
+  const to = req.query.to ?? null;
+  for (const [name, value] of [['from', from], ['to', to]]) {
+    if (value && !/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+      return res.status(400).json({ error: `${name} must be a YYYY-MM-DD date` });
+    }
+  }
   const weekFilter = week ? String(week) : null;
   const monthFilter = month ? String(month) : null;
+  const fromFilter = from ? String(from) : null;
+  const toFilter = to ? String(to) : null;
   const dateFilter =
     typeof req.query.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)
       ? req.query.date
@@ -667,6 +677,14 @@ router.get('/games', async (req, res) => {
         AND (
           ${monthFilter}::text IS NULL
           OR user_game_dates.effective_user_date < ((${monthFilter} || '-01')::date + INTERVAL '1 month' + INTERVAL '1 day')
+        )
+        AND (
+          ${fromFilter}::date IS NULL
+          OR user_game_dates.effective_user_date >= (${fromFilter}::date - INTERVAL '1 day')
+        )
+        AND (
+          ${toFilter}::date IS NULL
+          OR user_game_dates.effective_user_date < (${toFilter}::date + INTERVAL '2 days')
         )
       ORDER BY
         CASE g.status WHEN 'in_progress' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,

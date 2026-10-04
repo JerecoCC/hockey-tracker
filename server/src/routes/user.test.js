@@ -586,6 +586,27 @@ describe('GET /api/user/games', () => {
     expect(queryText).toContain("INTERVAL '1 month'");
   });
 
+  it('filters games by an inclusive from/to date range', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+
+    const res = await request(app).get('/api/user/games?from=2024-09-29&to=2024-11-02');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(sql.mock.calls[0].slice(1)).toEqual(
+      expect.arrayContaining(['2024-09-29', '2024-11-02']),
+    );
+    expect(queryText).toContain("INTERVAL '2 days'");
+  });
+
+  it('rejects invalid from/to dates', async () => {
+    const res = await request(app).get('/api/user/games?from=2024-09&to=2024-11-02');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/from must be/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
   it('rejects invalid week and month query values', async () => {
     const weekRes = await request(app).get('/api/user/games?week=October-7');
     const monthRes = await request(app).get('/api/user/games?month=2024-October');

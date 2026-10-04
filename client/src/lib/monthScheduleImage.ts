@@ -85,6 +85,11 @@ export const downloadMonthScheduleImage = async ({
       display: none !important;
     }
 
+    /* Neighbouring months' days are for dragging games in the app; the image shows one month. */
+    [data-calendar-export="true"] [data-outside-month="true"] {
+      visibility: hidden !important;
+    }
+
     [data-calendar-export="true"] [class*="dayCell"],
     [data-calendar-export="true"] [class*="emptyCell"] {
       aspect-ratio: auto !important;

@@ -268,13 +268,27 @@ const isDateKeyInWeek = (dateKey: string, weekStartKey: string) => {
   return date >= weekStart && date <= weekEnd;
 };
 
+/**
+ * First and last day the month calendar shows: the month padded to whole weeks with the
+ * previous and next month's days, which the calendar shows so games can be dragged onto them.
+ */
+const calendarGridRange = (month: Date) => {
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
+  const firstDay = new Date(year, monthIndex, 1).getDay();
+  const lastDate = new Date(year, monthIndex + 1, 0);
+  return {
+    start: new Date(year, monthIndex, 1 - firstDay),
+    end: new Date(year, monthIndex, lastDate.getDate() + (6 - lastDate.getDay())),
+  };
+};
+
+// The month query loads the whole calendar grid, plus a day either side like the server.
 const isDateKeyInMonthQueryWindow = (dateKey: string, monthKey: string) => {
   if (!DATE_ONLY_RE.test(dateKey) || !MONTH_ONLY_RE.test(monthKey)) return false;
-  const month = fromMonthPickerValue(monthKey);
-  const start = addDays(month, -1);
-  const end = addDays(addMonths(month, 1), 1);
+  const { start, end } = calendarGridRange(fromMonthPickerValue(monthKey));
   const date = dateKeyToDate(dateKey);
-  return date >= start && date < end;
+  return date >= addDays(start, -1) && date <= addDays(end, 1);
 };
 
 const userGameMatchesCachedQuery = (
@@ -715,7 +729,11 @@ const UserGames = () => {
       if (selectedTeamIdsParam) params.team_ids = selectedTeamIdsParam;
       if (showSkippedGames) params.include_skipped = 'true';
       if (gamesPeriodParams.week) params.week = gamesPeriodParams.week;
-      if (gamesPeriodParams.month) params.month = gamesPeriodParams.month;
+      if (gamesPeriodParams.month) {
+        const { start, end } = calendarGridRange(fromMonthPickerValue(gamesPeriodParams.month));
+        params.from = dateToISO(start);
+        params.to = dateToISO(end);
+      }
       const { data } = await axios.get<GameRecord[]>(`${API}/user/games`, {
         headers: authHeaders(),
         params,
@@ -1664,6 +1682,7 @@ const UserGames = () => {
             <MonthCalendar
               ref={calendarGridRef}
               month={calendarMonth}
+              showAdjacentMonthDays
               loading={isLoading}
               getDayHeaderRight={({ dateKey }) => {
                 const gameCount = gamesByCalendarDate.get(dateKey)?.length ?? 0;
@@ -1679,6 +1698,7 @@ const UserGames = () => {
               }}
               getDayProps={({ dateKey }) => ({
                 'data-date-key': dateKey,
+                'data-drop-target': calendarDropDateKey === dateKey ? 'true' : undefined,
                 onDragEnter: handleCalendarDragEnter(dateKey),
                 onDragOver: handleCalendarDragOver(dateKey),
                 onDragLeave: handleCalendarDragLeave(dateKey),
