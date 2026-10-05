@@ -55,7 +55,11 @@ import {
   toEasternDateKey,
   weekBelongsToCalendarMonth,
 } from './seasonDateUtils';
-import { partitionAutofillingGames } from './seasonGamesAutofillUtils';
+import {
+  hasFinalGame,
+  isDayAutofillStatus,
+  partitionAutofillingGames,
+} from './seasonGamesAutofillUtils';
 import styles from './SeasonGamesTab.module.scss';
 
 import { API, authHeaders, getAggregateErrorMessage as getErrorMessage } from '@/lib/apiClient';
@@ -171,9 +175,7 @@ const getAutofillLeagueCode = (
 const isDayAutofillCandidate = (game: GameRecord, leagueCode: string | null | undefined) =>
   !!getAutofillLeagueCode(game, leagueCode) &&
   !!game.scheduled_at &&
-  (game.status === 'scheduled' ||
-    game.status === 'in_progress' ||
-    (game.status === 'final' && (!game.time_start || !game.time_end)));
+  isDayAutofillStatus(game.status);
 
 const fetchNhlScheduleIndex = async (dateKey: string) => {
   const { data } = await axios.get<NhlScheduleResponse>(`${API}/admin/games/nhl-api`, {
@@ -442,7 +444,8 @@ const SeasonGamesTab = ({
     sessionStorage.setItem(teamKey, JSON.stringify(teamFilter));
   }, [teamKey, teamFilter]);
 
-  // Week-view days whose scores are hidden behind "?".
+  // Week-view days whose scores are hidden behind "?". Scores show by default; hiding is only
+  // offered (and only applies) on days with a final game.
   const hiddenScoreDaysKey = `season-games-hidden-score-days:${seasonId}`;
   const [hiddenScoreDays, setHiddenScoreDays] = useState<Set<string>>(() => {
     try {
@@ -455,6 +458,12 @@ const SeasonGamesTab = ({
   useEffect(() => {
     sessionStorage.setItem(hiddenScoreDaysKey, JSON.stringify([...hiddenScoreDays]));
   }, [hiddenScoreDaysKey, hiddenScoreDays]);
+
+  const areDayScoresHidden = (dateKey: string, dayGames: GameRecord[]) =>
+    hasFinalGame(dayGames) && hiddenScoreDays.has(dateKey);
+
+  const hideDayScores = (dateKey: string) =>
+    setHiddenScoreDays((current) => (current.has(dateKey) ? current : new Set(current).add(dateKey)));
 
   const toggleDayScoresHidden = (dateKey: string) => {
     setHiddenScoreDays((current) => {
@@ -900,6 +909,8 @@ const SeasonGamesTab = ({
       }
 
       await queryClient.invalidateQueries({ queryKey: ['games'] });
+      // Freshly filled results stay behind "?" until the day's scores are shown again.
+      if (filled > 0) hideDayScores(dateKey);
 
       if (failures.length > 0) {
         console.warn(`${autofillLeagueLabel} day auto-fill skipped games:`, failures);
@@ -1083,7 +1094,7 @@ const SeasonGamesTab = ({
   };
 
   const renderWeekGameList = (dateKey: string, dayGames: GameRecord[]) => {
-    const hideScores = hiddenScoreDays.has(dateKey);
+    const hideScores = areDayScoresHidden(dateKey, dayGames);
     if (autofillDay !== dateKey) return dayGames.map((game) => renderGameCard(game, hideScores));
 
     const { revealedGames, loadingGames } = partitionAutofillingGames(
@@ -1322,13 +1333,12 @@ const SeasonGamesTab = ({
                     : `View games on ${fmtDayHeading(dateKey)}`,
               })}
               renderDayAction={(dateKey, dayGames) => {
-                // Offered for any day with games, so scores can be hidden before they exist.
-                const hasGames = dayGames.length > 0;
-                if (!hasGames && isEnded) return undefined;
-                const scoresHidden = hiddenScoreDays.has(dateKey);
+                const canHideScores = hasFinalGame(dayGames);
+                if (!canHideScores && isEnded) return undefined;
+                const scoresHidden = areDayScoresHidden(dateKey, dayGames);
                 return (
                   <div className={styles.dayActions}>
-                    {hasGames && (
+                    {canHideScores && (
                       <Toggle
                         variant="toggle"
                         active={!scoresHidden}

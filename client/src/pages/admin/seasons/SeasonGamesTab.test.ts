@@ -8,7 +8,11 @@ import {
   toEasternDateKey,
   weekBelongsToCalendarMonth,
 } from './seasonDateUtils';
-import { partitionAutofillingGames } from './seasonGamesAutofillUtils';
+import {
+  hasFinalGame,
+  isDayAutofillStatus,
+  partitionAutofillingGames,
+} from './seasonGamesAutofillUtils';
 
 const dateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -101,5 +105,20 @@ describe('season games auto-fill placeholders', () => {
 
     expect(revealedGames.map((game) => game.id)).toEqual(['already-visible', 'also-visible']);
     expect(loadingGames.map((game) => game.id)).toEqual(['loading-1', 'loading-2']);
+  });
+});
+
+describe('season games day auto-fill and hidden scores', () => {
+  it('only auto-fills games that are not final', () => {
+    expect(isDayAutofillStatus('scheduled')).toBe(true);
+    expect(isDayAutofillStatus('in_progress')).toBe(true);
+    expect(isDayAutofillStatus('final')).toBe(false);
+    expect(isDayAutofillStatus('postponed')).toBe(false);
+  });
+
+  it('offers hiding scores only on days with a final game', () => {
+    expect(hasFinalGame([{ status: 'scheduled' }, { status: 'final' }])).toBe(true);
+    expect(hasFinalGame([{ status: 'scheduled' }, { status: 'in_progress' }])).toBe(false);
+    expect(hasFinalGame([])).toBe(false);
   });
 });
