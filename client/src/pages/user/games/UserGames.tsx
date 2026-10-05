@@ -299,8 +299,11 @@ const userGameMatchesCachedQuery = (
   if (query.statusFilter !== 'all' && game.status !== query.statusFilter) return false;
   if (query.leagueId !== 'all' && game.league_id !== query.leagueId) return false;
   if (!query.includeSkipped && game.skipped_by_user) return false;
+  // Like the server, games added to watch (scheduled) or watched show for any team.
+  const onWatchList = !!getScheduledWatchDateKey(game.scheduled_for) || !!game.watched_by_user;
   if (
     query.teamIds.size > 0 &&
+    !onWatchList &&
     !query.teamIds.has(game.home_team.id) &&
     !query.teamIds.has(game.away_team.id)
   ) {

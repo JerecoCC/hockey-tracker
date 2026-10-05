@@ -640,6 +640,11 @@ router.get('/games', async (req, res) => {
               )
             )
           )
+          -- Games the user added to watch (scheduled) or watched show for any team, so they
+          -- stay in the user's schedule alongside the selected or favorite teams.
+          OR uwg.scheduled_for IS NOT NULL
+          OR uwg.watched_on IS NOT NULL
+          OR uwg.watched_at IS NOT NULL
         )
         AND (${includeSkipped}::boolean OR uwg.skipped_at IS NULL)
         AND (

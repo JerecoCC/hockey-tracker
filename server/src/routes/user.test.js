@@ -586,6 +586,19 @@ describe('GET /api/user/games', () => {
     expect(queryText).toContain("INTERVAL '1 month'");
   });
 
+  it('keeps games added to watch or watched alongside the team filter', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+
+    const res = await request(app).get('/api/user/games?team_ids=team-9');
+    const queryText = sql.mock.calls[0][0].join(' ').replace(/\s+/g, ' ');
+
+    expect(res.status).toBe(200);
+    // The watch-list conditions are OR'd with the team/favorite match, not nested inside it.
+    expect(queryText).toMatch(
+      /\) \) \) -- [^\n]*? OR uwg\.scheduled_for IS NOT NULL OR uwg\.watched_on IS NOT NULL OR uwg\.watched_at IS NOT NULL \) AND \(/,
+    );
+  });
+
   it('filters games by an inclusive from/to date range', async () => {
     sql.mockResolvedValueOnce([GAME]);
 
