@@ -9,7 +9,7 @@ import { ScheduleGamesTitle } from '@/shared/ScheduleGamesLayout/ScheduleGamesLa
 import TeamCalendarGameCard from '@/shared/TeamCalendarGameCard/TeamCalendarGameCard';
 import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
-import { contrastRatio, ensureContrast, mixHex } from '@/lib/color';
+import { getTeamTintColors } from '@/lib/teamTint';
 import { ThemeContext } from '@/context/ThemeContext';
 import { buildGameDetailsPath, buildUserGameDetailsPath } from '@/lib/routeSlugs';
 import { toEasternDateKey } from '@/pages/admin/seasons/seasonDateUtils';
@@ -81,53 +81,6 @@ type CalendarDayStyle = CSSProperties & {
   '--month-calendar-day-number-color'?: string;
 };
 
-// Theme colors from index.scss home days are tinted from: the surface, then the deeper page
-// background (dark) or white (light).
-const HOME_DAY_THEME_BASES = {
-  dark: ['#1e293b', '#0f172a'],
-  light: ['#f5f9ff', '#ffffff'],
-};
-// Primary shares to try, closest to the default tint first. The cap keeps the tile apart from
-// the solid primary header and outline.
-const HOME_DAY_PRIMARY_SHARES = [0.3, 0.35, 0.4, 0.45, 0.25, 0.2];
-const HOME_DAY_MIN_TEXT_CONTRAST = 4.5;
-// How far the tile must sit from the header/outline color, like away days.
-const HOME_DAY_MIN_HEADER_CONTRAST = 1.3;
-
-/**
- * A home day's background and text. The tile is the theme surface tinted with the team's
- * primary, as long as the team's text reads on it and the tile stays distinguishable from the
- * primary header and outline; otherwise other tints of the theme are tried. If the team's text
- * can't read on any distinct tile, it's lightened or darkened just enough to read, keeping its hue.
- */
-const getHomeDayColors = (primary: string, text: string, isDarkMode: boolean) => {
-  const bases = isDarkMode ? HOME_DAY_THEME_BASES.dark : HOME_DAY_THEME_BASES.light;
-  const candidates = bases.flatMap((base) =>
-    HOME_DAY_PRIMARY_SHARES.map((share) => mixHex(primary, base, share)),
-  );
-  // Non-hex team colors can't be measured, so use the default tint as given.
-  if (candidates.some((candidate) => !candidate) || !mixHex(text, text, 1)) {
-    return {
-      background: `color-mix(in srgb, ${primary} 30%, var(--app-surface, ${bases[0]}))`,
-      text,
-    };
-  }
-  const tiles = candidates as string[];
-  const distinct = (tile: string) =>
-    contrastRatio(tile, primary) >= HOME_DAY_MIN_HEADER_CONTRAST;
-  const fitting = tiles.find(
-    (tile) => distinct(tile) && contrastRatio(text, tile) >= HOME_DAY_MIN_TEXT_CONTRAST,
-  );
-  if (fitting) return { background: fitting, text };
-
-  const background =
-    tiles.find(distinct) ??
-    tiles.reduce((best, tile) =>
-      contrastRatio(tile, primary) > contrastRatio(best, primary) ? tile : best,
-    );
-  return { background, text: ensureContrast(text, background, HOME_DAY_MIN_TEXT_CONTRAST) };
-};
-
 const getTeamCalendarDayStyle = (
   game: GameRecord,
   teamId: string,
@@ -145,7 +98,7 @@ const getTeamCalendarDayStyle = (
     };
   }
 
-  const homeDay = getHomeDayColors(
+  const homeDay = getTeamTintColors(
     homePrimaryColor,
     game.home_team.text_color || '#ffffff',
     isDarkMode,
@@ -178,7 +131,7 @@ const TeamCalendarGame = ({
   const opponent = isHomeGame ? game.away_team : game.home_team;
   // Matches the day's text, which can fall back to the theme's when the team's doesn't read.
   const logoAccentColor = isHomeGame
-    ? getHomeDayColors(team.primary_color || '#334155', team.text_color || '#ffffff', isDarkMode)
+    ? getTeamTintColors(team.primary_color || '#334155', team.text_color || '#ffffff', isDarkMode)
         .text
     : '#ffffff';
   const { home, away, winnerTeamId } = displayScore(game);
