@@ -767,6 +767,11 @@ const SeasonGamesTab = ({
       return;
     }
 
+    // Hide the day's scores before any game is filled, so each result arrives behind "?"
+    // instead of showing as it's revealed. Restored below if the run fills nothing.
+    const scoresWereHidden = hiddenScoreDays.has(dateKey);
+    hideDayScores(dateKey);
+
     setAutofillDay(dateKey);
     setAutofillingGameIds(new Set(candidates.map((game) => game.id)));
     setManualMoveReports([]);
@@ -909,8 +914,6 @@ const SeasonGamesTab = ({
       }
 
       await queryClient.invalidateQueries({ queryKey: ['games'] });
-      // Freshly filled results stay behind "?" until the day's scores are shown again.
-      if (filled > 0) hideDayScores(dateKey);
 
       if (failures.length > 0) {
         console.warn(`${autofillLeagueLabel} day auto-fill skipped games:`, failures);
@@ -941,6 +944,14 @@ const SeasonGamesTab = ({
         getErrorMessage(err, `Failed to auto-fill ${autofillLeagueLabel} games for this day.`),
       );
     } finally {
+      // Nothing was filled, so put the day's scores back the way they were.
+      if (filled === 0 && !scoresWereHidden) {
+        setHiddenScoreDays((current) => {
+          const next = new Set(current);
+          next.delete(dateKey);
+          return next;
+        });
+      }
       setAutofillDay(null);
       setAutofillingGameIds(new Set());
     }
