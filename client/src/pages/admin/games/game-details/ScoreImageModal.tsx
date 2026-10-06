@@ -1,9 +1,11 @@
 import {
   type ChangeEvent,
   type CSSProperties,
+  Fragment,
   type PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -500,14 +502,61 @@ const ScoreCardTeamLogo = ({ team }: { team: DrawTeam | null }) => {
   );
 };
 
+/**
+ * Text that wraps only between words. When a single word is wider than the box (e.g.
+ * WINTERHAWKS), the font shrinks just enough for that word to fit instead of breaking it.
+ */
+export const ScoreCardFitWords = ({ as: Tag, text }: { as: 'span' | 'strong'; text: string }) => {
+  const ref = useRef<HTMLElement>(null);
+  const [fontSize, setFontSize] = useState<number | null>(null);
+
+  // Start each new text from the stylesheet size, then measure in the next layout pass.
+  useLayoutEffect(() => setFontSize(null), [text]);
+
+  useLayoutEffect(() => {
+    if (fontSize !== null) return;
+    const node = ref.current;
+    if (!node) return;
+    const fit = () => {
+      const available = node.clientWidth;
+      const widestWord = Math.max(
+        0,
+        ...Array.from(node.children, (word) => (word as HTMLElement).scrollWidth),
+      );
+      if (available <= 0 || widestWord <= available) return;
+      const current = Number.parseFloat(window.getComputedStyle(node).fontSize);
+      if (!Number.isFinite(current) || current <= 0) return;
+      setFontSize(Math.floor((current * available) / widestWord));
+    };
+    fit();
+    // Web fonts can change word widths after the first layout.
+    void document.fonts?.ready.then(fit);
+  }, [fontSize, text]);
+
+  const words = text.split(/\s+/).filter(Boolean);
+  return (
+    <Tag
+      ref={ref as never}
+      style={fontSize ? { fontSize: `${fontSize}px` } : undefined}
+    >
+      {words.map((word, index) => (
+        <Fragment key={`${word}-${index}`}>
+          {index > 0 && ' '}
+          <span className={styles.scoreCardWord}>{word}</span>
+        </Fragment>
+      ))}
+    </Tag>
+  );
+};
+
 const ScoreCardTeamName = ({ team }: { team: DrawTeam | null }) => {
   const placeName = team?.place_name?.trim() ?? '';
   const teamName = team?.team_name?.trim() || team?.name || team?.code || 'TBD';
 
   return (
     <span className={styles.scoreCardTeamName}>
-      {placeName && <span>{placeName}</span>}
-      <strong>{teamName}</strong>
+      {placeName && <ScoreCardFitWords as="span" text={placeName} />}
+      <ScoreCardFitWords as="strong" text={teamName} />
     </span>
   );
 };

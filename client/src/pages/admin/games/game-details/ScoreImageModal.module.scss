@@ -486,22 +486,26 @@
     text-align: center;
     text-transform: uppercase;
 
-    span {
+    > span {
       font-size: 23px;
       font-weight: 900;
       letter-spacing: 0.18em;
       line-height: 1;
-      overflow-wrap: anywhere;
     }
 
-    strong {
+    > strong {
       color: #fff;
       font-size: 34px;
       font-weight: 950;
       letter-spacing: 0.08em;
       line-height: 1;
-      overflow-wrap: anywhere;
     }
+  }
+
+  // Lines break between words only; ScoreCardFitWords shrinks a word too wide to fit.
+  &Word {
+    display: inline-block;
+    white-space: nowrap;
   }
 
   &ScorePanel {

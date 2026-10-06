@@ -5,7 +5,7 @@ import { toPng } from 'html-to-image';
 import { ThemeContext } from '@/context/ThemeContext';
 import type { GameRecord } from '@/hooks/useGames';
 import useLeagues from '@/hooks/useLeagues';
-import ScoreImageModal from './ScoreImageModal';
+import ScoreImageModal, { ScoreCardFitWords } from './ScoreImageModal';
 
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn() }));
@@ -621,5 +621,50 @@ describe('ScoreImageModal', () => {
     expect(screen.getByText('Playoffs 2026')).toBeInTheDocument();
     expect(screen.getByText('Eastern Final')).toBeInTheDocument();
     expect(screen.queryByText('Finals')).not.toBeInTheDocument();
+  });
+});
+
+describe('ScoreCardFitWords', () => {
+  // jsdom has no layout: the name box is 200px wide, and a word is 30px per letter at 34px.
+  const fakeLayout = () => {
+    const clientWidth = jest
+      .spyOn(HTMLElement.prototype, 'clientWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.tagName === 'STRONG' ? 200 : 0;
+      });
+    const scrollWidth = jest
+      .spyOn(HTMLElement.prototype, 'scrollWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.classList.contains('scoreCardWord') ? (this.textContent ?? '').length * 30 : 0;
+      });
+    const computedStyle = jest
+      .spyOn(window, 'getComputedStyle')
+      .mockImplementation(() => ({ fontSize: '34px' }) as CSSStyleDeclaration);
+    return () => {
+      clientWidth.mockRestore();
+      scrollWidth.mockRestore();
+      computedStyle.mockRestore();
+    };
+  };
+
+  it('shrinks the font so a long word fits instead of breaking', () => {
+    const restore = fakeLayout();
+    const { container } = render(<ScoreCardFitWords as="strong" text="Winterhawks" />);
+    restore();
+
+    // 11 letters = 330px in a 200px box: 34px * 200 / 330 rounds down to 20px.
+    expect(container.querySelector('strong')).toHaveStyle('font-size: 20px');
+    expect(container.querySelectorAll('.scoreCardWord')).toHaveLength(1);
+  });
+
+  it('keeps the stylesheet size and wraps between words when each word fits', () => {
+    const restore = fakeLayout();
+    const { container } = render(<ScoreCardFitWords as="strong" text="Maple Leafs" />);
+    restore();
+
+    expect(container.querySelector('strong')?.style.fontSize).toBe('');
+    expect(
+      Array.from(container.querySelectorAll('.scoreCardWord'), (word) => word.textContent),
+    ).toEqual(['Maple', 'Leafs']);
   });
 });
