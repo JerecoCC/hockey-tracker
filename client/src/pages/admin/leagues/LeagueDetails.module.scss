@@ -778,10 +778,6 @@ $league-tab-list-gap: $space-md;
     min-width: 0;
   }
 
-  &GroupTeamList {
-    gap: $space-xs;
-  }
-
   &GroupChildren {
     display: flex;
     flex-direction: column;
@@ -892,29 +888,10 @@ $league-tab-list-gap: $space-md;
     padding: $space-sm $space-md 0;
   }
 
-  &TeamModalControls {
-    display: flex;
-    align-items: center;
-    gap: $space-md;
-    margin-bottom: $space-lg;
-
-    @media (max-width: $screen-mobile-max) {
-      align-items: stretch;
-      flex-direction: column;
-    }
-  }
-
-  &TeamModalSearch {
-    flex: 1;
-  }
-
-  &TeamModalList {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+  // The team list scrolls inside the modal, so the body's bottom padding would sit below it
+  // as an empty band. The list's own end padding keeps the last team off the footer divider.
+  &TeamModalBody {
+    padding-bottom: 0;
   }
 
   &TeamModalCode {
@@ -923,15 +900,6 @@ $league-tab-list-gap: $space-md;
     flex-shrink: 0;
     font-size: $font-xs;
     letter-spacing: 0;
-  }
-
-  &TeamModalEmpty {
-    color: var(--app-text-muted, #{$text-dim});
-    font-size: $font-base;
-    font-style: italic;
-    margin: 0;
-    padding: $space-2xl 0;
-    text-align: center;
   }
 
   &EmptyState {

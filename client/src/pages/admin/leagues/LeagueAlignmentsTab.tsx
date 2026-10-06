@@ -269,6 +269,7 @@ const TeamSelectionModal = ({
       onConfirm={handleSave}
       confirmLabel="Save Teams"
       confirmIcon="save"
+      bodyClassName={styles.alignmentTeamModalBody}
       confirmDisabled={disabled}
       busy={disabled}
       size="md"
@@ -305,10 +306,6 @@ const TeamSelectionModal = ({
         placeholder="Search teams..."
         autoFocus
         searchDisabled={disabled}
-        toolbarClassName={styles.alignmentTeamModalControls}
-        searchClassName={styles.alignmentTeamModalSearch}
-        listClassName={styles.alignmentTeamModalList}
-        emptyClassName={styles.alignmentTeamModalEmpty}
         emptyMessage="No teams are available."
         getNoResultsMessage={(searchQuery) => `No teams match "${searchQuery}".`}
         disabled={disabled}
@@ -563,7 +560,7 @@ const AlignmentGroupNode = ({
   const groupBody = (
     <div className={styles.alignmentGroupBody}>
       {isLeaf && group.teams.length > 0 && (
-        <ResponsiveList className={`${styles.alignmentTeamList} ${styles.alignmentGroupTeamList}`}>
+        <ResponsiveList className={styles.alignmentTeamList}>
           {group.teams.map((team) => (
             <ListItem
               key={team.id}
@@ -573,7 +570,6 @@ const AlignmentGroupNode = ({
               imageLight={team.logo_light}
               eyebrow={team.place_name || ''}
               name={team.team_name || team.name}
-              variant="plain"
               rightContent={{ type: 'code', value: team.code }}
               primaryColor={team.primary_color}
               textColor={team.text_color}
