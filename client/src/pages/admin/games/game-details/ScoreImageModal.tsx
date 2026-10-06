@@ -54,6 +54,17 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
   timeZone: 'America/New_York',
 });
+// The score card footer stacks the weekday above the date.
+const FOOTER_WEEKDAY_FMT = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
+  timeZone: 'America/New_York',
+});
+const FOOTER_DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'America/New_York',
+});
 const DATE_KEY_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -2197,9 +2208,17 @@ const ScoreImageModal = ({
                 <strong className={styles.scoreCardFooterLeagueCode}>{footerLeagueCode}</strong>
               )}
               {showDate && drawGame?.scheduled_at && (
-                <span>{formatScheduledDate(drawGame.scheduled_at, DATE_FMT)}</span>
+                <div className={styles.scoreCardFooterBlock}>
+                  <span>{formatScheduledDate(drawGame.scheduled_at, FOOTER_WEEKDAY_FMT)}</span>
+                  <span>{formatScheduledDate(drawGame.scheduled_at, FOOTER_DATE_FMT)}</span>
+                </div>
               )}
-              {showLeagueSeason && leagueLine && <span>{leagueLine}</span>}
+              {showLeagueSeason && (drawGame?.league_name || drawGame?.season_name) && (
+                <div className={styles.scoreCardFooterBlock}>
+                  {drawGame.league_name && <span>{drawGame.league_name}</span>}
+                  {drawGame.season_name && <span>{drawGame.season_name}</span>}
+                </div>
+              )}
             </footer>
           </div>
         </div>

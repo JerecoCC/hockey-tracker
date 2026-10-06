@@ -547,10 +547,16 @@ describe('ScoreImageModal', () => {
     );
     expect(mockToPng.mock.calls[0][0]).toHaveAttribute('data-theme', 'dark');
     expect(mockToPng.mock.calls[0][0]).toHaveStyle('--league-band: #003d7a');
-    expect(mockToPng.mock.calls[0][0].querySelector('footer')).toHaveAttribute(
-      'data-theme',
-      'light',
-    );
+    const exportedFooter = mockToPng.mock.calls[0][0].querySelector('footer') as HTMLElement;
+    expect(exportedFooter).toHaveAttribute('data-theme', 'light');
+    // The footer stacks the weekday over the date, and the season under the league name.
+    const footerBlocks = Array.from(
+      exportedFooter.querySelectorAll('.scoreCardFooterBlock'),
+    ).map((block) => Array.from(block.children).map((line) => line.textContent));
+    expect(footerBlocks).toEqual([
+      ['Thursday', 'March 5, 2026'],
+      ['Hockey League', '2026 Season'],
+    ]);
     expect(within(mockToPng.mock.calls[0][0]).getByText('1')).toHaveClass(
       'scoreCardLosingScore',
     );
