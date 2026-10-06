@@ -7,6 +7,10 @@ jest.mock('../middleware/auth', () => ({
     next();
   },
 }));
+jest.mock('../lib/personalGames', () => ({
+  fetchPersonalGames: jest.fn().mockResolvedValue([]),
+  findOwnedPersonalGame: jest.fn().mockResolvedValue(null),
+}));
 jest.mock('../services/googleCalendar', () => ({
   syncScheduledGameToGoogleCalendar: jest.fn().mockResolvedValue({ status: 'synced' }),
 }));
@@ -15,6 +19,7 @@ const request = require('supertest');
 const express = require('express');
 const { sql } = require('../db');
 const { syncScheduledGameToGoogleCalendar } = require('../services/googleCalendar');
+const { fetchPersonalGames, findOwnedPersonalGame } = require('../lib/personalGames');
 const userRouter = require('./user');
 
 const app = express();
@@ -841,5 +846,70 @@ describe('POST /api/user/watched-games/:gameId/skip', () => {
       userId: 'user-1',
       gameId: 'game-1',
     });
+  });
+});
+
+describe('personal games in user routes', () => {
+  const PERSONAL_ID = '33333333-3333-4333-8333-333333333333';
+
+  it('marks a recorded personal game watched on its own row', async () => {
+    findOwnedPersonalGame.mockResolvedValueOnce({ id: PERSONAL_ID, home_score: 3 });
+    sql.mockResolvedValueOnce([{ watched_on: '2026-10-11', scheduled_for: null }]);
+
+    const res = await request(app)
+      .post(`/api/user/watched-games/${PERSONAL_ID}`)
+      .send({ watched_on: '2026-10-11' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.watched_on).toBe('2026-10-11');
+    expect(sql.mock.calls[0][0].join('?')).toContain('UPDATE user_personal_games');
+  });
+
+  it('refuses to mark an unplayed personal game watched', async () => {
+    findOwnedPersonalGame.mockResolvedValueOnce({ id: PERSONAL_ID, home_score: null });
+
+    const res = await request(app).post(`/api/user/watched-games/${PERSONAL_ID}`).send({});
+
+    expect(res.status).toBe(400);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('postpones a personal game and syncs its calendar event', async () => {
+    findOwnedPersonalGame.mockResolvedValueOnce({ id: PERSONAL_ID });
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app)
+      .put(`/api/user/watched-games/${PERSONAL_ID}/schedule`)
+      .send({ scheduled_for: '2026-10-14' });
+
+    expect(res.status).toBe(200);
+    expect(sql.mock.calls[0][0].join('?')).toContain('UPDATE user_personal_games');
+    expect(syncScheduledGameToGoogleCalendar).toHaveBeenCalledWith({
+      userId: 'user-1',
+      gameId: PERSONAL_ID,
+    });
+  });
+
+  it('does not skip personal games', async () => {
+    findOwnedPersonalGame.mockResolvedValueOnce({ id: PERSONAL_ID });
+
+    const res = await request(app).post(`/api/user/watched-games/${PERSONAL_ID}/skip`);
+
+    expect(res.status).toBe(400);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('adds personal games to the games list with the same date window', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+    fetchPersonalGames.mockResolvedValueOnce([{ id: PERSONAL_ID, is_personal: true }]);
+
+    const res = await request(app).get('/api/user/games?from=2026-09-27&to=2026-11-07');
+
+    expect(res.status).toBe(200);
+    expect(res.body.map((game) => game.id)).toEqual([GAME.id, PERSONAL_ID]);
+    expect(fetchPersonalGames).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ from: '2026-09-27', to: '2026-11-07' }),
+    );
   });
 });

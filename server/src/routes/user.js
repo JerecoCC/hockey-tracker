@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { requireAuth } = require('../middleware/auth');
 const { sql } = require('../db');
 const { syncScheduledGameToGoogleCalendar } = require('../services/googleCalendar');
+const { fetchPersonalGames, findOwnedPersonalGame } = require('../lib/personalGames');
 
 const syncCalendarAfterUserGameChange = async (userId, gameId) => {
   try {
@@ -168,6 +169,26 @@ router.post('/watched-games/:gameId', async (req, res) => {
       ? req.body.watched_on
       : null;
   try {
+    const personal = await findOwnedPersonalGame(userId, gameId);
+    if (personal) {
+      if (personal.home_score === null) {
+        return res.status(400).json({ error: 'Only final games can be marked as watched' });
+      }
+      const [saved] = await sql`
+        UPDATE user_personal_games
+        SET watched_on = COALESCE(scheduled_for, ${watchedOn}::date, CURRENT_DATE),
+            updated_at = NOW()
+        WHERE id = ${gameId} AND user_id = ${userId}
+        RETURNING watched_on::text AS watched_on, scheduled_for::text AS scheduled_for
+      `;
+      return res.status(201).json({
+        user_id: userId,
+        game_id: gameId,
+        watched_on: saved.watched_on,
+        scheduled_for: saved.scheduled_for,
+      });
+    }
+
     const game = await sql`SELECT id, status FROM games WHERE id = ${gameId}`;
     if (game.length === 0) return res.status(404).json({ error: 'Game not found' });
     if (game[0].status !== 'final') {
@@ -207,6 +228,16 @@ router.put('/watched-games/:gameId/schedule', async (req, res) => {
   const scheduledFor = typeof req.body?.scheduled_for === 'string' ? req.body.scheduled_for : null;
 
   try {
+    if (await findOwnedPersonalGame(userId, gameId)) {
+      await sql`
+        UPDATE user_personal_games
+        SET scheduled_for = ${scheduledFor}::date, updated_at = NOW()
+        WHERE id = ${gameId} AND user_id = ${userId}
+      `;
+      await syncCalendarAfterUserGameChange(userId, gameId);
+      return res.json({ user_id: userId, game_id: gameId, scheduled_for: scheduledFor });
+    }
+
     const game = await sql`SELECT id FROM games WHERE id = ${gameId}`;
     if (game.length === 0) return res.status(404).json({ error: 'Game not found' });
 
@@ -240,6 +271,21 @@ router.delete('/watched-games/:gameId', async (req, res) => {
   const userId = req.user.id;
   const { gameId } = req.params;
   try {
+    // Unwatching a personal game keeps the game itself and its postponed date.
+    const personal = await findOwnedPersonalGame(userId, gameId);
+    if (personal) {
+      await sql`
+        UPDATE user_personal_games SET watched_on = NULL, updated_at = NOW()
+        WHERE id = ${gameId} AND user_id = ${userId}
+      `;
+      return res.json({
+        user_id: userId,
+        game_id: gameId,
+        watched_on: null,
+        scheduled_for: personal.scheduled_for ?? null,
+      });
+    }
+
     const existing = await sql`
       SELECT scheduled_for::text AS scheduled_for
       FROM user_watched_games
@@ -301,6 +347,12 @@ router.post('/watched-games/:gameId/skip', async (req, res) => {
   const userId = req.user.id;
   const { gameId } = req.params;
   try {
+    if (await findOwnedPersonalGame(userId, gameId)) {
+      return res
+        .status(400)
+        .json({ error: 'Personal games can be deleted instead of skipped' });
+    }
+
     const game = await sql`SELECT id FROM games WHERE id = ${gameId}`;
     if (game.length === 0) return res.status(404).json({ error: 'Game not found' });
 
@@ -698,7 +750,22 @@ router.get('/games', async (req, res) => {
         g.scheduled_at DESC NULLS LAST,
         g.created_at DESC
     `;
-    return res.json(games);
+    // The user's own personal games join their schedule under the same filters. They are the
+    // user's own additions, so like games added to watch they show whatever the team filter.
+    const personalGames = await fetchPersonalGames(userId, {
+      seasonId: season_id ?? null,
+      status: status ?? null,
+      leagueId: league_id ?? null,
+      gameType: game_type ?? null,
+      watchedOnly,
+      originalDate: originalDate ? String(originalDate) : null,
+      date: dateFilter,
+      week: weekFilter,
+      month: monthFilter,
+      from: fromFilter,
+      to: toFilter,
+    });
+    return res.json([...games, ...personalGames]);
   } catch (err) {
     console.error('user games list error:', err);
     return res.status(500).json({ error: 'Internal server error' });

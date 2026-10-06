@@ -2206,6 +2206,46 @@ async function initSchema() {
     WHERE watched_on IS NULL AND watched_at IS NOT NULL
   `;
 
+  // Games a user adds to their own calendar and scores by hand. Kept apart from the
+  // admin-managed games table: they only appear in their owner's schedule and never
+  // affect league standings, stats, or other users. Teams are referenced read-only.
+  //   scheduled_at   – the game date; scheduled_time – optional Eastern HH:MM start
+  //   home/away_score – null until the user records a final score
+  //   result_type    – how the recorded game ended (regulation, overtime, shootout)
+  //   scheduled_for  – the user's postponed watch date; watched_on – when they watched it
+  await sql`
+    CREATE TABLE IF NOT EXISTS user_personal_games (
+      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id        UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      home_team_id   UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      away_team_id   UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      game_type      TEXT NOT NULL DEFAULT 'regular'
+                       CHECK (game_type IN ('preseason', 'regular', 'playoff')),
+      scheduled_at   DATE NOT NULL,
+      scheduled_time TEXT CHECK (scheduled_time ~ '^[0-2][0-9]:[0-5][0-9]$'),
+      home_score     SMALLINT CHECK (home_score >= 0),
+      away_score     SMALLINT CHECK (away_score >= 0),
+      result_type    TEXT NOT NULL DEFAULT 'regulation'
+                       CHECK (result_type IN ('regulation', 'overtime', 'shootout')),
+      scheduled_for  DATE,
+      watched_on     DATE,
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CHECK (home_team_id <> away_team_id),
+      CHECK ((home_score IS NULL) = (away_score IS NULL))
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS user_personal_games_user_date_idx
+      ON user_personal_games (user_id, scheduled_at)
+  `;
+  // The league season the user filed the game under (read-only reference). It sets the
+  // game's league and season labels; null when the season is later deleted.
+  await sql`
+    ALTER TABLE user_personal_games
+      ADD COLUMN IF NOT EXISTS season_id UUID REFERENCES seasons(id) ON DELETE SET NULL
+  `;
+
   // Each user gets an app-owned secondary calendar. Refresh tokens are
   // encrypted by the application before they reach this table.
   await sql`
