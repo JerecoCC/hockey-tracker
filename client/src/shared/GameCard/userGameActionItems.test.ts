@@ -41,4 +41,13 @@ describe('getUserGameActions', () => {
       intent: 'success',
     });
   });
+
+  it('opens personal games for editing and never offers skip or cancel watch', () => {
+    const tooltips = getUserGameActions({ ...baseProps, personal: true, onCancelWatch: noop })
+      .filter((action) => action !== false)
+      .map((action) => action.tooltip);
+
+    expect(tooltips).toEqual(['Edit game', 'Postpone watch', 'Mark as watched']);
+    expect(getActionByTooltip({ personal: true }, 'Edit game')).toMatchObject({ icon: 'edit' });
+  });
 });

@@ -7,6 +7,8 @@ export interface UserGameActionsProps {
   skipped: boolean;
   favoriteTeamGame?: boolean;
   canMarkWatched?: boolean;
+  /** A personal game: it opens for editing, and is deleted rather than skipped. */
+  personal?: boolean;
   busy: boolean;
   onView: () => MaybePromise;
   onDownloadScoreCard: () => MaybePromise;
@@ -27,6 +29,7 @@ export const getUserGameActions = ({
   skipped,
   favoriteTeamGame = true,
   canMarkWatched = true,
+  personal = false,
   busy,
   onView,
   onDownloadScoreCard,
@@ -39,9 +42,9 @@ export const getUserGameActions = ({
 }: UserGameActionsProps): (ListItemAction | false)[] => [
   // Details stay open to everyone: an unwatched result is censored on the page.
   {
-    icon: 'open_in_new',
+    icon: personal ? 'edit' : 'open_in_new',
     intent: 'neutral',
-    tooltip: 'View game details',
+    tooltip: personal ? 'Edit game' : 'View game details',
     onClick: () => run(onView),
   },
   skipped && {
@@ -65,7 +68,8 @@ export const getUserGameActions = ({
     onClick: () => run(onUnwatch),
   },
   !watched &&
-    !skipped && {
+    !skipped &&
+    !personal && {
       icon: favoriteTeamGame ? 'remove_circle_outline' : 'cancel',
       intent: favoriteTeamGame ? 'warning' : 'danger',
       tooltip: favoriteTeamGame ? 'Skip game' : 'Cancel watch',

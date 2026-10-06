@@ -1,0 +1,25 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+// Team / score pairs side by side, then full-width rows.
+.form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 7rem;
+  row-gap: $space-lg;
+  column-gap: $space-md;
+
+  @media (max-width: $screen-mobile-max) {
+    grid-template-columns: minmax(0, 1fr) 5.5rem;
+  }
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+.copy {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-sm;
+}

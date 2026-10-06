@@ -9,6 +9,7 @@ import DatePicker from '@jerecocc/tracker-ui/components/DatePicker/DatePicker';
 import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import GameCard from '@/shared/GameCard/GameCard';
+import PersonalGameModal from '@/shared/PersonalGameModal/PersonalGameModal';
 import ScheduleWatchModal from '@/shared/ScheduleWatchModal/ScheduleWatchModal';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import { getUserGameActions } from '@/shared/GameCard/userGameActionItems';
@@ -130,6 +131,7 @@ const UserDashboard = () => {
   const [confirmSkipGame, setConfirmSkipGame] = useState<GameRecord | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
   const [scheduleDate, setScheduleDate] = useState('');
+  const [personalGameTarget, setPersonalGameTarget] = useState<GameRecord | null>(null);
   const [scheduleBusy, setScheduleBusy] = useState(false);
   const [scoreCardTarget, setScoreCardTarget] = useState<GameRecord | null>(null);
   const isAdmin = user?.role === 'admin';
@@ -166,6 +168,7 @@ const UserDashboard = () => {
           effectiveDate === todayKey &&
           !game.skipped_by_user &&
           (watchDate === todayKey ||
+            game.is_personal ||
             favorites.includes(game.home_team.id) ||
             favorites.includes(game.away_team.id))
         );
@@ -328,14 +331,19 @@ const UserDashboard = () => {
   const isFavoriteTeamGame = (game: GameRecord) =>
     favorites.includes(game.home_team.id) || favorites.includes(game.away_team.id);
 
+  // Personal games have no details page; opening one edits it.
+  const openGame = (game: GameRecord) =>
+    game.is_personal ? setPersonalGameTarget(game) : navigate(`/games/${game.id}`);
+
   const getDashboardGameActions = (game: GameRecord) =>
     getUserGameActions({
       watched: !!game.watched_by_user,
       skipped: !!game.skipped_by_user,
+      personal: !!game.is_personal,
       favoriteTeamGame: isFavoriteTeamGame(game),
       canMarkWatched: canMarkGameWatched(game),
       busy: actionGameId === game.id,
-      onView: () => navigate(`/games/${game.id}`),
+      onView: () => openGame(game),
       onDownloadScoreCard: () => setScoreCardTarget(getScoreCardGame(game)),
       onMarkWatched: () => markGameWatched(game),
       onUnwatch: () => unwatchGame(game.id),
@@ -469,15 +477,16 @@ const UserDashboard = () => {
                       useLeagueColors
                       canOpen
                       scorePlaceholder={!watched && game.status === 'final' ? '?' : undefined}
-                      onOpen={() => navigate(`/games/${game.id}`)}
+                      onOpen={() => openGame(game)}
                       actions={
                         <UserGameActions
                           watched={watched}
                           skipped={skipped}
+                          personal={!!game.is_personal}
                           favoriteTeamGame={isFavoriteTeamGame(game)}
                           canMarkWatched={canMarkWatched}
                           busy={busy}
-                          onView={() => navigate(`/games/${game.id}`)}
+                          onView={() => openGame(game)}
                           onDownloadScoreCard={() => setScoreCardTarget(getScoreCardGame(game))}
                           onMarkWatched={() => markGameWatched(game)}
                           onUnwatch={() => unwatchGame(game.id)}
@@ -564,6 +573,12 @@ const UserDashboard = () => {
           }}
         />
       )}
+
+      <PersonalGameModal
+        open={!!personalGameTarget}
+        game={personalGameTarget}
+        onClose={() => setPersonalGameTarget(null)}
+      />
 
       <ScheduleWatchModal
         open={!!scheduleTarget}

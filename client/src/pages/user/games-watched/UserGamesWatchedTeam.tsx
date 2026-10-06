@@ -44,14 +44,17 @@ const getScrollContainer = (element: HTMLElement) => {
   return document.documentElement;
 };
 
+// Personal games have no details page, so their cards don't link anywhere.
 const getGamePath = (game: GameRecord) =>
-  buildUserGameDetailsPath({
-    gameId: game.id,
-    awayTeamCode: game.away_team.code,
-    homeTeamCode: game.home_team.code,
-    scheduledAt: game.scheduled_at,
-    scheduledTime: game.scheduled_time,
-  });
+  game.is_personal
+    ? undefined
+    : buildUserGameDetailsPath({
+        gameId: game.id,
+        awayTeamCode: game.away_team.code,
+        homeTeamCode: game.home_team.code,
+        scheduledAt: game.scheduled_at,
+        scheduledTime: game.scheduled_time,
+      });
 
 const STATUS_LABEL: Record<GameStatus, string> = {
   scheduled: 'Scheduled',

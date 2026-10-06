@@ -17,6 +17,8 @@ const mockSetQueriesData = jest.fn();
 const mockSetQueryData = jest.fn();
 const mockFindAllQueries = jest.fn();
 
+// The personal game form pulls in the full tracker-ui bundle; its own tests cover it.
+jest.mock('@/shared/PersonalGameModal/PersonalGameModal', () => () => null);
 jest.mock('react-router-dom', () => ({
   Link: ({ to, children, ...props }: any) => (
     <a

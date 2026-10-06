@@ -16,6 +16,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
+import PersonalGameModal from '@/shared/PersonalGameModal/PersonalGameModal';
 import ScheduleWatchModal from '@/shared/ScheduleWatchModal/ScheduleWatchModal';
 import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
@@ -603,6 +604,7 @@ const CalendarGameCard = ({
         <UserGameActions
           watched={!!game.watched_by_user}
           skipped={!!game.skipped_by_user}
+          personal={!!game.is_personal}
           favoriteTeamGame={favoriteTeamGame}
           canMarkWatched={canMarkWatched}
           busy={busy}
@@ -649,6 +651,10 @@ const UserGames = () => {
   const [calendarDropDateKey, setCalendarDropDateKey] = useState<string | null>(null);
   const [addGamesDateKey, setAddGamesDateKey] = useState<string | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
+  // The personal game being added (game: null) or edited; null when the modal is closed.
+  const [personalGameTarget, setPersonalGameTarget] = useState<{ game: GameRecord | null } | null>(
+    null,
+  );
   const [scoreCardTarget, setScoreCardTarget] = useState<GameRecord | null>(null);
   const [scoreImageOpen, setScoreImageOpen] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
@@ -969,8 +975,11 @@ const UserGames = () => {
     ...leagues.map((l) => ({ value: l.id, label: l.code, logo: l.logo })),
   ];
 
+  // Personal games have no details page; opening one edits it.
   const openGame = (game: GameRecord) =>
-    navigate(
+    game.is_personal
+      ? setPersonalGameTarget({ game })
+      : navigate(
       buildUserGameDetailsPath({
         gameId: game.id,
         awayTeamCode: game.away_team.code,
@@ -1314,6 +1323,7 @@ const UserGames = () => {
     getUserGameActions({
       watched: !!game.watched_by_user,
       skipped: !!game.skipped_by_user,
+      personal: !!game.is_personal,
       favoriteTeamGame: isFavoriteTeamGame(game),
       canMarkWatched: canMarkGameWatched(game),
       busy: actionGameId === game.id,
@@ -1363,6 +1373,7 @@ const UserGames = () => {
           <UserGameActions
             watched={watched}
             skipped={skipped}
+            personal={!!game.is_personal}
             favoriteTeamGame={isFavoriteTeamGame(game)}
             canMarkWatched={canMarkWatched}
             busy={busy}
@@ -1516,6 +1527,11 @@ const UserGames = () => {
           iconSize="1.35rem"
           wrapperClassName={isMobileView ? styles.mobileMoreActions : undefined}
           items={[
+            {
+              label: 'Add Game',
+              icon: 'add',
+              onClick: () => setPersonalGameTarget({ game: null }),
+            },
             {
               label: 'Google Calendar Sync',
               icon: 'calendar_month',
@@ -1762,6 +1778,12 @@ const UserGames = () => {
           onClose={() => setAddGamesDateKey(null)}
         />
       )}
+
+      <PersonalGameModal
+        open={!!personalGameTarget}
+        game={personalGameTarget?.game ?? null}
+        onClose={() => setPersonalGameTarget(null)}
+      />
 
       {scheduleTarget && (
         <ScheduleWatchModal

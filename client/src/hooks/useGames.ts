@@ -84,6 +84,10 @@ export interface GameRecord {
   season_id: string;
   game_type: GameType;
   status: GameStatus;
+  /** A game the user added to their own schedule and scores by hand (not admin data). */
+  is_personal?: boolean;
+  /** How a personal game's recorded score ended. */
+  result_type?: 'regulation' | 'overtime' | 'shootout';
   scheduled_at: string | null;
   scheduled_time: string | null;
   venue: string | null;
