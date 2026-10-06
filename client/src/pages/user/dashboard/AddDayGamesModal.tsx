@@ -9,6 +9,7 @@ import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
+import PersonalGameModal from '@/shared/PersonalGameModal/PersonalGameModal';
 import type { GameRecord, TeamInfo } from '@/hooks/useGames';
 import { API, authHeaders } from '@/lib/apiClient';
 import {
@@ -87,6 +88,7 @@ const AddDayGamesModal = ({
 }: Props) => {
   const [locallyAddedIds, setLocallyAddedIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [addingPersonalGame, setAddingPersonalGame] = useState(false);
   const {
     data: games = [],
     isLoading,
@@ -121,8 +123,11 @@ const AddDayGamesModal = ({
     const otherGames: GameRecord[] = [];
     for (const game of ordered) {
       const isFavoriteGame = favorites.has(game.home_team.id) || favorites.has(game.away_team.id);
+      // Personal games are always on the user's list, like favorite-team games.
       const isDefaultWatch =
-        isFavoriteGame && !game.skipped_by_user && !getScheduledWatchDateKey(game.scheduled_for);
+        (isFavoriteGame || !!game.is_personal) &&
+        !game.skipped_by_user &&
+        !getScheduledWatchDateKey(game.scheduled_for);
       const isWatching =
         scheduledIds.has(game.id) || locallyAddedIds.has(game.id) || isDefaultWatch;
       (isWatching ? gamesToWatch : otherGames).push(game);
@@ -164,120 +169,144 @@ const AddDayGamesModal = ({
   };
 
   return (
-    <Modal
-      open
-      title="Edit games to watch"
-      onClose={() => {
-        if (!saving) onClose();
-      }}
-      onConfirm={() => void save()}
-      confirmLabel={saving ? 'Saving...' : 'Save'}
-      confirmDisabled={isLoading || isError || locallyAddedIds.size === 0}
-      busy={saving}
-      disableBackdropClose={saving}
-    >
-      <p className={styles.date}>{dateLabel} · Local time</p>
-      {isLoading ? (
-        <EmptyMessage>Loading games...</EmptyMessage>
-      ) : isError ? (
-        <div role="alert">
-          <EmptyMessage>Unable to load games.</EmptyMessage>
-          <Button
-            variant="outlined"
-            onClick={() => void refetch()}
-          >
-            Try again
-          </Button>
-        </div>
-      ) : (
-        <div className={styles.groups}>
-          {groups.map((group, index) => (
-            <div key={index}>
-              {index === 1 && <Divider className={styles.divider} />}
-              <h4
-                id={`day-games-group-${index}`}
-                className={styles.heading}
-              >
-                {index === 0 ? 'Games to Watch' : 'Other games'}
-              </h4>
-              {group.length === 0 ? (
-                <EmptyMessage>
-                  {index === 0 ? 'No games to watch on this day.' : 'No other games on this day.'}
-                </EmptyMessage>
-              ) : (
-                <ul
-                  className={styles.list}
-                  aria-labelledby={`day-games-group-${index}`}
-                >
-                  {group.map((game) => {
-                    const content = (
-                      <>
-                        <div className={styles.mainContent}>
-                          <div className={styles.matchup}>
-                            <MatchupTeam team={game.away_team} />
-                            <span className={styles.at}>@</span>
-                            <MatchupTeam team={game.home_team} />
+    <>
+      <Modal
+        open
+        title="Edit games to watch"
+        onClose={() => {
+          if (!saving) onClose();
+        }}
+        onConfirm={() => void save()}
+        confirmLabel={saving ? 'Saving...' : 'Save'}
+        confirmDisabled={isLoading || isError || locallyAddedIds.size === 0}
+        busy={saving}
+        disableBackdropClose={saving}
+      >
+        <p className={styles.date}>{dateLabel} · Local time</p>
+        {isLoading ? (
+          <EmptyMessage>Loading games...</EmptyMessage>
+        ) : isError ? (
+          <div role="alert">
+            <EmptyMessage>Unable to load games.</EmptyMessage>
+            <Button
+              variant="outlined"
+              onClick={() => void refetch()}
+            >
+              Try again
+            </Button>
+          </div>
+        ) : (
+          <div className={styles.groups}>
+            {groups.map((group, index) => (
+              <div key={index}>
+                {index === 1 && <Divider className={styles.divider} />}
+                <div className={styles.headingRow}>
+                  <h4
+                    id={`day-games-group-${index}`}
+                    className={styles.heading}
+                  >
+                    {index === 0 ? 'Games to Watch' : 'Other games'}
+                  </h4>
+                  {index === 0 && (
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      intent="neutral"
+                      size="small"
+                      icon="add"
+                      tooltip="Add personal game"
+                      aria-label="Add personal game"
+                      disabled={saving}
+                      onClick={() => setAddingPersonalGame(true)}
+                    />
+                  )}
+                </div>
+                {group.length === 0 ? (
+                  <EmptyMessage>
+                    {index === 0 ? 'No games to watch on this day.' : 'No other games on this day.'}
+                  </EmptyMessage>
+                ) : (
+                  <ul
+                    className={styles.list}
+                    aria-labelledby={`day-games-group-${index}`}
+                  >
+                    {group.map((game) => {
+                      const content = (
+                        <>
+                          <div className={styles.mainContent}>
+                            <div className={styles.matchup}>
+                              <MatchupTeam team={game.away_team} />
+                              <span className={styles.at}>@</span>
+                              <MatchupTeam team={game.home_team} />
+                            </div>
                           </div>
-                        </div>
-                        <span className={styles.time}>
-                          {isPostponedGame(game)
-                            ? getOriginalDateLabel(game)
-                            : game.scheduled_time
-                              ? formatGameTime(game.scheduled_at, game.scheduled_time, 'local')
-                              : 'Time TBD'}
-                        </span>
-                      </>
-                    );
-                    return (
-                      <ListItem
-                        key={game.id}
-                        fullWidth
-                        className={styles.gameRow}
-                        hideImage
-                        name=""
-                        ariaLabel={`${game.away_team.name} at ${game.home_team.name}`}
-                        rightContent={content}
-                        actions={
-                          index === 0
-                            ? locallyAddedIds.has(game.id) && !scheduledIds.has(game.id)
-                              ? [
+                          <span className={styles.time}>
+                            {isPostponedGame(game)
+                              ? getOriginalDateLabel(game)
+                              : game.scheduled_time
+                                ? formatGameTime(game.scheduled_at, game.scheduled_time, 'local')
+                                : 'Time TBD'}
+                          </span>
+                        </>
+                      );
+                      return (
+                        <ListItem
+                          key={game.id}
+                          fullWidth
+                          className={styles.gameRow}
+                          hideImage
+                          name=""
+                          ariaLabel={`${game.away_team.name} at ${game.home_team.name}`}
+                          rightContent={content}
+                          actions={
+                            index === 0
+                              ? locallyAddedIds.has(game.id) && !scheduledIds.has(game.id)
+                                ? [
+                                    {
+                                      icon: 'cancel',
+                                      intent: 'danger',
+                                      tooltip: 'Cancel watch',
+                                      disabled: saving,
+                                      onClick: () =>
+                                        setLocallyAddedIds((previous) => {
+                                          const next = new Set(previous);
+                                          next.delete(game.id);
+                                          return next;
+                                        }),
+                                    },
+                                  ]
+                                : getGameActions?.(game)
+                              : [
                                   {
-                                    icon: 'cancel',
-                                    intent: 'danger',
-                                    tooltip: 'Cancel watch',
+                                    icon: 'add',
+                                    intent: 'accent',
+                                    tooltip: 'Add to games to watch',
                                     disabled: saving,
                                     onClick: () =>
-                                      setLocallyAddedIds((previous) => {
-                                        const next = new Set(previous);
-                                        next.delete(game.id);
-                                        return next;
-                                      }),
+                                      setLocallyAddedIds((previous) =>
+                                        new Set(previous).add(game.id),
+                                      ),
                                   },
                                 ]
-                              : getGameActions?.(game)
-                            : [
-                                {
-                                  icon: 'add',
-                                  intent: 'accent',
-                                  tooltip: 'Add to games to watch',
-                                  disabled: saving,
-                                  onClick: () =>
-                                    setLocallyAddedIds((previous) =>
-                                      new Set(previous).add(game.id),
-                                    ),
-                                },
-                              ]
-                        }
-                      />
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </Modal>
+                          }
+                        />
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
+      {/* Adds a personal game on this day; once saved, the refreshed list shows it here. */}
+      <PersonalGameModal
+        open={addingPersonalGame}
+        game={null}
+        defaultDate={dateKey}
+        onClose={() => setAddingPersonalGame(false)}
+      />
+    </>
   );
 };
 

@@ -262,9 +262,9 @@ const PersonalGameModal = ({ open, game, defaultDate, onClose }: Props) => {
   return (
     <Modal
       open={open}
-      title={game ? 'Edit Game' : 'Add Game'}
+      title={game ? 'Edit Personal Game' : 'Add Personal Game'}
       onClose={onClose}
-      confirmLabel={busy ? 'Saving…' : game ? 'Save' : 'Add Game'}
+      confirmLabel={busy ? 'Saving…' : game ? 'Save' : 'Add Personal Game'}
       confirmIcon={game ? 'save' : 'add'}
       confirmForm="personal-game-form"
       confirmDisabled={busy || !isValid || (!!game && !isDirty)}
@@ -289,9 +289,6 @@ const PersonalGameModal = ({ open, game, defaultDate, onClose }: Props) => {
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <p className={styles.copy}>
-          Track a game on your own schedule and Google Calendar. Only you can see it.
-        </p>
 
         {/* League and season narrow the team lists */}
         <div className={styles.full}>

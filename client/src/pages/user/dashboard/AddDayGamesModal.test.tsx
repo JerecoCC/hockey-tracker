@@ -9,6 +9,10 @@ import AddDayGamesModal from './AddDayGamesModal';
 
 jest.mock('axios');
 jest.mock('react-toastify', () => ({ toast: { error: jest.fn() } }));
+// The real form pulls in the full tracker-ui bundle; this stand-in shows when and for what day it opens.
+jest.mock('@/shared/PersonalGameModal/PersonalGameModal', () => ({ open, defaultDate }: any) =>
+  open ? <div data-testid="personal-game-modal">{defaultDate}</div> : null,
+);
 
 const mockAxios = axios as jest.Mocked<typeof axios>;
 const team = (id: string): TeamInfo => ({
@@ -253,4 +257,23 @@ it('offers a retry when loading fails', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load games.');
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
   expect(await screen.findByText('No other games on this day.')).toBeInTheDocument();
+});
+
+it('opens the personal game form for this day from the Games to Watch plus button', async () => {
+  setup([favoriteGame]);
+  await screen.findByText('Games to Watch');
+  expect(screen.queryByTestId('personal-game-modal')).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Add personal game' }));
+
+  expect(screen.getByTestId('personal-game-modal')).toHaveTextContent(dateKey);
+});
+
+it('lists personal games under Games to Watch without an add action', async () => {
+  const personalGame = makeGame('personal', { is_personal: true });
+  setup([personalGame]);
+
+  const gamesToWatch = (await screen.findByRole('list', { name: 'Games to Watch' })) as HTMLElement;
+  expect(within(gamesToWatch).getByText('PERSONAL-AWAY')).toBeInTheDocument();
+  expect(screen.getByText('No other games on this day.')).toBeInTheDocument();
 });

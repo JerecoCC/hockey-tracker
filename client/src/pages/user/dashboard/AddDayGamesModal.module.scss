@@ -17,8 +17,17 @@
   margin-bottom: $space-lg;
 }
 
+// Group label with an optional action (add personal game) on the far right.
+.headingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  margin-bottom: $space-sm;
+}
+
 .heading {
-  margin: 0 0 $space-sm;
+  margin: 0;
   color: var(--app-text-strong, #{$text-bright});
   font-size: $font-sm;
 }

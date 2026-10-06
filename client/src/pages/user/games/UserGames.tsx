@@ -1536,7 +1536,7 @@ const UserGames = () => {
           wrapperClassName={isMobileView ? styles.mobileMoreActions : undefined}
           items={[
             {
-              label: 'Add Game',
+              label: 'Add Personal Game',
               icon: 'add',
               onClick: () => setPersonalGameTarget({ game: null }),
             },
