@@ -603,4 +603,57 @@ describe('UserDashboard', () => {
     expect(await screen.findByText('Score Image')).toBeInTheDocument();
     expect(screen.getByText('BOS @ TOR')).toBeInTheDocument();
   });
+
+  it('shows personal games watched today, even for teams that are not favorites', () => {
+    const team = (id: string, name: string, code: string) => ({
+      id,
+      name,
+      place_name: null,
+      team_name: name,
+      code,
+      logo: null,
+      primary_color: '#333333',
+      secondary_color: '#ffffff',
+      text_color: '#ffffff',
+    });
+    const personalGames = [
+      // Played earlier and postponed to today.
+      makeGame({
+        id: 'personal-today',
+        is_personal: true,
+        scheduled_at: '2026-06-10',
+        scheduled_time: null,
+        scheduled_for: '2026-06-21',
+        home_team: team('team-ott', 'Charge', 'OTT'),
+        away_team: team('team-mtl', 'Victoire', 'MTL'),
+      }),
+      // Postponed to another day.
+      makeGame({
+        id: 'personal-later',
+        is_personal: true,
+        scheduled_at: '2026-06-10',
+        scheduled_time: null,
+        scheduled_for: '2026-06-24',
+        home_team: team('team-ny', 'Sirens', 'NY'),
+        away_team: team('team-bos', 'Fleet', 'BOS'),
+      }),
+    ];
+    // Run the dashboard's own select so its today filter is exercised.
+    mockUseQuery.mockImplementation(({ queryKey, select }: any) => ({
+      data:
+        queryKey[0] === 'user-dashboard-watched-games'
+          ? []
+          : select
+            ? select(personalGames)
+            : personalGames,
+      isLoading: false,
+    }));
+
+    render(<UserDashboard />);
+
+    // Today's cards show team codes.
+    expect(screen.getAllByText('OTT').length).toBeGreaterThan(0);
+    expect(screen.queryByText('NY')).not.toBeInTheDocument();
+    expect(screen.queryByText('No games scheduled for today.')).not.toBeInTheDocument();
+  });
 });
