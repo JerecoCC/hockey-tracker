@@ -402,16 +402,18 @@ const eventForGame = ({ userId, game, timeZone }) => {
   const originalScheduleNote = originalScheduleDate
     ? `\nOriginal game date: ${formatCalendarDate(originalScheduleDate)}.`
     : '';
+  // Personal games have no details page, so they link to the user's schedule.
+  const gameUrl = game.is_personal ? `${clientUrl}/games` : `${clientUrl}/games/${game.id}`;
   return {
     id: eventIdForGame(userId, game.id),
     status: 'confirmed',
     summary: game.league_code ? `${matchup} · ${game.league_code}` : matchup,
-    description: `Game synced from Hockey Tracker.${originalScheduleNote}\n\n${clientUrl}/games/${game.id}`,
+    description: `Game synced from Hockey Tracker.${originalScheduleNote}\n\n${gameUrl}`,
     ...eventTime,
     transparency: 'transparent',
     source: {
       title: 'Hockey Tracker',
-      url: `${clientUrl}/games/${game.id}`,
+      url: gameUrl,
     },
     extendedProperties: {
       private: {
@@ -651,7 +653,8 @@ const calendarGameSelect = (userId, gameId = null) => sql`
       WHERE ti.team_id = g.home_team_id
       ORDER BY (ti.season_id = g.season_id) DESC NULLS LAST, ti.recorded_at DESC
       LIMIT 1
-    ), 'Home') AS home_code
+    ), 'Home') AS home_code,
+    false AS is_personal
   FROM games g
   LEFT JOIN user_watched_games uwg
     ON uwg.user_id = ${userId}
@@ -680,6 +683,37 @@ const calendarGameSelect = (userId, gameId = null) => sql`
         )
       )
     )
+
+  UNION ALL
+
+  -- The user's own personal games are always on their calendar, on the postponed watch date
+  -- when set. A deleted personal game drops out here, so its event is removed.
+  SELECT
+    pg.id,
+    pg.scheduled_at::text AS game_date,
+    pg.scheduled_for::text AS scheduled_for,
+    COALESCE(pg.scheduled_for, pg.scheduled_at)::text AS calendar_date,
+    pg.scheduled_time,
+    l.code AS league_code,
+    COALESCE((
+      SELECT ti.code FROM team_iterations ti
+      WHERE ti.team_id = pg.away_team_id
+      ORDER BY (ti.season_id IS NULL) DESC, ti.recorded_at DESC
+      LIMIT 1
+    ), 'Away') AS away_code,
+    COALESCE((
+      SELECT ti.code FROM team_iterations ti
+      WHERE ti.team_id = pg.home_team_id
+      ORDER BY (ti.season_id IS NULL) DESC, ti.recorded_at DESC
+      LIMIT 1
+    ), 'Home') AS home_code,
+    true AS is_personal
+  FROM user_personal_games pg
+  JOIN teams t_home ON t_home.id = pg.home_team_id
+  LEFT JOIN seasons ps ON ps.id = pg.season_id
+  LEFT JOIN leagues l ON l.id = COALESCE(ps.league_id, t_home.league_id)
+  WHERE pg.user_id = ${userId}
+    AND (${gameId}::uuid IS NULL OR pg.id = ${gameId}::uuid)
 `;
 
 const syncScheduledGameToGoogleCalendar = async ({ userId, gameId, now = new Date() }) => {
