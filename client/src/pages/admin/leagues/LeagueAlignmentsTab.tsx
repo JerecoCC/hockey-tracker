@@ -501,6 +501,12 @@ const AlignmentGroupNode = ({
   const teamCountLabel = `${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`;
   const groupName = roleLabel ? `${group.name} ${roleLabel}` : group.name;
   const groupCountLabel = `(${teamCountLabel})`;
+  // A team belongs to one group per alignment, so the picker leaves out teams already in
+  // another group or subgroup. This group's own teams stay listed so they can be removed.
+  const teamsInOtherGroups = new Set(
+    allGroups.filter((g) => g.id !== group.id).flatMap((g) => g.teams.map((team) => team.id)),
+  );
+  const assignableTeams = leagueTeams.filter((team) => !teamsInOtherGroups.has(team.id));
   const removeTeam = (teamId: string) => {
     void onSetGroupTeams(
       group.id,
@@ -661,7 +667,7 @@ const AlignmentGroupNode = ({
         <TeamSelectionModal
           open={teamModalOpen}
           title={`${group.name} Teams`}
-          teams={leagueTeams}
+          teams={assignableTeams}
           selectedIds={group.teams.map((team) => team.id)}
           disabled={busy === group.id}
           onClose={() => setTeamModalOpen(false)}
