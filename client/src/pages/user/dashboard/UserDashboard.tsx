@@ -10,6 +10,7 @@ import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import GameCard from '@/shared/GameCard/GameCard';
 import PersonalGameModal from '@/shared/PersonalGameModal/PersonalGameModal';
+import PersonalGameScoreModal from '@/shared/PersonalGameModal/PersonalGameScoreModal';
 import ScheduleWatchModal from '@/shared/ScheduleWatchModal/ScheduleWatchModal';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
 import { getUserGameActions } from '@/shared/GameCard/userGameActionItems';
@@ -132,6 +133,8 @@ const UserDashboard = () => {
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
   const [scheduleDate, setScheduleDate] = useState('');
   const [personalGameTarget, setPersonalGameTarget] = useState<GameRecord | null>(null);
+  // The personal game being marked watched, whose score is asked for first.
+  const [scoreTarget, setScoreTarget] = useState<GameRecord | null>(null);
   const [scheduleBusy, setScheduleBusy] = useState(false);
   const [scoreCardTarget, setScoreCardTarget] = useState<GameRecord | null>(null);
   const isAdmin = user?.role === 'admin';
@@ -240,6 +243,11 @@ const UserDashboard = () => {
   };
 
   const markGameWatched = async (game: GameRecord) => {
+    // A personal game's score is recorded when it's marked watched.
+    if (game.is_personal) {
+      setScoreTarget(game);
+      return;
+    }
     const gameId = game.id;
     if (actionGameId === gameId) return;
     if (!canMarkGameWatched(game)) {
@@ -578,6 +586,10 @@ const UserDashboard = () => {
         open={!!personalGameTarget}
         game={personalGameTarget}
         onClose={() => setPersonalGameTarget(null)}
+      />
+      <PersonalGameScoreModal
+        game={scoreTarget}
+        onClose={() => setScoreTarget(null)}
       />
 
       <ScheduleWatchModal

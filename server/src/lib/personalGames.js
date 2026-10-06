@@ -95,6 +95,16 @@ function normalizePersonalGameInput(body = {}, { partial = false } = {}) {
     out.scheduled_for = scheduledFor;
   }
 
+  // The client's "today", used as the watched date when recording a score marks the game
+  // watched (a postponed watch date takes precedence). Not stored on its own.
+  if (has('watched_on')) {
+    const watchedOn = body.watched_on || null;
+    if (watchedOn !== null && !DATE_RE.test(watchedOn)) {
+      throw badRequest('watched_on must be a YYYY-MM-DD date');
+    }
+    out.watched_on = watchedOn;
+  }
+
   return out;
 }
 

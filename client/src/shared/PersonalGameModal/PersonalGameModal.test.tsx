@@ -3,18 +3,21 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
 import type { GameRecord } from '@/hooks/useGames';
 import PersonalGameModal from './PersonalGameModal';
+import PersonalGameScoreModal from './PersonalGameScoreModal';
 
 jest.mock('axios');
 
 const mockCreate = jest.fn();
 const mockUpdate = jest.fn();
 const mockDelete = jest.fn();
+const mockRecordScore = jest.fn();
 jest.mock('@/hooks/usePersonalGames', () => ({
   __esModule: true,
   default: () => ({
     createPersonalGame: mockCreate,
     updatePersonalGame: mockUpdate,
     deletePersonalGame: mockDelete,
+    recordPersonalGameScore: mockRecordScore,
   }),
 }));
 
@@ -216,6 +219,7 @@ describe('PersonalGameModal', () => {
         home_score: 3,
         result_type: 'overtime',
         scheduled_for: '2026-05-16',
+        watched_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       }),
     );
     expect(onClose).toHaveBeenCalled();
@@ -274,5 +278,55 @@ describe('PersonalGameModal', () => {
     expect(screen.getByLabelText('Game Date')).toHaveValue('2026-05-14');
     expect(screen.getByLabelText('Result')).toHaveValue('shootout');
     expect(screen.getByRole('button', { name: /Delete/ })).toBeInTheDocument();
+  });
+});
+
+describe('PersonalGameScoreModal', () => {
+  const unscoredGame = {
+    id: 'personal-1',
+    is_personal: true,
+    status: 'scheduled',
+    away_team: { id: 'team-ott', code: 'OTT' },
+    home_team: { id: 'team-mtl', code: 'MTL' },
+  } as unknown as GameRecord;
+
+  it('records the score when a personal game is marked watched', async () => {
+    mockRecordScore.mockResolvedValue({ id: 'personal-1' });
+    const onClose = jest.fn();
+    render(
+      <PersonalGameScoreModal
+        game={unscoredGame}
+        onClose={onClose}
+      />,
+    );
+
+    change('OTT Score', '2');
+    change('MTL Score', '3');
+    change('Result', 'shootout');
+    fireEvent.submit(document.getElementById('personal-game-score-form')!);
+
+    await waitFor(() =>
+      expect(mockRecordScore).toHaveBeenCalledWith('personal-1', {
+        away_score: 2,
+        home_score: 3,
+        result_type: 'shootout',
+      }),
+    );
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('needs both scores before marking watched', async () => {
+    render(
+      <PersonalGameScoreModal
+        game={unscoredGame}
+        onClose={jest.fn()}
+      />,
+    );
+
+    change('OTT Score', '2');
+    fireEvent.submit(document.getElementById('personal-game-score-form')!);
+
+    expect(await screen.findByText('Score is required')).toBeInTheDocument();
+    expect(mockRecordScore).not.toHaveBeenCalled();
   });
 });

@@ -17,6 +17,7 @@ import { toast } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
 import PersonalGameModal from '@/shared/PersonalGameModal/PersonalGameModal';
+import PersonalGameScoreModal from '@/shared/PersonalGameModal/PersonalGameScoreModal';
 import ScheduleWatchModal from '@/shared/ScheduleWatchModal/ScheduleWatchModal';
 import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
@@ -652,6 +653,8 @@ const UserGames = () => {
   const [addGamesDateKey, setAddGamesDateKey] = useState<string | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
   // The personal game being added (game: null) or edited; null when the modal is closed.
+  // The personal game being marked watched, whose score is asked for first.
+  const [scoreTarget, setScoreTarget] = useState<GameRecord | null>(null);
   const [personalGameTarget, setPersonalGameTarget] = useState<{ game: GameRecord | null } | null>(
     null,
   );
@@ -1096,6 +1099,11 @@ const UserGames = () => {
   };
 
   const markGameWatched = async (game: GameRecord) => {
+    // A personal game's score is recorded when it's marked watched.
+    if (game.is_personal) {
+      setScoreTarget(game);
+      return;
+    }
     const gameId = game.id;
     if (actionGameId === gameId) return;
     if (!canMarkGameWatched(game)) {
@@ -1783,6 +1791,10 @@ const UserGames = () => {
         open={!!personalGameTarget}
         game={personalGameTarget?.game ?? null}
         onClose={() => setPersonalGameTarget(null)}
+      />
+      <PersonalGameScoreModal
+        game={scoreTarget}
+        onClose={() => setScoreTarget(null)}
       />
 
       {scheduleTarget && (

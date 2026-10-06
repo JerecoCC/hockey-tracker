@@ -16,6 +16,7 @@ import usePersonalGames, {
   type PersonalGameResultType,
 } from '@/hooks/usePersonalGames';
 import { API, authHeaders } from '@/lib/apiClient';
+import { toLocalDateKey } from '@/lib/gameSchedule';
 import styles from './PersonalGameModal.module.scss';
 
 interface TeamOption {
@@ -226,6 +227,8 @@ const PersonalGameModal = ({ open, game, defaultDate, onClose }: Props) => {
       home_score: scored ? Number(values.home_score) : null,
       result_type: scored ? values.result_type : 'regulation',
       scheduled_for: values.scheduled_for || null,
+      // A score means the game was watched; the server marks it watched on this date.
+      watched_on: scored ? toLocalDateKey(new Date()) : null,
     };
     const saved = game
       ? await updatePersonalGame(game.id, input)

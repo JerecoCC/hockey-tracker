@@ -3,6 +3,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 import { API, authHeaders, getApiErrorMessage as apiError } from '@/lib/apiClient';
+import { toLocalDateKey } from '@/lib/gameSchedule';
 import type { GameRecord, GameType } from './useGames';
 
 export type PersonalGameResultType = 'regulation' | 'overtime' | 'shootout';
@@ -23,6 +24,14 @@ export interface PersonalGameInput {
   result_type: PersonalGameResultType;
   /** The postponed watch date (YYYY-MM-DD), or null. */
   scheduled_for: string | null;
+  /** Today's local date: recording a score marks the game watched on it (unless postponed). */
+  watched_on?: string | null;
+}
+
+export interface PersonalGameScore {
+  away_score: number;
+  home_score: number;
+  result_type: PersonalGameResultType;
 }
 
 // Every list a personal game can appear in: my games, the dashboard, and watched games.
@@ -73,6 +82,26 @@ const usePersonalGames = () => {
     }
   };
 
+  /** Records the final score after watching, which also marks the game watched. */
+  const recordPersonalGameScore = async (
+    id: string,
+    score: PersonalGameScore,
+  ): Promise<GameRecord | null> => {
+    try {
+      const { data } = await axios.patch<GameRecord>(
+        `${API}/user/personal-games/${id}`,
+        { ...score, watched_on: toLocalDateKey(new Date()) },
+        { headers: authHeaders() },
+      );
+      toast.success('Score recorded and marked as watched');
+      await refreshGameLists();
+      return data;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to record the score'));
+      return null;
+    }
+  };
+
   const deletePersonalGame = async (id: string): Promise<boolean> => {
     try {
       await axios.delete(`${API}/user/personal-games/${id}`, { headers: authHeaders() });
@@ -85,7 +114,7 @@ const usePersonalGames = () => {
     }
   };
 
-  return { createPersonalGame, updatePersonalGame, deletePersonalGame };
+  return { createPersonalGame, updatePersonalGame, recordPersonalGameScore, deletePersonalGame };
 };
 
 export default usePersonalGames;

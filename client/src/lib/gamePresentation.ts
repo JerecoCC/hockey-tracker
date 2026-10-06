@@ -25,7 +25,9 @@ export const getScoreCardGame = (game: GameRecord): GameRecord => ({
   series_away_wins: game.series_away_wins_at_game ?? null,
 });
 
-export const canMarkGameWatched = (game: GameRecord): boolean => game.status === 'final';
+// A personal game can be marked watched before it has a score: that's when its score is recorded.
+export const canMarkGameWatched = (game: GameRecord): boolean =>
+  game.status === 'final' || !!game.is_personal;
 
 export const getGameMatchupLabel = (game: GameRecord): string =>
   `${game.away_team.code} @ ${game.home_team.code}`;

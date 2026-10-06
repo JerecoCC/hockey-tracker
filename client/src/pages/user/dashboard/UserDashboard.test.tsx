@@ -14,6 +14,7 @@ let mockAuthUser: any = {
 
 // The personal game form pulls in the full tracker-ui bundle; its own tests cover it.
 jest.mock('@/shared/PersonalGameModal/PersonalGameModal', () => () => null);
+jest.mock('@/shared/PersonalGameModal/PersonalGameScoreModal', () => () => null);
 jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
 jest.mock('axios');
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn(), useQueryClient: jest.fn() }));

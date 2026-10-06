@@ -130,3 +130,52 @@ describe('DELETE /api/user/personal-games/:id', () => {
     });
   });
 });
+
+describe('recording a personal game score', () => {
+  it('marks a new game watched when it is added with a score', async () => {
+    sql.mockResolvedValueOnce([{ id: GAME_ID }]);
+
+    await request(app).post('/api/user/personal-games').send({
+      home_team_id: HOME,
+      away_team_id: AWAY,
+      scheduled_at: '2026-10-10',
+      home_score: 3,
+      away_score: 1,
+      watched_on: '2026-10-11',
+    });
+
+    const insert = sql.mock.calls[0][0].join('?');
+    expect(insert).toContain('watched_on');
+    expect(insert).toMatch(/COALESCE\(\?::date, \?::date, CURRENT_DATE\)/);
+    expect(sql.mock.calls[0].slice(1)).toEqual(expect.arrayContaining([3, 1, '2026-10-11']));
+  });
+
+  it('marks an edited game watched when its score is set, keeping an existing date', async () => {
+    findOwnedPersonalGame.mockResolvedValueOnce({ id: GAME_ID });
+    sql
+      .mockResolvedValueOnce([
+        {
+          season_id: null,
+          home_team_id: HOME,
+          away_team_id: AWAY,
+          game_type: 'regular',
+          scheduled_at: '2026-10-10',
+          scheduled_time: null,
+          scheduled_for: null,
+          home_score: null,
+          away_score: null,
+          result_type: 'regulation',
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app)
+      .patch(`/api/user/personal-games/${GAME_ID}`)
+      .send({ home_score: 2, away_score: 4, result_type: 'regulation', watched_on: '2026-10-12' });
+
+    expect(res.status).toBe(200);
+    const update = sql.mock.calls[1][0].join('?');
+    expect(update).toMatch(/COALESCE\(\s*watched_on,\s*\?::date,\s*\?::date,\s*CURRENT_DATE\s*\)/);
+    expect(sql.mock.calls[1].slice(1)).toEqual(expect.arrayContaining(['2026-10-12']));
+  });
+});

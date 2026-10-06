@@ -45,7 +45,9 @@ const assertWatchDateAfterGame = ({ scheduled_for: watchDate, scheduled_at: game
 // ---------------------------------------------------------------------------
 // POST /api/user/personal-games  – add a game to the user's own schedule
 // Body: { season_id?, home_team_id, away_team_id, game_type, scheduled_at, scheduled_time?,
-//         home_score?, away_score?, result_type?, scheduled_for? }
+//         home_score?, away_score?, result_type?, scheduled_for?, watched_on? }
+// A score is only known once the user has watched the game, so recording one marks it
+// watched: on the postponed watch date if set, else watched_on (the client's today).
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
   const userId = req.user.id;
@@ -56,12 +58,16 @@ router.post('/', async (req, res) => {
     const [created] = await sql`
       INSERT INTO user_personal_games (
         user_id, season_id, home_team_id, away_team_id, game_type, scheduled_at, scheduled_time,
-        home_score, away_score, result_type, scheduled_for
+        home_score, away_score, result_type, scheduled_for, watched_on
       )
       VALUES (
         ${userId}, ${input.season_id}, ${input.home_team_id}, ${input.away_team_id}, ${input.game_type},
         ${input.scheduled_at}::date, ${input.scheduled_time}, ${input.home_score},
-        ${input.away_score}, ${input.result_type}, ${input.scheduled_for}::date
+        ${input.away_score}, ${input.result_type}, ${input.scheduled_for}::date,
+        CASE
+          WHEN ${input.home_score}::smallint IS NULL THEN NULL
+          ELSE COALESCE(${input.scheduled_for}::date, ${input.watched_on ?? null}::date, CURRENT_DATE)
+        END
       )
       RETURNING id
     `;
@@ -97,7 +103,8 @@ router.patch('/:id', async (req, res) => {
     assertValidResult(merged);
     assertWatchDateAfterGame(merged);
 
-    // An unplayed game can't stay marked watched.
+    // Recording a score marks an unwatched game watched (keeping an existing watched date);
+    // clearing the score means it hasn't been watched.
     await sql`
       UPDATE user_personal_games SET
         season_id      = ${merged.season_id},
@@ -110,7 +117,15 @@ router.patch('/:id', async (req, res) => {
         away_score     = ${merged.away_score},
         result_type    = ${merged.result_type},
         scheduled_for  = ${merged.scheduled_for}::date,
-        watched_on     = CASE WHEN ${merged.home_score}::smallint IS NULL THEN NULL ELSE watched_on END,
+        watched_on     = CASE
+                           WHEN ${merged.home_score}::smallint IS NULL THEN NULL
+                           ELSE COALESCE(
+                             watched_on,
+                             ${merged.scheduled_for}::date,
+                             ${changes.watched_on ?? null}::date,
+                             CURRENT_DATE
+                           )
+                         END,
         updated_at     = NOW()
       WHERE id = ${id} AND user_id = ${userId}
     `;
