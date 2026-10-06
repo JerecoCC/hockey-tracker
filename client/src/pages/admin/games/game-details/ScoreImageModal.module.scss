@@ -455,6 +455,16 @@
 
 .scoreCard {
   &TeamPanel {
+    // Logos are transparent PNGs on the team's solid primary, so a white outline traced around
+    // the logo's shape keeps one drawn in the primary color from blending into the panel.
+    // Eight 2px offsets (sides and diagonals) close the gaps a four-way outline leaves at corners.
+    .scoreCardLogoImg {
+      filter: drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff)
+        drop-shadow(0 -2px 0 #fff) drop-shadow(1.5px 1.5px 0 #fff)
+        drop-shadow(-1.5px 1.5px 0 #fff) drop-shadow(1.5px -1.5px 0 #fff)
+        drop-shadow(-1.5px -1.5px 0 #fff) drop-shadow(0 10px 14px rgba(0, 0, 0, 0.22));
+    }
+
     .scoreCardLogoImg,
     .scoreCardLogoPlaceholder {
       position: absolute;
