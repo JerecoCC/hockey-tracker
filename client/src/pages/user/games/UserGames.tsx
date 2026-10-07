@@ -75,7 +75,6 @@ import AddDayGamesModal from '../dashboard/AddDayGamesModal';
 const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/ScoreImageModal'));
 
 import { API, authHeaders } from '@/lib/apiClient';
-const WEEK_STORAGE_KEY = 'user-games-week-start';
 const CALENDAR_MONTH_STORAGE_KEY = 'user-games-calendar-month';
 const USER_WEEK_SUMMARY_STICKY_TOP = '52px';
 const USER_WEEK_SUMMARY_STICKY_TOP_PX = 52;
@@ -217,14 +216,6 @@ const majorityMonthForWeek = (weekStart: Date) => {
 
   return majority?.month ?? firstWeekStartForMonth(weekStart);
 };
-const weekBelongsToCalendarMonth = (weekStart: Date, month: Date) =>
-  isSameCalendarMonth(majorityMonthForWeek(weekStart), month);
-
-const getStoredWeekStart = () => {
-  const stored = sessionStorage.getItem(WEEK_STORAGE_KEY);
-  return stored && DATE_ONLY_RE.test(stored) ? fromISODate(stored) : toDay(new Date());
-};
-
 const getStoredCalendarMonth = () => {
   const stored = sessionStorage.getItem(CALENDAR_MONTH_STORAGE_KEY);
   return stored && MONTH_ONLY_RE.test(stored) ? fromMonthPickerValue(stored) : null;
@@ -633,7 +624,8 @@ const UserGames = () => {
   const isMobileView = viewport === 'mobile';
   const isTabletView = viewport === 'tablet';
   const initialStoredCalendarMonth = getStoredCalendarMonth();
-  const [weekStart, setWeekStart] = useState<Date>(() => getStoredWeekStart());
+  // The week view always opens on today; only leaving the month view on another month moves it.
+  const [weekStart, setWeekStart] = useState<Date>(() => toDay(new Date()));
   const [calendarMonth, setCalendarMonth] = useState<Date>(
     () => initialStoredCalendarMonth ?? monthStart(new Date()),
   );
@@ -669,10 +661,6 @@ const UserGames = () => {
   const calendarGridRef = useRef<HTMLDivElement>(null);
 
   const weekEnd = addDays(weekStart, 6);
-
-  useEffect(() => {
-    sessionStorage.setItem(WEEK_STORAGE_KEY, dateToISO(weekStart));
-  }, [weekStart]);
 
   useEffect(() => {
     sessionStorage.setItem(CALENDAR_MONTH_STORAGE_KEY, toMonthPickerValue(calendarMonth));
@@ -1320,9 +1308,10 @@ const UserGames = () => {
   const handleViewChange = (nextView: 'list' | 'calendar') => {
     if (nextView === view) return;
     if (nextView === 'list') {
-      if (!weekBelongsToCalendarMonth(weekStart, calendarMonth)) {
-        setWeekStart(firstWeekStartForMonth(calendarMonth));
-      }
+      const today = toDay(new Date());
+      setWeekStart(
+        isSameCalendarMonth(calendarMonth, today) ? today : firstWeekStartForMonth(calendarMonth),
+      );
     } else {
       handleCalendarMonthChange(majorityMonthForWeek(weekStart));
     }

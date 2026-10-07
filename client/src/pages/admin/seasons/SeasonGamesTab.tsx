@@ -53,7 +53,7 @@ import {
   isDateKeyWithinRange,
   majorityMonthForWeek,
   toEasternDateKey,
-  weekBelongsToCalendarMonth,
+  isSameCalendarMonth,
 } from './seasonDateUtils';
 import {
   hasFinalGame,
@@ -372,43 +372,41 @@ const SeasonGamesTab = ({
     });
   };
 
-  // ── Week navigation (with sessionStorage persistence) ────────────────────
-  const weekKey = `season-games-week:${seasonId}`;
-  const [weekStart, setWeekStartState] = useState<Date>(() => {
-    const stored = sessionStorage.getItem(`season-games-week:${seasonId}`);
-    const initialWeek = stored ?? dateToISO(toDay(new Date()));
-    return fromISODate(clampWeekStartDateKey(initialWeek, seasonStartDate, seasonEndDate));
-  });
+  // ── Week navigation ───────────────────────────────────────────────────────
+  // The week view always opens on today (kept inside the season); only leaving the month
+  // view on another month moves it.
+  const todayWeekStart = () =>
+    fromISODate(
+      clampWeekStartDateKey(dateToISO(toDay(new Date())), seasonStartDate, seasonEndDate),
+    );
+  const [weekStart, setWeekStartState] = useState<Date>(todayWeekStart);
   const weekEnd = addDays(weekStart, 6);
   const visibleWeekEnd = fromISODate(
     clampDateKeyToRange(dateToISO(weekEnd), seasonStartDate, seasonEndDate),
   );
 
   useEffect(() => {
-    const stored = sessionStorage.getItem(weekKey);
-    const initialWeek = stored ?? dateToISO(toDay(new Date()));
-    const clampedWeek = clampWeekStartDateKey(initialWeek, seasonStartDate, seasonEndDate);
-    sessionStorage.setItem(weekKey, clampedWeek);
-    setWeekStartState(fromISODate(clampedWeek));
-  }, [seasonEndDate, seasonStartDate, weekKey]);
+    setWeekStartState(todayWeekStart());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seasonEndDate, seasonStartDate, seasonId]);
 
   const setWeekStart = (updater: Date | ((d: Date) => Date)) => {
     setWeekStartState((prev) => {
       const requested = typeof updater === 'function' ? updater(prev) : updater;
-      const next = fromISODate(
+      return fromISODate(
         clampWeekStartDateKey(dateToISO(requested), seasonStartDate, seasonEndDate),
       );
-      sessionStorage.setItem(weekKey, dateToISO(next));
-      return next;
     });
   };
 
   const handleViewChange = (nextView: SeasonGamesView) => {
     if (nextView === view) return;
     if (nextView === 'list') {
-      if (!weekBelongsToCalendarMonth(weekStart, calendarMonth)) {
-        setWeekStart(firstWeekStartForMonth(calendarMonth));
-      }
+      setWeekStart(
+        isSameCalendarMonth(calendarMonth, new Date())
+          ? toDay(new Date())
+          : firstWeekStartForMonth(calendarMonth),
+      );
     } else {
       setCalendarMonth(majorityMonthForWeek(weekStart));
     }

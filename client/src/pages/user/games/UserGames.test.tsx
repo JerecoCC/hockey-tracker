@@ -268,8 +268,28 @@ jest.mock('@jerecocc/tracker-ui/components/Toggle/Toggle', () => ({
 }));
 jest.mock('@jerecocc/tracker-ui/components/PeriodPicker/PeriodPicker', () => ({
   __esModule: true,
-  default: ({ kind, label, onPrevious, onNext, className }: any) => {
+  // The picker builds its own label from `value`: "May 15 – May 21, 2026" or "May 2026".
+  default: ({ kind, value, onPrevious, onNext, className }: any) => {
     const period = kind === 'month' ? 'month' : 'week';
+    const [y, m, d] = String(value ?? '')
+      .split('-')
+      .map(Number);
+    let label = '';
+    if (kind === 'month') {
+      label = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(
+        new Date(y, m - 1, 1),
+      );
+    } else if (y && m && d) {
+      const start = new Date(y, m - 1, d);
+      const end = new Date(y, m - 1, d + 6);
+      const short = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+      const withYear = new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      label = `${(start.getFullYear() === end.getFullYear() ? short : withYear).format(start)} – ${withYear.format(end)}`;
+    }
     return (
       <div className={className}>
         <button
@@ -659,12 +679,39 @@ const allTeams = [
   { id: 'team-idle', name: 'Idle Team', code: 'IDL', logo: null, league_id: 'league-1' },
 ];
 
+// The page opens the week view on today, so pin today to the fixture date. Only Date is faked;
+// timers stay real for user events and query updates.
+beforeEach(() => {
+  jest.useFakeTimers({
+    now: currentDate,
+    doNotFake: [
+      'hrtime',
+      'nextTick',
+      'performance',
+      'queueMicrotask',
+      'requestAnimationFrame',
+      'cancelAnimationFrame',
+      'requestIdleCallback',
+      'cancelIdleCallback',
+      'setImmediate',
+      'clearImmediate',
+      'setInterval',
+      'clearInterval',
+      'setTimeout',
+      'clearTimeout',
+    ],
+  });
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   window.history.replaceState({}, '', '/games');
   window.localStorage.clear();
   window.sessionStorage.clear();
-  window.sessionStorage.setItem('user-games-week-start', localDateString(0));
   window.sessionStorage.setItem(
     'user-games-calendar-month',
     `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
@@ -2515,24 +2562,21 @@ describe('UserGames schedule views', () => {
     expect(screen.getByRole('button', { name: `Select week: ${weekLabel}` })).toBeInTheDocument();
   });
 
-  it('stores and restores the selected week in session storage', async () => {
+  it('always reopens the week view on today', async () => {
     const user = userEvent.setup();
     const { unmount } = render(<UserGames />);
 
     await user.click(screen.getByRole('button', { name: 'Week view' }));
     await user.click(screen.getByRole('button', { name: 'Next week' }));
 
-    const expectedWeekStart = localDateString(7);
-    const expectedWeekLabel = formatWeekRange(dateOffset(7), dateOffset(13));
-
-    expect(window.sessionStorage.getItem('user-games-week-start')).toBe(expectedWeekStart);
-
     unmount();
     render(<UserGames />);
     await user.click(screen.getByRole('button', { name: 'Week view' }));
 
     expect(
-      screen.getByRole('button', { name: `Select week: ${expectedWeekLabel}` }),
+      screen.getByRole('button', {
+        name: `Select week: ${formatWeekRange(dateOffset(0), dateOffset(6))}`,
+      }),
     ).toBeInTheDocument();
   });
 
