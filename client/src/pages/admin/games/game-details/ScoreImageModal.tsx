@@ -268,8 +268,6 @@ interface Props {
   onClose: () => void;
   /** When true, renders the headline/caption/toggle form below the upload area. */
   showForm?: boolean;
-  /** Admin-only affordance for previewing the generated image before download. */
-  allowPreview?: boolean;
 }
 
 type ScoreCardFormValues = {
@@ -571,7 +569,6 @@ const ScoreImageModal = ({
   overtimeSuffix,
   onClose,
   showForm = false,
-  allowPreview = false,
 }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scoreCardRef = useRef<HTMLDivElement>(null);
@@ -1199,7 +1196,6 @@ const ScoreImageModal = ({
       : drawGame.series_home_wins!
     : 0;
   const seriesStatusLine = scoreCardPhaseLabel;
-  const canPreview = allowPreview || isStandaloneForm;
   const isPreviewDisabled =
     generating || previewing || (isStandaloneForm && !scoreCardFormValidation.isValid);
 
@@ -1671,19 +1667,18 @@ const ScoreImageModal = ({
         disableBackdropClose={isStandaloneForm}
         footer={
           <div className={styles.footer}>
-            {canPreview && (
-              <div className={styles.footerStart}>
-                <Button
-                  variant="outlined"
-                  intent="accent"
-                  icon="visibility"
-                  onClick={handlePreview}
-                  disabled={isPreviewDisabled}
-                >
-                  {previewing ? 'Generating Preview…' : 'Preview Image'}
-                </Button>
-              </div>
-            )}
+            {/* Every score card can be previewed before downloading. */}
+            <div className={styles.footerStart}>
+              <Button
+                variant="outlined"
+                intent="accent"
+                icon="visibility"
+                onClick={handlePreview}
+                disabled={isPreviewDisabled}
+              >
+                {previewing ? 'Generating Preview…' : 'Preview Image'}
+              </Button>
+            </div>
             <div className={styles.footerEnd}>
               <Button
                 variant="outlined"
@@ -2282,7 +2277,7 @@ const ScoreImageModal = ({
       </Modal>
 
       <ImagePreviewModal
-        open={canPreview && !!previewUrl}
+        open={!!previewUrl}
         src={previewUrl}
         alt="Generated score card preview"
         onClose={() => setPreviewUrl(null)}

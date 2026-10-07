@@ -1063,7 +1063,6 @@ const GameSummaryTab = ({
             liveAwayScore={liveAwayScore}
             liveHomeScore={liveHomeScore}
             overtimeSuffix={overtimeSuffix}
-            allowPreview
             onClose={() => setScoreImageOpen(false)}
           />
         )}

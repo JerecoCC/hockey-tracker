@@ -515,7 +515,6 @@ describe('ScoreImageModal', () => {
           }
           liveAwayScore={1}
           liveHomeScore={2}
-          allowPreview
         />
       </ThemeContext.Provider>,
     );

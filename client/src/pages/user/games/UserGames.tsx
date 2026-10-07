@@ -1822,7 +1822,6 @@ const UserGames = () => {
             liveHomeScore={scoreCardTarget?.home_score}
             overtimeSuffix={scoreCardTarget ? getOvertimeSuffix(scoreCardTarget) : ''}
             showForm={scoreImageOpen}
-            allowPreview
             onClose={() => {
               setScoreImageOpen(false);
               setScoreCardTarget(null);
