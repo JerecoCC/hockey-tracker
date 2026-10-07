@@ -529,6 +529,37 @@ describe('Google Calendar service helpers', () => {
   });
 });
 
+describe('Google Calendar league colors', () => {
+  const { eventColorIdForGame } = require('./googleCalendar');
+  const baseGame = {
+    id: 'game-1',
+    calendar_date: '2026-10-10',
+    game_date: '2026-10-10',
+    scheduled_time: null,
+    away_code: 'AWY',
+    home_code: 'HOM',
+  };
+
+  it("uses the league's chosen color", () => {
+    const event = eventForGame({
+      userId: 'user-1',
+      game: { ...baseGame, league_id: 'league-1', google_calendar_color_id: 7 },
+    });
+    expect(event.colorId).toBe('7');
+  });
+
+  it('picks a stable automatic color from the league when none is chosen', () => {
+    const first = eventColorIdForGame({ league_id: 'league-1', google_calendar_color_id: null });
+    expect(Number(first)).toBeGreaterThanOrEqual(1);
+    expect(Number(first)).toBeLessThanOrEqual(11);
+    expect(eventColorIdForGame({ league_id: 'league-1' })).toBe(first);
+  });
+
+  it('leaves the color to the calendar when the game has no league', () => {
+    expect(eventColorIdForGame({ league_id: null })).toBeUndefined();
+  });
+});
+
 describe('calendarGameSelect seasons', () => {
   it('takes the closest open season in each league, not one across all leagues', async () => {
     sql.mockResolvedValueOnce([]);

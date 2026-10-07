@@ -11,6 +11,7 @@ import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
 import { type CreateLeagueData } from '@/hooks/useLeagues';
 import { descriptionHtmlToTextarea, textareaToDescriptionHtml } from '@/lib/descriptionHtml';
+import { GOOGLE_CALENDAR_COLORS } from '@/lib/googleCalendarColors';
 import styles from './LeagueEditModal.module.scss';
 
 const BEST_OF_OPTIONS = [
@@ -30,6 +31,23 @@ const SCORING_SYSTEM_OPTIONS = [
   { value: '3-2-1-0', label: '3-2-1-0 (W / OT W / OT Loss / Loss)' },
 ];
 
+const AUTOMATIC_CALENDAR_COLOR = 'auto';
+
+const CALENDAR_COLOR_OPTIONS = [
+  { value: AUTOMATIC_CALENDAR_COLOR, label: 'Automatic' },
+  ...GOOGLE_CALENDAR_COLORS.map((color) => ({
+    value: String(color.id),
+    label: color.name,
+    leadingIndicator: (
+      <span
+        className={styles.calendarColorSwatch}
+        style={{ background: color.hex }}
+        aria-hidden="true"
+      />
+    ),
+  })),
+];
+
 interface FormValues {
   logo: File | string | null;
   icon: File | string | null;
@@ -41,6 +59,7 @@ interface FormValues {
   best_of_shootout: string;
   scoring_system: '3-2-1-0' | '2-1-0';
   goalie_min_regular_minutes: string;
+  google_calendar_color_id: string;
   description: string | null;
 }
 
@@ -65,6 +84,9 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       best_of_shootout: String(league.best_of_shootout),
       scoring_system: league.scoring_system,
       goalie_min_regular_minutes: String(league.goalie_min_regular_minutes),
+      google_calendar_color_id: league.google_calendar_color_id
+        ? String(league.google_calendar_color_id)
+        : AUTOMATIC_CALENDAR_COLOR,
       description: descriptionHtmlToTextarea(league.description),
     }),
     [league],
@@ -112,6 +134,10 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       best_of_shootout: parseInt(data.best_of_shootout, 10),
       scoring_system: data.scoring_system,
       goalie_min_regular_minutes: parseInt(data.goalie_min_regular_minutes, 10),
+      google_calendar_color_id:
+        data.google_calendar_color_id === AUTOMATIC_CALENDAR_COLOR
+          ? null
+          : Number(data.google_calendar_color_id),
       description: textareaToDescriptionHtml(data.description) ?? undefined,
     };
     const ok = await updateLeague(league.id, payload);
@@ -227,6 +253,14 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
             disabled={isSubmitting}
           />
         </div>
+        <ControlledSelectField
+          label="Google Calendar Color"
+          control={control}
+          name="google_calendar_color_id"
+          options={CALENDAR_COLOR_OPTIONS}
+          infoTooltip="Color of this league's games on users' synced Google Calendars. Automatic picks one from the league."
+          disabled={isSubmitting}
+        />
         <ControlledTextareaField
           label="Description"
           control={control}

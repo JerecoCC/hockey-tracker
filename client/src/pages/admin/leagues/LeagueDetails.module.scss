@@ -1626,3 +1626,18 @@ $league-tab-list-gap: $space-md;
     background: rgba(255, 255, 255, 0.52);
   }
 }
+
+// Google Calendar event color swatch for a league.
+.calendarColorSwatch {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+}
+
+.calendarColorValue {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+}

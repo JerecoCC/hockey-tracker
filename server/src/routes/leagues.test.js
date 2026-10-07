@@ -424,3 +424,22 @@ describe('DELETE /api/admin/leagues/:id', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('PATCH /api/admin/leagues/:id google calendar color', () => {
+  it('saves a chosen color and allows clearing it back to automatic', async () => {
+    sql.mockResolvedValue([{ id: 'league-1', google_calendar_color_id: 5 }]);
+
+    const res = await request(app).patch('/api/admin/leagues/league-1').send({ google_calendar_color_id: 5 });
+    expect(res.status).toBe(200);
+    expect(sql.mock.calls[0].slice(1)).toEqual(expect.arrayContaining([true, 5]));
+
+    await request(app).patch('/api/admin/leagues/league-1').send({ google_calendar_color_id: null });
+    expect(sql.mock.calls[1].slice(1)).toEqual(expect.arrayContaining([true, null]));
+  });
+
+  it('rejects colors outside Google Calendar 1-11', async () => {
+    const res = await request(app).patch('/api/admin/leagues/league-1').send({ google_calendar_color_id: 12 });
+    expect(res.status).toBe(400);
+    expect(sql).not.toHaveBeenCalled();
+  });
+});

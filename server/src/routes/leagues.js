@@ -286,7 +286,7 @@ router.get('/', async (_req, res) => {
       SELECT
         l.id, l.name, l.code, l.logo, l.icon, l.primary_color, l.text_color,
         l.best_of_playoff, l.best_of_shootout, l.scoring_system,
-        l.goalie_min_regular_minutes, l.playoff_format,
+        l.goalie_min_regular_minutes, l.playoff_format, l.google_calendar_color_id,
         CASE
           WHEN latest_season.id IS NULL OR latest_season.is_ended THEN 'postseason'
           WHEN latest_season.playoffs_started THEN 'playoffs'
@@ -323,7 +323,7 @@ router.get('/:id', async (req, res) => {
       SELECT
         l.id, l.name, l.code, l.description, l.logo, l.icon, l.primary_color, l.text_color,
         l.best_of_playoff, l.best_of_shootout, l.scoring_system,
-        l.goalie_min_regular_minutes, l.playoff_format,
+        l.goalie_min_regular_minutes, l.playoff_format, l.google_calendar_color_id,
         CASE
           WHEN latest_season.id IS NULL OR latest_season.is_ended THEN 'postseason'
           WHEN latest_season.playoffs_started THEN 'playoffs'
@@ -449,6 +449,20 @@ router.patch('/:id', async (req, res) => {
   const logoInBody           = 'logo' in req.body;
   const iconInBody           = 'icon' in req.body;
   const playoffFormatInBody  = 'playoff_format' in req.body;
+  const calendarColorInBody  = 'google_calendar_color_id' in req.body;
+  const calendarColorId =
+    req.body.google_calendar_color_id === null || req.body.google_calendar_color_id === ''
+      ? null
+      : Number(req.body.google_calendar_color_id);
+  if (
+    calendarColorInBody &&
+    calendarColorId !== null &&
+    !(Number.isInteger(calendarColorId) && calendarColorId >= 1 && calendarColorId <= 11)
+  ) {
+    return res
+      .status(400)
+      .json({ error: 'google_calendar_color_id must be a Google Calendar color from 1 to 11' });
+  }
 
   if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
     return res.status(400).json({ error: 'name cannot be empty' });
@@ -477,9 +491,10 @@ router.patch('/:id', async (req, res) => {
         best_of_shootout = COALESCE(${best_of_shootout ?? null}, best_of_shootout),
         scoring_system   = COALESCE(${scoring_system ?? null}, scoring_system),
         goalie_min_regular_minutes = COALESCE(${goalieMinRegularMinutes}, goalie_min_regular_minutes),
-        playoff_format   = CASE WHEN ${playoffFormatInBody} THEN ${playoff_format ? JSON.stringify(playoff_format) : null}::jsonb ELSE playoff_format END
+        playoff_format   = CASE WHEN ${playoffFormatInBody} THEN ${playoff_format ? JSON.stringify(playoff_format) : null}::jsonb ELSE playoff_format END,
+        google_calendar_color_id = CASE WHEN ${calendarColorInBody} THEN ${calendarColorId}::smallint ELSE google_calendar_color_id END
       WHERE id = ${id}
-      RETURNING id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes, playoff_format, created_at
+      RETURNING id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, goalie_min_regular_minutes, playoff_format, google_calendar_color_id, created_at
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'League not found' });
     return res.json(rows[0]);

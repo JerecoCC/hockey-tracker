@@ -406,6 +406,19 @@ const formatCalendarDate = (dateKey) =>
 const eventIdForGame = (userId, gameId) =>
   `ht${crypto.createHash('sha256').update(`${userId}:${gameId}`, 'utf8').digest('hex')}`;
 
+// Google Calendar's fixed event colors are colorId 1-11. A league without a chosen color
+// gets a stable one from its id, so different leagues usually differ by default.
+const GOOGLE_EVENT_COLOR_COUNT = 11;
+const eventColorIdForGame = (game) => {
+  const chosen = Number(game.google_calendar_color_id);
+  if (Number.isInteger(chosen) && chosen >= 1 && chosen <= GOOGLE_EVENT_COLOR_COUNT) {
+    return String(chosen);
+  }
+  if (!game.league_id) return undefined;
+  const hash = crypto.createHash('sha256').update(String(game.league_id), 'utf8').digest();
+  return String((hash.readUInt32BE(0) % GOOGLE_EVENT_COLOR_COUNT) + 1);
+};
+
 const eventForGame = ({ userId, game, timeZone }) => {
   const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').trim().replace(/\/$/, '');
   const matchup = `${game.away_code || 'Away'} @ ${game.home_code || 'Home'}`;
@@ -425,6 +438,7 @@ const eventForGame = ({ userId, game, timeZone }) => {
     description: `Game synced from Hockey Tracker.${originalScheduleNote}\n\n${gameUrl}`,
     ...eventTime,
     transparency: 'transparent',
+    colorId: eventColorIdForGame(game),
     source: {
       title: 'Hockey Tracker',
       url: gameUrl,
@@ -656,6 +670,8 @@ const calendarGameSelect = (userId, gameId = null) => sql`
       END
     ) AS scheduled_time,
     l.code AS league_code,
+    l.id AS league_id,
+    l.google_calendar_color_id,
     true AS has_season,
     s.end_date::text AS season_end_date,
     COALESCE((
@@ -713,6 +729,8 @@ const calendarGameSelect = (userId, gameId = null) => sql`
     COALESCE(pg.scheduled_for, pg.scheduled_at)::text AS calendar_date,
     pg.scheduled_time,
     l.code AS league_code,
+    l.id AS league_id,
+    l.google_calendar_color_id,
     (pg.season_id IS NOT NULL) AS has_season,
     ps.end_date::text AS season_end_date,
     COALESCE((
@@ -992,6 +1010,7 @@ const disconnectGoogleCalendar = async (userId) => {
 };
 
 module.exports = {
+  eventColorIdForGame,
   GoogleCalendarError,
   connectGoogleCalendar,
   disconnectGoogleCalendar,

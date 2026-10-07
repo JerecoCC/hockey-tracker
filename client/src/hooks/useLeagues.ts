@@ -37,6 +37,8 @@ export interface LeagueRecord {
   goalie_min_regular_minutes: number;
   /** Ordered list of qualification rules. Null means no programmatic format is set. */
   playoff_format: PlayoffFormatRule[] | null;
+  /** Google Calendar event color (colorId 1-11) for synced games; null picks one automatically. */
+  google_calendar_color_id?: number | null;
   /** League phase derived from its latest season. */
   season_phase: 'preseason' | 'regular' | 'playoffs' | 'postseason';
 }
@@ -54,6 +56,7 @@ export interface CreateLeagueData {
   scoring_system?: '3-2-1-0' | '2-1-0';
   goalie_min_regular_minutes?: number;
   playoff_format?: PlayoffFormatRule[] | null;
+  google_calendar_color_id?: number | null;
 }
 
 

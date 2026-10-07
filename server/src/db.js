@@ -2206,6 +2206,14 @@ async function initSchema() {
     WHERE watched_on IS NULL AND watched_at IS NOT NULL
   `;
 
+  // Google Calendar event color for this league's synced games: one of Google's 11 fixed
+  // event colors (colorId 1-11). Null picks one automatically from the league id.
+  await sql`
+    ALTER TABLE leagues
+      ADD COLUMN IF NOT EXISTS google_calendar_color_id SMALLINT
+        CHECK (google_calendar_color_id BETWEEN 1 AND 11)
+  `;
+
   // Games a user adds to their own calendar and scores by hand. Kept apart from the
   // admin-managed games table: they only appear in their owner's schedule and never
   // affect league standings, stats, or other users. Teams are referenced read-only.

@@ -4,6 +4,7 @@ import EntityHeader from '@jerecocc/tracker-ui/components/EntityHeader/EntityHea
 import InfoItem from '@jerecocc/tracker-ui/components/InfoItem/InfoItem';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
+import { getGoogleCalendarColor } from '@/lib/googleCalendarColors';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -60,7 +61,7 @@ export const LeagueInfoCardSkeleton = ({ className }: SkeletonProps) => (
     <Divider />
 
     <div className={cx(styles.infoGrid, styles.infoCardGrid)}>
-      {['playoff-format', 'shootout-rounds', 'goalie-minimum', 'scoring-system'].map((item) => (
+      {['playoff-format', 'shootout-rounds', 'goalie-minimum', 'scoring-system', 'calendar-color'].map((item) => (
         <div
           key={item}
           className={styles.infoSkeletonItem}
@@ -94,6 +95,21 @@ export const LeagueInfoCardSkeleton = ({ className }: SkeletonProps) => (
     </div>
   </Card>
 );
+
+const CalendarColorValue = ({ colorId }: { colorId?: number | null }) => {
+  const color = getGoogleCalendarColor(colorId);
+  if (!color) return <>Automatic</>;
+  return (
+    <span className={styles.calendarColorValue}>
+      <span
+        className={styles.calendarColorSwatch}
+        style={{ background: color.hex }}
+        aria-hidden="true"
+      />
+      {color.name}
+    </span>
+  );
+};
 
 const LeagueInfoCard = ({ league, onEdit, className }: Props) => (
   <Card className={className}>
@@ -131,6 +147,12 @@ const LeagueInfoCard = ({ league, onEdit, className }: Props) => (
         label="Scoring System"
         value={league.scoring_system}
       />
+      <InfoItem
+        type="custom"
+        label="Google Calendar Color"
+      >
+        <CalendarColorValue colorId={league.google_calendar_color_id} />
+      </InfoItem>
       <InfoItem
         type="html"
         label="Description"
