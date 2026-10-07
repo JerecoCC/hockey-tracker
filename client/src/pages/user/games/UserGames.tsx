@@ -18,6 +18,7 @@ import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
 import PersonalGameModal from '@/shared/PersonalGameModal/PersonalGameModal';
 import PersonalGameScoreModal from '@/shared/PersonalGameModal/PersonalGameScoreModal';
+import PersonalGamesBulkModal from '@/shared/PersonalGameModal/PersonalGamesBulkModal';
 import ScheduleWatchModal from '@/shared/ScheduleWatchModal/ScheduleWatchModal';
 import GameCard from '@/shared/GameCard/GameCard';
 import UserGameActions from '@/shared/GameCard/UserGameActions';
@@ -653,6 +654,7 @@ const UserGames = () => {
   const [addGamesDateKey, setAddGamesDateKey] = useState<string | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
   // The personal game being added (game: null) or edited; null when the modal is closed.
+  const [bulkPersonalGamesOpen, setBulkPersonalGamesOpen] = useState(false);
   // The personal game being marked watched, whose score is asked for first.
   const [scoreTarget, setScoreTarget] = useState<GameRecord | null>(null);
   const [personalGameTarget, setPersonalGameTarget] = useState<{ game: GameRecord | null } | null>(
@@ -1541,6 +1543,11 @@ const UserGames = () => {
               onClick: () => setPersonalGameTarget({ game: null }),
             },
             {
+              label: 'Bulk Add Personal Games',
+              icon: 'playlist_add',
+              onClick: () => setBulkPersonalGamesOpen(true),
+            },
+            {
               label: 'Google Calendar Sync',
               icon: 'calendar_month',
               disabled: busy,
@@ -1795,6 +1802,10 @@ const UserGames = () => {
       <PersonalGameScoreModal
         game={scoreTarget}
         onClose={() => setScoreTarget(null)}
+      />
+      <PersonalGamesBulkModal
+        open={bulkPersonalGamesOpen}
+        onClose={() => setBulkPersonalGamesOpen(false)}
       />
 
       {scheduleTarget && (

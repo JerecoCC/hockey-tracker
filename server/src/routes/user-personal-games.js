@@ -80,6 +80,62 @@ router.post('/', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/user/personal-games/bulk  – add several unplayed games under one season
+// Body: { season_id?, games: [{ home_team_id, away_team_id, game_type, scheduled_at }] }
+// Every row is validated before anything is saved, and they're inserted together.
+// ---------------------------------------------------------------------------
+const BULK_MAX_GAMES = 100;
+
+router.post('/bulk', async (req, res) => {
+  const userId = req.user.id;
+  const { season_id: seasonId = null, games } = req.body ?? {};
+  try {
+    if (!Array.isArray(games) || games.length === 0) {
+      return res.status(400).json({ error: 'games must be a non-empty array' });
+    }
+    if (games.length > BULK_MAX_GAMES) {
+      return res.status(400).json({ error: `Add at most ${BULK_MAX_GAMES} games at a time` });
+    }
+    const rows = games.map((game, index) => {
+      try {
+        const input = normalizePersonalGameInput({
+          season_id: seasonId,
+          home_team_id: game?.home_team_id,
+          away_team_id: game?.away_team_id,
+          game_type: game?.game_type,
+          scheduled_at: game?.scheduled_at,
+        });
+        return {
+          season_id: input.season_id,
+          home_team_id: input.home_team_id,
+          away_team_id: input.away_team_id,
+          game_type: input.game_type,
+          scheduled_at: input.scheduled_at,
+        };
+      } catch (err) {
+        err.message = `Game ${index + 1}: ${err.message}`;
+        throw err;
+      }
+    });
+
+    const created = await sql`
+      INSERT INTO user_personal_games (
+        user_id, season_id, home_team_id, away_team_id, game_type, scheduled_at
+      )
+      SELECT ${userId}, r.season_id, r.home_team_id, r.away_team_id, r.game_type, r.scheduled_at
+      FROM jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) AS r(
+        season_id uuid, home_team_id uuid, away_team_id uuid, game_type text, scheduled_at date
+      )
+      RETURNING id
+    `;
+    for (const { id } of created) await syncCalendar(userId, id);
+    return res.status(201).json({ created: created.length, ids: created.map(({ id }) => id) });
+  } catch (err) {
+    return sendError(res, err, 'bulk create');
+  }
+});
+
+// ---------------------------------------------------------------------------
 // PATCH /api/user/personal-games/:id  – edit any of the fields above
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {

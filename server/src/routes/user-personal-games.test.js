@@ -179,3 +179,52 @@ describe('recording a personal game score', () => {
     expect(sql.mock.calls[1].slice(1)).toEqual(expect.arrayContaining(['2026-10-12']));
   });
 });
+
+describe('POST /api/user/personal-games/bulk', () => {
+  const GAME_2 = '44444444-4444-4444-8444-444444444444';
+  const SEASON = '55555555-5555-4555-8555-555555555555';
+
+  it('adds every game under the season in one insert and syncs each calendar event', async () => {
+    sql.mockResolvedValueOnce([{ id: GAME_ID }, { id: GAME_2 }]);
+
+    const res = await request(app)
+      .post('/api/user/personal-games/bulk')
+      .send({
+        season_id: SEASON,
+        games: [
+          { away_team_id: AWAY, home_team_id: HOME, game_type: 'regular', scheduled_at: '2026-10-10' },
+          { away_team_id: HOME, home_team_id: AWAY, game_type: 'playoff', scheduled_at: '2026-10-12' },
+        ],
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({ created: 2, ids: [GAME_ID, GAME_2] });
+    expect(sql).toHaveBeenCalledTimes(1);
+    const rows = JSON.parse(sql.mock.calls[0].find((value) => typeof value === 'string' && value.startsWith('[')));
+    expect(rows).toEqual([
+      { season_id: SEASON, home_team_id: HOME, away_team_id: AWAY, game_type: 'regular', scheduled_at: '2026-10-10' },
+      { season_id: SEASON, home_team_id: AWAY, away_team_id: HOME, game_type: 'playoff', scheduled_at: '2026-10-12' },
+    ]);
+    expect(syncScheduledGameToGoogleCalendar).toHaveBeenCalledTimes(2);
+  });
+
+  it('saves nothing when any row is invalid, naming the row', async () => {
+    const res = await request(app)
+      .post('/api/user/personal-games/bulk')
+      .send({
+        games: [
+          { away_team_id: AWAY, home_team_id: HOME, scheduled_at: '2026-10-10' },
+          { away_team_id: AWAY, home_team_id: AWAY, scheduled_at: '2026-10-11' },
+        ],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/^Game 2: .*must be different/);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('rejects an empty list', async () => {
+    const res = await request(app).post('/api/user/personal-games/bulk').send({ games: [] });
+    expect(res.status).toBe(400);
+  });
+});

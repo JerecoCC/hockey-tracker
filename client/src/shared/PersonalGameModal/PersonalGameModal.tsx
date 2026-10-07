@@ -1,7 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { type RegisterOptions, useForm, useWatch } from 'react-hook-form';
-import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import {
@@ -15,37 +13,9 @@ import usePersonalGames, {
   type PersonalGameInput,
   type PersonalGameResultType,
 } from '@/hooks/usePersonalGames';
-import { API, authHeaders } from '@/lib/apiClient';
 import { toLocalDateKey } from '@/lib/gameSchedule';
 import styles from './PersonalGameModal.module.scss';
-
-interface TeamOption {
-  id: string;
-  name: string | null;
-  code: string | null;
-  league_id: string | null;
-  logo: string | null;
-  logo_dark?: string | null;
-  logo_light?: string | null;
-}
-
-interface LeagueOption {
-  id: string;
-  name: string;
-  code: string | null;
-  logo: string | null;
-}
-
-interface SeasonOption {
-  id: string;
-  name: string;
-  is_current: boolean;
-}
-
-const fetchUserData = async <T,>(path: string, params?: Record<string, string>) => {
-  const { data } = await axios.get<T>(`${API}${path}`, { headers: authHeaders(), params });
-  return data;
-};
+import usePersonalGameOptions from './usePersonalGameOptions';
 
 const GAME_TYPE_OPTIONS: { value: GameType; label: string }[] = [
   { value: 'preseason', label: 'Preseason' },
@@ -125,6 +95,23 @@ const PersonalGameModal = ({ open, game, defaultDate, onClose }: Props) => {
   // Pick the league's current season when adding a game or after the league changes, but
   // leave an edited game's saved season (or lack of one) alone.
   const autoPickSeason = useRef(!game);
+  const {
+    leagueOptions,
+    seasonOptions,
+    teamOptions,
+    teamsLoading,
+    seasonPlaceholder,
+    teamPlaceholder,
+  } = usePersonalGameOptions({
+    open,
+    leagueId,
+    seasonId,
+    autoPickSeason: autoPickSeason.current,
+    onPickSeason: (pickedSeasonId) => {
+      autoPickSeason.current = false;
+      setValue('season_id', pickedSeasonId, { shouldDirty: true, shouldValidate: true });
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -133,66 +120,6 @@ const PersonalGameModal = ({ open, game, defaultDate, onClose }: Props) => {
     setConfirmingDelete(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, game?.id]);
-
-  const { data: leagues = [] } = useQuery<LeagueOption[]>({
-    queryKey: ['user-leagues'],
-    queryFn: () => fetchUserData<LeagueOption[]>('/user/leagues'),
-    enabled: open,
-  });
-  const { data: seasons = [], isLoading: seasonsLoading } = useQuery<SeasonOption[]>({
-    queryKey: ['user-seasons', leagueId],
-    queryFn: () => fetchUserData<SeasonOption[]>('/user/seasons', { league_id: leagueId }),
-    enabled: open && !!leagueId,
-  });
-  // A season narrows the teams to the ones taking part in it; otherwise the league does.
-  const { data: teams = [], isLoading: teamsLoading } = useQuery<TeamOption[]>({
-    queryKey: seasonId ? ['user-teams', 'season', seasonId] : ['user-teams'],
-    queryFn: () =>
-      fetchUserData<TeamOption[]>('/user/teams', seasonId ? { season_id: seasonId } : undefined),
-    enabled: open && !!leagueId,
-  });
-
-  const leagueOptions = useMemo(
-    () =>
-      [...leagues]
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((league) => ({
-          value: league.id,
-          label: league.name,
-          logo: league.logo,
-          code: league.code ?? undefined,
-        })),
-    [leagues],
-  );
-  const seasonOptions = useMemo(
-    () => seasons.map((season) => ({ value: season.id, label: season.name })),
-    [seasons],
-  );
-  const teamOptions = useMemo(
-    () =>
-      teams
-        .filter((team) => (team.name || team.code) && (seasonId || team.league_id === leagueId))
-        .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
-        .map((team) => ({
-          value: team.id,
-          // The code leads the name and stays in the label so searching by code still works.
-          label: team.code ? `${team.code} · ${team.name ?? team.code}` : (team.name ?? ''),
-          logo: team.logo,
-          logoDark: team.logo_dark,
-          logoLight: team.logo_light,
-          code: team.code ?? undefined,
-        })),
-    [leagueId, seasonId, teams],
-  );
-
-  useEffect(() => {
-    if (!autoPickSeason.current || !leagueId || seasonId || seasonsLoading || !seasons.length) {
-      return;
-    }
-    autoPickSeason.current = false;
-    const season = seasons.find((candidate) => candidate.is_current) ?? seasons[0];
-    setValue('season_id', season.id, { shouldDirty: true, shouldValidate: true });
-  }, [leagueId, seasonId, seasons, seasonsLoading, setValue]);
 
   // Teams outside the chosen league or season no longer apply once its team list loads.
   useEffect(() => {
@@ -311,15 +238,7 @@ const PersonalGameModal = ({ open, game, defaultDate, onClose }: Props) => {
             control={control}
             name="season_id"
             options={seasonOptions}
-            placeholder={
-              !leagueId
-                ? 'Select a league first'
-                : seasonsLoading
-                  ? 'Loading seasons…'
-                  : seasonOptions.length === 0
-                    ? 'No seasons in this league'
-                    : 'Select season…'
-            }
+            placeholder={seasonPlaceholder}
             disabled={busy || !leagueId || seasonOptions.length === 0}
             rules={{
               validate: (value) => !!value || seasonOptions.length === 0 || 'Season is required',
@@ -334,9 +253,7 @@ const PersonalGameModal = ({ open, game, defaultDate, onClose }: Props) => {
           name="away_team_id"
           options={teamOptions}
           searchable
-          placeholder={
-            !leagueId ? 'Select a league first' : teamsLoading ? 'Loading teams…' : 'Select team…'
-          }
+          placeholder={teamPlaceholder}
           disabled={busy || !leagueId}
           required
           rules={{ required: 'Away team is required' }}
@@ -358,9 +275,7 @@ const PersonalGameModal = ({ open, game, defaultDate, onClose }: Props) => {
           name="home_team_id"
           options={teamOptions}
           searchable
-          placeholder={
-            !leagueId ? 'Select a league first' : teamsLoading ? 'Loading teams…' : 'Select team…'
-          }
+          placeholder={teamPlaceholder}
           disabled={busy || !leagueId}
           required
           rules={{

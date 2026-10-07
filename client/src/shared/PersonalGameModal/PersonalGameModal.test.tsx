@@ -4,6 +4,7 @@ import axios from 'axios';
 import type { GameRecord } from '@/hooks/useGames';
 import PersonalGameModal from './PersonalGameModal';
 import PersonalGameScoreModal from './PersonalGameScoreModal';
+import PersonalGamesBulkModal from './PersonalGamesBulkModal';
 
 jest.mock('axios');
 
@@ -11,6 +12,7 @@ const mockCreate = jest.fn();
 const mockUpdate = jest.fn();
 const mockDelete = jest.fn();
 const mockRecordScore = jest.fn();
+const mockBulkCreate = jest.fn();
 jest.mock('@/hooks/usePersonalGames', () => ({
   __esModule: true,
   default: () => ({
@@ -18,6 +20,7 @@ jest.mock('@/hooks/usePersonalGames', () => ({
     updatePersonalGame: mockUpdate,
     deletePersonalGame: mockDelete,
     recordPersonalGameScore: mockRecordScore,
+    bulkCreatePersonalGames: mockBulkCreate,
   }),
 }));
 
@@ -328,5 +331,78 @@ describe('PersonalGameScoreModal', () => {
 
     expect(await screen.findByText('Score is required')).toBeInTheDocument();
     expect(mockRecordScore).not.toHaveBeenCalled();
+  });
+});
+
+describe('PersonalGamesBulkModal', () => {
+  const renderBulk = () => {
+    mockApi();
+    mockBulkCreate.mockResolvedValue(true);
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const onClose = jest.fn();
+    render(
+      <QueryClientProvider client={queryClient}>
+        <PersonalGamesBulkModal
+          open
+          onClose={onClose}
+        />
+      </QueryClientProvider>,
+    );
+    return { onClose };
+  };
+
+  // Row fields have no labels; they're the selects and inputs after League and Season.
+  const rowFields = () => {
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
+    const [, , away, home, gameType] = selects;
+    const date = screen
+      .getAllByRole('textbox')
+      .find((input) => !input.getAttribute('aria-label')) as HTMLInputElement;
+    return { away, home, gameType, date };
+  };
+
+  it('adds every row under the single league and season', async () => {
+    renderBulk();
+    await screen.findByRole('option', { name: 'PWHL' });
+    expect(rowFields().away).toBeDisabled();
+
+    change('League', 'league-pwhl');
+    await waitFor(() => expect(screen.getByLabelText('Season')).toHaveValue('pwhl-2027'));
+    await screen.findAllByRole('option', { name: 'OTT · Ottawa Charge' });
+
+    const { away, home, gameType, date } = rowFields();
+    expect(away).not.toBeDisabled();
+    fireEvent.change(away, { target: { value: 'team-ott' } });
+    fireEvent.change(home, { target: { value: 'team-mtl' } });
+    fireEvent.change(gameType, { target: { value: 'playoff' } });
+    fireEvent.change(date, { target: { value: '2026-05-14' } });
+    fireEvent.submit(document.getElementById('bulk-personal-games-form')!);
+
+    await waitFor(() =>
+      expect(mockBulkCreate).toHaveBeenCalledWith({
+        season_id: 'pwhl-2027',
+        games: [
+          {
+            away_team_id: 'team-ott',
+            home_team_id: 'team-mtl',
+            game_type: 'playoff',
+            scheduled_at: '2026-05-14',
+          },
+        ],
+      }),
+    );
+  });
+
+  it("clears a row's teams when the league changes", async () => {
+    renderBulk();
+    await screen.findByRole('option', { name: 'PWHL' });
+    change('League', 'league-pwhl');
+    await screen.findAllByRole('option', { name: 'OTT · Ottawa Charge' });
+    fireEvent.change(rowFields().away, { target: { value: 'team-ott' } });
+
+    change('League', 'league-nhl');
+
+    await waitFor(() => expect(screen.getByLabelText('Season')).toHaveValue('nhl-2027'));
+    await waitFor(() => expect(rowFields().away).toHaveValue(''));
   });
 });

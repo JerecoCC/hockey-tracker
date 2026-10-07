@@ -28,6 +28,11 @@ export interface PersonalGameInput {
   watched_on?: string | null;
 }
 
+export interface PersonalGameBulkInput {
+  season_id: string | null;
+  games: Array<Pick<PersonalGameInput, 'away_team_id' | 'home_team_id' | 'game_type' | 'scheduled_at'>>;
+}
+
 export interface PersonalGameScore {
   away_score: number;
   home_score: number;
@@ -82,6 +87,25 @@ const usePersonalGames = () => {
     }
   };
 
+  /** Adds several unplayed games under one season; nothing is saved if any row is invalid. */
+  const bulkCreatePersonalGames = async (input: PersonalGameBulkInput): Promise<boolean> => {
+    try {
+      const { data } = await axios.post<{ created: number }>(
+        `${API}/user/personal-games/bulk`,
+        input,
+        { headers: authHeaders() },
+      );
+      toast.success(
+        `${data.created} personal game${data.created === 1 ? '' : 's'} added to your schedule`,
+      );
+      await refreshGameLists();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to add games'));
+      return false;
+    }
+  };
+
   /** Records the final score after watching, which also marks the game watched. */
   const recordPersonalGameScore = async (
     id: string,
@@ -114,7 +138,13 @@ const usePersonalGames = () => {
     }
   };
 
-  return { createPersonalGame, updatePersonalGame, recordPersonalGameScore, deletePersonalGame };
+  return {
+    createPersonalGame,
+    bulkCreatePersonalGames,
+    updatePersonalGame,
+    recordPersonalGameScore,
+    deletePersonalGame,
+  };
 };
 
 export default usePersonalGames;
