@@ -374,6 +374,20 @@ const gameIsAfterToday = (game, requestedTimeZone, now = new Date()) => {
   return Boolean(eventDate && eventDate > today);
 };
 
+/**
+ * Whether a selected game is written to the calendar. Games in a season sync for the whole
+ * season, past dates included, until today is after the season's end date (a season without
+ * an end date keeps syncing). Games without a season (personal games filed under none) only
+ * sync from today on.
+ */
+const gameIsInSyncWindow = (game, requestedTimeZone, now = new Date()) => {
+  if (!game.has_season) return gameIsAfterToday(game, requestedTimeZone, now);
+  if (!game.season_end_date) return true;
+  const timeZone = normalizeGoogleCalendarTimeZone(requestedTimeZone);
+  const today = dateTimePartsInZone(now, timeZone).date;
+  return today <= game.season_end_date;
+};
+
 const originalScheduleDateForGame = (game, requestedTimeZone) => {
   if (!game.game_date) return null;
   const calendarTime = normalizeCalendarTime(game.scheduled_time);
@@ -579,8 +593,10 @@ const markSyncError = async (userId, err) => {
 };
 
 const calendarGameSelect = (userId, gameId = null) => sql`
+  -- The open season closest to today in each league with a favorite team, so favorites in
+  -- several leagues (e.g. NHL and PWHL) each sync their own current season.
   WITH closest_open_season AS (
-    SELECT candidate.id
+    SELECT DISTINCT ON (candidate.league_id) candidate.id
     FROM seasons candidate
     WHERE candidate.is_ended = FALSE
       AND EXISTS (
@@ -595,6 +611,7 @@ const calendarGameSelect = (userId, gameId = null) => sql`
         WHERE candidate_game.season_id = candidate.id
       )
     ORDER BY
+      candidate.league_id,
       CASE
         WHEN candidate.start_date IS NOT NULL
           AND candidate.start_date <= CURRENT_DATE
@@ -613,7 +630,6 @@ const calendarGameSelect = (userId, gameId = null) => sql`
       candidate.start_date DESC NULLS LAST,
       candidate.created_at DESC,
       candidate.id
-    LIMIT 1
   )
   SELECT
     g.id,
@@ -640,6 +656,8 @@ const calendarGameSelect = (userId, gameId = null) => sql`
       END
     ) AS scheduled_time,
     l.code AS league_code,
+    true AS has_season,
+    s.end_date::text AS season_end_date,
     COALESCE((
       SELECT ti.code
       FROM team_iterations ti
@@ -674,7 +692,7 @@ const calendarGameSelect = (userId, gameId = null) => sql`
     AND (
       uwg.scheduled_for IS NOT NULL
       OR (
-        g.season_id = (SELECT id FROM closest_open_season)
+        g.season_id IN (SELECT id FROM closest_open_season)
         AND EXISTS (
           SELECT 1
           FROM user_favorite_teams uft
@@ -695,6 +713,8 @@ const calendarGameSelect = (userId, gameId = null) => sql`
     COALESCE(pg.scheduled_for, pg.scheduled_at)::text AS calendar_date,
     pg.scheduled_time,
     l.code AS league_code,
+    (pg.season_id IS NOT NULL) AS has_season,
+    ps.end_date::text AS season_end_date,
     COALESCE((
       SELECT ti.code FROM team_iterations ti
       WHERE ti.team_id = pg.away_team_id
@@ -724,7 +744,7 @@ const syncScheduledGameToGoogleCalendar = async ({ userId, gameId, now = new Dat
     const timeZone = normalizeGoogleCalendarTimeZone(connection.time_zone);
     const accessToken = await refreshAccessToken(connection.refresh_token_encrypted);
     const games = await calendarGameSelect(userId, gameId);
-    const game = games.find((candidate) => gameIsAfterToday(candidate, timeZone, now));
+    const game = games.find((candidate) => gameIsInSyncWindow(candidate, timeZone, now));
     if (game) {
       await upsertGameEvent({
         accessToken,
@@ -734,7 +754,7 @@ const syncScheduledGameToGoogleCalendar = async ({ userId, gameId, now = new Dat
         timeZone,
       });
     } else if (games.length === 0) {
-      // Past games that still match the calendar (e.g. watched games) keep their event;
+      // Selected games outside the sync window (e.g. from a finished season) keep their event;
       // only skipped, unfavorited, or out-of-season games are removed.
       await deleteGameEvent({
         accessToken,
@@ -778,9 +798,10 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
       context.accessToken || (await refreshAccessToken(connection.refresh_token_encrypted));
     const selectedGames = await calendarGameSelect(userId);
     const now = context.now || new Date();
-    const games = selectedGames.filter((game) => gameIsAfterToday(game, timeZone, now));
+    const games = selectedGames.filter((game) => gameIsInSyncWindow(game, timeZone, now));
     // Stale means no longer selected (skipped, unfavorited, or outside the calendar season).
-    // Past selected games such as watched ones keep their events but are not rewritten.
+    // Selected games outside the sync window (seasons already over) keep their events but are
+    // not rewritten.
     const calendarGameIds = new Set(selectedGames.map((game) => game.id));
 
     reportProgress({
@@ -989,6 +1010,7 @@ module.exports = {
     eventIdForGame,
     eventTimeForGame,
     gameIsAfterToday,
+    gameIsInSyncWindow,
     googleRequest,
     refreshAccessToken,
     upsertGameEvent,

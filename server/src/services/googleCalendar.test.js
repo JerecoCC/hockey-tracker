@@ -18,6 +18,7 @@ const {
     eventIdForGame,
     googleRequest,
     gameIsAfterToday,
+    gameIsInSyncWindow,
     refreshAccessToken,
     upsertGameEvent,
   },
@@ -314,10 +315,9 @@ describe('Google Calendar service helpers', () => {
     expect(queryText).toContain('WHERE candidate_game.season_id = candidate.id');
     expect(queryText).toContain('candidate.start_date <= CURRENT_DATE');
     expect(queryText).toContain('CURRENT_DATE < candidate.start_date');
-    expect(queryText).toContain('LIMIT 1');
     expect(queryText).toContain('FROM games g');
     expect(queryText).toContain(
-      'uwg.scheduled_for IS NOT NULL OR ( g.season_id = (SELECT id FROM closest_open_season)',
+      'uwg.scheduled_for IS NOT NULL OR ( g.season_id IN (SELECT id FROM closest_open_season)',
     );
     expect(queryText).toContain('FROM user_favorite_teams uft');
     expect(queryText).toContain('COALESCE( uwg.scheduled_for');
@@ -526,5 +526,50 @@ describe('Google Calendar service helpers', () => {
         expect.objectContaining({ method: 'DELETE' }),
       );
     });
+  });
+});
+
+describe('calendarGameSelect seasons', () => {
+  it('takes the closest open season in each league, not one across all leagues', async () => {
+    sql.mockResolvedValueOnce([]);
+    await calendarGameSelect('user-1');
+
+    const query = sql.mock.calls[0][0].join('?');
+    expect(query).toContain('SELECT DISTINCT ON (candidate.league_id) candidate.id');
+    expect(query).toContain('g.season_id IN (SELECT id FROM closest_open_season)');
+    const seasonCte = query.slice(query.indexOf('WITH closest_open_season'), query.indexOf('SELECT\n    g.id'));
+    expect(seasonCte).toContain('ORDER BY');
+    expect(seasonCte).not.toContain('LIMIT 1');
+  });
+});
+
+describe('gameIsInSyncWindow', () => {
+  const now = new Date('2026-10-07T16:00:00Z');
+  const seasonGame = (gameDate, seasonEnd) => ({
+    id: 'game-1',
+    has_season: true,
+    season_end_date: seasonEnd,
+    game_date: gameDate,
+    calendar_date: gameDate,
+    scheduled_time: null,
+  });
+
+  it('syncs past games of a season that has not ended yet', () => {
+    expect(gameIsInSyncWindow(seasonGame('2026-09-19', '2027-06-30'), 'America/New_York', now)).toBe(true);
+  });
+
+  it('syncs through the season end date, then stops', () => {
+    expect(gameIsInSyncWindow(seasonGame('2026-04-01', '2026-10-07'), 'America/New_York', now)).toBe(true);
+    expect(gameIsInSyncWindow(seasonGame('2026-04-01', '2026-10-06'), 'America/New_York', now)).toBe(false);
+  });
+
+  it('keeps syncing a season without an end date', () => {
+    expect(gameIsInSyncWindow(seasonGame('2026-01-01', null), 'America/New_York', now)).toBe(true);
+  });
+
+  it('only syncs games without a season from today on', () => {
+    const game = { ...seasonGame('2026-10-01', null), has_season: false };
+    expect(gameIsInSyncWindow(game, 'America/New_York', now)).toBe(false);
+    expect(gameIsInSyncWindow({ ...game, calendar_date: '2026-10-09', game_date: '2026-10-09' }, 'America/New_York', now)).toBe(true);
   });
 });
