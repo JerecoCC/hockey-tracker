@@ -178,3 +178,18 @@ export const formatGameTime = (
 
   return instant.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 };
+
+const OVERDUE_FINAL_MS = 3 * 60 * 60 * 1000;
+
+/**
+ * True when a game should have finished but isn't final: more than three hours have passed
+ * since its scheduled start. Postponed games and games without a start time never count.
+ */
+export const isGameOverdueForFinal = (
+  game: ScheduledGame & { status: string },
+  now: Date = new Date(),
+): boolean => {
+  if (game.status === 'final' || game.status === 'postponed' || !game.scheduled_time) return false;
+  const start = getScheduledInstant(game.scheduled_at, game.scheduled_time);
+  return !!start && now.getTime() - start.getTime() > OVERDUE_FINAL_MS;
+};

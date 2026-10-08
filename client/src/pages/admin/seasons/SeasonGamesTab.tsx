@@ -60,6 +60,7 @@ import {
   isDayAutofillStatus,
   partitionAutofillingGames,
 } from './seasonGamesAutofillUtils';
+import { isGameOverdueForFinal } from '@/lib/gameSchedule';
 import styles from './SeasonGamesTab.module.scss';
 
 import { API, authHeaders, getAggregateErrorMessage as getErrorMessage } from '@/lib/apiClient';
@@ -1096,6 +1097,11 @@ const SeasonGamesTab = ({
         showScore={!hideResult && shouldShowGameScore(game)}
         scorePlaceholder={hideResult ? '?' : undefined}
         showTypeIndicator
+        warningBanner={
+          isGameOverdueForFinal(game)
+            ? 'Not final yet: more than 3 hours past its scheduled start'
+            : null
+        }
         href={gameDetailsPath(game)}
         onOpen={() => openGame(game)}
       />

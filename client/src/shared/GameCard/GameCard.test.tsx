@@ -176,3 +176,17 @@ describe('GameCard', () => {
     expect(screen.queryByText('FINAL/OT')).not.toBeInTheDocument();
   });
 });
+
+describe('GameCard warning banner', () => {
+  it('shows the warning ribbon in place of the watched ribbon', () => {
+    render(
+      <GameCard
+        game={{ ...game, watched_by_user: true }}
+        warningBanner="Not final yet"
+      />,
+    );
+
+    expect(screen.getByRole('img', { name: 'Not final yet' })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Watched' })).not.toBeInTheDocument();
+  });
+});

@@ -75,6 +75,8 @@ export interface GameCardProps {
   supplementalMeta?: string;
   /** Controls the watched and postponed-watch ribbons on the card variant. Defaults to true. */
   showWatchedBanner?: boolean;
+  /** Shows a warning ribbon with this text (as its tooltip), in place of any other ribbon. */
+  warningBanner?: string | null;
   /** Renders a left accent stripe coloured by game type. */
   showTypeIndicator?: boolean;
   /** Keeps actions visible in a vertical rail on the right at the mobile breakpoint. */
@@ -219,6 +221,7 @@ const GameCardVariant = ({
   statusLabel: statusLabelProp,
   statusIntent,
   showWatchedBanner = true,
+  warningBanner = null,
   showTypeIndicator = false,
   mobileActionsAside = false,
   onOpen,
@@ -254,8 +257,16 @@ const GameCardVariant = ({
     .filter(Boolean)
     .join(' \u00b7 ');
   const playoffMetaLabel = getPlayoffGameMetaLabel(game);
-  const ribbonLabel = isWatched ? 'Watched' : isPostponedWatch ? 'Postponed watch' : null;
-  const ribbonIcon = isWatched ? 'visibility' : 'calendar_month';
+  const ribbonLabel = warningBanner
+    ? warningBanner
+    : !showWatchedBanner
+      ? null
+      : isWatched
+        ? 'Watched'
+        : isPostponedWatch
+          ? 'Postponed watch'
+          : null;
+  const ribbonIcon = warningBanner ? 'warning' : isWatched ? 'visibility' : 'calendar_month';
 
   return (
     <Card
@@ -300,16 +311,18 @@ const GameCardVariant = ({
           aria-hidden="true"
         />
       )}
-      {showWatchedBanner && ribbonLabel && (
+      {ribbonLabel && (
         <Tooltip
           text={ribbonLabel}
           className={[
             styles.watchedRibbon,
-            isWatched
-              ? styles.watchedGameRibbon
-              : isPostponedWatch
-                ? styles.postponedWatchRibbon
-                : '',
+            warningBanner
+              ? styles.warningRibbon
+              : isWatched
+                ? styles.watchedGameRibbon
+                : isPostponedWatch
+                  ? styles.postponedWatchRibbon
+                  : '',
           ]
             .filter(Boolean)
             .join(' ')}

@@ -238,6 +238,16 @@
   color: #fff;
 }
 
+.warningRibbon {
+  background: $warning-light;
+  color: $bg-page;
+}
+
+:global(:root[data-theme='light']) .warningRibbon {
+  background: $warning;
+  color: #fff;
+}
+
 .gameActions {
   position: static;
   z-index: 2;
