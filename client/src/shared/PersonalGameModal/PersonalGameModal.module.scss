@@ -35,3 +35,15 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+// Game date and start time side by side at equal widths, aligned along the top.
+.scheduleRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: $space-md;
+
+  @media (max-width: $screen-mobile-max) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

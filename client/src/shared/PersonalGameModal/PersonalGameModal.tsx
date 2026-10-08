@@ -323,21 +323,23 @@ const PersonalGameModal = ({ open, game, defaultDate, onClose }: Props) => {
             required
           />
         </div>
-        <ControlledDatePickerField
-          label="Game Date"
-          control={control}
-          name="scheduled_at"
-          placeholder="Select date…"
-          disabled={busy}
-          required
-          rules={{ required: 'Game date is required' }}
-        />
-        <ControlledTimePickerField
-          label="Start Time (ET)"
-          control={control}
-          name="scheduled_time"
-          disabled={busy}
-        />
+        <div className={`${styles.full} ${styles.scheduleRow}`}>
+          <ControlledDatePickerField
+            label="Game Date (ET)"
+            control={control}
+            name="scheduled_at"
+            placeholder="Select date…"
+            disabled={busy}
+            required
+            rules={{ required: 'Game date is required' }}
+          />
+          <ControlledTimePickerField
+            label="Start Time (ET)"
+            control={control}
+            name="scheduled_time"
+            disabled={busy}
+          />
+        </div>
 
         {/* Postponed watch date */}
         <div className={styles.full}>

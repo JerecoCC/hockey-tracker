@@ -205,7 +205,7 @@ describe('PersonalGameModal', () => {
     change('Home Score', '3');
     change('Result', 'overtime');
     change('Game Type', 'playoff');
-    change('Game Date', '2026-05-14');
+    change('Game Date (ET)', '2026-05-14');
     change('Start Time (ET)', '19:00');
     change('Postpone Watch To', '2026-05-16');
     submit();
@@ -245,7 +245,7 @@ describe('PersonalGameModal', () => {
 
     change('Away Team', 'team-ott');
     change('Home Team', 'team-mtl');
-    change('Game Date', '2026-05-14');
+    change('Game Date (ET)', '2026-05-14');
     change('Away Score', '2');
     change('Postpone Watch To', '2026-05-14');
     submit();
@@ -278,7 +278,7 @@ describe('PersonalGameModal', () => {
     expect(screen.getByLabelText('League')).toHaveValue('league-pwhl');
     expect(screen.getByLabelText('Season')).toHaveValue('pwhl-2026');
     expect(screen.getByLabelText('Away Team')).toHaveValue('team-ott');
-    expect(screen.getByLabelText('Game Date')).toHaveValue('2026-05-14');
+    expect(screen.getByLabelText('Game Date (ET)')).toHaveValue('2026-05-14');
     expect(screen.getByLabelText('Result')).toHaveValue('shootout');
     expect(screen.getByRole('button', { name: /Delete/ })).toBeInTheDocument();
   });

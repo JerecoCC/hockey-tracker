@@ -260,7 +260,7 @@ const PersonalGamesBulkModal = ({ open, onClose, defaultDate }: Props) => {
         { label: 'Away Team', required: true },
         { label: 'Home Team', required: true },
         { label: 'Game Type', required: true },
-        { label: 'Game Date', required: true },
+        { label: 'Game Date (ET)', required: true },
       ]}
       requiredRowFields={['away_team_id', 'home_team_id', 'game_type', 'scheduled_at']}
       requiredFormFields={['league_id']}
