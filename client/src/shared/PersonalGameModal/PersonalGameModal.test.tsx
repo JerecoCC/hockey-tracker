@@ -351,17 +351,18 @@ describe('PersonalGamesBulkModal', () => {
     return { onClose };
   };
 
-  // Row fields have no labels; they're the selects and inputs after League and Season.
+  // Row fields have no labels: the team selects after League, Season and Game Type, then the
+  // date and time inputs.
   const rowFields = () => {
     const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
-    const [, , away, home, gameType] = selects;
-    const date = screen
+    const [, , , away, home] = selects;
+    const [date, time] = screen
       .getAllByRole('textbox')
-      .find((input) => !input.getAttribute('aria-label')) as HTMLInputElement;
-    return { away, home, gameType, date };
+      .filter((input) => !input.getAttribute('aria-label')) as HTMLInputElement[];
+    return { away, home, date, time };
   };
 
-  it('adds every row under the single league and season', async () => {
+  it('adds every row under the single league, season and game type', async () => {
     renderBulk();
     await screen.findByRole('option', { name: 'PWHL' });
     expect(rowFields().away).toBeDisabled();
@@ -370,12 +371,13 @@ describe('PersonalGamesBulkModal', () => {
     await waitFor(() => expect(screen.getByLabelText('Season')).toHaveValue('pwhl-2027'));
     await screen.findAllByRole('option', { name: 'OTT · Ottawa Charge' });
 
-    const { away, home, gameType, date } = rowFields();
+    change('Game Type', 'playoff');
+    const { away, home, date, time } = rowFields();
     expect(away).not.toBeDisabled();
     fireEvent.change(away, { target: { value: 'team-ott' } });
     fireEvent.change(home, { target: { value: 'team-mtl' } });
-    fireEvent.change(gameType, { target: { value: 'playoff' } });
     fireEvent.change(date, { target: { value: '2026-05-14' } });
+    fireEvent.change(time, { target: { value: '19:00' } });
     fireEvent.submit(document.getElementById('bulk-personal-games-form')!);
 
     await waitFor(() =>
@@ -387,6 +389,7 @@ describe('PersonalGamesBulkModal', () => {
             home_team_id: 'team-mtl',
             game_type: 'playoff',
             scheduled_at: '2026-05-14',
+            scheduled_time: '19:00',
           },
         ],
       }),

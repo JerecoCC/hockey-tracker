@@ -14,6 +14,7 @@ import BulkCreateModal, {
 import {
   ControlledDatePickerField,
   ControlledSelectField,
+  ControlledTimePickerField,
 } from '@/components/form/ControlledFields';
 import type { GameType } from '@/hooks/useGames';
 import usePersonalGames from '@/hooks/usePersonalGames';
@@ -29,13 +30,16 @@ const GAME_TYPE_OPTIONS: { value: GameType; label: string }[] = [
 interface RowValues {
   away_team_id: string | null;
   home_team_id: string | null;
-  game_type: GameType;
   scheduled_at: string;
+  /** Eastern HH:MM, or empty when the start time isn't known. */
+  scheduled_time: string;
 }
 
 interface FormValues {
   league_id: string;
   season_id: string;
+  /** One game type for every game in the batch. */
+  game_type: GameType;
   rows: RowValues[];
 }
 
@@ -44,8 +48,8 @@ type Context = BulkCreateModalContext<FormValues, RowValues>;
 const EMPTY_ROW: RowValues = {
   away_team_id: null,
   home_team_id: null,
-  game_type: 'regular',
   scheduled_at: '',
+  scheduled_time: '',
 };
 
 const hasRowValue = (value: unknown) => value != null && String(value).trim() !== '';
@@ -65,7 +69,7 @@ const RowsTracker = ({
 };
 
 /**
- * The single League and Season fields above the rows. They narrow every row's team pickers,
+ * The single League, Season and Game Type fields above the rows. They narrow every row's team pickers,
  * and a team no longer in the chosen league or season is cleared from its row.
  */
 const LeagueSeasonFields = ({
@@ -137,6 +141,15 @@ const LeagueSeasonFields = ({
           validate: (value) => !!value || seasonOptions.length === 0 || 'Season is required',
         }}
       />
+      <ControlledSelectField
+        label="Game Type"
+        control={control}
+        name="game_type"
+        options={GAME_TYPE_OPTIONS}
+        disabled={isSubmitting}
+        required
+        rules={{ required: 'Game type is required' }}
+      />
     </div>
   );
 };
@@ -186,20 +199,17 @@ const GameRow = ({
       disabled={isSubmitting || !teamsEnabled}
       searchable
     />
-    <ControlledSelectField
-      control={control}
-      name={`rows.${index}.game_type`}
-      required
-      rules={{ required: 'Game type is required' }}
-      options={GAME_TYPE_OPTIONS}
-      disabled={isSubmitting}
-    />
     <ControlledDatePickerField
       control={control}
       name={`rows.${index}.scheduled_at`}
       required
       rules={{ required: 'Date is required' }}
       placeholder="Date…"
+      disabled={isSubmitting}
+    />
+    <ControlledTimePickerField
+      control={control}
+      name={`rows.${index}.scheduled_time`}
       disabled={isSubmitting}
     />
     {deleteButton}
@@ -214,8 +224,8 @@ interface Props {
 }
 
 /**
- * Adds several unplayed personal games at once: one league and season for all of them, and a
- * row per game with its away and home teams, game type and date.
+ * Adds several unplayed personal games at once: one league, season and game type for all of
+ * them, and a row per game with its away and home teams, date and optional start time.
  */
 const PersonalGamesBulkModal = ({ open, onClose, defaultDate }: Props) => {
   const { bulkCreatePersonalGames } = usePersonalGames();
@@ -231,13 +241,13 @@ const PersonalGamesBulkModal = ({ open, onClose, defaultDate }: Props) => {
     [],
   );
 
-  // New rows repeat the previous row's game type and date, so a run of games is quick to enter.
+  // New rows repeat the previous row's date and time, so a run of games is quick to enter.
   const createRow = useCallback(() => {
     const previous = rowsRef.current[rowsRef.current.length - 1];
     return {
       ...EMPTY_ROW,
-      game_type: previous?.game_type ?? EMPTY_ROW.game_type,
       scheduled_at: previous?.scheduled_at || defaultDate || '',
+      scheduled_time: previous?.scheduled_time ?? '',
     };
   }, [defaultDate]);
 
@@ -251,6 +261,7 @@ const PersonalGamesBulkModal = ({ open, onClose, defaultDate }: Props) => {
       createDefaultValues={() => ({
         league_id: '',
         season_id: '',
+        game_type: 'regular',
         rows: [{ ...EMPTY_ROW, scheduled_at: defaultDate ?? '' }],
       })}
       rowArrayName="rows"
@@ -259,11 +270,11 @@ const PersonalGamesBulkModal = ({ open, onClose, defaultDate }: Props) => {
       headerCells={[
         { label: 'Away Team', required: true },
         { label: 'Home Team', required: true },
-        { label: 'Game Type', required: true },
         { label: 'Game Date (ET)', required: true },
+        { label: 'Start Time (ET)' },
       ]}
-      requiredRowFields={['away_team_id', 'home_team_id', 'game_type', 'scheduled_at']}
-      requiredFormFields={['league_id']}
+      requiredRowFields={['away_team_id', 'home_team_id', 'scheduled_at']}
+      requiredFormFields={['league_id', 'game_type']}
       addRowLabel="Add Game"
       itemLabel="game"
       getConfirmLabel={(count, isSubmitting) =>
@@ -279,8 +290,9 @@ const PersonalGamesBulkModal = ({ open, onClose, defaultDate }: Props) => {
           games: data.rows.map((row) => ({
             away_team_id: row.away_team_id!,
             home_team_id: row.home_team_id!,
-            game_type: row.game_type,
+            game_type: data.game_type,
             scheduled_at: row.scheduled_at,
+            scheduled_time: row.scheduled_time || null,
           })),
         })
       }

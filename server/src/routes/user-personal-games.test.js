@@ -192,7 +192,7 @@ describe('POST /api/user/personal-games/bulk', () => {
       .send({
         season_id: SEASON,
         games: [
-          { away_team_id: AWAY, home_team_id: HOME, game_type: 'regular', scheduled_at: '2026-10-10' },
+          { away_team_id: AWAY, home_team_id: HOME, game_type: 'regular', scheduled_at: '2026-10-10', scheduled_time: '19:00' },
           { away_team_id: HOME, home_team_id: AWAY, game_type: 'playoff', scheduled_at: '2026-10-12' },
         ],
       });
@@ -202,8 +202,8 @@ describe('POST /api/user/personal-games/bulk', () => {
     expect(sql).toHaveBeenCalledTimes(1);
     const rows = JSON.parse(sql.mock.calls[0].find((value) => typeof value === 'string' && value.startsWith('[')));
     expect(rows).toEqual([
-      { season_id: SEASON, home_team_id: HOME, away_team_id: AWAY, game_type: 'regular', scheduled_at: '2026-10-10' },
-      { season_id: SEASON, home_team_id: AWAY, away_team_id: HOME, game_type: 'playoff', scheduled_at: '2026-10-12' },
+      { season_id: SEASON, home_team_id: HOME, away_team_id: AWAY, game_type: 'regular', scheduled_at: '2026-10-10', scheduled_time: '19:00' },
+      { season_id: SEASON, home_team_id: AWAY, away_team_id: HOME, game_type: 'playoff', scheduled_at: '2026-10-12', scheduled_time: null },
     ]);
     expect(syncScheduledGameToGoogleCalendar).toHaveBeenCalledTimes(2);
   });

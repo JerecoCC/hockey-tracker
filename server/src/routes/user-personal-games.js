@@ -81,7 +81,7 @@ router.post('/', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/user/personal-games/bulk  – add several unplayed games under one season
-// Body: { season_id?, games: [{ home_team_id, away_team_id, game_type, scheduled_at }] }
+// Body: { season_id?, games: [{ home_team_id, away_team_id, game_type, scheduled_at, scheduled_time? }] }
 // Every row is validated before anything is saved, and they're inserted together.
 // ---------------------------------------------------------------------------
 const BULK_MAX_GAMES = 100;
@@ -104,6 +104,7 @@ router.post('/bulk', async (req, res) => {
           away_team_id: game?.away_team_id,
           game_type: game?.game_type,
           scheduled_at: game?.scheduled_at,
+          scheduled_time: game?.scheduled_time,
         });
         return {
           season_id: input.season_id,
@@ -111,6 +112,7 @@ router.post('/bulk', async (req, res) => {
           away_team_id: input.away_team_id,
           game_type: input.game_type,
           scheduled_at: input.scheduled_at,
+          scheduled_time: input.scheduled_time,
         };
       } catch (err) {
         err.message = `Game ${index + 1}: ${err.message}`;
@@ -120,11 +122,13 @@ router.post('/bulk', async (req, res) => {
 
     const created = await sql`
       INSERT INTO user_personal_games (
-        user_id, season_id, home_team_id, away_team_id, game_type, scheduled_at
+        user_id, season_id, home_team_id, away_team_id, game_type, scheduled_at, scheduled_time
       )
-      SELECT ${userId}, r.season_id, r.home_team_id, r.away_team_id, r.game_type, r.scheduled_at
+      SELECT ${userId}, r.season_id, r.home_team_id, r.away_team_id, r.game_type, r.scheduled_at,
+             r.scheduled_time
       FROM jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) AS r(
-        season_id uuid, home_team_id uuid, away_team_id uuid, game_type text, scheduled_at date
+        season_id uuid, home_team_id uuid, away_team_id uuid, game_type text, scheduled_at date,
+        scheduled_time text
       )
       RETURNING id
     `;

@@ -30,7 +30,7 @@ export interface PersonalGameInput {
 
 export interface PersonalGameBulkInput {
   season_id: string | null;
-  games: Array<Pick<PersonalGameInput, 'away_team_id' | 'home_team_id' | 'game_type' | 'scheduled_at'>>;
+  games: Array<Pick<PersonalGameInput, 'away_team_id' | 'home_team_id' | 'game_type' | 'scheduled_at' | 'scheduled_time'>>;
 }
 
 export interface PersonalGameScore {
