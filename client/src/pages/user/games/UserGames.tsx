@@ -53,6 +53,7 @@ import { type GameRecord } from '@/hooks/useGames';
 import {
   DATE_ONLY_RE,
   dateKeyToDate,
+  formatGameTime,
   getOriginalGameDateKey,
   getScheduledWatchDateKey,
   isInvalidWatchScheduleDate,
@@ -527,6 +528,13 @@ const CalendarGameCard = ({
         : 'lose';
   const originalDateLabel = getOriginalGameDateLabel(game, tzPref);
   const playoffMetaLabel = getPlayoffGameMetaLabel(game);
+  // Unwatched games show their scheduled start in the user's timezone; games without a start
+  // time say so. Watched games have no tooltip.
+  const startTimeLabel = game.watched_by_user
+    ? undefined
+    : game.scheduled_time
+      ? `Starts ${formatGameTime(game.scheduled_at, game.scheduled_time, tzPref)}`
+      : 'Start time TBD';
   const awaySeriesWins = getSeriesWinsForTeam(game, game.away_team.id);
   const homeSeriesWins = getSeriesWinsForTeam(game, game.home_team.id);
   const seriesTotalWins = game.series_games_to_win;
@@ -553,6 +561,7 @@ const CalendarGameCard = ({
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
+      tooltip={startTimeLabel}
       topLabel={originalDateLabel}
       bottomLabel={playoffMetaLabel}
       awayTeam={{
@@ -973,14 +982,14 @@ const UserGames = () => {
     game.is_personal
       ? setPersonalGameTarget({ game })
       : navigate(
-      buildUserGameDetailsPath({
-        gameId: game.id,
-        awayTeamCode: game.away_team.code,
-        homeTeamCode: game.home_team.code,
-        scheduledAt: game.scheduled_at,
-        scheduledTime: game.scheduled_time,
-      }),
-    );
+          buildUserGameDetailsPath({
+            gameId: game.id,
+            awayTeamCode: game.away_team.code,
+            homeTeamCode: game.home_team.code,
+            scheduledAt: game.scheduled_at,
+            scheduledTime: game.scheduled_time,
+          }),
+        );
   const openScoreCardModal = (game: GameRecord) => setScoreCardTarget(getScoreCardGame(game));
   const openScheduleModal = (game: GameRecord) => {
     setScheduleTarget(game);

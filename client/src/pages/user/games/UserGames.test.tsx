@@ -8,6 +8,7 @@ import gameCardStyles from '@/shared/GameCard/GameCard.module.scss';
 import scheduleLayoutStyles from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout.module.scss';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import { syncGoogleCalendarWithProgress } from './googleCalendarSync';
+import { formatGameTime } from '@/lib/gameSchedule';
 import UserGames from './UserGames';
 import styles from './UserGames.module.scss';
 
@@ -2610,6 +2611,21 @@ describe('UserGames schedule views', () => {
     expect(within(emptyCalendarDay).getByText('No games scheduled')).toHaveClass(
       styles.calendarDayEmpty,
     );
+  });
+
+  it("shows an unwatched calendar game's start time in a tooltip, but not a watched one's", async () => {
+    const user = userEvent.setup();
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+
+    // games[0] is unwatched and games[1] is watched.
+    const startTooltips = Array.from(document.querySelectorAll('[title^="Start"]'), (node) =>
+      node.getAttribute('title'),
+    );
+    expect(startTooltips).toEqual([
+      `Starts ${formatGameTime(games[0].scheduled_at, games[0].scheduled_time, 'local')}`,
+    ]);
   });
 
   it('renders compact calendar game cards and navigates when clicked', async () => {

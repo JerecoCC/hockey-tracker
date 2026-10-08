@@ -185,7 +185,7 @@ const CalendarGameListItem = ({
     );
   }
 
-  return (
+  const item = (
     <div
       className={itemClassName}
       style={style}
@@ -196,6 +196,18 @@ const CalendarGameListItem = ({
     >
       {content}
     </div>
+  );
+
+  // Non-link items only get a tooltip when one is given.
+  return tooltip ? (
+    <Tooltip
+      className={styles.wrap}
+      text={tooltip}
+    >
+      {item}
+    </Tooltip>
+  ) : (
+    item
   );
 };
 
