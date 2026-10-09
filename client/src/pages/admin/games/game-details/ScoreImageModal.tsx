@@ -35,6 +35,7 @@ import { getPlayoffScoreMetaBaseLabel, getPlayoffScoreMetaLabel } from './playof
 import styles from './ScoreImageModal.module.scss';
 
 import { API, authHeaders } from '@/lib/apiClient';
+import { contrastRatio, mixHex } from '@/lib/color';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -545,6 +546,22 @@ export const ScoreCardFitWords = ({ as: Tag, text }: { as: 'span' | 'strong'; te
       ))}
     </Tag>
   );
+};
+
+const SCORE_CARD_TEAM_TEXT_LIGHT = '#ffffff';
+const SCORE_CARD_TEAM_TEXT_DARK = '#0f172a';
+
+/**
+ * The team name color for a panel filled with `primary`: white or near-black, whichever
+ * contrasts more with the panel (the primary under the panel's 8% black shade).
+ */
+export const getScoreCardTeamTextColor = (primary: string): string => {
+  const panel = mixHex('#000000', primary, 0.08);
+  if (!panel) return SCORE_CARD_TEAM_TEXT_LIGHT;
+  return contrastRatio(SCORE_CARD_TEAM_TEXT_LIGHT, panel) >=
+    contrastRatio(SCORE_CARD_TEAM_TEXT_DARK, panel)
+    ? SCORE_CARD_TEAM_TEXT_LIGHT
+    : SCORE_CARD_TEAM_TEXT_DARK;
 };
 
 const ScoreCardTeamName = ({ team }: { team: DrawTeam | null }) => {
@@ -2068,6 +2085,8 @@ const ScoreImageModal = ({
                 height: H,
                 '--away-primary': awayPrimary,
                 '--home-primary': homePrimary,
+                '--away-team-text': getScoreCardTeamTextColor(awayPrimary),
+                '--home-team-text': getScoreCardTeamTextColor(homePrimary),
                 '--league-band': leagueBand,
                 '--hero-x': `${cropX}%`,
                 '--hero-y': `${cropY}%`,

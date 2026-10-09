@@ -5,7 +5,7 @@ import { toPng } from 'html-to-image';
 import { ThemeContext } from '@/context/ThemeContext';
 import type { GameRecord } from '@/hooks/useGames';
 import useLeagues from '@/hooks/useLeagues';
-import ScoreImageModal, { ScoreCardFitWords } from './ScoreImageModal';
+import ScoreImageModal, { ScoreCardFitWords, getScoreCardTeamTextColor } from './ScoreImageModal';
 
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn() }));
@@ -665,5 +665,21 @@ describe('ScoreCardFitWords', () => {
     expect(
       Array.from(container.querySelectorAll('.scoreCardWord'), (word) => word.textContent),
     ).toEqual(['Maple', 'Leafs']);
+  });
+});
+
+describe('getScoreCardTeamTextColor', () => {
+  it('uses white team names on dark primaries', () => {
+    expect(getScoreCardTeamTextColor('#003087')).toBe('#ffffff');
+    expect(getScoreCardTeamTextColor('#6f263d')).toBe('#ffffff');
+  });
+
+  it('uses dark team names on light primaries', () => {
+    expect(getScoreCardTeamTextColor('#ffb81c')).toBe('#0f172a');
+    expect(getScoreCardTeamTextColor('#f4f4f4')).toBe('#0f172a');
+  });
+
+  it('falls back to white for colors it cannot read', () => {
+    expect(getScoreCardTeamTextColor('rebeccapurple')).toBe('#ffffff');
   });
 });

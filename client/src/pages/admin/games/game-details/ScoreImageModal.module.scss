@@ -435,10 +435,14 @@
   }
 
   &TeamPanelAway {
+    --score-card-team-text: var(--away-team-text, #fff);
+
     background: var(--away-primary);
   }
 
   &TeamPanelHome {
+    --score-card-team-text: var(--home-team-text, #fff);
+
     background: var(--home-primary);
   }
 }
@@ -492,11 +496,13 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    color: rgba(255, 255, 255, 0.82);
+    // White or near-black per team, whichever contrasts more with its primary (set inline).
+    color: var(--score-card-team-text, #fff);
     text-align: center;
     text-transform: uppercase;
 
     > span {
+      opacity: 0.82;
       font-size: 23px;
       font-weight: 900;
       letter-spacing: 0.18em;
@@ -504,7 +510,6 @@
     }
 
     > strong {
-      color: #fff;
       font-size: 34px;
       font-weight: 950;
       letter-spacing: 0.08em;
