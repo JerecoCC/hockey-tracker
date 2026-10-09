@@ -2279,6 +2279,14 @@ router.get('/:id/stats', async (req, res) => {
                 (SELECT goalie_min_regular_minutes FROM season_info),
                 (SELECT league_goalie_min_regular_minutes FROM season_info)
               ) * 60
+           -- Until some goalie reaches the minimum (early in a season), show them all.
+           OR NOT EXISTS (
+                SELECT 1 FROM goalie_game_agg
+                WHERE toi >= COALESCE(
+                  (SELECT goalie_min_regular_minutes FROM season_info),
+                  (SELECT league_goalie_min_regular_minutes FROM season_info)
+                ) * 60
+              )
         ORDER BY
           CASE WHEN ${sortKey} = 'last_name' AND ${sortDir} = 'asc' THEN last_name END ASC NULLS LAST,
           CASE WHEN ${sortKey} = 'last_name' AND ${sortDir} = 'desc' THEN last_name END DESC NULLS LAST,
@@ -2571,6 +2579,14 @@ router.get('/:id/stats', async (req, res) => {
               (SELECT goalie_min_regular_minutes FROM season_info),
               (SELECT league_goalie_min_regular_minutes FROM season_info)
             ) * 60
+         -- Until some goalie reaches the minimum (early in a season), show them all.
+         OR NOT EXISTS (
+              SELECT 1 FROM goalie_game_agg qualified
+              WHERE qualified.toi >= COALESCE(
+                (SELECT goalie_min_regular_minutes FROM season_info),
+                (SELECT league_goalie_min_regular_minutes FROM season_info)
+              ) * 60
+            )
       ORDER BY save_pct DESC NULLS LAST, agg.saves DESC
     `;
 

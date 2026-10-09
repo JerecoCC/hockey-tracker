@@ -171,6 +171,8 @@ describe('GET /api/admin/seasons/:id/stats', () => {
     expect(queryText).toContain('league_goalie_min_regular_minutes');
     expect(queryText).not.toContain("UPPER(l.code) = 'PWHL'");
     expect(queryText).toContain('time_on_ice >= COALESCE');
+    // Falls back to every goalie until one reaches the minimum.
+    expect(queryText).toContain('OR NOT EXISTS');
     expect(queryText).toContain("= 'time_on_ice'");
     expect(queryText).not.toContain('WHERE gp >= 25');
   });

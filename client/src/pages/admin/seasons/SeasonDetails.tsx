@@ -269,7 +269,7 @@ const SeasonDetailsPage = () => {
   const goalieEligibilityTooltip =
     statsCompetition === 'regular'
       ? effectiveGoalieMinRegularMinutes > 0
-        ? `Only show goalies with at least ${effectiveGoalieMinRegularMinutes} regular-season minutes`
+        ? `Only show goalies with at least ${effectiveGoalieMinRegularMinutes} regular-season minutes (all goalies are shown until one reaches it)`
         : 'All regular-season goalies are shown'
       : 'Regular-season goalie minimum does not apply to playoff stats';
 
