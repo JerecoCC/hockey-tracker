@@ -131,16 +131,6 @@
   }
 }
 
-.dayTodayIndicator.dayTodayIndicator {
-  box-sizing: border-box;
-  min-height: 1.35rem;
-  padding: 0.1rem 0.45rem;
-  border-radius: 999px;
-  font-size: 0.625rem;
-  letter-spacing: 0.04em;
-  line-height: 1;
-}
-
 .list {
   list-style: none;
   padding: 0;
@@ -419,11 +409,6 @@
 
         .weekSummaryCountSkeleton.weekSummaryCountSkeleton {
           width: 100%;
-        }
-
-        .dayTodayIndicator.dayTodayIndicator {
-          padding: 0.1rem 0.2rem;
-          font-size: 0.5rem;
         }
       }
     }

@@ -115,7 +115,9 @@ describe('ScheduleWeekList', () => {
 
     renderWeekList();
 
-    expect(screen.getByText('Today').closest('[aria-current="date"]')).toBeInTheDocument();
+    const todayTag = screen.getByText('Today');
+    expect(todayTag.closest('[aria-current="date"]')).toBeInTheDocument();
+    expect(todayTag).toHaveClass('tag', 'outlined', 'accent');
   });
 
   it('marks the current day in the compact week summary', () => {

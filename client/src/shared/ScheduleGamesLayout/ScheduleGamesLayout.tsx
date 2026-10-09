@@ -173,7 +173,6 @@ export const ScheduleWeekSummary = <T,>({
                   label="Today"
                   variant="outlined"
                   intent="accent"
-                  className={styles.dayTodayIndicator}
                 />
               ) : (
                 <span className={styles.weekSummaryWeekday}>{formatWeekday(dateKey)}</span>
@@ -291,9 +290,10 @@ export const ScheduleWeekList = <T,>({
             title={title}
             titleAccessory={
               isToday ? (
-                <Badge
-                  value="Today"
-                  className={styles.dayTodayIndicator}
+                <Tag
+                  label="Today"
+                  variant="outlined"
+                  intent="accent"
                 />
               ) : undefined
             }
