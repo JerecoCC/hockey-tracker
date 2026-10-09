@@ -2762,6 +2762,7 @@ router.get('/seasons', async (req, res) => {
         l.code AS league_code,
         l.logo AS league_logo,
         s.start_date::text AS start_date,
+        s.preseason_start_date::text AS preseason_start_date,
         s.started_at::text AS started_at,
         s.end_date::text AS end_date,
         s.is_ended,

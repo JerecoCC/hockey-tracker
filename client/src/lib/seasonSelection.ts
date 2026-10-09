@@ -1,3 +1,5 @@
+import { getSeasonTagPhase } from './seasonPhase';
+
 export interface SeasonSelectRecord {
   id: string;
   name: string;
@@ -6,9 +8,12 @@ export interface SeasonSelectRecord {
   created_at?: string | null;
   is_current?: boolean;
   is_ended?: boolean;
+  started_at?: string | null;
+  playoffs_started?: boolean;
+  preseason_start_date?: string | null;
 }
 
-export type DefaultSeasonMode = 'latest' | 'latest-ended' | 'none';
+export type DefaultSeasonMode = 'latest' | 'latest-ended' | 'active-or-latest-ended' | 'none';
 
 export const sortSeasonsLatestFirst = <TSeason extends SeasonSelectRecord>(
   seasons: TSeason[],
@@ -38,3 +43,20 @@ export const getLatestEndedSeasonId = <TSeason extends SeasonSelectRecord>(
 ): string | null =>
   sortSeasonsLatestFirst(seasons.filter((season) => isSeasonEnded(season, asOfDate)))[0]?.id ??
   null;
+
+/** In preseason (from its preseason start date), started, or in the playoffs — not yet ended. */
+export const isSeasonActive = <TSeason extends SeasonSelectRecord>(
+  season: TSeason,
+  today: Date = new Date(),
+): boolean => {
+  const phase = getSeasonTagPhase(season, today);
+  return phase === 'preseason' || phase === 'in_progress' || phase === 'playoffs';
+};
+
+/** The latest active season (preseason included), or else the latest ended season. */
+export const getActiveOrLatestEndedSeasonId = <TSeason extends SeasonSelectRecord>(
+  seasons: TSeason[],
+  today: Date = new Date(),
+): string | null =>
+  sortSeasonsLatestFirst(seasons.filter((season) => isSeasonActive(season, today)))[0]?.id ??
+  getLatestEndedSeasonId(seasons);

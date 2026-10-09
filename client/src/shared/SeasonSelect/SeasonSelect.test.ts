@@ -1,4 +1,5 @@
 import {
+  getActiveOrLatestEndedSeasonId,
   getLatestEndedSeasonId,
   getLatestSeasonId,
   isSeasonEnded,
@@ -69,5 +70,49 @@ describe('SeasonSelect season helpers', () => {
         '2026-07-07',
       ),
     ).toBe(true);
+  });
+});
+
+describe('getActiveOrLatestEndedSeasonId', () => {
+  const ended = {
+    id: 'season-ended',
+    name: '2025-26',
+    start_date: '2025-10-07',
+    preseason_start_date: '2025-09-20',
+    started_at: '2025-10-07T00:00:00Z',
+    is_ended: true,
+  };
+  const next = {
+    id: 'season-next',
+    name: '2026-27',
+    start_date: '2026-10-06',
+    preseason_start_date: '2026-09-19',
+    started_at: null,
+    is_ended: false,
+  };
+
+  it('picks the season in preseason', () => {
+    expect(getActiveOrLatestEndedSeasonId([ended, next], new Date(2026, 8, 25))).toBe(
+      'season-next',
+    );
+  });
+
+  it('picks a started season, including once its playoffs begin', () => {
+    const started = { ...next, started_at: '2026-10-06T00:00:00Z' };
+    expect(getActiveOrLatestEndedSeasonId([ended, started], new Date(2026, 10, 1))).toBe(
+      'season-next',
+    );
+    expect(
+      getActiveOrLatestEndedSeasonId(
+        [ended, { ...started, playoffs_started: true }],
+        new Date(2027, 3, 20),
+      ),
+    ).toBe('season-next');
+  });
+
+  it('falls back to the latest ended season before preseason begins', () => {
+    expect(getActiveOrLatestEndedSeasonId([ended, next], new Date(2026, 7, 1))).toBe(
+      'season-ended',
+    );
   });
 });

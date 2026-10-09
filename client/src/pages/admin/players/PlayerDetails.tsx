@@ -68,7 +68,7 @@ import useLeagueDraftDates, { type LeagueDraftDateRecord } from '@/hooks/useLeag
 import { getDraftPickStartDate } from '@/lib/draftDates';
 import { formatPlayerPosition } from '@/lib/playerPosition';
 import { PLAYER_STATUS_LABELS, getPlayerStatus, type PlayerStatus } from '@/lib/playerStatus';
-import { getLatestEndedSeasonId } from '@/lib/seasonSelection';
+import { getActiveOrLatestEndedSeasonId, getLatestEndedSeasonId } from '@/lib/seasonSelection';
 import {
   buildGameDetailsPath,
   buildLeagueDetailsPath,
@@ -2380,9 +2380,12 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     if (stint.season_id) playerSeasonIds.add(stint.season_id);
   });
   const playerSeasonOptions = gameLogSeasons.filter((season) => playerSeasonIds.has(season.id));
-  const defaultPlayerSeasonId = getLatestEndedSeasonId(playerSeasonOptions);
+  // Season selects open on the active season (preseason included), else the latest ended one.
+  const defaultPlayerSeasonId = getActiveOrLatestEndedSeasonId(playerSeasonOptions);
+  // Movement checks compare against the latest season that has actually ended.
+  const latestEndedPlayerSeasonId = getLatestEndedSeasonId(playerSeasonOptions);
   const latestPlayedSeason =
-    playerSeasonOptions.find((season) => season.id === defaultPlayerSeasonId) ?? null;
+    playerSeasonOptions.find((season) => season.id === latestEndedPlayerSeasonId) ?? null;
   const [seasonStatsSeasonId, setSeasonStatsSeasonId] = useState<string | null>(null);
   const effectiveSeasonStatsSeasonId = seasonStatsSeasonId ?? defaultPlayerSeasonId;
   const { currentSeasonStats: seasonStats, loading: seasonStatsLoading } =
@@ -3354,7 +3357,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
               onChange={handleSeasonChange}
               placeholder="All seasons"
               includeAllOption
-              defaultSeasonMode="latest-ended"
+              defaultSeasonMode="active-or-latest-ended"
             />
           </div>
           <SegmentedControl
@@ -4225,7 +4228,7 @@ const SeasonStatsSection = ({
             seasons={seasons}
             onChange={onSeasonChange}
             placeholder="Select season..."
-            defaultSeasonMode="latest-ended"
+            defaultSeasonMode="active-or-latest-ended"
           />
         </div>
       ) : null

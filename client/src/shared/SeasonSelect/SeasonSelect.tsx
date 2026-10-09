@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import Select, { type SelectOption, type SelectWidth } from '@jerecocc/tracker-ui/components/Select/Select';
 import {
+  getActiveOrLatestEndedSeasonId,
   getLatestEndedSeasonId,
   getLatestSeasonId,
   sortSeasonsLatestFirst,
@@ -50,6 +51,9 @@ const SeasonSelect = <TSeason extends SeasonSelectRecord>(props: Props<TSeason>)
   const defaultSeasonId = useMemo(() => {
     if (defaultSeasonMode === 'none') return null;
     if (defaultSeasonMode === 'latest-ended') return getLatestEndedSeasonId(seasons);
+    if (defaultSeasonMode === 'active-or-latest-ended') {
+      return getActiveOrLatestEndedSeasonId(seasons);
+    }
     return getLatestSeasonId(seasons);
   }, [defaultSeasonMode, seasons]);
   const options = useMemo<SelectOption[]>(() => {
