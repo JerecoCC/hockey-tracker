@@ -822,4 +822,58 @@
     --stat-item-value-font-size: #{$font-xl};
     --stat-item-value-font-weight: 700;
   }
+
+  // Stacks a stat's rank tag under its value.
+  &CellWithRank {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-xs;
+    min-width: 0;
+  }
+
+  // League-wide rank tag: a highlight keeps running around its outline. A rotating conic
+  // gradient is masked down to the 1px border so the label and fill are untouched.
+  &RankLeague {
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      padding: 1px;
+      border-radius: inherit;
+      background: conic-gradient(
+        from var(--stat-rank-shine-angle),
+        transparent 0deg 250deg,
+        color-mix(in srgb, currentColor 35%, #fff) 300deg,
+        transparent 350deg
+      );
+      mask:
+        linear-gradient(#000 0 0) content-box,
+        linear-gradient(#000 0 0);
+      mask-composite: exclude;
+      pointer-events: none;
+      animation: statRankShine 2.8s linear infinite;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &::after {
+        content: none;
+      }
+    }
+  }
+}
+
+// Registered so the gradient angle can be animated.
+@property --stat-rank-shine-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes statRankShine {
+  to {
+    --stat-rank-shine-angle: 360deg;
+  }
 }

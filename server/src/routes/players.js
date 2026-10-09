@@ -5,6 +5,7 @@ const multer = require('multer');
 const { put } = require('@vercel/blob');
 const { sql } = require('../db');
 const { requireAdmin } = require('../middleware/auth');
+const { fetchPlayerSeasonStatRanks } = require('../lib/playerSeasonStatRanks');
 
 // ---------------------------------------------------------------------------
 // Multer – memory storage for player photo uploads
@@ -1711,11 +1712,18 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
       };
     };
 
+    const ranks = await fetchPlayerSeasonStatRanks({
+      playerId: id,
+      seasonId: season_id,
+      isGoalie: player_position === 'G',
+    });
+    const withRanks = (stats, gameType) => (stats ? { ...stats, ranks: ranks[gameType] } : null);
+
     return res.json({
       season_id,
       season_name,
-      regular:  makeStats('regular'),
-      playoffs: makeStats('playoff'),
+      regular:  withRanks(makeStats('regular'), 'regular'),
+      playoffs: withRanks(makeStats('playoff'), 'playoff'),
     });
   } catch (err) {
     console.error('players latest-season-stats error:', err);

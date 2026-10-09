@@ -11,6 +11,9 @@ jest.mock('../lib/personalGames', () => ({
   fetchPersonalGames: jest.fn().mockResolvedValue([]),
   findOwnedPersonalGame: jest.fn().mockResolvedValue(null),
 }));
+jest.mock('../lib/playerSeasonStatRanks', () => ({
+  fetchPlayerSeasonStatRanks: jest.fn().mockResolvedValue({ regular: {}, playoff: {} }),
+}));
 jest.mock('../services/googleCalendar', () => ({
   syncScheduledGameToGoogleCalendar: jest.fn().mockResolvedValue({ status: 'synced' }),
 }));

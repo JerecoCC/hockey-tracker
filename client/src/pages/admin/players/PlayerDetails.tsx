@@ -28,7 +28,7 @@ import SeasonSelect from '@/shared/SeasonSelect/SeasonSelect';
 import StatItem from '@jerecocc/tracker-ui/components/StatItem/StatItem';
 import Table, { type Column } from '@jerecocc/tracker-ui/components/Table/Table';
 import Tabs from '@jerecocc/tracker-ui/components/Tabs/Tabs';
-import Tag, { type TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
+import Tag, { type TagIntent, type TagProps } from '@jerecocc/tracker-ui/components/Tag/Tag';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
@@ -43,6 +43,7 @@ import usePlayerDetails, {
   type PlayerCurrentSeasonStats,
   type PlayerCurrentSeasonStatBlock,
   type PlayerLastFiveGameRecord,
+  type PlayerSeasonStatRank,
 } from '@/hooks/usePlayerDetails';
 import useTeamDetails from '@/hooks/useTeamDetails';
 import useSeasons, { type SeasonRecord } from '@/hooks/useSeasons';
@@ -4280,26 +4281,31 @@ const SeasonStatBlock = ({
             label="GP"
             tooltip={STAT_LABELS.GP}
             value={stats.gp}
+            rank={stats.ranks?.gp}
           />
           <StatCell
             label="W"
             tooltip={STAT_LABELS.W}
             value={stats.wins}
+            rank={stats.ranks?.wins}
           />
           <StatCell
             label="SO"
             tooltip={STAT_LABELS.SO}
             value={stats.shootout_wins}
+            rank={stats.ranks?.shootout_wins}
           />
           <StatCell
             label="GAA"
             tooltip={STAT_LABELS.GAA}
             value={formatGaa(stats.goals_against, stats.time_on_ice)}
+            rank={stats.ranks?.gaa}
           />
           <StatCell
             label="SV%"
             tooltip={STAT_LABELS['SV%']}
             value={fmtSavePct(stats.save_pct)}
+            rank={stats.ranks?.save_pct}
           />
         </div>
       ) : (
@@ -4308,21 +4314,25 @@ const SeasonStatBlock = ({
             label="GP"
             tooltip={STAT_LABELS.GP}
             value={stats.gp}
+            rank={stats.ranks?.gp}
           />
           <StatCell
             label="G"
             tooltip={STAT_LABELS.G}
             value={stats.goals}
+            rank={stats.ranks?.goals}
           />
           <StatCell
             label="A"
             tooltip={STAT_LABELS.A}
             value={stats.assists}
+            rank={stats.ranks?.assists}
           />
           <StatCell
             label="P"
             tooltip={STAT_LABELS.P}
             value={stats.points}
+            rank={stats.ranks?.points}
           />
         </div>
       )}
@@ -4330,19 +4340,70 @@ const SeasonStatBlock = ({
   );
 };
 
+/** 1 → "1st", 2 → "2nd", 11 → "11th", 22 → "22nd". */
+const ordinal = (n: number) => {
+  const tens = n % 100;
+  const suffix =
+    tens >= 11 && tens <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] ?? 'th');
+  return `${n}${suffix}`;
+};
+
+/** Tag text like "T2nd NHL" or "3rd TOR". */
+export const formatStatRankLabel = ({ rank, tied, label }: PlayerSeasonStatRank) =>
+  `${tied ? 'T' : ''}${ordinal(rank)} ${label}`;
+
+/**
+ * League ranks are outlined in the league's primary color, with a shine running around the
+ * outline; team ranks are filled with the team's primary color in its text color.
+ */
+const getStatRankTagProps = ({
+  scope,
+  primary_color: primary,
+  text_color: text,
+}: PlayerSeasonStatRank): Pick<TagProps, 'variant' | 'style' | 'className'> => {
+  if (scope === 'league') {
+    return {
+      variant: 'outlined',
+      className: styles.statRankLeague,
+      style: primary ? { borderColor: primary, color: primary } : undefined,
+    };
+  }
+  if (!primary) return { variant: 'outlined' };
+  return {
+    variant: 'solid',
+    style: { background: primary, borderColor: primary, color: text ?? '#fff' },
+  };
+};
+
+const formatStatRankTooltip = ({ scope, rank, tied, label }: PlayerSeasonStatRank) =>
+  `${tied ? 'Tied for' : 'Ranked'} ${ordinal(rank)} ${scope === 'league' ? 'in the' : 'on'} ${label}`;
+
 const StatCell = ({
   label,
   tooltip,
   value,
+  rank,
 }: {
   label: string;
   tooltip: string;
   value: number | string;
+  /** A top-10 league or team rank, shown as a tag under the value. */
+  rank?: PlayerSeasonStatRank;
 }) => (
-  <StatItem
-    className={styles.statCell}
-    label={label}
-    tooltip={tooltip}
-    value={value}
-  />
+  <div className={styles.statCellWithRank}>
+    <StatItem
+      className={styles.statCell}
+      label={label}
+      tooltip={tooltip}
+      value={value}
+    />
+    {rank && (
+      <Tooltip text={formatStatRankTooltip(rank)}>
+        <Tag
+          label={formatStatRankLabel(rank)}
+          {...getStatRankTagProps(rank)}
+        />
+      </Tooltip>
+    )}
+  </div>
 );

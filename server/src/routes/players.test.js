@@ -4,10 +4,14 @@ jest.mock('../db', () => ({ sql: jest.fn() }));
 jest.mock('../middleware/auth', () => ({
   requireAdmin: (req, _res, next) => { req.user = { id: 'admin-1', role: 'admin' }; next(); },
 }));
+jest.mock('../lib/playerSeasonStatRanks', () => ({
+  fetchPlayerSeasonStatRanks: jest.fn().mockResolvedValue({ regular: {}, playoff: {} }),
+}));
 
 const request       = require('supertest');
 const express       = require('express');
 const { sql }       = require('../db');
+const { fetchPlayerSeasonStatRanks } = require('../lib/playerSeasonStatRanks');
 const playersRouter = require('./players');
 
 const app = express();
@@ -658,6 +662,11 @@ describe('GET /api/admin/players/:id/stats', () => {
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/players/:id/latest-season-stats', () => {
   it('returns the latest played season stats split by regular season and playoffs', async () => {
+    const pointsRank = { scope: 'league', rank: 2, tied: true, label: 'NHL' };
+    fetchPlayerSeasonStatRanks.mockResolvedValueOnce({
+      regular: { points: pointsRank },
+      playoff: {},
+    });
     sql
       .mockResolvedValueOnce([{ season_id: 'season-2', season_name: '2023-24', player_position: 'C' }])
       .mockResolvedValueOnce([
@@ -683,6 +692,7 @@ describe('GET /api/admin/players/:id/latest-season-stats', () => {
         shots_against: 0,
         save_pct: null,
         time_on_ice: 0,
+        ranks: { points: pointsRank },
       },
       playoffs: {
         gp: 2,
@@ -695,7 +705,13 @@ describe('GET /api/admin/players/:id/latest-season-stats', () => {
         shots_against: 0,
         save_pct: null,
         time_on_ice: 0,
+        ranks: {},
       },
+    });
+    expect(fetchPlayerSeasonStatRanks).toHaveBeenCalledWith({
+      playerId: 'player-1',
+      seasonId: 'season-2',
+      isGoalie: false,
     });
   });
 

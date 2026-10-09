@@ -144,6 +144,28 @@ export const usePlayerAwards = (
 };
 
 // ── Latest played season stats returned by GET /players/:id/latest-season-stats ─
+/** A stat's top-10 rank: league-wide, or among teammates when outside the league top 10. */
+export interface PlayerSeasonStatRank {
+  scope: 'league' | 'team';
+  rank: number;
+  tied: boolean;
+  /** League or team code, e.g. "NHL" or "TOR". */
+  label: string;
+  /** The league's or team's colors, used for the tag. */
+  primary_color?: string | null;
+  text_color?: string | null;
+}
+
+export type PlayerSeasonRankedStat =
+  | 'gp'
+  | 'goals'
+  | 'assists'
+  | 'points'
+  | 'wins'
+  | 'shootout_wins'
+  | 'gaa'
+  | 'save_pct';
+
 export interface PlayerCurrentSeasonStatBlock {
   gp: number;
   goals: number;
@@ -156,6 +178,8 @@ export interface PlayerCurrentSeasonStatBlock {
   save_pct: number | null;
   /** Total goalie time on ice this season, in seconds. */
   time_on_ice: number;
+  /** Only stats ranked in a top 10 are present. */
+  ranks?: Partial<Record<PlayerSeasonRankedStat, PlayerSeasonStatRank>>;
 }
 
 export interface PlayerCurrentSeasonStats {

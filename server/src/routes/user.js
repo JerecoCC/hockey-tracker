@@ -3,6 +3,7 @@ const { requireAuth } = require('../middleware/auth');
 const { sql } = require('../db');
 const { syncScheduledGameToGoogleCalendar } = require('../services/googleCalendar');
 const { fetchPersonalGames, findOwnedPersonalGame } = require('../lib/personalGames');
+const { fetchPlayerSeasonStatRanks } = require('../lib/playerSeasonStatRanks');
 
 const syncCalendarAfterUserGameChange = async (userId, gameId) => {
   try {
@@ -1977,11 +1978,18 @@ router.get(['/players/:id/current-season-stats', '/players/:id/latest-season-sta
       };
     };
 
+    const ranks = await fetchPlayerSeasonStatRanks({
+      playerId: id,
+      seasonId: season_id,
+      isGoalie: player_position === 'G',
+    });
+    const withRanks = (stats, gameType) => (stats ? { ...stats, ranks: ranks[gameType] } : null);
+
     return res.json({
       season_id,
       season_name,
-      regular: makeStats('regular'),
-      playoffs: makeStats('playoff'),
+      regular: withRanks(makeStats('regular'), 'regular'),
+      playoffs: withRanks(makeStats('playoff'), 'playoff'),
     });
   } catch (err) {
     console.error('user player latest-season-stats error:', err);

@@ -244,6 +244,10 @@ jest.mock(
     ({ children, className }: any) => <span className={className}>{children}</span>,
 );
 jest.mock('../teams/TeamPlayerEditModal', () => () => null);
+// The real fields load the tracker-ui index, whose rich text editor Jest can't parse.
+jest.mock('@/components/form/ControlledFields', () => ({
+  ControlledTextareaField: ({ label }: { label: string }) => <label>{label}</label>,
+}));
 jest.mock(
   '../teams/MovePlayerModal',
   () =>
@@ -627,6 +631,41 @@ describe('PlayerDetails info tab', () => {
     expect(container.querySelector('.infoSummaryGrid')).toBeInTheDocument();
     expect(container.querySelector('.playerInfoCard')).toBeInTheDocument();
     expect(container.querySelector('.currentSeasonCards')).toBeInTheDocument();
+  });
+
+  it('tags top-10 season stats with their league or team rank in those colors', () => {
+    const { currentSeasonStats } = mockUsePlayerCurrentSeasonStats();
+    mockUsePlayerCurrentSeasonStats.mockReturnValue({
+      currentSeasonStats: {
+        ...currentSeasonStats,
+        regular: {
+          ...currentSeasonStats.regular,
+          ranks: {
+            points: {
+              scope: 'league',
+              rank: 2,
+              tied: true,
+              label: 'NHL',
+              primary_color: '#111111',
+              text_color: '#eeeeee',
+            },
+            goals: { scope: 'team', rank: 3, tied: false, label: 'TOR', primary_color: '#00205b' },
+          },
+        },
+      },
+    });
+
+    render(<PlayerDetails />);
+
+    // League ranks are outlined in the league color; team ranks are filled with the team color.
+    const leagueTag = screen.getByText('T2nd NHL');
+    expect(leagueTag).toHaveClass('outlined');
+    expect(leagueTag).toHaveStyle({ borderColor: '#111111', color: '#111111' });
+    const teamTag = screen.getByText('3rd TOR');
+    expect(teamTag).toHaveClass('solid');
+    expect(teamTag).toHaveStyle({ background: '#00205b', color: '#fff' });
+    // Only the two ranked stats get tags.
+    expect(screen.getAllByText(/^T?\d+(st|nd|rd|th) /)).toHaveLength(2);
   });
 
   it('links NHL league player numbers to the NHL player page', () => {
