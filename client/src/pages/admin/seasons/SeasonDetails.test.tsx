@@ -125,6 +125,8 @@ jest.mock('@jerecocc/tracker-ui/components/TitleRow/TitleRow', () => (props: any
 jest.mock('@jerecocc/tracker-ui/components/InfoItem/InfoItem', () => () => null);
 jest.mock('@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar', () => () => <span>player</span>);
 jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => () => <span>logo</span>);
+// Its form fields load the tracker-ui index, whose rich text editor Jest can't parse.
+jest.mock('./SeasonAwardsTab', () => () => null);
 jest.mock('./SeasonEndModal', () => () => null);
 jest.mock('./SeasonFormModal', () => () => null);
 jest.mock('./SeasonGamesTab', () => (props: Record<string, unknown>) => mockSeasonGamesTab(props));
@@ -756,13 +758,52 @@ describe('SeasonDetails stats tab', () => {
 
     const forwardsCard = screen
       .getByRole('button', { name: 'View all forward leaders' })
-      .closest('section') as HTMLElement;
+      .closest('[data-testid="card"]') as HTMLElement;
     const defenseCard = screen
       .getByRole('button', { name: 'View all defense leaders' })
-      .closest('section') as HTMLElement;
+      .closest('[data-testid="card"]') as HTMLElement;
     expect(within(forwardsCard).queryByRole('button', { name: 'View Morgan Rielly' })).toBeNull();
     expect(within(forwardsCard).getByRole('button', { name: 'View John Smith' })).toBeInTheDocument();
     expect(within(defenseCard).getByRole('button', { name: 'View Morgan Rielly' })).toBeInTheDocument();
+  });
+
+  it('breaks summary leader ties by goals for forwards and defense', () => {
+    mockUseTabState.mockReturnValue([4, jest.fn()]);
+    const forward = mockUseSeasonStats().skaters[0];
+    const skater = (id: string, firstName: string, position: string, goals: number) => ({
+      ...forward,
+      player_id: id,
+      first_name: firstName,
+      last_name: 'Tie',
+      position,
+      goals,
+      assists: 80 - goals,
+      points: 80,
+    });
+    mockUseSeasonStats.mockReturnValue({
+      // Listed fewer goals first, so the order only comes from the tie-break.
+      skaters: [
+        skater('f-1', 'Fewer', 'C', 20),
+        skater('f-2', 'More', 'LW', 35),
+        skater('d-1', 'Fewer', 'D', 10),
+        skater('d-2', 'More', 'D', 15),
+      ],
+      goalies: [],
+      loading: false,
+    });
+
+    render(<SeasonDetails />);
+
+    const leaderNames = (label: string) => {
+      const card = screen
+        .getByRole('button', { name: label })
+        .closest('[data-testid="card"]') as HTMLElement;
+      return within(card)
+        .getAllByRole('button', { name: /^View .+ Tie$/ })
+        .map((button) => button.getAttribute('aria-label'));
+    };
+    expect(leaderNames('View all forward leaders')).toEqual(['View More Tie', 'View Fewer Tie']);
+    expect(leaderNames('View all defense leaders')).toEqual(['View More Tie', 'View Fewer Tie']);
   });
 
   it('opens full leader lists from the summary header icon buttons', async () => {

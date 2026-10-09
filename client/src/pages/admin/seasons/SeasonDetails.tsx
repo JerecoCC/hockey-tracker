@@ -110,9 +110,15 @@ const DEFAULT_WILDCARD_FORMAT: PlayoffFormatRule[] = [
   { scope: 'conference', method: 'wildcard', count: 2 },
 ];
 
+// Ties on the chosen stat go to the player with more goals, then more points.
 const sortBySkaterStat = (arr: SkaterStatRecord[], stat: SkaterStatType) =>
   [...arr]
-    .sort((a, b) => ((b[stat] as number) ?? 0) - ((a[stat] as number) ?? 0))
+    .sort(
+      (a, b) =>
+        ((b[stat] as number) ?? 0) - ((a[stat] as number) ?? 0) ||
+        (b.goals ?? 0) - (a.goals ?? 0) ||
+        (b.points ?? 0) - (a.points ?? 0),
+    )
     .slice(0, PAGE_SIZE);
 
 /** Recursively collect all team IDs in a group and its descendant groups. */
@@ -416,7 +422,8 @@ const SeasonDetailsPage = () => {
       const bv = b[sort.key as keyof SkaterStatRecord] ?? '';
       if (av < bv) return sort.dir === 'asc' ? -1 : 1;
       if (av > bv) return sort.dir === 'asc' ? 1 : -1;
-      return 0;
+      // Ties go to the player with more goals, then more points (as the server orders them).
+      return (b.goals ?? 0) - (a.goals ?? 0) || (b.points ?? 0) - (a.points ?? 0);
     });
 
   const forwards = useMemo(

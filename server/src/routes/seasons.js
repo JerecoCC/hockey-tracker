@@ -2185,7 +2185,7 @@ router.get('/:id/stats', async (req, res) => {
           CASE WHEN ${sortKey} = 'assists' AND ${sortDir} = 'desc' THEN assists END DESC NULLS LAST,
           CASE WHEN ${sortKey} = 'points' AND ${sortDir} = 'asc' THEN points END ASC NULLS LAST,
           CASE WHEN ${sortKey} = 'points' AND ${sortDir} = 'desc' THEN points END DESC NULLS LAST,
-          points DESC, goals DESC, assists DESC, gp DESC, last_name ASC, first_name ASC
+          goals DESC, points DESC, assists DESC, gp DESC, last_name ASC, first_name ASC
         LIMIT ${pageSize} OFFSET ${offset}
       `;
       const total = rows[0]?.total ?? 0;
