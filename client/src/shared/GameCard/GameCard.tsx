@@ -140,6 +140,34 @@ const getStatusLabel = (game: GameRecord, revealResult = true) => {
   return game.status.replace(/_/g, ' ').toUpperCase();
 };
 
+/** True when the viewer moved watching this game to a day other than its game day. */
+const isPostponedWatchGame = (game: GameRecord, tzPref: GameTimezone) => {
+  const watchDateKey = getScheduledWatchDateKey(game.scheduled_for);
+  const originalDateKey = getOriginalGameDateKey(game, tzPref);
+  return !!watchDateKey && !!originalDateKey && watchDateKey !== originalDateKey;
+};
+
+/**
+ * The status tag. A game whose watch was postponed reads Postponed while it's still
+ * scheduled; once it's live or final, its own status shows.
+ */
+const getStatusTag = (
+  game: GameRecord,
+  {
+    isPostponedWatch,
+    revealResult,
+    label,
+    intent,
+  }: { isPostponedWatch: boolean; revealResult: boolean; label?: string; intent?: TagIntent },
+) =>
+  isPostponedWatch && game.status === 'scheduled'
+    ? // Coloured like the Postpone watch button, apart from a league-postponed game.
+      { label: 'POSTPONED', intent: 'info' as const }
+    : {
+        label: label ?? getStatusLabel(game, revealResult),
+        intent: intent ?? GAME_STATUS_TAG_INTENT[game.status],
+      };
+
 const getPlayoffRoundShortLabel = (game: GameRecord) => {
   if (game.game_type !== 'playoff' || game.playoff_round == null) return null;
   const customLabel = game.playoff_round_names?.[game.playoff_round] ?? null;
@@ -232,12 +260,13 @@ const GameCardVariant = ({
   const awayDim = showScore && game.away_score < game.home_score;
   const homeDim = showScore && game.home_score < game.away_score;
   const isWatched = !!game.watched_by_user;
-  const scheduledWatchDateKey = getScheduledWatchDateKey(game.scheduled_for);
-  const originalGameDateKey = getOriginalGameDateKey(game, tzPref);
-  const isPostponedWatch =
-    !!scheduledWatchDateKey &&
-    !!originalGameDateKey &&
-    scheduledWatchDateKey !== originalGameDateKey;
+  const isPostponedWatch = isPostponedWatchGame(game, tzPref);
+  const statusTag = getStatusTag(game, {
+    isPostponedWatch,
+    revealResult: showScore,
+    label: statusLabelProp,
+    intent: statusIntent,
+  });
   const hasTypeIndicator = showTypeIndicator || game.skipped_by_user;
   const isOpenable = canOpen ?? (!!href || isWatched);
   const timeLabel =
@@ -259,14 +288,10 @@ const GameCardVariant = ({
   const playoffMetaLabel = getPlayoffGameMetaLabel(game);
   const ribbonLabel = warningBanner
     ? warningBanner
-    : !showWatchedBanner
-      ? null
-      : isWatched
-        ? 'Watched'
-        : isPostponedWatch
-          ? 'Postponed watch'
-          : null;
-  const ribbonIcon = warningBanner ? 'warning' : isWatched ? 'visibility' : 'calendar_month';
+    : showWatchedBanner && isWatched
+      ? 'Watched'
+      : null;
+  const ribbonIcon = warningBanner ? 'warning' : 'visibility';
 
   return (
     <Card
@@ -316,13 +341,7 @@ const GameCardVariant = ({
           text={ribbonLabel}
           className={[
             styles.watchedRibbon,
-            warningBanner
-              ? styles.warningRibbon
-              : isWatched
-                ? styles.watchedGameRibbon
-                : isPostponedWatch
-                  ? styles.postponedWatchRibbon
-                  : '',
+            warningBanner ? styles.warningRibbon : styles.watchedGameRibbon,
           ]
             .filter(Boolean)
             .join(' ')}
@@ -366,8 +385,8 @@ const GameCardVariant = ({
         {bottomLabel && <div className={styles.bottomLabel}>{bottomLabel}</div>}
         <div className={styles.gameFooter}>
           <Tag
-            label={statusLabelProp ?? getStatusLabel(game, showScore)}
-            intent={statusIntent ?? GAME_STATUS_TAG_INTENT[game.status]}
+            label={statusTag.label}
+            intent={statusTag.intent}
           />
           {playoffMetaLabel && <span>{playoffMetaLabel}</span>}
           {!playoffMetaLabel && game.game_type === 'preseason' && (
@@ -410,6 +429,12 @@ const GameListItemVariant = ({
   const awayScore = game.away_score;
   const homeScore = game.home_score;
   const showScore = showScoreProp ?? shouldShowWatchedScore(game);
+  const statusTag = getStatusTag(game, {
+    isPostponedWatch: isPostponedWatchGame(game, tzPref),
+    revealResult: showScore,
+    label: statusLabelProp,
+    intent: statusIntent,
+  });
   const isFinal = game.status === 'final';
   const awayLost = isFinal && awayScore < homeScore;
   const homeLost = isFinal && homeScore < awayScore;
@@ -527,8 +552,8 @@ const GameListItemVariant = ({
         {game.venue && <span className={listStyles.venue}>{game.venue}</span>}
       </div>
       <Tag
-        label={statusLabelProp ?? getStatusLabel(game, showScore)}
-        intent={statusIntent ?? GAME_STATUS_TAG_INTENT[game.status]}
+        label={statusTag.label}
+        intent={statusTag.intent}
       />
       {actions && (
         <ActionOverlay className={listStyles.actions}>{renderActions(actions)}</ActionOverlay>

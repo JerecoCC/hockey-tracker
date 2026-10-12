@@ -122,26 +122,44 @@ describe('GameCard', () => {
     expect(screen.getByRole('tooltip')).toHaveTextContent('Watched');
   });
 
-  it('uses a postponed-watch ribbon and omits the original game time', () => {
-    const { container } = render(
+  it('shows a postponed watch as a Postponed status, not a ribbon, and omits the game time', () => {
+    const postponedWatch = {
+      ...game,
+      status: 'scheduled' as const,
+      watched_by_user: false,
+      scheduled_for: '2024-05-03',
+    };
+    const { container, rerender } = render(
       <GameCard
-        game={{
-          ...game,
-          status: 'scheduled',
-          watched_by_user: false,
-          scheduled_for: '2024-05-03',
-        }}
+        game={postponedWatch}
         tzPref="ET"
       />,
     );
 
     expect(container.querySelector('.gameMeta')).toHaveTextContent(/^05\/01\/2024$/);
-    const ribbon = screen.getByRole('img', { name: 'Postponed watch' });
-    expect(ribbon.parentElement).toHaveClass('watchedRibbon', 'postponedWatchRibbon');
-    expect(screen.queryByRole('img', { name: 'Watched' })).not.toBeInTheDocument();
+    expect(screen.getByText('POSTPONED')).toHaveClass('tag', 'solid', 'info');
+    expect(screen.queryByText('SCHEDULED')).not.toBeInTheDocument();
+    expect(container.querySelector('.watchedRibbon')).not.toBeInTheDocument();
 
-    fireEvent.mouseEnter(ribbon.parentElement as HTMLElement);
-    expect(screen.getByRole('tooltip')).toHaveTextContent('Postponed watch');
+    // The list layout reads the same.
+    rerender(
+      <GameCard
+        game={postponedWatch}
+        tzPref="ET"
+        variant="list-item"
+      />,
+    );
+    expect(screen.getByText('POSTPONED')).toHaveClass('tag', 'solid', 'info');
+
+    // Once the game is no longer scheduled, its own status shows.
+    rerender(
+      <GameCard
+        game={{ ...postponedWatch, status: 'in_progress' }}
+        tzPref="ET"
+      />,
+    );
+    expect(screen.getByText('LIVE')).toBeInTheDocument();
+    expect(screen.queryByText('POSTPONED')).not.toBeInTheDocument();
   });
 
   it('marks the watched ribbon with its own colour', () => {

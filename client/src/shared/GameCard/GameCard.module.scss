@@ -228,16 +228,6 @@
   color: #fff;
 }
 
-.postponedWatchRibbon {
-  background: $info-light;
-  color: $bg-page;
-}
-
-:global(:root[data-theme='light']) .postponedWatchRibbon {
-  background: $info;
-  color: #fff;
-}
-
 .warningRibbon {
   background: $warning-light;
   color: $bg-page;
