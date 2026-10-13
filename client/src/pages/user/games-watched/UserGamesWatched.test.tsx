@@ -12,9 +12,9 @@ jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn() }));
 jest.mock('axios');
 jest.mock('@jerecocc/tracker-ui/components/Select/Select', () => ({
   __esModule: true,
-  default: ({ value, options, onChange }: any) => (
+  default: ({ value, options, onChange, ariaLabelledBy }: any) => (
     <select
-      aria-label="Year"
+      aria-labelledby={ariaLabelledBy}
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
@@ -22,6 +22,7 @@ jest.mock('@jerecocc/tracker-ui/components/Select/Select', () => ({
         <option
           key={option.value}
           value={option.value}
+          data-logo={option.logo ?? undefined}
         >
           {option.label}
         </option>
@@ -224,6 +225,105 @@ describe('UserGamesWatched', () => {
     expect(within(rows[1]).getByLabelText('1 watched game')).toBeInTheDocument();
     expect(within(rows[1]).getByText('0-1-0')).toBeInTheDocument();
     expect(screen.queryByText('Toronto Maple Leafs')).not.toBeInTheDocument();
+  });
+
+  it('filters by league, season and search, and sorts by team, seen and wins', () => {
+    const nhl = {
+      league_id: 'nhl',
+      league_code: 'NHL',
+      league_name: 'National Hockey League',
+      league_logo: '/nhl.png',
+    };
+    const pwhl = {
+      league_id: 'pwhl',
+      league_code: 'PWHL',
+      league_name: 'PWHL',
+      league_logo: '/pwhl.png',
+    };
+    mockUseQuery.mockReturnValue({
+      isLoading: false,
+      data: [
+        // NHL 2025-26: Toronto beats New York twice.
+        makeWatchedGame('nhl-1', '2026-01-10', teamHome, teamOther, {
+          ...nhl,
+          season_id: 'nhl-2526',
+          season_name: '2025-26',
+        }),
+        makeWatchedGame('nhl-2', '2026-01-12', teamHome, teamOther, {
+          ...nhl,
+          season_id: 'nhl-2526',
+          season_name: '2025-26',
+        }),
+        // NHL 2024-25: Toronto beats Boston.
+        makeWatchedGame('nhl-3', '2025-01-10', teamHome, teamAway, {
+          ...nhl,
+          season_id: 'nhl-2425',
+          season_name: '2024-25',
+        }),
+        // PWHL 2025-26: Boston beats New York.
+        makeWatchedGame('pwhl-1', '2026-01-15', teamAway, teamOther, {
+          ...pwhl,
+          season_id: 'pwhl-2526',
+          season_name: '2025-26',
+        }),
+      ],
+    });
+    renderWatchedPage();
+    const rowNames = () =>
+      screen
+        .getAllByRole('row')
+        .slice(1)
+        .map((row) => row.querySelector(`.${styles.teamName}`)?.textContent);
+    const optionLabels = (select: HTMLElement) =>
+      within(select)
+        .getAllByRole('option')
+        .map((option) => option.textContent);
+
+    const league = screen.getByLabelText('League');
+    const season = screen.getByLabelText('Season');
+    expect(optionLabels(league)).toEqual(['All Leagues', 'NHL', 'PWHL']);
+    // Each league option shows its logo.
+    expect(
+      within(league)
+        .getAllByRole('option')
+        .map((option) => option.getAttribute('data-logo')),
+    ).toEqual([null, '/nhl.png', '/pwhl.png']);
+    // Across leagues each season carries its league, latest first.
+    expect(optionLabels(season)).toEqual([
+      'All Seasons',
+      'NHL 2025-26',
+      'PWHL 2025-26',
+      'NHL 2024-25',
+    ]);
+
+    // Seen, most first; ties go A to Z.
+    expect(rowNames()).toEqual(['New York Rangers', 'Toronto Maple Leafs', 'Boston Bruins']);
+
+    // Sorting by wins, then by team name from the headers.
+    fireEvent.click(screen.getByRole('button', { name: /Your Record/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Your Record/ }));
+    expect(rowNames()).toEqual(['Toronto Maple Leafs', 'Boston Bruins', 'New York Rangers']);
+    fireEvent.click(screen.getByRole('button', { name: /^Team/ }));
+    expect(rowNames()).toEqual(['Boston Bruins', 'New York Rangers', 'Toronto Maple Leafs']);
+
+    // A league narrows the teams and its seasons.
+    fireEvent.change(league, { target: { value: 'pwhl' } });
+    expect(optionLabels(season)).toEqual(['All Seasons', '2025-26']);
+    expect(rowNames()).toEqual(['Boston Bruins', 'New York Rangers']);
+
+    fireEvent.change(league, { target: { value: 'all' } });
+    fireEvent.change(season, { target: { value: 'nhl-2425' } });
+    expect(rowNames()).toEqual(['Boston Bruins', 'Toronto Maple Leafs']);
+
+    // Search matches the team name, place or code.
+    fireEvent.change(screen.getByPlaceholderText('Search teams...'), {
+      target: { value: 'tor' },
+    });
+    expect(rowNames()).toEqual(['Toronto Maple Leafs']);
+    fireEvent.change(screen.getByPlaceholderText('Search teams...'), {
+      target: { value: 'zzz' },
+    });
+    expect(screen.getAllByText('No teams match these filters.')).not.toHaveLength(0);
   });
 
   it('opens a team watched-games page from a team row', () => {

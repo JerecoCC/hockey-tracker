@@ -71,13 +71,80 @@ export const getWatchedYears = (games: GameRecord[]) => {
   return [...years].sort((a, b) => b.localeCompare(a));
 };
 
-export const getWatchedTeamSummaries = (games: GameRecord[], year = 'all') => {
+/** Narrows watched games by year, league and season; 'all' (or nothing) keeps every one. */
+export interface WatchedGameFilters {
+  year?: string;
+  leagueId?: string;
+  seasonId?: string;
+}
+
+const matchesFilter = (value: string | null | undefined, filter = 'all') =>
+  filter === 'all' || value === filter;
+
+export interface WatchedLeagueOption {
+  id: string;
+  code: string;
+  name: string;
+  logo: string | null;
+}
+
+export interface WatchedSeasonOption {
+  id: string;
+  name: string;
+  leagueId: string;
+  leagueCode: string;
+}
+
+/** The leagues of the watched games, by code. */
+export const getWatchedLeagues = (games: GameRecord[]): WatchedLeagueOption[] => {
+  const leagues = new Map<string, WatchedLeagueOption>();
+  for (const game of games) {
+    if (!game.watched_by_user || !game.league_id || leagues.has(game.league_id)) continue;
+    leagues.set(game.league_id, {
+      id: game.league_id,
+      code: game.league_code ?? game.league_name ?? '',
+      name: game.league_name ?? game.league_code ?? '',
+      logo: game.league_logo ?? null,
+    });
+  }
+  return [...leagues.values()].sort((a, b) => a.code.localeCompare(b.code));
+};
+
+/** The seasons of the watched games (in one league, unless 'all'), latest first. */
+export const getWatchedSeasons = (
+  games: GameRecord[],
+  leagueId = 'all',
+): WatchedSeasonOption[] => {
+  const seasons = new Map<string, WatchedSeasonOption>();
+  for (const game of games) {
+    if (!game.watched_by_user || !game.season_id || seasons.has(game.season_id)) continue;
+    if (!matchesFilter(game.league_id, leagueId)) continue;
+    seasons.set(game.season_id, {
+      id: game.season_id,
+      name: game.season_name ?? '',
+      leagueId: game.league_id ?? '',
+      leagueCode: game.league_code ?? '',
+    });
+  }
+  return [...seasons.values()].sort(
+    (a, b) => b.name.localeCompare(a.name) || a.leagueCode.localeCompare(b.leagueCode),
+  );
+};
+
+export const getWatchedTeamSummaries = (
+  games: GameRecord[],
+  filters: string | WatchedGameFilters = 'all',
+) => {
+  const { year = 'all', leagueId = 'all', seasonId = 'all' } =
+    typeof filters === 'string' ? { year: filters } : filters;
   const map = new Map<string, TeamWatchSummary>();
 
   for (const game of games) {
     if (!game.watched_by_user) continue;
     const scheduledGameYear = getScheduledGameYear(game);
     if (year !== 'all' && scheduledGameYear !== year) continue;
+    if (!matchesFilter(game.league_id, leagueId)) continue;
+    if (!matchesFilter(game.season_id, seasonId)) continue;
     addTeamWatch(map, game.home_team, game);
     addTeamWatch(map, game.away_team, game);
   }
@@ -86,4 +153,39 @@ export const getWatchedTeamSummaries = (games: GameRecord[], year = 'all') => {
     if (b.count !== a.count) return b.count - a.count;
     return (a.team.team_name || a.team.name).localeCompare(b.team.team_name || b.team.name);
   });
+};
+
+export type TeamWatchSortKey = 'team' | 'seen' | 'wins';
+
+export const getWatchedTeamName = (team: WatchedTeam) => team.team_name || team.name;
+
+const compareTeamNames = (a: TeamWatchSummary, b: TeamWatchSummary) =>
+  getWatchedTeamName(a.team).localeCompare(getWatchedTeamName(b.team));
+
+/**
+ * Sorts by team name, games seen or wins. Ties on seen or wins go to the team
+ * name, A to Z, whichever way the sort runs.
+ */
+export const sortTeamWatchSummaries = (
+  summaries: TeamWatchSummary[],
+  key: TeamWatchSortKey,
+  dir: 'asc' | 'desc',
+) => {
+  const sign = dir === 'asc' ? 1 : -1;
+  return [...summaries].sort((a, b) => {
+    if (key === 'team') return sign * compareTeamNames(a, b);
+    const diff = key === 'seen' ? a.count - b.count : a.record.wins - b.record.wins;
+    return sign * diff || compareTeamNames(a, b);
+  });
+};
+
+/** Keeps teams whose name, place or code contains the query (ignoring case). */
+export const searchTeamWatchSummaries = (summaries: TeamWatchSummary[], query: string) => {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return summaries;
+  return summaries.filter(({ team }) =>
+    [team.place_name, getWatchedTeamName(team), team.code].some((value) =>
+      value?.toLowerCase().includes(needle),
+    ),
+  );
 };
