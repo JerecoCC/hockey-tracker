@@ -131,6 +131,7 @@ export interface GameRecord {
   league_id?: string;
   league_code?: string;
   league_name?: string;
+  league_logo?: string | null;
   league_primary_color?: string;
   league_text_color?: string;
   watched_by_user?: boolean;

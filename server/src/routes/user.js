@@ -498,6 +498,7 @@ router.get('/games', async (req, res) => {
         l.id   AS league_id,
         l.code AS league_code,
         l.name AS league_name,
+        l.logo AS league_logo,
         l.primary_color AS league_primary_color,
         l.text_color AS league_text_color,
         COALESCE(uwg.watched_on, uwg.watched_at::date)::text AS watched_on,
