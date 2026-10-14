@@ -157,7 +157,6 @@ export interface PlayerSeasonStatRank {
 }
 
 export type PlayerSeasonRankedStat =
-  | 'gp'
   | 'goals'
   | 'assists'
   | 'points'

@@ -9,7 +9,7 @@ const { sql } = require('../db');
 const TOP_N = 10;
 
 // Counting stats aren't ranked at zero; a 0.00 GAA is the best there is, so rates always are.
-const COUNTING_STATS = new Set(['gp', 'goals', 'assists', 'points', 'wins', 'shootout_wins']);
+const COUNTING_STATS = new Set(['goals', 'assists', 'points', 'wins', 'shootout_wins']);
 
 /**
  * Ranks every player of the same kind (skaters or goalies) by season totals. A player's team
@@ -86,7 +86,6 @@ const fetchPlayerSeasonStatRanks = async ({ playerId, seasonId, isGoalie }) => {
       ) q
       CROSS JOIN LATERAL (
         VALUES
-          ('gp', pt.gp::numeric, true),
           ('goals', pt.goals::numeric, true),
           ('assists', pt.assists::numeric, true),
           ('points', pt.points::numeric, true),

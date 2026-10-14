@@ -4281,7 +4281,6 @@ const SeasonStatBlock = ({
             label="GP"
             tooltip={STAT_LABELS.GP}
             value={stats.gp}
-            rank={stats.ranks?.gp}
           />
           <StatCell
             label="W"
@@ -4314,7 +4313,6 @@ const SeasonStatBlock = ({
             label="GP"
             tooltip={STAT_LABELS.GP}
             value={stats.gp}
-            rank={stats.ranks?.gp}
           />
           <StatCell
             label="G"
