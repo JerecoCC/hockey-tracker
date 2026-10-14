@@ -71,11 +71,15 @@ export const getWatchedYears = (games: GameRecord[]) => {
   return [...years].sort((a, b) => b.localeCompare(a));
 };
 
-/** Narrows watched games by year, league and season; 'all' (or nothing) keeps every one. */
+/**
+ * Narrows watched games by year, league, season and game type; 'all' (or nothing) keeps
+ * every one.
+ */
 export interface WatchedGameFilters {
   year?: string;
   leagueId?: string;
   seasonId?: string;
+  gameType?: string;
 }
 
 const matchesFilter = (value: string | null | undefined, filter = 'all') =>
@@ -135,7 +139,7 @@ export const getWatchedTeamSummaries = (
   games: GameRecord[],
   filters: string | WatchedGameFilters = 'all',
 ) => {
-  const { year = 'all', leagueId = 'all', seasonId = 'all' } =
+  const { year = 'all', leagueId = 'all', seasonId = 'all', gameType = 'all' } =
     typeof filters === 'string' ? { year: filters } : filters;
   const map = new Map<string, TeamWatchSummary>();
 
@@ -145,6 +149,7 @@ export const getWatchedTeamSummaries = (
     if (year !== 'all' && scheduledGameYear !== year) continue;
     if (!matchesFilter(game.league_id, leagueId)) continue;
     if (!matchesFilter(game.season_id, seasonId)) continue;
+    if (!matchesFilter(game.game_type, gameType)) continue;
     addTeamWatch(map, game.home_team, game);
     addTeamWatch(map, game.away_team, game);
   }

@@ -326,6 +326,33 @@ describe('UserGamesWatched', () => {
     expect(screen.getAllByText('No teams match these filters.')).not.toHaveLength(0);
   });
 
+  it('filters by game type', () => {
+    mockUseQuery.mockReturnValue({
+      isLoading: false,
+      data: [
+        makeWatchedGame('regular-1', '2026-01-10', teamHome, teamOther),
+        makeWatchedGame('playoff-1', '2026-04-20', teamHome, teamAway, {
+          game_type: 'playoff',
+        }),
+      ],
+    });
+    renderWatchedPage();
+    const gameType = screen.getByLabelText('Game type');
+    expect(
+      within(gameType)
+        .getAllByRole('option')
+        .map((option) => option.textContent),
+    ).toEqual(['All Game Types', 'Preseason', 'Regular Season', 'Playoffs']);
+
+    fireEvent.change(gameType, { target: { value: 'playoff' } });
+
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]).getByText('Boston Bruins')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('Toronto Maple Leafs')).toBeInTheDocument();
+    expect(screen.queryByText('New York Rangers')).not.toBeInTheDocument();
+  });
+
   it('opens a team watched-games page from a team row', () => {
     renderWatchedPage();
 

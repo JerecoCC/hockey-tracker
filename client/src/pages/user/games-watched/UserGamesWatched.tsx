@@ -43,6 +43,13 @@ const DEFAULT_SORT_DIRECTION: Record<TeamWatchSortKey, SortDirection> = {
 };
 
 // The mobile list has no column headers, so it sorts from a select.
+const GAME_TYPE_OPTIONS: SelectOption[] = [
+  { value: ALL, label: 'All Game Types' },
+  { value: 'preseason', label: 'Preseason' },
+  { value: 'regular', label: 'Regular Season' },
+  { value: 'playoff', label: 'Playoffs' },
+];
+
 const MOBILE_SORT_OPTIONS: SelectOption[] = [
   { value: 'seen', label: 'Most seen' },
   { value: 'wins', label: 'Most wins' },
@@ -238,6 +245,7 @@ const UserGamesWatched = () => {
   const [selectedYear, setSelectedYear] = useState(ALL);
   const [leagueId, setLeagueId] = useState(ALL);
   const [seasonId, setSeasonId] = useState(ALL);
+  const [gameType, setGameType] = useState(ALL);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<{ key: TeamWatchSortKey; dir: SortDirection }>({
     key: 'seen',
@@ -296,16 +304,25 @@ const UserGamesWatched = () => {
     () =>
       sortTeamWatchSummaries(
         searchTeamWatchSummaries(
-          getWatchedTeamSummaries(watchedGames, { year: selectedYear, leagueId, seasonId }),
+          getWatchedTeamSummaries(watchedGames, {
+            year: selectedYear,
+            leagueId,
+            seasonId,
+            gameType,
+          }),
           search,
         ),
         sort.key,
         sort.dir,
       ),
-    [leagueId, search, seasonId, selectedYear, sort, watchedGames],
+    [gameType, leagueId, search, seasonId, selectedYear, sort, watchedGames],
   );
   const isFiltered =
-    !!search.trim() || selectedYear !== ALL || leagueId !== ALL || seasonId !== ALL;
+    !!search.trim() ||
+    selectedYear !== ALL ||
+    leagueId !== ALL ||
+    seasonId !== ALL ||
+    gameType !== ALL;
   const emptyMessage = isFiltered ? 'No teams match these filters.' : 'No watched games yet.';
 
   useEffect(() => {
@@ -370,6 +387,12 @@ const UserGamesWatched = () => {
             value={seasonId}
             options={seasonOptions}
             onChange={setSeasonId}
+          />
+          <FilterSelect
+            label="Game type"
+            value={gameType}
+            options={GAME_TYPE_OPTIONS}
+            onChange={setGameType}
           />
           <FilterSelect
             label="Sort teams"
