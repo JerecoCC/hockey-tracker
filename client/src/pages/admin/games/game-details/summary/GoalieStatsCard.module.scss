@@ -1,13 +1,6 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
-.empty {
-  font-size: $font-sm;
-  color: var(--app-text-muted, #{$text-dim});
-  margin: 0;
-  padding: $space-xs 0;
-}
-
 // ── Goalie list ────────────────────────────────────────────────────────────────
 
 .goalie {

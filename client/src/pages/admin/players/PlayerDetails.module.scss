@@ -430,15 +430,6 @@
   }
 }
 
-// ── Placeholder ───────────────────────────────────────────────────────────
-.placeholder {
-  color: var(--app-text-muted, #{$text-dim});
-  font-style: italic;
-  margin: 0;
-  padding: $space-lg 0;
-  text-align: center;
-}
-
 // ── Team history stint list ───────────────────────────────────────────────
 .manualMovementActions {
   display: flex;
@@ -571,13 +562,10 @@
   }
 
   &HistoryEmpty {
-    margin: 0;
+    // Compact dashed box; text styling comes from EmptyMessage.
     padding: $space-sm;
     border: 1px dashed var(--app-border, #{$border});
     border-radius: $radius-sm;
-    color: var(--app-text-muted, #{$text-dim});
-    font-size: $font-sm;
-    font-style: italic;
   }
 }
 

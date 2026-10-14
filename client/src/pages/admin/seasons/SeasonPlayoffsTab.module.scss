@@ -530,9 +530,9 @@ $bracket-line: color-mix(
   }
 
   &Empty {
-    font-size: $font-sm;
-    color: var(--app-text-muted, #{$text-dim});
-    font-style: italic;
+    // Value of the Qualification Rules info item, so it lines up with the label.
+    padding: 0;
+    text-align: left;
   }
 }
 

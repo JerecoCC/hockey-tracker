@@ -1551,9 +1551,9 @@ const SeasonPlayoffsTab = ({
                     ))}
                   </ResponsiveList>
                 ) : (
-                  <p className={styles.formatEmpty}>
+                  <EmptyMessage className={styles.formatEmpty}>
                     No rules configured - qualification is managed manually.
-                  </p>
+                  </EmptyMessage>
                 )}
               </InfoItem>
             </div>

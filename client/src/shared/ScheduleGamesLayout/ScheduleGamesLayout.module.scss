@@ -122,13 +122,6 @@
       opacity $transition-fast,
       transform $transition-fast;
   }
-
-  &Empty {
-    margin: 0;
-    font-size: $font-sm;
-    color: var(--app-text-muted, #{$text-dim});
-    font-style: italic;
-  }
 }
 
 .list {

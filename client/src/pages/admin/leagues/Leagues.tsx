@@ -7,6 +7,7 @@ import useLeagues, { LeagueRecord } from '@/hooks/useLeagues';
 import { buildLeagueDetailsPath } from '@/lib/routeSlugs';
 import LeagueDeleteModal from './LeagueDeleteModal';
 import LeagueFormModal from './LeagueFormModal';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './Leagues.module.scss';
 
@@ -69,9 +70,9 @@ const LeaguesPage = () => {
         }
       >
         {loading ? (
-          <p className={styles.emptyMsg}>Loading...</p>
+          <EmptyMessage>Loading...</EmptyMessage>
         ) : sortedLeagues.length === 0 ? (
-          <p className={styles.emptyMsg}>No leagues yet. Add one to get started.</p>
+          <EmptyMessage>No leagues yet. Add one to get started.</EmptyMessage>
         ) : (
       <ResponsiveList className={styles.leagueList}>
             {sortedLeagues.map((league) => {

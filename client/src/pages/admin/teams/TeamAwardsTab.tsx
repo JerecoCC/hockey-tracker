@@ -9,6 +9,7 @@ import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { useTeamAwards, type TeamAwardRecord } from '@/hooks/useTeamDetails';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './TeamDetails.module.scss';
 
@@ -175,9 +176,9 @@ const TeamAwardsTab = ({ teamId, seasonId, mode = 'admin' }: Props) => {
       }
     >
       {loading ? (
-        <p className={styles.tabPlaceholder}>Loading awards...</p>
+        <EmptyMessage>Loading awards...</EmptyMessage>
       ) : awardGroups.length === 0 ? (
-        <p className={styles.tabPlaceholder}>No awards recorded yet.</p>
+        <EmptyMessage>No awards recorded yet.</EmptyMessage>
       ) : awardViewMode === 'banner' ? (
         <div
           className={styles.awardBannerRack}

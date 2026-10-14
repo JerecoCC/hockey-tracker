@@ -6,6 +6,7 @@ import axios from 'axios';
 import { toast, type TypeOptions } from 'react-toastify';
 import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
 import AwardBanner from '@/shared/AwardBanner/AwardBanner';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import Banner from '@jerecocc/tracker-ui/components/Banner/Banner';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
@@ -1600,7 +1601,7 @@ const ManualMovementReportSection = ({
         </div>
       }
     >
-      {!report && <p className={styles.placeholder}>No manual movement report generated yet.</p>}
+      {!report && <EmptyMessage>No manual movement report generated yet.</EmptyMessage>}
 
       {report && applyIssues.length > 0 && (
         <Banner
@@ -2088,7 +2089,7 @@ const StintHistoryDetails = ({
   <div className={styles.stintHistorySection}>
     <span className={styles.stintHistoryTitle}>Season Photos</span>
     {photoHistory.length === 0 ? (
-      <p className={styles.stintHistoryEmpty}>No season photos yet.</p>
+      <EmptyMessage className={styles.stintHistoryEmpty}>No season photos yet.</EmptyMessage>
     ) : (
       <ResponsiveList className={styles.stintHistoryList}>
         {photoHistory.map((entry) => {
@@ -2156,7 +2157,7 @@ const JerseyNumberTimeline = ({
   const rows = buildJerseyTimelineRows(entries);
 
   if (rows.length === 0) {
-    return <p className={styles.placeholder}>No jersey number history yet.</p>;
+    return <EmptyMessage>No jersey number history yet.</EmptyMessage>;
   }
 
   return (
@@ -3436,9 +3437,9 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       }
     >
       {playerAwardsLoading ? (
-        <p className={styles.placeholder}>Loading awards...</p>
+        <EmptyMessage>Loading awards...</EmptyMessage>
       ) : playerAwardGroups.length === 0 ? (
-        <p className={styles.placeholder}>No awards recorded yet.</p>
+        <EmptyMessage>No awards recorded yet.</EmptyMessage>
       ) : awardViewMode === 'banner' ? (
         <div
           className={styles.awardBannerRack}
@@ -3726,7 +3727,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
                         }
                       >
                         {teamHistoryStints.length === 0 ? (
-                          <p className={styles.placeholder}>No team history yet.</p>
+                          <EmptyMessage>No team history yet.</EmptyMessage>
                         ) : (
                           <ResponsiveList className={styles.stintList}>
                             {teamHistoryStints.map((s) => {
@@ -4236,9 +4237,9 @@ const SeasonStatsSection = ({
     }
   >
     {loading && !stats ? (
-      <p className={styles.placeholder}>Loading season stats...</p>
+      <EmptyMessage>Loading season stats...</EmptyMessage>
     ) : !stats ? (
-      <p className={styles.placeholder}>No season stats recorded yet.</p>
+      <EmptyMessage>No season stats recorded yet.</EmptyMessage>
     ) : (
       <div className={styles.seasonStatsGroups}>
         <SeasonStatBlock
@@ -4274,7 +4275,7 @@ const SeasonStatBlock = ({
     <div className={styles.seasonStatsGroup}>
       <h3 className={styles.seasonStatsGroupTitle}>{title}</h3>
       {!stats ? (
-        <p className={styles.placeholder}>No games played.</p>
+        <EmptyMessage>No games played.</EmptyMessage>
       ) : isGoalie ? (
         <div className={`${styles.statGrid} ${styles.statGridGoalie}`}>
           <StatCell

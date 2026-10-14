@@ -3,9 +3,9 @@ import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import { useTeamSeasons } from '@/hooks/useTeamDetails';
 import { buildTeamSeasonDetailsPath } from '@/lib/routeSlugs';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import { getSeasonTagPhase, seasonPhasePresentation } from '@/lib/seasonPhase';
-import styles from './TeamDetails.module.scss';
 
 interface Props {
   teamId: string;
@@ -39,7 +39,7 @@ const TeamSeasonsTab = ({ teamId, teamCode, leagueId, leagueCode }: Props) => {
           ))}
         </ResponsiveList>
       ) : seasons.length === 0 ? (
-        <p className={styles.tabPlaceholder}>No seasons recorded for this team.</p>
+        <EmptyMessage>No seasons recorded for this team.</EmptyMessage>
       ) : (
         <ResponsiveList>
           {seasons.map((season) => {

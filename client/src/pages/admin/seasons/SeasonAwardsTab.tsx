@@ -50,6 +50,7 @@ import {
   teamMatchesAwardEligibility,
 } from '@/lib/awardDefinitions';
 import { formatPlayerPosition } from '@/lib/playerPosition';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import PlayerCard from '@/shared/PlayerCard/PlayerCard';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './SeasonDetails.module.scss';
@@ -1519,11 +1520,11 @@ const SeasonAwardsTab = ({
         }
       >
         {loading ? (
-          <p className={styles.tabPlaceholder}>Loading awards...</p>
+          <EmptyMessage>Loading awards...</EmptyMessage>
         ) : awards.length === 0 ? (
-          <p className={styles.tabPlaceholder}>No league award definitions yet.</p>
+          <EmptyMessage>No league award definitions yet.</EmptyMessage>
         ) : trackedAwards.length === 0 ? (
-          <p className={styles.tabPlaceholder}>No awards tracked for this season.</p>
+          <EmptyMessage>No awards tracked for this season.</EmptyMessage>
         ) : (
           <div className={styles.awardsList}>
             {trackedAwards.map((award) => {
@@ -1844,9 +1845,9 @@ const SeasonAwardsTab = ({
                   })}
                 />
                 {activeRecipientNomineeRadioOptions.length === 0 ? (
-                  <p className={styles.awardPlayerChecklistEmpty}>
+                  <EmptyMessage>
                     No nominees are available for this award.
-                  </p>
+                  </EmptyMessage>
                 ) : (
                   <RadioList
                     value={recipientSelectedId || null}
@@ -2086,7 +2087,7 @@ const AwardWinnerList = ({
     >
       {recipients.length === 0 ? (
         <li className={[styles.awardWinnerCard, styles.awardWinnerCardEmpty].join(' ')}>
-          <span className={styles.awardEmptyMessage}>{empty}</span>
+          <EmptyMessage className={styles.awardEmptyMessage}>{empty}</EmptyMessage>
         </li>
       ) : (
         recipients.map((recipient) => {
@@ -2159,7 +2160,7 @@ const AwardPlayerList = ({
   >
     {recipients.length === 0 ? (
       empty ? (
-        <span className={styles.awardEmptyMessage}>{empty}</span>
+        <EmptyMessage className={styles.awardEmptyMessage}>{empty}</EmptyMessage>
       ) : null
     ) : (
       <ResponsiveList

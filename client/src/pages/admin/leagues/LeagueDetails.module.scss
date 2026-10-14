@@ -901,13 +901,6 @@ $league-tab-list-gap: $space-md;
     font-size: $font-xs;
     letter-spacing: 0;
   }
-
-  &EmptyState {
-    display: flex;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: $space-md;
-  }
 }
 
 // Applied only when teams.length > 5 — caps height and enables scrolling
@@ -956,11 +949,10 @@ $league-tab-list-gap: $space-md;
     grid-column: 1 / -1;
   }
 
-  &Msg {
-    font-size: $font-sm;
-    color: var(--app-text-muted, #{$text-dim});
-    font-style: italic;
-    margin: 0;
+  // Sits under the left-aligned Create Team button, so keep it flush-left.
+  &StateMessage {
+    padding: 0;
+    text-align: left;
   }
 }
 

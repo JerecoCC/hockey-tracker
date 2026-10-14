@@ -12,6 +12,7 @@ import {
   type GroupTeamRecord,
 } from '@/hooks/useLeagueGroups';
 import { type TeamRecord } from '@/hooks/useTeams';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 
@@ -405,7 +406,7 @@ const LeagueGroupsCard = (props: Props) => {
       }
     >
       {loading ? (
-        <p className={styles.teamsEmpty}>Loading…</p>
+        <EmptyMessage>Loading…</EmptyMessage>
       ) : (
         <>
           {isRootAdding && (
@@ -452,9 +453,9 @@ const LeagueGroupsCard = (props: Props) => {
               >
                 Create Team
               </Button>
-              <p className={styles.teamsEmpty}>
+              <EmptyMessage className={styles.emptyStateMessage}>
                 No teams yet. Create a group to organise teams, or add a team directly.
-              </p>
+              </EmptyMessage>
             </div>
           )}
         </>

@@ -51,13 +51,6 @@
   }
 }
 
-.emptyMsg {
-  margin: $space-sm $space-md;
-  color: var(--app-text-muted, #{$text-dim});
-  font-size: $font-sm;
-  font-style: italic;
-}
-
 .teamList {
   list-style: none;
   margin: 0;
@@ -127,12 +120,6 @@
     align-items: center;
     padding-top: 0;
     padding-bottom: 0;
-  }
-
-  &Body {
-    .emptyMsg {
-      margin: 0;
-    }
   }
 
   &Label {

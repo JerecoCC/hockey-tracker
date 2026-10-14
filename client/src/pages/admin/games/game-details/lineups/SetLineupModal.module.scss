@@ -68,14 +68,6 @@
   --selectable-list-item-image-font-size: #{$font-base};
 }
 
-.empty {
-  font-size: $font-base;
-  color: var(--app-text-muted, #{$text-dim});
-  font-style: italic;
-  text-align: center;
-  padding: $space-2xl 0;
-}
-
 .error {
   margin: 0 0 $space-sm;
   font-size: $font-sm;

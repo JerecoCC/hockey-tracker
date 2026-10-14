@@ -22,6 +22,7 @@ import {
   TabActionSkeleton,
   type TabSkeletonProps,
 } from './LeagueTabSkeletonHelpers';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 
@@ -419,10 +420,10 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
           }
         >
           {draftEvents.length === 0 ? (
-            <p className={styles.emptyMsg}>
+            <EmptyMessage>
               No drafts configured yet. Add draft dates so drafted player stints can use the correct
               start date.
-            </p>
+            </EmptyMessage>
           ) : (
             <div className={styles.draftTimelineScroll}>
               <table

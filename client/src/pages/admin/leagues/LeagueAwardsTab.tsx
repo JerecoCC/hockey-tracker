@@ -49,6 +49,7 @@ import {
   TabActionSkeleton,
   type TabSkeletonProps,
 } from './LeagueTabSkeletonHelpers';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 
@@ -716,9 +717,9 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
           }
         >
           {awards.length === 0 ? (
-            <p className={styles.emptyMsg}>
+            <EmptyMessage>
               No award definitions yet. Create one to apply it across seasons.
-            </p>
+            </EmptyMessage>
           ) : (
             <ResponsiveList
               className={styles.awardDefinitionList}

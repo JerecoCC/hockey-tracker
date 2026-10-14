@@ -40,15 +40,6 @@
   }
 }
 
-// ── Placeholder ────────────────────────────────────────────────────────────────
-.tabPlaceholder {
-  color: var(--app-text-muted, #{$text-dim});
-  font-style: italic;
-  text-align: center;
-  padding: $space-xl 0;
-  margin: 0;
-}
-
 // ── Info grid ──────────────────────────────────────────────────────────────────
 .standings {
   &Place {
@@ -1016,11 +1007,9 @@
     flex: 1;
     width: 100%;
     min-height: 100%;
-    color: $text-muted;
-    font-size: $font-sm;
-    font-style: italic;
     line-height: 1.35;
-    text-align: center;
+    // The winner card / player row already provides the spacing.
+    padding: 0;
   }
 
   &TeamSelectionForm {

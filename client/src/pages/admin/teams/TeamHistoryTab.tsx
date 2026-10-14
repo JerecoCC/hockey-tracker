@@ -13,6 +13,7 @@ import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/L
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import useTeamHistory, { type TeamIteration } from '@/hooks/useTeamHistory';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './TeamDetails.module.scss';
 
@@ -226,10 +227,10 @@ const TeamHistoryTab = ({
         {isLoading ? (
           renderHistorySkeletons()
         ) : iterations.length === 0 ? (
-          <p className={styles.tabPlaceholder}>
+          <EmptyMessage>
             No versions recorded yet. Use &ldquo;Record Version&rdquo; to snapshot the team&apos;s
             current identity.
-          </p>
+          </EmptyMessage>
         ) : (
           <ResponsiveList className={styles.historyList}>
             {iterations.map((iter) => {

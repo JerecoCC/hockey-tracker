@@ -1251,12 +1251,6 @@
   }
 }
 
-.emptyAPIData {
-  color: var(--app-text-muted, #{$text-dim});
-  font-style: italic;
-  font-size: $font-base;
-}
-
 @media (max-width: 720px) {
   .goalieStatsEditor {
     &Header {

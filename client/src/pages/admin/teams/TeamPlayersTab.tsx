@@ -19,6 +19,7 @@ import LineupCreatePlayersModal from '../games/game-details/lineups/LineupCreate
 import BulkTradeModal from './BulkTradeModal';
 import TeamPlayerEditModal from './TeamPlayerEditModal';
 import ProjectedLineupModal from './ProjectedLineupModal';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './TeamDetails.module.scss';
 
@@ -404,7 +405,7 @@ const TeamPlayersTab = ({
                   {sectionPlayers.map(renderPlayer)}
                 </ResponsiveList>
               ) : (
-                <p className={styles.rosterEmpty}>
+                <EmptyMessage>
                   {scopedPlayers.length === 0
                     ? isProspectsView
                       ? scope === 'team'
@@ -420,7 +421,7 @@ const TeamPlayersTab = ({
                       : isProspectsView
                         ? `No ${section.title.toLowerCase()} reserves.`
                         : `No ${section.title.toLowerCase()} on this roster.`}
-                </p>
+                </EmptyMessage>
               )}
             </Section>
           );

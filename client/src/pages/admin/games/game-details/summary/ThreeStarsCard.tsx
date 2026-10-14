@@ -3,6 +3,7 @@ import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { GoalieStatRecord } from '@/hooks/useGameGoalieStats';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import StarCard from './StarCard';
 import styles from './ThreeStarsCard.module.scss';
 
@@ -60,7 +61,7 @@ const ThreeStarsCard = ({
       }
     >
       {starDefs.length === 0 ? (
-        <p className={styles.empty}>No stars selected.</p>
+        <EmptyMessage>No stars selected.</EmptyMessage>
       ) : (
         <div className={styles.starsRow}>
           {starDefs.map(({ starCount, playerId }) => {

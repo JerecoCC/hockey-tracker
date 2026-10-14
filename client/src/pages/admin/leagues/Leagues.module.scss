@@ -10,13 +10,6 @@
   gap: $space-md;
 }
 
-.emptyMsg {
-  font-size: $font-base;
-  color: var(--app-text-muted, #{$text-dim});
-  font-style: italic;
-  margin: 0;
-}
-
 // ── Title row ──────────────────────────────────────────────────────────
 // ── League cell ────────────────────────────────────────────────────────
 .logo {

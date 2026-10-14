@@ -15,6 +15,7 @@ import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import { type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
 import { type CreateSeasonData } from '@/hooks/useSeasons';
 import { buildSeasonTeamDetailsPath } from '@/lib/routeSlugs';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './SeasonTeamsCard.module.scss';
 
@@ -174,7 +175,7 @@ const GroupNode = ({
         />
       )}
       {isLeaf && group.teams.length === 0 && (
-        <p className={styles.emptyMsg}>No teams assigned to this group.</p>
+        <EmptyMessage>No teams assigned to this group.</EmptyMessage>
       )}
       {children.length > 0 && (
         <div className={styles.groupNestedList}>
@@ -222,7 +223,6 @@ const GroupNode = ({
           className={{
             root: styles.groupAccordion,
             header: styles.groupHeader,
-            body: styles.groupBody,
           }}
           label={<span className={styles.groupLabel}>{group.name}</span>}
           headerRight={

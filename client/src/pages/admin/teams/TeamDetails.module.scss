@@ -88,16 +88,6 @@
   margin-top: $space-xl;
 }
 
-// ── Tab placeholder ────────────────────────────────────────────────────
-.tabPlaceholder {
-  font-size: $font-body;
-  color: var(--app-text-muted, #{$text-dim});
-  font-style: italic;
-  margin: 0;
-  padding: $space-lg 0;
-  text-align: center;
-}
-
 .listSkeletonList {
   pointer-events: none;
 }
@@ -274,13 +264,6 @@
     align-items: center;
     gap: $space-sm;
     flex: 0 0 auto;
-  }
-
-  &Empty {
-    font-size: $font-base;
-    color: var(--app-text-muted, #{$text-dim});
-    font-style: italic;
-    margin: 0;
   }
 
   &Toolbar {

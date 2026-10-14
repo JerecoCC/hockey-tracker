@@ -8,6 +8,7 @@ import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import MonthCalendar from '@jerecocc/tracker-ui/components/MonthCalendar/MonthCalendar';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import styles from './ScheduleGamesLayout.module.scss';
 
 export type ScheduleDayGroup<T> = readonly [dateKey: string, items: T[]];
@@ -303,7 +304,7 @@ export const ScheduleWeekList = <T,>({
             {loading ? (
               (renderLoading?.(dateKey) ?? <ScheduleWeekDaySkeletons dateLabel={heading} />)
             ) : dayGames.length === 0 ? (
-              <p className={styles.dayEmpty}>{getEmptyMessage(dateKey, dayGames)}</p>
+              <EmptyMessage>{getEmptyMessage(dateKey, dayGames)}</EmptyMessage>
             ) : (
               renderDayContent(dateKey, dayGames)
             )}

@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import styles from '../../GameDetailsPage.module.scss';
 import { GameRecord } from '@/hooks/useGames';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 
 type Props = {
   game: GameRecord;
@@ -92,7 +93,7 @@ const GoalieSwitchReportCard = ({ game }: Props) => {
             </div>
           </div>
         ) : (
-          <span className={styles.emptyAPIData}>No data fetched.</span>
+          <EmptyMessage>No data fetched.</EmptyMessage>
         )}
       </Section>
       <NhlGoalieSwitchCheckerModal

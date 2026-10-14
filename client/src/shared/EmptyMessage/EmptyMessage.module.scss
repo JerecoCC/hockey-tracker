@@ -1,8 +1,11 @@
 @use 'styles/colors' as *;
 @use 'styles/mixins' as *;
 
+// The app's one empty-state message: muted italic text, centred, with room
+// around it so it doesn't crowd the content above or below.
 .message {
   margin: 0;
+  padding: $space-xl $space-lg;
   color: var(--app-text-muted, #{$text-dim});
   font-size: $font-sm;
   font-style: italic;

@@ -30,6 +30,7 @@ import {
   TabActionSkeleton,
   type TabSkeletonProps,
 } from './LeagueTabSkeletonHelpers';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LeagueDetails.module.scss';
 
@@ -593,9 +594,9 @@ const AlignmentGroupNode = ({
         </ResponsiveList>
       )}
       {isLeaf && group.teams.length === 0 && (
-        <p className={`${styles.emptyMsg} ${styles.groupEmptyMsg}`}>
+        <EmptyMessage className={styles.groupEmptyMsg}>
           No teams assigned to this group.
-        </p>
+        </EmptyMessage>
       )}
       {children.length > 0 && (
         <div className={styles.alignmentGroupChildren}>
@@ -1020,7 +1021,7 @@ const AlignmentPanel = ({
         </div>
       ) : structureType === 'league' ? (
         flatTeams.length === 0 ? (
-          <p className={styles.emptyMsg}>No teams are defined in this alignment.</p>
+          <EmptyMessage>No teams are defined in this alignment.</EmptyMessage>
         ) : (
           <ResponsiveList className={styles.alignmentTeamList}>
             {flatTeams.map((team) => (
@@ -1049,7 +1050,7 @@ const AlignmentPanel = ({
           </ResponsiveList>
         )
       ) : roots.length === 0 ? (
-        <p className={styles.emptyMsg}>No groups are defined in this alignment.</p>
+        <EmptyMessage>No groups are defined in this alignment.</EmptyMessage>
       ) : (
         <div className={styles.alignmentGroupSection}>
           <ResponsiveList className={styles.alignmentGroupList}>
@@ -1404,7 +1405,7 @@ const CreateAlignmentModal = ({
 
           {selectedStructure === 'league' ? (
             draftDetails.teams.length === 0 ? (
-              <p className={styles.emptyMsg}>No teams are defined in this alignment.</p>
+              <EmptyMessage>No teams are defined in this alignment.</EmptyMessage>
             ) : (
               <ResponsiveList className={styles.alignmentTeamList}>
                 {draftDetails.teams.map((team) => (
@@ -1434,7 +1435,7 @@ const CreateAlignmentModal = ({
             )
           ) : selectedStructure === 'groups' ? (
             roots.length === 0 ? (
-              <p className={styles.emptyMsg}>No groups are defined in this alignment.</p>
+              <EmptyMessage>No groups are defined in this alignment.</EmptyMessage>
             ) : (
               <div className={styles.alignmentGroupSection}>
                 <ResponsiveList className={styles.alignmentGroupList}>
@@ -1574,9 +1575,7 @@ const LeagueAlignmentsTab = (props: Props) => {
             noHeaderMargin
           >
             {alignmentSets.length === 0 ? (
-              <div className={styles.alignmentEmptyState}>
-                <p className={styles.emptyMsg}>No alignment sets yet.</p>
-              </div>
+              <EmptyMessage>No alignment sets yet.</EmptyMessage>
             ) : (
               <ResponsiveList className={styles.alignmentSetStack}>
                 {alignmentSets.map((alignmentSet) => {

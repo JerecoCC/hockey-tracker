@@ -42,6 +42,7 @@ import useSeasonStats, {
 import Select from '@jerecocc/tracker-ui/components/Select/Select';
 import useTabState from '@/hooks/useTabState';
 import { getSeasonPhase, getSeasonTagPhase, seasonPhasePresentation } from '@/lib/seasonPhase';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import SeasonEndModal from './SeasonEndModal';
@@ -1177,7 +1178,7 @@ const SeasonDetailsPage = () => {
                           onSelectItem={navigateToPlayer}
                         />
                       ) : (
-                        <p className={styles.tabPlaceholder}>No forward stats yet.</p>
+                        <EmptyMessage>No forward stats yet.</EmptyMessage>
                       )}
                     </Section>
 
@@ -1227,7 +1228,7 @@ const SeasonDetailsPage = () => {
                           onSelectItem={navigateToPlayer}
                         />
                       ) : (
-                        <p className={styles.tabPlaceholder}>No defense stats yet.</p>
+                        <EmptyMessage>No defense stats yet.</EmptyMessage>
                       )}
                     </Section>
 
@@ -1285,7 +1286,7 @@ const SeasonDetailsPage = () => {
                           onSelectItem={navigateToPlayer}
                         />
                       ) : (
-                        <p className={styles.tabPlaceholder}>No goalie stats yet.</p>
+                        <EmptyMessage>No goalie stats yet.</EmptyMessage>
                       )}
                     </Section>
                   </div>
@@ -1408,7 +1409,7 @@ const SeasonDetailsPage = () => {
 
                   const renderTable = (rows: StandingDisplayRow[], emptyMsg: string) =>
                     !standingsLoading && rows.length === 0 ? (
-                      <p className={styles.tabPlaceholder}>{emptyMsg}</p>
+                      <EmptyMessage>{emptyMsg}</EmptyMessage>
                     ) : (
                       <Table
                         columns={standingsColumns}

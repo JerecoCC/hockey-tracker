@@ -16,6 +16,7 @@ import type {
 } from '@/hooks/useGameGoalieStats';
 import { formatPlayerName } from '../formatUtils';
 import { defaultStintToi, secondsToMMSS } from '../goalieTimeOnIce';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './GoalieStatsCard.module.scss';
 import { playerDataComplete } from '../gameUtils';
@@ -251,7 +252,7 @@ const GoalieStatsCard = ({
         }
       >
         {visibleRows.length === 0 ? (
-          <p className={styles.empty}>No goalie stats recorded yet.</p>
+          <EmptyMessage>No goalie stats recorded yet.</EmptyMessage>
         ) : (
         <ResponsiveList className={styles.goalieList}>
             {visibleRows.map((row) => {

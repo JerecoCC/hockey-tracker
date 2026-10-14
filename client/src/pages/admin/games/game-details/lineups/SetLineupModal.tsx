@@ -4,6 +4,7 @@ import RadioList, { type RadioListOption } from '@jerecocc/tracker-ui/components
 import { type LineupEntry, type LineupPositionSlot } from '@/hooks/useGameLineup';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
+import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import styles from './SetLineupModal.module.scss';
 
 interface Props {
@@ -169,7 +170,7 @@ const SetLineupModal = ({
       confirmDisabled={!canSave}
     >
       {sortedPlayers.length === 0 ? (
-        <p className={styles.empty}>No goalies are in this game lineup yet.</p>
+        <EmptyMessage>No goalies are in this game lineup yet.</EmptyMessage>
       ) : (
         <RadioList
           value={selectedValue}
