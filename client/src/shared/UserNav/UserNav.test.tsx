@@ -32,6 +32,27 @@ const setup = (role: 'admin' | 'user') => {
 beforeEach(() => jest.clearAllMocks());
 
 describe('UserNav', () => {
+  it('leads with the app icon and name, and only the icon when collapsed', () => {
+    const { container, rerender } = setup('user');
+
+    expect(screen.getByText('Hockey Tracker')).toBeInTheDocument();
+    expect(container.querySelector('img[src="/favicon.svg"]')).toHaveAttribute('alt', '');
+
+    rerender(
+      <UserNav
+        collapsed
+        onToggle={jest.fn()}
+        mobileOpen={false}
+        onMobileClose={mockMobileClose}
+      />,
+    );
+    expect(screen.queryByText('Hockey Tracker')).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Hockey Tracker' })).toHaveAttribute(
+      'src',
+      '/favicon.svg',
+    );
+  });
+
   it('renders a supported icon for Games', () => {
     setup('user');
 

@@ -23,6 +23,10 @@
       "dest": "client/assets/$1"
     },
     {
+      "src": "/favicon.svg",
+      "dest": "client/favicon.svg"
+    },
+    {
       "src": "/(.*)",
       "dest": "client/index.html"
     }

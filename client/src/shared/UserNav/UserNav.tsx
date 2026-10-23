@@ -42,16 +42,16 @@ const UserNav = (props: UserNavProps) => {
       className={`${styles.nav} ${collapsed ? styles.collapsed : ''} ${mobileOpen ? styles.mobileOpen : ''}`}
     >
       <div className={styles.top}>
+        {/* The app icon leads the name; collapsed, the icon stands alone. */}
         <div className={styles.brandRow}>
-          {showExpanded && (
-            <span className={styles.brand}>
-              <Icon
-                name="sports_hockey"
-                className={styles.brandIcon}
-              />{' '}
-              Hockey
-            </span>
-          )}
+          <span className={styles.brand}>
+            <img
+              src="/favicon.svg"
+              alt={showExpanded ? '' : 'Hockey Tracker'}
+              className={styles.brandIcon}
+            />
+            {showExpanded && 'Hockey Tracker'}
+          </span>
         </div>
 
         <ul className={styles.list}>
