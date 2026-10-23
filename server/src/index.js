@@ -48,6 +48,12 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
+// API data is per-user and changes with every edit, so browsers and the
+// Vercel edge must never answer from a cached copy.
+app.use('/api', (_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 app.use(
   session({
     secret: runtimeSecret('SESSION_SECRET', 'hockey-tracker-secret'),

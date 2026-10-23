@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+const fs = require('fs');
 const { neon } = require('@neondatabase/serverless');
 const { drizzle } = require('drizzle-orm/neon-http');
 const schema = require('./schema');
@@ -393,12 +395,44 @@ async function backfillMissingDefaultGroupAlignmentAssignments() {
   }
 }
 
+// Fingerprint of every file that participates in schema setup. The full setup
+// is hundreds of sequential Neon round trips (~20s), far too slow to repeat on
+// every serverless cold start, so it only reruns when this code changes.
+const SCHEMA_SETUP_FILES = [
+  __filename,
+  require.resolve('./db/migrations'),
+  require.resolve('./db/playerTimeline'),
+  require.resolve('./lib/gameStatsSnapshots'),
+];
+const schemaHash = crypto.createHash('sha256');
+for (const file of SCHEMA_SETUP_FILES) {
+  // Normalize line endings so a Windows checkout and Vercel agree on the hash.
+  schemaHash.update(fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n'));
+}
+const SCHEMA_SETUP_MIGRATION = `schema_setup:${schemaHash.digest('hex').slice(0, 16)}`;
+
 /**
- * Run once at startup: create the users table if it doesn't exist.
+ * Run once at startup: bring the schema up to date, skipping the full setup
+ * when this exact version of it has already been applied.
  */
 async function initSchema() {
   await ensureMigrationLedger(sql);
 
+  const applied = await sql`
+    SELECT 1 FROM _migrations WHERE name = ${SCHEMA_SETUP_MIGRATION} LIMIT 1
+  `;
+  if (applied.length > 0) return;
+
+  await runSchemaSetup();
+
+  await sql`
+    INSERT INTO _migrations (name) VALUES (${SCHEMA_SETUP_MIGRATION})
+    ON CONFLICT (name) DO NOTHING
+  `;
+  console.log('Database schema ready');
+}
+
+async function runSchemaSetup() {
   await sql`
     CREATE TABLE IF NOT EXISTS users (
       id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -2842,8 +2876,6 @@ async function initSchema() {
   // are filled in (and games generated) only when both teams are determined.
   await sql`ALTER TABLE playoff_series ALTER COLUMN home_team_id DROP NOT NULL`;
   await sql`ALTER TABLE playoff_series ALTER COLUMN away_team_id DROP NOT NULL`;
-
-  console.log('Database schema ready');
 }
 
 module.exports = { sql, db, schema, initSchema };

@@ -111,9 +111,6 @@ const useSeasons = (leagueId?: string, options: { mode?: SeasonsMode } = {}) => 
         return [] as SeasonRecord[];
       }
     },
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnWindowFocus: false,
   });
 
   const addSeason = async (payload: CreateSeasonData): Promise<boolean> => {
