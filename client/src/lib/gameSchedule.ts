@@ -64,12 +64,11 @@ export const getEasternDateKey = (
   if (!scheduledAt) return null;
   if (DATE_ONLY_RE.test(scheduledAt)) return scheduledAt;
 
+  // scheduled_time is an Eastern wall-clock time, so a UTC-midnight scheduled_at alongside it
+  // is a date placeholder — including for a 00:00 start, which is midnight Eastern, not UTC.
   const rawDateKey = getRawDateKey(scheduledAt);
   const isMidnightPlaceholder =
-    !!scheduledTime &&
-    scheduledTime !== '00:00' &&
-    !!rawDateKey &&
-    ISO_MIDNIGHT_RE.test(scheduledAt);
+    !!scheduledTime && !!rawDateKey && ISO_MIDNIGHT_RE.test(scheduledAt);
   if (isMidnightPlaceholder) return rawDateKey;
 
   const instant = new Date(scheduledAt);
@@ -152,6 +151,11 @@ const getUserDayGameSortRank = (game: UserScheduledGame) => {
 export const sortUserDayGames = (a: UserScheduledGame, b: UserScheduledGame) => {
   const rankDiff = getUserDayGameSortRank(a) - getUserDayGameSortRank(b);
   if (rankDiff !== 0) return rankDiff;
+  // Compare actual start times: a local calendar day can hold games from two Eastern dates,
+  // so the time of day alone can't order them.
+  const aStart = a.scheduled_time ? getScheduledInstant(a.scheduled_at, a.scheduled_time) : null;
+  const bStart = b.scheduled_time ? getScheduledInstant(b.scheduled_at, b.scheduled_time) : null;
+  if (aStart && bStart) return aStart.getTime() - bStart.getTime();
   if (!a.scheduled_time && !b.scheduled_time) return 0;
   if (!a.scheduled_time) return 1;
   if (!b.scheduled_time) return -1;
