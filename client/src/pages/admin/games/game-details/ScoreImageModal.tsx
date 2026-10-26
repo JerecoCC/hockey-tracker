@@ -1127,6 +1127,15 @@ const ScoreImageModal = ({
   };
 
   const drawGame = (game ?? synthGame) as DrawGameType | null;
+  // Names the game like the game details breadcrumb: "AWY @ HOM - Oct 26, 2026".
+  const titleGameLabel = drawGame
+    ? [
+        `${drawGame.away_team.code} @ ${drawGame.home_team.code}`,
+        formatScheduledDate(drawGame.scheduled_at),
+      ]
+        .filter(Boolean)
+        .join(' - ')
+    : null;
   const drawAwayScore = liveAwayScore ?? scoreCardNumberOrDefault(numVals.awayScore);
   const drawHomeScore = liveHomeScore ?? scoreCardNumberOrDefault(numVals.homeScore);
   const formOvertimeSuffix = (() => {
@@ -1678,7 +1687,9 @@ const ScoreImageModal = ({
     <>
       <Modal
         open={open}
-        title="Generate Score Card"
+        title={
+          titleGameLabel ? `Generate Score Card: ${titleGameLabel}` : 'Generate Score Card'
+        }
         onClose={onClose}
         size="lg"
         disableBackdropClose={isStandaloneForm}
