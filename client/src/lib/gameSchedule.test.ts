@@ -4,6 +4,7 @@ import {
   getScheduledInstant,
   getScheduledWatchDateKey,
   isInvalidWatchScheduleDate,
+  sortUserDayGames,
   toDateKeyInZone,
   isGameOverdueForFinal,
 } from './gameSchedule';
@@ -41,6 +42,24 @@ describe('game schedule time utilities', () => {
     expect(toDateKeyInZone(getScheduledInstant(game.scheduled_at, null)!, 'Asia/Manila')).toBe(
       '2026-07-18',
     );
+  });
+
+  it('keeps a midnight Eastern start on its own date', () => {
+    const game = { scheduled_at: '2026-11-14T00:00:00.000Z', scheduled_time: '00:00' };
+
+    expect(getEasternDateKey(game.scheduled_at, game.scheduled_time)).toBe('2026-11-14');
+    expect(getScheduledInstant(game.scheduled_at, game.scheduled_time)?.toISOString()).toBe(
+      '2026-11-14T05:00:00.000Z',
+    );
+    expect(getOriginalGameDateKey(game, 'ET')).toBe('2026-11-14');
+  });
+
+  it('orders a day by start instant across two Eastern dates', () => {
+    // Both start on Nov 13 in Manila: 8:00 AM, then 10:00 PM.
+    const evening = { scheduled_at: '2026-11-12T00:00:00.000Z', scheduled_time: '19:00' };
+    const morning = { scheduled_at: '2026-11-13T00:00:00.000Z', scheduled_time: '09:00' };
+
+    expect([morning, evening].sort(sortUserDayGames)).toEqual([evening, morning]);
   });
 
   it('only permits watch dates after the original game date', () => {
