@@ -363,71 +363,73 @@ const UserDashboard = () => {
 
   return (
     <div className={styles.page}>
-      <section
-        className={styles.hero}
-        aria-labelledby="dashboard-welcome"
-      >
-        <span
-          className={styles.rinkCreases}
-          aria-hidden="true"
-        />
-        <div className={styles.heroContent}>
-          <div className={styles.identity}>
-            <div className={styles.avatarFrame}>
-              {user?.photo ? (
-                <img
-                  src={user.photo}
-                  alt=""
-                  className={styles.avatar}
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <span
-                  className={styles.avatarFallback}
-                  aria-hidden="true"
+      <div className={styles.heroFrame}>
+        <section
+          className={styles.hero}
+          aria-labelledby="dashboard-welcome"
+        >
+          <span
+            className={styles.rinkCreases}
+            aria-hidden="true"
+          />
+          <div className={styles.heroContent}>
+            <div className={styles.identity}>
+              <div className={styles.avatarFrame}>
+                {user?.photo ? (
+                  <img
+                    src={user.photo}
+                    alt=""
+                    className={styles.avatar}
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span
+                    className={styles.avatarFallback}
+                    aria-hidden="true"
+                  >
+                    {avatarInitial}
+                  </span>
+                )}
+              </div>
+
+              <div className={styles.welcome}>
+                <span className={styles.heroKicker}>Game day command center</span>
+                <h1
+                  id="dashboard-welcome"
+                  className={styles.welcomeName}
                 >
-                  {avatarInitial}
-                </span>
-              )}
+                  Welcome, {displayName}!
+                </h1>
+                <p className={styles.heroLead}>
+                  Keep today&apos;s matchups, your watch list, and favorite teams in one view.
+                </p>
+              </div>
             </div>
 
-            <div className={styles.welcome}>
-              <span className={styles.heroKicker}>Game day command center</span>
-              <h1
-                id="dashboard-welcome"
-                className={styles.welcomeName}
-              >
-                Welcome, {displayName}!
-              </h1>
-              <p className={styles.heroLead}>
-                Keep today&apos;s matchups, your watch list, and favorite teams in one view.
-              </p>
+            <div
+              className={styles.summaryStats}
+              aria-label="Dashboard summary"
+              role="group"
+            >
+              <StatItem
+                className={styles.summaryStat}
+                label="Today's slate"
+                value={gamesLoading ? '—' : todayGames.length}
+              />
+              <StatItem
+                className={styles.summaryStat}
+                label="Games watched"
+                value={watchedGamesLoading ? '—' : watchedGames.length}
+              />
+              <StatItem
+                className={styles.summaryStat}
+                label="Teams tracked"
+                value={watchedTeamsLoading ? '—' : watchedTeamSummaries.length}
+              />
             </div>
           </div>
-
-          <div
-            className={styles.summaryStats}
-            aria-label="Dashboard summary"
-            role="group"
-          >
-            <StatItem
-              className={styles.summaryStat}
-              label="Today's slate"
-              value={gamesLoading ? '—' : todayGames.length}
-            />
-            <StatItem
-              className={styles.summaryStat}
-              label="Games watched"
-              value={watchedGamesLoading ? '—' : watchedGames.length}
-            />
-            <StatItem
-              className={styles.summaryStat}
-              label="Teams tracked"
-              value={watchedTeamsLoading ? '—' : watchedTeamSummaries.length}
-            />
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       <div className={styles.contentGrid}>
         <div className={styles.mainColumn}>
