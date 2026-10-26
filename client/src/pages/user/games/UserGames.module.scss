@@ -147,12 +147,15 @@
   --calendar-game-dog-ear: 10px;
   --calendar-game-dog-ear-inset: -1px;
 
+  // The clip runs 1px outside the card on every side but the folded corner: an edge exactly on
+  // a fractional-width card's border antialiases it, which made the right border look thinner.
+  // The corner points slide along the same diagonal so the fold itself is unchanged.
   clip-path: polygon(
-    0 0,
-    calc(100% - var(--calendar-game-dog-ear)) 0,
-    100% var(--calendar-game-dog-ear),
-    100% 100%,
-    0 100%
+    -1px -1px,
+    calc(100% - var(--calendar-game-dog-ear) - 1px) -1px,
+    calc(100% + 1px) calc(var(--calendar-game-dog-ear) + 1px),
+    calc(100% + 1px) calc(100% + 1px),
+    -1px calc(100% + 1px)
   );
 
   &::after {
