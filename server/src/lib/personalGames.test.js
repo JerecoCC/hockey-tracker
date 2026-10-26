@@ -82,6 +82,20 @@ describe('assertValidResult', () => {
 describe('fetchPersonalGames', () => {
   beforeEach(() => sql.mockReset());
 
+  it("returns the league's Google Calendar color, or none without a league", async () => {
+    sql.mockResolvedValueOnce([
+      { id: 'pg-1', league_id: 'league-1', league_calendar_color_id: 3 },
+      { id: 'pg-2', league_id: null, league_calendar_color_id: null },
+    ]);
+
+    const games = await fetchPersonalGames('user-1');
+
+    expect(games.map((game) => game.league_calendar_color_id)).toEqual([3, null]);
+    expect(sql.mock.calls[0][0].join('?')).toContain(
+      'l.google_calendar_color_id AS league_calendar_color_id',
+    );
+  });
+
   it('filters by the season the game was filed under', async () => {
     sql.mockResolvedValueOnce([]);
     await fetchPersonalGames('user-1', { seasonId: 'season-1' });

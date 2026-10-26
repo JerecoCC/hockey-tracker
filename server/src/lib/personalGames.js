@@ -1,6 +1,7 @@
 'use strict';
 
 const { sql } = require('../db');
+const { withLeagueCalendarColors } = require('./leagueCalendarColor');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -137,7 +138,7 @@ async function fetchPersonalGames(userId, filters = {}) {
     to = null,
   } = filters;
 
-  return sql`
+  const rows = await sql`
     SELECT
       pg.id,
       pg.season_id,
@@ -191,6 +192,7 @@ async function fetchPersonalGames(userId, filters = {}) {
       l.logo AS league_logo,
       l.primary_color AS league_primary_color,
       l.text_color AS league_text_color,
+      l.google_calendar_color_id AS league_calendar_color_id,
       pg.watched_on::text AS watched_on,
       pg.scheduled_for::text AS scheduled_for,
       false AS skipped_by_user,
@@ -250,6 +252,7 @@ async function fetchPersonalGames(userId, filters = {}) {
       AND (${to}::date IS NULL OR d.effective_user_date < ${to}::date + 2)
     ORDER BY pg.scheduled_at, pg.scheduled_time NULLS LAST, pg.created_at
   `;
+  return withLeagueCalendarColors(rows);
 }
 
 /** The personal game with this id if the user owns it, else null. */

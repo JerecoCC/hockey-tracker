@@ -134,6 +134,8 @@ export interface GameRecord {
   league_logo?: string | null;
   league_primary_color?: string;
   league_text_color?: string;
+  /** Google Calendar event colorId (1-11) the league's games sync with. */
+  league_calendar_color_id?: number | null;
   watched_by_user?: boolean;
   watched_on?: string | null;
   skipped_by_user?: boolean;

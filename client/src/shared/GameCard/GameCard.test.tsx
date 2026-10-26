@@ -77,6 +77,31 @@ describe('GameCard', () => {
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
 
+  it('tints league colors with the given color, falling back to the league primary', () => {
+    const leagueGame = { ...game, league_primary_color: '#0a4fa3' };
+    const { container, rerender } = render(
+      <MemoryRouter>
+        <GameCard
+          game={leagueGame}
+          useLeagueColors
+          leagueColor="#039be5"
+        />
+      </MemoryRouter>,
+    );
+    const card = container.querySelector('[data-game-card-variant="card"]');
+    expect(card).toHaveStyle('--game-league-primary: #039be5');
+
+    rerender(
+      <MemoryRouter>
+        <GameCard
+          game={leagueGame}
+          useLeagueColors
+        />
+      </MemoryRouter>,
+    );
+    expect(card).toHaveStyle('--game-league-primary: #0a4fa3');
+  });
+
   it('renders the card variant status with the default Tag intent', () => {
     render(<GameCard game={game} />);
 

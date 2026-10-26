@@ -3,6 +3,7 @@ const { requireAuth } = require('../middleware/auth');
 const { sql } = require('../db');
 const { syncScheduledGameToGoogleCalendar } = require('../services/googleCalendar');
 const { fetchPersonalGames, findOwnedPersonalGame } = require('../lib/personalGames');
+const { withLeagueCalendarColors } = require('../lib/leagueCalendarColor');
 const { fetchPlayerSeasonStatRanks } = require('../lib/playerSeasonStatRanks');
 
 const syncCalendarAfterUserGameChange = async (userId, gameId) => {
@@ -501,6 +502,7 @@ router.get('/games', async (req, res) => {
         l.logo AS league_logo,
         l.primary_color AS league_primary_color,
         l.text_color AS league_text_color,
+        l.google_calendar_color_id AS league_calendar_color_id,
         COALESCE(uwg.watched_on, uwg.watched_at::date)::text AS watched_on,
         uwg.scheduled_for::text AS scheduled_for,
         (uwg.skipped_at IS NOT NULL) AS skipped_by_user,
@@ -767,7 +769,7 @@ router.get('/games', async (req, res) => {
       from: fromFilter,
       to: toFilter,
     });
-    return res.json([...games, ...personalGames]);
+    return res.json([...withLeagueCalendarColors(games), ...personalGames]);
   } catch (err) {
     console.error('user games list error:', err);
     return res.status(500).json({ error: 'Internal server error' });

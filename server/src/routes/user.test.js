@@ -23,6 +23,7 @@ const express = require('express');
 const { sql } = require('../db');
 const { syncScheduledGameToGoogleCalendar } = require('../services/googleCalendar');
 const { fetchPersonalGames, findOwnedPersonalGame } = require('../lib/personalGames');
+const { leagueCalendarColorId } = require('../lib/leagueCalendarColor');
 const userRouter = require('./user');
 
 const app = express();
@@ -900,6 +901,21 @@ describe('personal games in user routes', () => {
 
     expect(res.status).toBe(400);
     expect(sql).not.toHaveBeenCalled();
+  });
+
+  it("returns each game's league Google Calendar color, picking one when none is chosen", async () => {
+    sql.mockResolvedValueOnce([
+      { ...GAME, league_id: 'league-1', league_calendar_color_id: 7 },
+      { ...GAME, id: 'game-auto', league_id: 'league-1', league_calendar_color_id: null },
+    ]);
+
+    const res = await request(app).get('/api/user/games');
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].league_calendar_color_id).toBe(7);
+    expect(res.body[1].league_calendar_color_id).toBe(leagueCalendarColorId('league-1', null));
+    expect(res.body[1].league_calendar_color_id).toBeGreaterThanOrEqual(1);
+    expect(res.body[1].league_calendar_color_id).toBeLessThanOrEqual(11);
   });
 
   it('adds personal games to the games list with the same date window', async () => {
