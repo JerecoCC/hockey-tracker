@@ -9,6 +9,7 @@ import {
   type CSSProperties,
   type DragEvent,
 } from 'react';
+import { flushSync } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -448,6 +449,20 @@ const getOriginalGameDateTooltip = (game: GameRecord, tzPref: GameTimezone) => {
     : 'Postponed';
 };
 
+const ORIGINAL_GAME_IMAGE_DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  month: '2-digit',
+  day: '2-digit',
+  year: 'numeric',
+});
+
+// The downloaded month image still labels postponed games with their original date.
+const getOriginalGameImageDateLabel = (game: GameRecord, tzPref: GameTimezone) => {
+  const originalDateKey = getOriginalGameDateKey(game, tzPref);
+  return originalDateKey
+    ? ORIGINAL_GAME_IMAGE_DATE_FMT.format(dateKeyToDate(originalDateKey))
+    : null;
+};
+
 const shouldShowWatchedScore = (game: GameRecord) =>
   !!game.watched_by_user && (game.status === 'final' || game.status === 'in_progress');
 
@@ -496,6 +511,7 @@ const CalendarGameCard = ({
   draggable,
   dragging,
   busy,
+  imageLayout = false,
 }: {
   game: GameRecord;
   tzPref: GameTimezone;
@@ -512,6 +528,11 @@ const CalendarGameCard = ({
   draggable?: boolean;
   dragging?: boolean;
   busy: boolean;
+  /**
+   * Lays the card out as the downloaded month image shows it: the original date on top of a
+   * postponed game, the playoff round at the bottom, and no dog ear.
+   */
+  imageLayout?: boolean;
 }) => {
   const canMarkWatched = canMarkGameWatched(game);
   const showRecordedScore = shouldShowWatchedScore(game);
@@ -558,7 +579,7 @@ const CalendarGameCard = ({
         styles.calendarGameLeagueTint,
         !game.watched_by_user ? styles.calendarGameUnwatched : '',
         game.skipped_by_user ? styles.calendarGameSkipped : '',
-        postponed ? styles.calendarGamePostponed : '',
+        postponed && !imageLayout ? styles.calendarGamePostponed : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -572,7 +593,14 @@ const CalendarGameCard = ({
       onDragStart={draggable ? onDragStart : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
       tooltip={tooltip}
-      topLabel={playoffMetaLabel}
+      topLabel={
+        imageLayout
+          ? postponed
+            ? getOriginalGameImageDateLabel(game, tzPref)
+            : null
+          : playoffMetaLabel
+      }
+      bottomLabel={imageLayout ? playoffMetaLabel : null}
       awayTeam={{
         logo: game.away_team.logo,
         logoDark: game.away_team.logo_dark,
@@ -675,6 +703,7 @@ const UserGames = () => {
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
   const [calendarDownloadBusy, setCalendarDownloadBusy] = useState(false);
+  const [calendarImageLayout, setCalendarImageLayout] = useState(false);
   const seededTeamFilterLeagueRef = useRef<string | null>(null);
   const calendarGridRef = useRef<HTMLDivElement>(null);
 
@@ -1308,12 +1337,17 @@ const UserGames = () => {
 
     setCalendarDownloadBusy(true);
     try {
-      await downloadMonthScheduleImage({
+      // The image copies the calendar the moment the download starts, so the cards switch to the
+      // image's layout just for that copy and back again before the screen ever paints it.
+      flushSync(() => setCalendarImageLayout(true));
+      const download = downloadMonthScheduleImage({
         calendarNode,
         calendarMonth,
         headerLabel: MONTH_LABEL_FMT.format(calendarMonth),
         filename: `Games - ${MONTH_LABEL_FMT.format(calendarMonth)}.png`,
       });
+      setCalendarImageLayout(false);
+      await download;
       toast.success('Monthly schedule downloaded!');
     } catch (err) {
       console.error('Failed to download month calendar', err);
@@ -1777,6 +1811,7 @@ const UserGames = () => {
                         }
                         dragging={dragGameId === game.id}
                         busy={actionGameId === game.id}
+                        imageLayout={calendarImageLayout}
                       />
                     ))}
                   </ScheduleCalendarGameList>

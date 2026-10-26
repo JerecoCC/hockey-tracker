@@ -1680,6 +1680,39 @@ describe('UserGames schedule views', () => {
     expect(toast.success).toHaveBeenCalledWith('Monthly schedule downloaded!');
   });
 
+  it('keeps the month image layout: original date on top, playoff round at the bottom, no dog ear', async () => {
+    const user = userEvent.setup();
+    const findPostponedItem = () =>
+      screen.getAllByText('AWY')[0].closest(`.${calendarItemStyles.item}`) as HTMLElement;
+    const [y, m, d] = localDateKeyForGame(games[0])!.split('-').map(Number);
+    const originalDate = formatNumericDate(
+      `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+    );
+    let imageItem: { top: string | null; bottom: string | null; dogEar: boolean } | null = null;
+    mockDownloadMonthScheduleImage.mockImplementationOnce(async () => {
+      // The image copies the calendar as the download starts, so read it as the copy would.
+      const item = findPostponedItem();
+      imageItem = {
+        top: item.querySelector(`.${calendarItemStyles.topLabel}`)?.textContent ?? null,
+        bottom: item.querySelector(`.${calendarItemStyles.bottomLabel}`)?.textContent ?? null,
+        dogEar: item.classList.contains(styles.calendarGamePostponed),
+      };
+    });
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+    await user.click(screen.getByRole('button', { name: 'Download monthly schedule' }));
+
+    await waitFor(() => expect(mockDownloadMonthScheduleImage).toHaveBeenCalled());
+    expect(imageItem).toEqual({ top: originalDate, bottom: 'R2 - G3', dogEar: false });
+
+    // The screen goes straight back to its own layout.
+    const item = findPostponedItem();
+    expect(item).toHaveClass(styles.calendarGamePostponed);
+    expect(item.querySelector(`.${calendarItemStyles.topLabel}`)).toHaveTextContent('R2 - G3');
+    expect(item.querySelector(`.${calendarItemStyles.bottomLabel}`)).toBeNull();
+  });
+
   it('opens the score card modal from a watched game hover action', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
