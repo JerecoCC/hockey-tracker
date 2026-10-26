@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { sql } = require('../db');
+const { leagueCalendarColorId } = require('../lib/leagueCalendarColor');
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -406,17 +407,9 @@ const formatCalendarDate = (dateKey) =>
 const eventIdForGame = (userId, gameId) =>
   `ht${crypto.createHash('sha256').update(`${userId}:${gameId}`, 'utf8').digest('hex')}`;
 
-// Google Calendar's fixed event colors are colorId 1-11. A league without a chosen color
-// gets a stable one from its id, so different leagues usually differ by default.
-const GOOGLE_EVENT_COLOR_COUNT = 11;
 const eventColorIdForGame = (game) => {
-  const chosen = Number(game.google_calendar_color_id);
-  if (Number.isInteger(chosen) && chosen >= 1 && chosen <= GOOGLE_EVENT_COLOR_COUNT) {
-    return String(chosen);
-  }
-  if (!game.league_id) return undefined;
-  const hash = crypto.createHash('sha256').update(String(game.league_id), 'utf8').digest();
-  return String((hash.readUInt32BE(0) % GOOGLE_EVENT_COLOR_COUNT) + 1);
+  const colorId = leagueCalendarColorId(game.league_id, game.google_calendar_color_id);
+  return colorId ? String(colorId) : undefined;
 };
 
 const eventForGame = ({ userId, game, timeZone }) => {

@@ -66,6 +66,7 @@ import {
   getOvertimeSuffix,
   getScoreCardGame,
 } from '@/lib/gamePresentation';
+import { getGoogleCalendarColor } from '@/lib/googleCalendarColors';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import { buildUserGameDetailsPath } from '@/lib/routeSlugs';
 import { getScreenSize, type ScreenSize } from '@/lib/screenSize';
@@ -423,9 +424,13 @@ const getSeriesWinsForTeam = (game: GameRecord, teamId: string) => {
   return null;
 };
 
+// Games are tinted with the league's Google Calendar color, matching their synced events.
+const getLeagueCalendarColor = (game: GameRecord) =>
+  getGoogleCalendarColor(game.league_calendar_color_id)?.hex ?? game.league_primary_color;
+
 const getLeagueStyle = (game: GameRecord) =>
   ({
-    '--game-league-primary': game.league_primary_color ?? '#334155',
+    '--game-league-primary': getLeagueCalendarColor(game) ?? '#334155',
     '--game-league-text': game.league_text_color ?? '#ffffff',
   }) as CSSProperties;
 
@@ -1374,6 +1379,7 @@ const UserGames = () => {
         tzPref={tzPref}
         canOpen
         useLeagueColors
+        leagueColor={getLeagueCalendarColor(game)}
         mobileActionsAside
         scorePlaceholder={!watched && game.status === 'final' ? '?' : undefined}
         onOpen={() => openGame(game)}

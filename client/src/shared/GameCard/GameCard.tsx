@@ -63,6 +63,8 @@ export interface GameCardProps {
   canOpen?: boolean;
   className?: string;
   useLeagueColors?: boolean;
+  /** Tints with this color instead of the league's primary color when useLeagueColors is set. */
+  leagueColor?: string | null;
   originalDateLabel?: string | null;
   bottomLabel?: ReactNode;
   actions?: ReactNode | (GameCardAction | false | null | undefined)[];
@@ -202,9 +204,9 @@ const getPlayoffGameMetaLabel = (game: GameRecord) => {
 const shouldShowWatchedScore = (game: GameRecord) =>
   !!game.watched_by_user && (game.status === 'final' || game.status === 'in_progress');
 
-const getLeagueStyle = (game: GameRecord) =>
+const getLeagueStyle = (game: GameRecord, leagueColor?: string | null) =>
   ({
-    '--game-league-primary': game.league_primary_color ?? '#334155',
+    '--game-league-primary': leagueColor ?? game.league_primary_color ?? '#334155',
     '--game-league-text': game.league_text_color ?? '#ffffff',
   }) as CSSProperties;
 
@@ -240,6 +242,7 @@ const GameCardVariant = ({
   canOpen,
   className,
   useLeagueColors = false,
+  leagueColor,
   originalDateLabel: originalDateLabelProp,
   bottomLabel,
   actions,
@@ -311,7 +314,7 @@ const GameCardVariant = ({
       ]
         .filter(Boolean)
         .join(' ')}
-      style={useLeagueColors ? getLeagueStyle(game) : undefined}
+      style={useLeagueColors ? getLeagueStyle(game, leagueColor) : undefined}
       role={isOpenable && onOpen ? 'button' : undefined}
       tabIndex={isOpenable && onOpen ? 0 : undefined}
       // With an href, the link overlay handles clicks (so the browser offers

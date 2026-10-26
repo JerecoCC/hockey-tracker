@@ -587,6 +587,7 @@ const games = [
     league_name: 'NHL',
     league_primary_color: '#0a4fa3',
     league_text_color: '#ffffff',
+    league_calendar_color_id: 7,
     watched_by_user: false,
     skipped_by_user: false,
     watched_on: null,
@@ -1202,7 +1203,8 @@ describe('UserGames schedule views', () => {
     await user.click(screen.getByRole('button', { name: 'Month view' }));
     const calendarGameItem = screen.getAllByText('AWY')[0].closest(`.${calendarItemStyles.item}`);
     expect(calendarGameItem).toHaveClass(styles.calendarGameLeagueTint);
-    expect(calendarGameItem).toHaveStyle('--game-league-primary: #0a4fa3');
+    // Peacock, the league's Google Calendar color, rather than its primary color.
+    expect(calendarGameItem).toHaveStyle('--game-league-primary: #039be5');
   });
 
   it('opens a day edit modal in Week view and adds games to the current schedule cache', async () => {
