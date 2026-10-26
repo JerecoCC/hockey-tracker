@@ -484,6 +484,7 @@ const UserDashboard = () => {
                       tzPref={tzPref}
                       useLeagueColors
                       canOpen
+                      mobileActionsAside
                       scorePlaceholder={!watched && game.status === 'final' ? '?' : undefined}
                       onOpen={() => openGame(game)}
                       actions={

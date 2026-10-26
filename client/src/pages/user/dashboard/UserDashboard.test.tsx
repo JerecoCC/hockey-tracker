@@ -63,8 +63,11 @@ jest.mock('@/hooks/useFavoriteTeams', () => ({
   __esModule: true,
   default: () => ({ favorites: ['team-home', 'team-away'] }),
 }));
-jest.mock('@jerecocc/tracker-ui/components/Card/Card', () => ({ title, children }: any) => (
-  <section>
+jest.mock('@jerecocc/tracker-ui/components/Card/Card', () => ({ title, children, ...props }: any) => (
+  // Keep data-* attributes, such as a game card's mobile actions layout.
+  <section
+    {...Object.fromEntries(Object.entries(props).filter(([key]) => key.startsWith('data-')))}
+  >
     {title && <h3>{title}</h3>}
     {children}
   </section>
@@ -497,6 +500,16 @@ describe('UserDashboard', () => {
     expect(mockInvalidateQueries).toHaveBeenCalledWith({
       queryKey: ['user-dashboard-watched-games'],
     });
+  });
+
+  it('keeps game actions visible in a side rail on mobile, like the games week view', () => {
+    mockDashboardQueries({ todayGames: [makeGame({ status: 'final' })] });
+
+    render(<UserDashboard />);
+
+    expect(
+      screen.getByLabelText('Mark as watched').closest('[data-game-card-variant="card"]'),
+    ).toHaveAttribute('data-mobile-actions-layout', 'aside');
   });
 
   it('hides the watch action for non-final dashboard games', () => {
