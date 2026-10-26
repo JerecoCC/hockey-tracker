@@ -183,11 +183,15 @@
 }
 
 .calendarGameSkipped.calendarGameSkipped {
+  --calendar-game-at-color: rgba($danger, 0.68);
+
   border-color: rgba($danger, 0.68);
   background: rgba($danger, 0.07);
   box-shadow: inset 3px 0 0 rgba($danger, 0.75);
 
   &:hover {
+    --calendar-game-at-color: rgba($danger, 0.86);
+
     border-color: rgba($danger, 0.86);
     background: rgba($danger, 0.11);
   }
