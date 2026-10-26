@@ -9,6 +9,7 @@ import {
   type CSSProperties,
   type DragEvent,
 } from 'react';
+import { flushSync } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -78,6 +79,8 @@ const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/Scor
 
 import { API, authHeaders } from '@/lib/apiClient';
 const CALENDAR_MONTH_STORAGE_KEY = 'user-games-calendar-month';
+const WEEK_START_STORAGE_KEY = 'user-games-week-start';
+const VIEW_STORAGE_KEY = 'user-games-view';
 const USER_WEEK_SUMMARY_STICKY_TOP = '52px';
 const USER_WEEK_SUMMARY_STICKY_TOP_PX = 52;
 const USER_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX = 8;
@@ -221,6 +224,14 @@ const majorityMonthForWeek = (weekStart: Date) => {
 const getStoredCalendarMonth = () => {
   const stored = sessionStorage.getItem(CALENDAR_MONTH_STORAGE_KEY);
   return stored && MONTH_ONLY_RE.test(stored) ? fromMonthPickerValue(stored) : null;
+};
+const getStoredWeekStart = () => {
+  const stored = sessionStorage.getItem(WEEK_START_STORAGE_KEY);
+  return stored && DATE_ONLY_RE.test(stored) ? fromISODate(stored) : null;
+};
+const getStoredView = (): 'list' | 'calendar' | null => {
+  const stored = sessionStorage.getItem(VIEW_STORAGE_KEY);
+  return stored === 'list' || stored === 'calendar' ? stored : null;
 };
 
 const USER_TIMEZONE: GameTimezone = 'local';
@@ -435,15 +446,31 @@ const getLeagueStyle = (game: GameRecord) =>
   }) as CSSProperties;
 
 const ORIGINAL_GAME_DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+// A postponed game's original date, in the user's timezone like the calendar it sits on.
+const getOriginalGameDateTooltip = (game: GameRecord, tzPref: GameTimezone) => {
+  const originalDateKey = getOriginalGameDateKey(game, tzPref);
+  return originalDateKey
+    ? ORIGINAL_GAME_DATE_FMT.format(dateKeyToDate(originalDateKey))
+    : 'Postponed';
+};
+
+const ORIGINAL_GAME_IMAGE_DATE_FMT = new Intl.DateTimeFormat('en-US', {
   month: '2-digit',
   day: '2-digit',
   year: 'numeric',
 });
 
-const getOriginalGameDateLabel = (game: GameRecord, tzPref: GameTimezone) => {
-  if (!getScheduledWatchDateKey(game.scheduled_for)) return null;
+// The downloaded month image still labels postponed games with their original date.
+const getOriginalGameImageDateLabel = (game: GameRecord, tzPref: GameTimezone) => {
   const originalDateKey = getOriginalGameDateKey(game, tzPref);
-  return originalDateKey ? ORIGINAL_GAME_DATE_FMT.format(dateKeyToDate(originalDateKey)) : null;
+  return originalDateKey
+    ? ORIGINAL_GAME_IMAGE_DATE_FMT.format(dateKeyToDate(originalDateKey))
+    : null;
 };
 
 const shouldShowWatchedScore = (game: GameRecord) =>
@@ -494,6 +521,7 @@ const CalendarGameCard = ({
   draggable,
   dragging,
   busy,
+  imageLayout = false,
 }: {
   game: GameRecord;
   tzPref: GameTimezone;
@@ -510,6 +538,11 @@ const CalendarGameCard = ({
   draggable?: boolean;
   dragging?: boolean;
   busy: boolean;
+  /**
+   * Lays the card out as the downloaded month image shows it: the original date on top of a
+   * postponed game, the playoff round at the bottom, and no dog ear.
+   */
+  imageLayout?: boolean;
 }) => {
   const canMarkWatched = canMarkGameWatched(game);
   const showRecordedScore = shouldShowWatchedScore(game);
@@ -531,15 +564,17 @@ const CalendarGameCard = ({
       : home > away
         ? 'win'
         : 'lose';
-  const originalDateLabel = getOriginalGameDateLabel(game, tzPref);
+  const postponed = !!getScheduledWatchDateKey(game.scheduled_for);
   const playoffMetaLabel = getPlayoffGameMetaLabel(game);
-  // Unwatched games show their scheduled start in the user's timezone; games without a start
-  // time say so. Watched games have no tooltip.
-  const startTimeLabel = game.watched_by_user
-    ? undefined
-    : game.scheduled_time
-      ? `Starts ${formatGameTime(game.scheduled_at, game.scheduled_time, tzPref)}`
-      : 'Start time TBD';
+  // Postponed games show their original date. Other unwatched games show their scheduled start
+  // in the user's timezone, or say it's not set. Other watched games have no tooltip.
+  const tooltip = postponed
+    ? getOriginalGameDateTooltip(game, tzPref)
+    : game.watched_by_user
+      ? undefined
+      : game.scheduled_time
+        ? formatGameTime(game.scheduled_at, game.scheduled_time, tzPref)
+        : 'TBD';
   const awaySeriesWins = getSeriesWinsForTeam(game, game.away_team.id);
   const homeSeriesWins = getSeriesWinsForTeam(game, game.home_team.id);
   const seriesTotalWins = game.series_games_to_win;
@@ -554,6 +589,7 @@ const CalendarGameCard = ({
         styles.calendarGameLeagueTint,
         !game.watched_by_user ? styles.calendarGameUnwatched : '',
         game.skipped_by_user ? styles.calendarGameSkipped : '',
+        postponed && !imageLayout ? styles.calendarGamePostponed : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -566,9 +602,15 @@ const CalendarGameCard = ({
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
-      tooltip={startTimeLabel}
-      topLabel={originalDateLabel}
-      bottomLabel={playoffMetaLabel}
+      tooltip={tooltip}
+      topLabel={
+        imageLayout
+          ? postponed
+            ? getOriginalGameImageDateLabel(game, tzPref)
+            : null
+          : playoffMetaLabel
+      }
+      bottomLabel={imageLayout ? playoffMetaLabel : null}
       awayTeam={{
         logo: game.away_team.logo,
         logoDark: game.away_team.logo_dark,
@@ -638,12 +680,15 @@ const UserGames = () => {
   const isMobileView = viewport === 'mobile';
   const isTabletView = viewport === 'tablet';
   const initialStoredCalendarMonth = getStoredCalendarMonth();
-  // The week view always opens on today; only leaving the month view on another month moves it.
-  const [weekStart, setWeekStart] = useState<Date>(() => toDay(new Date()));
+  // Coming back to the page this session reopens the view, week and month last shown; a new
+  // session opens the week view on today.
+  const [weekStart, setWeekStart] = useState<Date>(
+    () => getStoredWeekStart() ?? toDay(new Date()),
+  );
   const [calendarMonth, setCalendarMonth] = useState<Date>(
     () => initialStoredCalendarMonth ?? monthStart(new Date()),
   );
-  const [view, setView] = useState<'list' | 'calendar'>('list');
+  const [view, setView] = useState<'list' | 'calendar'>(() => getStoredView() ?? 'list');
   const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
   const { setValue: setFilterValue, watch: watchFilter } = useForm<{ showSkippedGames: boolean }>({
     defaultValues: { showSkippedGames: false },
@@ -671,6 +716,7 @@ const UserGames = () => {
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
   const [calendarDownloadBusy, setCalendarDownloadBusy] = useState(false);
+  const [calendarImageLayout, setCalendarImageLayout] = useState(false);
   const seededTeamFilterLeagueRef = useRef<string | null>(null);
   const calendarGridRef = useRef<HTMLDivElement>(null);
 
@@ -679,6 +725,14 @@ const UserGames = () => {
   useEffect(() => {
     sessionStorage.setItem(CALENDAR_MONTH_STORAGE_KEY, toMonthPickerValue(calendarMonth));
   }, [calendarMonth]);
+
+  useEffect(() => {
+    sessionStorage.setItem(WEEK_START_STORAGE_KEY, dateToISO(weekStart));
+  }, [weekStart]);
+
+  useEffect(() => {
+    sessionStorage.setItem(VIEW_STORAGE_KEY, view);
+  }, [view]);
 
   useEffect(() => {
     if (!isMobileView && !isTabletView) setFiltersDrawerOpen(false);
@@ -1304,12 +1358,17 @@ const UserGames = () => {
 
     setCalendarDownloadBusy(true);
     try {
-      await downloadMonthScheduleImage({
+      // The image copies the calendar the moment the download starts, so the cards switch to the
+      // image's layout just for that copy and back again before the screen ever paints it.
+      flushSync(() => setCalendarImageLayout(true));
+      const download = downloadMonthScheduleImage({
         calendarNode,
         calendarMonth,
         headerLabel: MONTH_LABEL_FMT.format(calendarMonth),
         filename: `Games - ${MONTH_LABEL_FMT.format(calendarMonth)}.png`,
       });
+      setCalendarImageLayout(false);
+      await download;
       toast.success('Monthly schedule downloaded!');
     } catch (err) {
       console.error('Failed to download month calendar', err);
@@ -1773,6 +1832,7 @@ const UserGames = () => {
                         }
                         dragging={dragGameId === game.id}
                         busy={actionGameId === game.id}
+                        imageLayout={calendarImageLayout}
                       />
                     ))}
                   </ScheduleCalendarGameList>

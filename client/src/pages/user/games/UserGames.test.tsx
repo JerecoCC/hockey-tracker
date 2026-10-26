@@ -8,7 +8,6 @@ import gameCardStyles from '@/shared/GameCard/GameCard.module.scss';
 import scheduleLayoutStyles from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout.module.scss';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import { syncGoogleCalendarWithProgress } from './googleCalendarSync';
-import { formatGameTime } from '@/lib/gameSchedule';
 import UserGames from './UserGames';
 import styles from './UserGames.module.scss';
 
@@ -1466,7 +1465,7 @@ describe('UserGames schedule views', () => {
     render(<UserGames />);
     await user.click(screen.getByRole('button', { name: 'Month view' }));
 
-    expect(screen.getByText('R2 - G3')).toHaveClass(calendarItemStyles.bottomLabel);
+    expect(screen.getByText('R2 - G3')).toHaveClass(calendarItemStyles.topLabel);
     expect(screen.queryByLabelText('Series record 1 of 4')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Series record 2 of 4')).not.toBeInTheDocument();
   });
@@ -1679,6 +1678,39 @@ describe('UserGames schedule views', () => {
       new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
     );
     expect(toast.success).toHaveBeenCalledWith('Monthly schedule downloaded!');
+  });
+
+  it('keeps the month image layout: original date on top, playoff round at the bottom, no dog ear', async () => {
+    const user = userEvent.setup();
+    const findPostponedItem = () =>
+      screen.getAllByText('AWY')[0].closest(`.${calendarItemStyles.item}`) as HTMLElement;
+    const [y, m, d] = localDateKeyForGame(games[0])!.split('-').map(Number);
+    const originalDate = formatNumericDate(
+      `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
+    );
+    let imageItem: { top: string | null; bottom: string | null; dogEar: boolean } | null = null;
+    mockDownloadMonthScheduleImage.mockImplementationOnce(async () => {
+      // The image copies the calendar as the download starts, so read it as the copy would.
+      const item = findPostponedItem();
+      imageItem = {
+        top: item.querySelector(`.${calendarItemStyles.topLabel}`)?.textContent ?? null,
+        bottom: item.querySelector(`.${calendarItemStyles.bottomLabel}`)?.textContent ?? null,
+        dogEar: item.classList.contains(styles.calendarGamePostponed),
+      };
+    });
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+    await user.click(screen.getByRole('button', { name: 'Download monthly schedule' }));
+
+    await waitFor(() => expect(mockDownloadMonthScheduleImage).toHaveBeenCalled());
+    expect(imageItem).toEqual({ top: originalDate, bottom: 'R2 - G3', dogEar: false });
+
+    // The screen goes straight back to its own layout.
+    const item = findPostponedItem();
+    expect(item).toHaveClass(styles.calendarGamePostponed);
+    expect(item.querySelector(`.${calendarItemStyles.topLabel}`)).toHaveTextContent('R2 - G3');
+    expect(item.querySelector(`.${calendarItemStyles.bottomLabel}`)).toBeNull();
   });
 
   it('opens the score card modal from a watched game hover action', async () => {
@@ -2565,22 +2597,39 @@ describe('UserGames schedule views', () => {
     expect(screen.getByRole('button', { name: `Select week: ${weekLabel}` })).toBeInTheDocument();
   });
 
-  it('always reopens the week view on today', async () => {
+  it('reopens the week and view last shown this session', async () => {
     const user = userEvent.setup();
-    const { unmount } = render(<UserGames />);
+    const first = render(<UserGames />);
 
     await user.click(screen.getByRole('button', { name: 'Week view' }));
     await user.click(screen.getByRole('button', { name: 'Next week' }));
+    expect(window.sessionStorage.getItem('user-games-view')).toBe('list');
+    expect(window.sessionStorage.getItem('user-games-week-start')).toBe(localDateString(7));
 
-    unmount();
-    render(<UserGames />);
-    await user.click(screen.getByRole('button', { name: 'Week view' }));
+    first.unmount();
+    const second = render(<UserGames />);
 
+    // Back on the week view, on the week that was left, without choosing it again.
     expect(
       screen.getByRole('button', {
-        name: `Select week: ${formatWeekRange(dateOffset(0), dateOffset(6))}`,
+        name: `Select week: ${formatWeekRange(dateOffset(7), dateOffset(13))}`,
       }),
     ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+    await user.click(screen.getByRole('button', { name: 'Next month' }));
+    const storedMonth = window.sessionStorage.getItem('user-games-calendar-month')!;
+    expect(window.sessionStorage.getItem('user-games-view')).toBe('calendar');
+
+    second.unmount();
+    render(<UserGames />);
+
+    const [year, month] = storedMonth.split('-').map(Number);
+    const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(
+      new Date(year, month - 1, 1),
+    );
+    expect(screen.getByRole('button', { name: `Select month: ${monthLabel}` })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Select week:/ })).not.toBeInTheDocument();
   });
 
   it('stores the selected month in session storage', async () => {
@@ -2615,19 +2664,34 @@ describe('UserGames schedule views', () => {
     );
   });
 
-  it("shows an unwatched calendar game's start time in a tooltip, but not a watched one's", async () => {
+  it("shows a postponed calendar game's original local date in a tooltip with a dog ear, not a start time", async () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
     await user.click(screen.getByRole('button', { name: 'Month view' }));
 
-    // games[0] is unwatched and games[1] is watched.
-    const startTooltips = Array.from(document.querySelectorAll('[title^="Start"]'), (node) =>
+    // games[0] is unwatched and postponed; games[1] is watched and not postponed.
+    const [y, m, d] = localDateKeyForGame(games[0])!.split('-').map(Number);
+    const originalDate = new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(new Date(y, m - 1, d));
+    const tooltips = Array.from(document.querySelectorAll('[title]'), (node) =>
       node.getAttribute('title'),
     );
-    expect(startTooltips).toEqual([
-      `Starts ${formatGameTime(games[0].scheduled_at, games[0].scheduled_time, 'local')}`,
-    ]);
+    // Just the date, and no start time for the postponed game (the watched one has no tooltip).
+    expect(tooltips).toContain(originalDate);
+    expect(tooltips.filter((title) => /\d{1,2}:\d{2}/.test(title ?? ''))).toEqual([]);
+
+    const postponedItem = screen.getAllByText('AWY')[0].closest(`.${calendarItemStyles.item}`);
+    const watchedItem = screen.getAllByText('OPP')[0].closest(`.${calendarItemStyles.item}`);
+    expect(postponedItem).toHaveClass(styles.calendarGamePostponed);
+    // The top of the card holds the playoff round now, not the original date.
+    expect(postponedItem!.querySelector(`.${calendarItemStyles.topLabel}`)).toHaveTextContent(
+      'R2 - G3',
+    );
+    expect(watchedItem).not.toHaveClass(styles.calendarGamePostponed);
   });
 
   it('renders compact calendar game cards and navigates when clicked', async () => {
@@ -2641,10 +2705,6 @@ describe('UserGames schedule views', () => {
         name: `Select month: ${new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1))}`,
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getAllByText(formatNumericDate(localDateKeyForGame(games[0]) ?? scheduledWatchDate))
-        .length,
-    ).toBeGreaterThan(0);
     const firstGameCalendarDay = screen.getByLabelText(
       `Calendar day ${localDateKeyForGame(games[0])}`,
     );

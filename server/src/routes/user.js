@@ -778,11 +778,11 @@ router.get('/games', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/user/games/route-lookup
-// Resolves /games/<MM-DD-YYYY>/<away-code>-vs-<home-code> to one favorite-team game id.
+// Resolves /games/<MM-DD-YYYY>/<away-code>-vs-<home-code> to one game id. Any game is allowed,
+// since the user's games list shows games for any team the user filters to or adds to watch.
 // The route date is the Eastern game date, independent of the user's UI timezone.
 // ---------------------------------------------------------------------------
 router.get('/games/route-lookup', async (req, res) => {
-  const userId = req.user.id;
   const { game_date, game_slug } = req.query;
   if (!game_date || !game_slug) {
     return res.status(400).json({ error: 'game_date and game_slug are required' });
@@ -833,12 +833,6 @@ router.get('/games/route-lookup', async (req, res) => {
             'g'
           )
         ) = ${game_slug}
-        AND EXISTS (
-          SELECT 1
-          FROM user_favorite_teams uft
-          WHERE uft.user_id = ${userId}
-            AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
-        )
       ORDER BY g.scheduled_at DESC NULLS LAST, g.created_at DESC, g.id DESC
       LIMIT 1
     `;
@@ -853,7 +847,7 @@ router.get('/games/route-lookup', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/user/games/:id  - read-only game detail for authenticated users
-// Scoped to games involving the user's favourite teams.
+// Any game, like the route lookup; the watch state returned is the user's own.
 // ---------------------------------------------------------------------------
 router.get('/games/:id', async (req, res) => {
   const userId = req.user.id;
@@ -1272,12 +1266,6 @@ router.get('/games/:id', async (req, res) => {
         ON uwg.user_id = ${userId}
        AND uwg.game_id = g.id
       WHERE g.id = ${id}
-        AND EXISTS (
-          SELECT 1
-          FROM user_favorite_teams uft
-          WHERE uft.user_id = ${userId}
-            AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
-        )
       LIMIT 1
     `;
 

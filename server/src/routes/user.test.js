@@ -642,7 +642,7 @@ describe('GET /api/user/games', () => {
 });
 
 describe('GET /api/user/games/route-lookup', () => {
-  it('resolves a favorite-team slug game route to a game id', async () => {
+  it('resolves a slug game route to a game id, whether or not a favorite team plays', async () => {
     sql.mockResolvedValueOnce([{ game_id: 'game-1' }]);
 
     const res = await request(app)
@@ -651,7 +651,6 @@ describe('GET /api/user/games/route-lookup', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ game_id: 'game-1' });
-    expect(sql.mock.calls[0].slice(1)).toContain('user-1');
     expect(sql.mock.calls[0].slice(1)).toContain('2024-10-10');
     expect(sql.mock.calls[0].slice(1)).toContain('awy-vs-hom');
     expect(queryText).toContain('JOIN seasons');
@@ -660,7 +659,8 @@ describe('GET /api/user/games/route-lookup', () => {
     expect(queryText).toContain("AT TIME ZONE 'America/New_York'");
     expect(queryText).toContain("AT TIME ZONE 'UTC'");
     expect(queryText).not.toContain("g.scheduled_time <> '00:00'");
-    expect(queryText).toContain('user_favorite_teams');
+    // Games added to watch or shown by the team filter can be any team's.
+    expect(queryText).not.toContain('user_favorite_teams');
     expect(queryText).not.toContain('uwg.skipped_at IS NULL');
   });
 
@@ -673,7 +673,7 @@ describe('GET /api/user/games/route-lookup', () => {
     expect(sql).not.toHaveBeenCalled();
   });
 
-  it('returns 404 when no favorite-team game matches the slug route', async () => {
+  it('returns 404 when no game matches the slug route', async () => {
     sql.mockResolvedValueOnce([]);
 
     const res = await request(app)
@@ -685,7 +685,7 @@ describe('GET /api/user/games/route-lookup', () => {
 });
 
 describe('GET /api/user/games/:id', () => {
-  it('returns a single favorite-team game for the authenticated user', async () => {
+  it("returns any single game with the authenticated user's watch state", async () => {
     sql.mockResolvedValueOnce([GAME]);
 
     const res = await request(app).get('/api/user/games/game-1');
@@ -696,7 +696,7 @@ describe('GET /api/user/games/:id', () => {
     expect(res.body).toMatchObject({ home_score: 0, away_score: 0, winner_team_id: null });
     expect(sql.mock.calls[0].slice(1)).toContain('user-1');
     expect(sql.mock.calls[0].slice(1)).toContain('game-1');
-    expect(queryText).toContain('user_favorite_teams');
+    expect(queryText).not.toContain('user_favorite_teams');
     expect(queryText).toContain('(uwg.skipped_at IS NOT NULL) AS skipped_by_user');
     expect(queryText).not.toContain('uwg.skipped_at IS NULL');
     expect(queryText).toContain('series_progress.series_home_wins_at_game');

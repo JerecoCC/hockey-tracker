@@ -31,20 +31,33 @@ export const downloadMonthScheduleImage = async ({
     '--app-text-strong',
     '#f8fafc',
   );
+  const hiddenHost = document.createElement('div');
   const exportNode = document.createElement('div');
   const exportStyleNode = document.createElement('style');
   const headerNode = document.createElement('div');
+  // Copied before the first await: callers may lay the calendar out for the image just for this
+  // call and restore it as soon as it returns.
   const clonedCalendar = calendarNode.cloneNode(true) as HTMLElement;
   const calendarExportWidth = getCalendarExportWidth(calendarNode);
   const monthLabel = MONTH_IMAGE_LABEL_FMT.format(calendarMonth);
   const displayLabel = headerLabel ?? monthLabel;
 
-  exportNode.setAttribute('data-calendar-export', 'true');
-  Object.assign(exportNode.style, {
-    position: 'absolute',
+  // The export still has to lay out and render, so it can't be display: none or visibility:
+  // hidden. Instead it sits in a zero-size, clipped, fixed host: never seen, never scrolled to.
+  // Only exportNode is captured, so the host's styles don't reach the image.
+  hiddenHost.setAttribute('aria-hidden', 'true');
+  Object.assign(hiddenHost.style, {
+    position: 'fixed',
     left: '0',
     top: '0',
     zIndex: '-1',
+    width: '0',
+    height: '0',
+    overflow: 'hidden',
+    pointerEvents: 'none',
+  });
+  exportNode.setAttribute('data-calendar-export', 'true');
+  Object.assign(exportNode.style, {
     width: `${EXPORT_IMAGE_WIDTH}px`,
     padding: `${EXPORT_PADDING}px`,
     boxSizing: 'border-box',
@@ -134,7 +147,8 @@ export const downloadMonthScheduleImage = async ({
   });
 
   exportNode.append(exportStyleNode, headerNode, clonedCalendar);
-  document.body.appendChild(exportNode);
+  hiddenHost.appendChild(exportNode);
+  document.body.appendChild(hiddenHost);
   await new Promise((resolve) => requestAnimationFrame(resolve));
   setCalendarExportDayMinHeight(clonedCalendar);
   await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -157,7 +171,7 @@ export const downloadMonthScheduleImage = async ({
       },
     });
   } finally {
-    document.body.removeChild(exportNode);
+    document.body.removeChild(hiddenHost);
   }
 
   const link = document.createElement('a');

@@ -101,6 +101,11 @@
   }
 }
 
+// Only frames the hero on mobile; elsewhere the hero lays out as if it weren't there.
+.heroFrame {
+  display: contents;
+}
+
 .rinkCreases {
   position: absolute;
   z-index: 0;
@@ -361,6 +366,30 @@
   > button {
     flex-shrink: 0;
   }
+
+  // On mobile the edit button sits beside the day title, and the admin test date gets its own
+  // full-width row under them. The actions dissolve into the section header's wrapping row.
+  @container (max-width: #{$screen-mobile-max}) {
+    display: contents;
+
+    > button {
+      order: 1;
+      margin-left: auto;
+    }
+
+    .testDateControl {
+      order: 2;
+      flex: 1 0 100%;
+      width: 100%;
+
+      // Only the picker stretches; the visually hidden label must stay 1px or it overflows.
+      > :not(.srOnly) {
+        flex: 1 1 auto;
+        width: 100%;
+        min-width: 0;
+      }
+    }
+  }
 }
 
 @container (max-width: 1040px) {
@@ -379,17 +408,14 @@
     position: static;
   }
 
-  .hero {
-    border-radius: 0;
-
-    &::before,
-    &::after {
-      border-radius: 0;
-    }
-  }
-
-  .rinkCreases {
-    border-radius: 0;
+  // Frames the hero like the sections below it: their surface, top and bottom borders, and
+  // padding, so the rink background sits inset with space around it.
+  .heroFrame {
+    display: block;
+    padding: $space-md;
+    border: 1px solid var(--app-border, #{$border});
+    border-width: 1px 0;
+    background: var(--app-surface, #{$bg-card});
   }
 
   .heroKicker {
@@ -411,13 +437,18 @@
 }
 
 @container (max-width: #{$screen-mobile-only-max}) {
+  // Framed like a section's content, the rink's blue outline is the hero's outer edge.
   .hero {
-    --rink-inset: #{$space-xs};
+    --rink-inset: 0px;
 
     min-height: 0;
     padding: $space-md;
-    border-right: 0;
-    border-left: 0;
+    border: 0;
+
+    &::before,
+    &::after {
+      border-radius: inherit;
+    }
 
     &::after {
       background:

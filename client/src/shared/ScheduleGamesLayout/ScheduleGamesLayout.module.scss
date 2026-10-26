@@ -286,6 +286,14 @@
   line-height: 1;
 }
 
+// Only shown in the fitted mobile week strip, in place of the Today tag.
+.weekSummaryTodayIcon {
+  display: none;
+  color: $accent;
+  font-size: $font-sm;
+  line-height: 1;
+}
+
 .dayCardAnchor {
   scroll-margin-top: 162px;
 }
@@ -379,8 +387,19 @@
           gap: $space-xs;
         }
 
+        // The Today tag is too wide for these day columns, so an icon marks today instead.
+        .weekSummaryTodayTag.weekSummaryTodayTag {
+          display: none;
+        }
+
+        .weekSummaryTodayIcon {
+          display: inline-flex;
+        }
+
+        // Counts sit at the bottom of every day, whether or not the day also shows its icon.
         .weekSummaryCountRow {
           height: auto;
+          margin-top: auto;
 
           .weekSummaryIcon {
             order: -1;
