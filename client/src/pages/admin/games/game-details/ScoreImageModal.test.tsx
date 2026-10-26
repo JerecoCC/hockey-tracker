@@ -140,6 +140,8 @@ describe('ScoreImageModal', () => {
       />,
     );
 
+    // No game is chosen yet, so the title has no matchup to name.
+    expect(screen.getByText('Generate Score Card')).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('e.g. Quarterfinals')).not.toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Playoff Game' })).not.toBeInTheDocument();
     const previewButton = screen.getByRole('button', { name: 'Preview Image' });
@@ -616,6 +618,8 @@ describe('ScoreImageModal', () => {
       />,
     );
 
+    // Titled like the game details breadcrumb, with the Eastern game date.
+    expect(screen.getByText('Generate Score Card: AWY @ HOM - Jun 18, 2026')).toBeInTheDocument();
     expect(screen.getAllByText('HL').length).toBeGreaterThan(0);
     expect(screen.getByText('Playoffs 2026')).toBeInTheDocument();
     expect(screen.getByText('Eastern Final')).toBeInTheDocument();
