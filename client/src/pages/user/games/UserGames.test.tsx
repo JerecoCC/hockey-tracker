@@ -8,7 +8,6 @@ import gameCardStyles from '@/shared/GameCard/GameCard.module.scss';
 import scheduleLayoutStyles from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout.module.scss';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import { syncGoogleCalendarWithProgress } from './googleCalendarSync';
-import { formatGameTime } from '@/lib/gameSchedule';
 import UserGames from './UserGames';
 import styles from './UserGames.module.scss';
 
@@ -1466,7 +1465,7 @@ describe('UserGames schedule views', () => {
     render(<UserGames />);
     await user.click(screen.getByRole('button', { name: 'Month view' }));
 
-    expect(screen.getByText('R2 - G3')).toHaveClass(calendarItemStyles.bottomLabel);
+    expect(screen.getByText('R2 - G3')).toHaveClass(calendarItemStyles.topLabel);
     expect(screen.queryByLabelText('Series record 1 of 4')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Series record 2 of 4')).not.toBeInTheDocument();
   });
@@ -2615,19 +2614,33 @@ describe('UserGames schedule views', () => {
     );
   });
 
-  it("shows an unwatched calendar game's start time in a tooltip, but not a watched one's", async () => {
+  it("shows a postponed calendar game's original local date in a tooltip with a dog ear, not a start time", async () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
     await user.click(screen.getByRole('button', { name: 'Month view' }));
 
-    // games[0] is unwatched and games[1] is watched.
-    const startTooltips = Array.from(document.querySelectorAll('[title^="Start"]'), (node) =>
+    // games[0] is unwatched and postponed; games[1] is watched and not postponed.
+    const [y, m, d] = localDateKeyForGame(games[0])!.split('-').map(Number);
+    const originalDate = new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(new Date(y, m - 1, d));
+    const tooltips = Array.from(document.querySelectorAll('[title]'), (node) =>
       node.getAttribute('title'),
     );
-    expect(startTooltips).toEqual([
-      `Starts ${formatGameTime(games[0].scheduled_at, games[0].scheduled_time, 'local')}`,
-    ]);
+    expect(tooltips).toContain(`Originally scheduled ${originalDate}`);
+    expect(tooltips.filter((title) => title?.startsWith('Start'))).toEqual([]);
+
+    const postponedItem = screen.getAllByText('AWY')[0].closest(`.${calendarItemStyles.item}`);
+    const watchedItem = screen.getAllByText('OPP')[0].closest(`.${calendarItemStyles.item}`);
+    expect(postponedItem).toHaveClass(styles.calendarGamePostponed);
+    // The top of the card holds the playoff round now, not the original date.
+    expect(postponedItem!.querySelector(`.${calendarItemStyles.topLabel}`)).toHaveTextContent(
+      'R2 - G3',
+    );
+    expect(watchedItem).not.toHaveClass(styles.calendarGamePostponed);
   });
 
   it('renders compact calendar game cards and navigates when clicked', async () => {
@@ -2641,10 +2654,6 @@ describe('UserGames schedule views', () => {
         name: `Select month: ${new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1))}`,
       }),
     ).toBeInTheDocument();
-    expect(
-      screen.getAllByText(formatNumericDate(localDateKeyForGame(games[0]) ?? scheduledWatchDate))
-        .length,
-    ).toBeGreaterThan(0);
     const firstGameCalendarDay = screen.getByLabelText(
       `Calendar day ${localDateKeyForGame(games[0])}`,
     );

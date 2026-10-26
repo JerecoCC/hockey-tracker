@@ -141,6 +141,44 @@
   border-width: 2px;
 }
 
+// Postponed games fold down their top-right corner. The corner is clipped away so whatever
+// sits behind the card shows through, and the flap is drawn in the card's border color.
+.calendarGamePostponed.calendarGamePostponed {
+  --calendar-game-dog-ear: 10px;
+  --calendar-game-dog-ear-inset: -1px;
+
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--calendar-game-dog-ear)) 0,
+    100% var(--calendar-game-dog-ear),
+    100% 100%,
+    0 100%
+  );
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: var(--calendar-game-dog-ear-inset);
+    right: var(--calendar-game-dog-ear-inset);
+    z-index: 2;
+    width: var(--calendar-game-dog-ear);
+    height: var(--calendar-game-dog-ear);
+    border-bottom-left-radius: 2px;
+    background: linear-gradient(
+      to bottom left,
+      transparent 50%,
+      var(--calendar-game-card-hover-border) 50%
+    );
+    pointer-events: none;
+  }
+}
+
+// Unwatched and skipped cards have a 2px border, so the flap sits further out.
+.calendarGamePostponed.calendarGameUnwatched,
+.calendarGamePostponed.calendarGameSkipped {
+  --calendar-game-dog-ear-inset: -2px;
+}
+
 .calendarGameSkipped.calendarGameSkipped {
   border-color: rgba($danger, 0.68);
   background: rgba($danger, 0.07);

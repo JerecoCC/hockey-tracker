@@ -435,15 +435,17 @@ const getLeagueStyle = (game: GameRecord) =>
   }) as CSSProperties;
 
 const ORIGINAL_GAME_DATE_FMT = new Intl.DateTimeFormat('en-US', {
-  month: '2-digit',
-  day: '2-digit',
+  month: 'short',
+  day: 'numeric',
   year: 'numeric',
 });
 
-const getOriginalGameDateLabel = (game: GameRecord, tzPref: GameTimezone) => {
-  if (!getScheduledWatchDateKey(game.scheduled_for)) return null;
+// A postponed game's original date, in the user's timezone like the calendar it sits on.
+const getOriginalGameDateTooltip = (game: GameRecord, tzPref: GameTimezone) => {
   const originalDateKey = getOriginalGameDateKey(game, tzPref);
-  return originalDateKey ? ORIGINAL_GAME_DATE_FMT.format(dateKeyToDate(originalDateKey)) : null;
+  return originalDateKey
+    ? `Originally scheduled ${ORIGINAL_GAME_DATE_FMT.format(dateKeyToDate(originalDateKey))}`
+    : 'Postponed';
 };
 
 const shouldShowWatchedScore = (game: GameRecord) =>
@@ -531,15 +533,17 @@ const CalendarGameCard = ({
       : home > away
         ? 'win'
         : 'lose';
-  const originalDateLabel = getOriginalGameDateLabel(game, tzPref);
+  const postponed = !!getScheduledWatchDateKey(game.scheduled_for);
   const playoffMetaLabel = getPlayoffGameMetaLabel(game);
-  // Unwatched games show their scheduled start in the user's timezone; games without a start
-  // time say so. Watched games have no tooltip.
-  const startTimeLabel = game.watched_by_user
-    ? undefined
-    : game.scheduled_time
-      ? `Starts ${formatGameTime(game.scheduled_at, game.scheduled_time, tzPref)}`
-      : 'Start time TBD';
+  // Postponed games show their original date. Other unwatched games show their scheduled start
+  // in the user's timezone, or say it's not set. Other watched games have no tooltip.
+  const tooltip = postponed
+    ? getOriginalGameDateTooltip(game, tzPref)
+    : game.watched_by_user
+      ? undefined
+      : game.scheduled_time
+        ? `Starts ${formatGameTime(game.scheduled_at, game.scheduled_time, tzPref)}`
+        : 'Start time TBD';
   const awaySeriesWins = getSeriesWinsForTeam(game, game.away_team.id);
   const homeSeriesWins = getSeriesWinsForTeam(game, game.home_team.id);
   const seriesTotalWins = game.series_games_to_win;
@@ -554,6 +558,7 @@ const CalendarGameCard = ({
         styles.calendarGameLeagueTint,
         !game.watched_by_user ? styles.calendarGameUnwatched : '',
         game.skipped_by_user ? styles.calendarGameSkipped : '',
+        postponed ? styles.calendarGamePostponed : '',
       ]
         .filter(Boolean)
         .join(' ')}
@@ -566,9 +571,8 @@ const CalendarGameCard = ({
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
-      tooltip={startTimeLabel}
-      topLabel={originalDateLabel}
-      bottomLabel={playoffMetaLabel}
+      tooltip={tooltip}
+      topLabel={playoffMetaLabel}
       awayTeam={{
         logo: game.away_team.logo,
         logoDark: game.away_team.logo_dark,
