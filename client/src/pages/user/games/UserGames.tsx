@@ -79,6 +79,8 @@ const ScoreImageModal = lazy(() => import('@/pages/admin/games/game-details/Scor
 
 import { API, authHeaders } from '@/lib/apiClient';
 const CALENDAR_MONTH_STORAGE_KEY = 'user-games-calendar-month';
+const WEEK_START_STORAGE_KEY = 'user-games-week-start';
+const VIEW_STORAGE_KEY = 'user-games-view';
 const USER_WEEK_SUMMARY_STICKY_TOP = '52px';
 const USER_WEEK_SUMMARY_STICKY_TOP_PX = 52;
 const USER_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX = 8;
@@ -222,6 +224,14 @@ const majorityMonthForWeek = (weekStart: Date) => {
 const getStoredCalendarMonth = () => {
   const stored = sessionStorage.getItem(CALENDAR_MONTH_STORAGE_KEY);
   return stored && MONTH_ONLY_RE.test(stored) ? fromMonthPickerValue(stored) : null;
+};
+const getStoredWeekStart = () => {
+  const stored = sessionStorage.getItem(WEEK_START_STORAGE_KEY);
+  return stored && DATE_ONLY_RE.test(stored) ? fromISODate(stored) : null;
+};
+const getStoredView = (): 'list' | 'calendar' | null => {
+  const stored = sessionStorage.getItem(VIEW_STORAGE_KEY);
+  return stored === 'list' || stored === 'calendar' ? stored : null;
 };
 
 const USER_TIMEZONE: GameTimezone = 'local';
@@ -670,12 +680,15 @@ const UserGames = () => {
   const isMobileView = viewport === 'mobile';
   const isTabletView = viewport === 'tablet';
   const initialStoredCalendarMonth = getStoredCalendarMonth();
-  // The week view always opens on today; only leaving the month view on another month moves it.
-  const [weekStart, setWeekStart] = useState<Date>(() => toDay(new Date()));
+  // Coming back to the page this session reopens the view, week and month last shown; a new
+  // session opens the week view on today.
+  const [weekStart, setWeekStart] = useState<Date>(
+    () => getStoredWeekStart() ?? toDay(new Date()),
+  );
   const [calendarMonth, setCalendarMonth] = useState<Date>(
     () => initialStoredCalendarMonth ?? monthStart(new Date()),
   );
-  const [view, setView] = useState<'list' | 'calendar'>('list');
+  const [view, setView] = useState<'list' | 'calendar'>(() => getStoredView() ?? 'list');
   const [filtersDrawerOpen, setFiltersDrawerOpen] = useState(false);
   const { setValue: setFilterValue, watch: watchFilter } = useForm<{ showSkippedGames: boolean }>({
     defaultValues: { showSkippedGames: false },
@@ -712,6 +725,14 @@ const UserGames = () => {
   useEffect(() => {
     sessionStorage.setItem(CALENDAR_MONTH_STORAGE_KEY, toMonthPickerValue(calendarMonth));
   }, [calendarMonth]);
+
+  useEffect(() => {
+    sessionStorage.setItem(WEEK_START_STORAGE_KEY, dateToISO(weekStart));
+  }, [weekStart]);
+
+  useEffect(() => {
+    sessionStorage.setItem(VIEW_STORAGE_KEY, view);
+  }, [view]);
 
   useEffect(() => {
     if (!isMobileView && !isTabletView) setFiltersDrawerOpen(false);

@@ -2597,22 +2597,39 @@ describe('UserGames schedule views', () => {
     expect(screen.getByRole('button', { name: `Select week: ${weekLabel}` })).toBeInTheDocument();
   });
 
-  it('always reopens the week view on today', async () => {
+  it('reopens the week and view last shown this session', async () => {
     const user = userEvent.setup();
-    const { unmount } = render(<UserGames />);
+    const first = render(<UserGames />);
 
     await user.click(screen.getByRole('button', { name: 'Week view' }));
     await user.click(screen.getByRole('button', { name: 'Next week' }));
+    expect(window.sessionStorage.getItem('user-games-view')).toBe('list');
+    expect(window.sessionStorage.getItem('user-games-week-start')).toBe(localDateString(7));
 
-    unmount();
-    render(<UserGames />);
-    await user.click(screen.getByRole('button', { name: 'Week view' }));
+    first.unmount();
+    const second = render(<UserGames />);
 
+    // Back on the week view, on the week that was left, without choosing it again.
     expect(
       screen.getByRole('button', {
-        name: `Select week: ${formatWeekRange(dateOffset(0), dateOffset(6))}`,
+        name: `Select week: ${formatWeekRange(dateOffset(7), dateOffset(13))}`,
       }),
     ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+    await user.click(screen.getByRole('button', { name: 'Next month' }));
+    const storedMonth = window.sessionStorage.getItem('user-games-calendar-month')!;
+    expect(window.sessionStorage.getItem('user-games-view')).toBe('calendar');
+
+    second.unmount();
+    render(<UserGames />);
+
+    const [year, month] = storedMonth.split('-').map(Number);
+    const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(
+      new Date(year, month - 1, 1),
+    );
+    expect(screen.getByRole('button', { name: `Select month: ${monthLabel}` })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Select week:/ })).not.toBeInTheDocument();
   });
 
   it('stores the selected month in session storage', async () => {
