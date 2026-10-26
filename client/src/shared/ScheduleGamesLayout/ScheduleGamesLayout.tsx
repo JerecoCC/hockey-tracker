@@ -170,11 +170,19 @@ export const ScheduleWeekSummary = <T,>({
             <span className={styles.weekSummaryDayRow}>
               <span className={styles.weekSummaryDate}>{formatDate(dateKey)}</span>
               {isToday ? (
-                <Tag
-                  label="Today"
-                  variant="outlined"
-                  intent="accent"
-                />
+                <>
+                  <Tag
+                    label="Today"
+                    variant="outlined"
+                    intent="accent"
+                    className={styles.weekSummaryTodayTag}
+                  />
+                  {/* Mobile's narrow day columns mark today with an icon instead of the tag. */}
+                  <Icon
+                    name="location_on"
+                    className={styles.weekSummaryTodayIcon}
+                  />
+                </>
               ) : (
                 <span className={styles.weekSummaryWeekday}>{formatWeekday(dateKey)}</span>
               )}
