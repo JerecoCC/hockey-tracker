@@ -2680,8 +2680,9 @@ describe('UserGames schedule views', () => {
     const tooltips = Array.from(document.querySelectorAll('[title]'), (node) =>
       node.getAttribute('title'),
     );
-    expect(tooltips).toContain(`Originally scheduled ${originalDate}`);
-    expect(tooltips.filter((title) => title?.startsWith('Start'))).toEqual([]);
+    // Just the date, and no start time for the postponed game (the watched one has no tooltip).
+    expect(tooltips).toContain(originalDate);
+    expect(tooltips.filter((title) => /\d{1,2}:\d{2}/.test(title ?? ''))).toEqual([]);
 
     const postponedItem = screen.getAllByText('AWY')[0].closest(`.${calendarItemStyles.item}`);
     const watchedItem = screen.getAllByText('OPP')[0].closest(`.${calendarItemStyles.item}`);

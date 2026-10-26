@@ -455,7 +455,7 @@ const ORIGINAL_GAME_DATE_FMT = new Intl.DateTimeFormat('en-US', {
 const getOriginalGameDateTooltip = (game: GameRecord, tzPref: GameTimezone) => {
   const originalDateKey = getOriginalGameDateKey(game, tzPref);
   return originalDateKey
-    ? `Originally scheduled ${ORIGINAL_GAME_DATE_FMT.format(dateKeyToDate(originalDateKey))}`
+    ? ORIGINAL_GAME_DATE_FMT.format(dateKeyToDate(originalDateKey))
     : 'Postponed';
 };
 
@@ -573,8 +573,8 @@ const CalendarGameCard = ({
     : game.watched_by_user
       ? undefined
       : game.scheduled_time
-        ? `Starts ${formatGameTime(game.scheduled_at, game.scheduled_time, tzPref)}`
-        : 'Start time TBD';
+        ? formatGameTime(game.scheduled_at, game.scheduled_time, tzPref)
+        : 'TBD';
   const awaySeriesWins = getSeriesWinsForTeam(game, game.away_team.id);
   const homeSeriesWins = getSeriesWinsForTeam(game, game.home_team.id);
   const seriesTotalWins = game.series_games_to_win;
