@@ -30,6 +30,7 @@ import {
   type GameTimezone,
 } from '@/lib/gameSchedule';
 import { canMarkGameWatched, getOvertimeSuffix, getScoreCardGame } from '@/lib/gamePresentation';
+import { getLeagueCalendarColor } from '@/lib/googleCalendarColors';
 import { buildUserWatchedTeamPath } from '@/lib/routeSlugs';
 import { getWatchedTeamSummaries, type TeamWatchSummary } from '@/lib/watchedTeams';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
@@ -485,6 +486,7 @@ const UserDashboard = () => {
                       game={game}
                       tzPref={tzPref}
                       useLeagueColors
+                      leagueColor={getLeagueCalendarColor(game)}
                       canOpen
                       mobileActionsAside
                       scorePlaceholder={!watched && game.status === 'final' ? '?' : undefined}
