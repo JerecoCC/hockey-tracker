@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useQuery } from '@tanstack/react-query';
 import { toPng } from 'html-to-image';
+import { toast } from 'react-toastify';
 import { ThemeContext } from '@/context/ThemeContext';
 import type { GameRecord } from '@/hooks/useGames';
 import useLeagues from '@/hooks/useLeagues';
@@ -624,6 +625,140 @@ describe('ScoreImageModal', () => {
     expect(screen.getByText('Playoffs 2026')).toBeInTheDocument();
     expect(screen.getByText('Eastern Final')).toBeInTheDocument();
     expect(screen.queryByText('Finals')).not.toBeInTheDocument();
+  });
+});
+
+describe('ScoreImageModal sharing', () => {
+  const shareGame = {
+    away_team: {
+      id: 'team-away',
+      name: 'Away Bears',
+      code: 'AWY',
+      logo: null,
+      primary_color: '#111111',
+      secondary_color: '#222222',
+      text_color: '#ffffff',
+    },
+    home_team: {
+      id: 'team-home',
+      name: 'Home Wolves',
+      code: 'HOM',
+      logo: null,
+      primary_color: '#333333',
+      secondary_color: '#444444',
+      text_color: '#ffffff',
+    },
+    scheduled_at: '2026-06-18T19:00:00Z',
+    league_code: 'HL',
+    game_type: 'regular',
+  } as Partial<GameRecord> as GameRecord;
+  const renderShareModal = () =>
+    render(
+      <ScoreImageModal
+        open
+        onClose={jest.fn()}
+        game={shareGame}
+        liveAwayScore={1}
+        liveHomeScore={2}
+      />,
+    );
+  const setNavigator = (name: string, value: unknown) =>
+    Object.defineProperty(navigator, name, { configurable: true, writable: true, value });
+  let toastError: jest.SpyInstance;
+  let toastSuccess: jest.SpyInstance;
+  let toastInfo: jest.SpyInstance;
+
+  beforeEach(() => {
+    toastError = jest.spyOn(toast, 'error').mockImplementation(() => 'id');
+    toastSuccess = jest.spyOn(toast, 'success').mockImplementation(() => 'id');
+    toastInfo = jest.spyOn(toast, 'info').mockImplementation(() => 'id');
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    for (const name of ['canShare', 'share', 'clipboard']) {
+      delete (navigator as unknown as Record<string, unknown>)[name];
+    }
+    delete (globalThis as Record<string, unknown>).ClipboardItem;
+  });
+
+  it("opens the device's share sheet with the score card image", async () => {
+    const user = userEvent.setup();
+    const share = jest.fn().mockResolvedValue(undefined);
+    setNavigator('canShare', () => true);
+    setNavigator('share', share);
+    renderShareModal();
+
+    await user.click(screen.getByRole('button', { name: 'Share Image' }));
+
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(1));
+    const { files, title } = share.mock.calls[0][0];
+    expect(files[0]).toBeInstanceOf(File);
+    expect(files[0].name).toMatch(/^AWY vs HOM - \d{4}-\d{2}-\d{2}\.png$/);
+    expect(files[0].type).toBe('image/png');
+    expect(title).toBe('AWY @ HOM - Jun 18, 2026');
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it('treats closing the share sheet as no error', async () => {
+    const user = userEvent.setup();
+    setNavigator('canShare', () => true);
+    setNavigator('share', jest.fn().mockRejectedValue(new DOMException('Canceled', 'AbortError')));
+    renderShareModal();
+
+    await user.click(screen.getByRole('button', { name: 'Share Image' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Share Image' })).toBeEnabled());
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it('shares the ready image on a second tap when the browser refused the first', async () => {
+    const user = userEvent.setup();
+    const share = jest
+      .fn()
+      .mockRejectedValueOnce(new DOMException('No user activation', 'NotAllowedError'))
+      .mockResolvedValueOnce(undefined);
+    setNavigator('canShare', () => true);
+    setNavigator('share', share);
+    renderShareModal();
+
+    await user.click(screen.getByRole('button', { name: 'Share Image' }));
+    await waitFor(() =>
+      expect(toastInfo).toHaveBeenCalledWith('Score card is ready. Tap Share Image again.'),
+    );
+    await user.click(screen.getByRole('button', { name: 'Share Image' }));
+
+    await waitFor(() => expect(share).toHaveBeenCalledTimes(2));
+    // The unchanged card isn't rendered again, so the second share is immediate.
+    expect(mockToPng).toHaveBeenCalledTimes(1);
+    expect(share.mock.calls[1][0].files[0]).toBe(share.mock.calls[0][0].files[0]);
+  });
+
+  it('copies the image to paste into a post where sharing files is unsupported', async () => {
+    const user = userEvent.setup();
+    const write = jest.fn().mockResolvedValue(undefined);
+    setNavigator('clipboard', { write });
+    (globalThis as Record<string, unknown>).ClipboardItem = class {
+      constructor(public items: Record<string, Promise<Blob>>) {}
+    };
+    renderShareModal();
+
+    expect(screen.queryByRole('button', { name: 'Share Image' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Copy Image' }));
+
+    await waitFor(() => expect(write).toHaveBeenCalledTimes(1));
+    const image = await write.mock.calls[0][0][0].items['image/png'];
+    expect(image).toBeInstanceOf(File);
+    expect(image.type).toBe('image/png');
+    expect(toastSuccess).toHaveBeenCalledWith('Score card copied. Paste it into your post.');
+  });
+
+  it('offers neither when the browser can share files nor copy images', () => {
+    renderShareModal();
+
+    expect(screen.queryByRole('button', { name: 'Share Image' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Copy Image' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Download Image' })).toBeInTheDocument();
   });
 });
 

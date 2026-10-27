@@ -146,6 +146,35 @@ function getDownloadFilename(drawGame: DrawGameType | null) {
   return `${drawGame.away_team.code} vs ${drawGame.home_team.code} - ${getFileDateLabel(drawGame.scheduled_at)}.png`;
 }
 
+type ScoreCardShareMode = 'share' | 'copy' | null;
+
+/**
+ * How the score card can be shared without downloading it: the device's share sheet where the
+ * browser can share image files (phones, some desktops), otherwise copying the image to paste
+ * into a post, or neither.
+ */
+function getScoreCardShareMode(): ScoreCardShareMode {
+  if (typeof navigator === 'undefined') return null;
+  try {
+    const probe = new File([''], 'score-card.png', { type: 'image/png' });
+    if (navigator.canShare?.({ files: [probe] })) return 'share';
+  } catch {
+    // File or canShare unsupported; fall through to the clipboard.
+  }
+  if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') return 'copy';
+  return null;
+}
+
+function dataUrlToPngBlob(dataUrl: string) {
+  const bytes = atob(dataUrl.slice(dataUrl.indexOf(',') + 1));
+  const buffer = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i += 1) buffer[i] = bytes.charCodeAt(i);
+  return new Blob([buffer], { type: 'image/png' });
+}
+
+const isDomError = (err: unknown, name: string) =>
+  err instanceof DOMException && err.name === name;
+
 /** Convert a hex color string to rgba(...) with the given alpha. */
 function hexToRgba(hex: string, alpha: number): string {
   const h = hex.replace('#', '');
@@ -598,6 +627,11 @@ const ScoreImageModal = ({
   const [generating, setGenerating] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [shareMode] = useState(getScoreCardShareMode);
+  const [sharing, setSharing] = useState(false);
+  // The last image made for sharing, kept with the card markup it came from so an unchanged
+  // card can be shared again without re-rendering it.
+  const sharedImageRef = useRef<{ markup: string; file: File } | null>(null);
 
   // Crop state — position 0-100 (%), zoom 1-3×
   const [cropX, setCropX] = useState(50);
@@ -1665,6 +1699,57 @@ const ScoreImageModal = ({
     }
   };
 
+  const getShareFile = async (scoreCardNode: HTMLDivElement) => {
+    const markup = scoreCardNode.outerHTML;
+    if (sharedImageRef.current?.markup === markup) return sharedImageRef.current.file;
+    const url = await renderScoreCardImage();
+    if (!url) throw new Error('Score card did not render');
+    const file = new File([dataUrlToPngBlob(url)], getDownloadFilename(drawGame), {
+      type: 'image/png',
+    });
+    sharedImageRef.current = { markup, file };
+    return file;
+  };
+
+  const handleShare = async () => {
+    if (!scoreCardFormValidation.isValid) {
+      setScoreCardValidationAttempted(true);
+      return;
+    }
+    const scoreCardNode = scoreCardRef.current;
+    if (!scoreCardNode || !shareMode) return;
+
+    setSharing(true);
+    try {
+      if (shareMode === 'copy') {
+        // The write starts right away with the image as a promise, so Safari still counts it as
+        // part of the tap that asked for it.
+        await navigator.clipboard.write([
+          new ClipboardItem({ 'image/png': getShareFile(scoreCardNode) }),
+        ]);
+        toast.success('Score card copied. Paste it into your post.');
+        return;
+      }
+      const file = await getShareFile(scoreCardNode);
+      await navigator.share({ files: [file], title: titleGameLabel ?? 'Score card' });
+    } catch (err) {
+      // Closing the share sheet without picking an app isn't a failure.
+      if (isDomError(err, 'AbortError')) return;
+      // Browsers only open the share sheet soon after a tap, and making the image can outlast
+      // that. The image is kept, so a second tap shares it straight away.
+      if (shareMode === 'share' && isDomError(err, 'NotAllowedError') && sharedImageRef.current) {
+        toast.info('Score card is ready. Tap Share Image again.');
+        return;
+      }
+      console.error('Failed to share score card image', err);
+      toast.error(
+        shareMode === 'copy' ? 'Failed to copy score card image' : 'Failed to share score card image',
+      );
+    } finally {
+      setSharing(false);
+    }
+  };
+
   const handlePreview = async () => {
     if (isStandaloneForm && !scoreCardFormValidation.isValid) {
       setScoreCardValidationAttempted(true);
@@ -1715,6 +1800,18 @@ const ScoreImageModal = ({
               >
                 Close
               </Button>
+              {/* Shares straight to social apps (or copies the image) without a download. */}
+              {shareMode && (
+                <Button
+                  variant="outlined"
+                  intent="accent"
+                  icon={shareMode === 'share' ? 'open_in_new' : 'clone'}
+                  onClick={handleShare}
+                  disabled={isDownloadDisabled || sharing}
+                >
+                  {sharing ? 'Preparing…' : shareMode === 'share' ? 'Share Image' : 'Copy Image'}
+                </Button>
+              )}
               <Button
                 variant="filled"
                 intent="accent"

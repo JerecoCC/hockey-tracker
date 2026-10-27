@@ -935,3 +935,27 @@
 .footerEnd {
   margin-left: auto;
 }
+
+// Matches the Modal's own mobile footer (this modal replaces it with a custom one): the start
+// actions on top, a divider, then the end actions stacked full-width with Close at the bottom.
+@media (max-width: $screen-tablet-max) {
+  .footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: $space-md;
+  }
+
+  .footerStart {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .footerEnd {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: $space-sm;
+    margin-left: 0;
+    padding-top: $space-md;
+    border-top: 1px solid var(--app-border, #{$border});
+  }
+}
