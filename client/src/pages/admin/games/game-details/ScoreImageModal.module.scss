@@ -1,6 +1,12 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+// The Modal renders its title as an h3; keep the title's line break after the colon so the
+// game sits on its own row. Body headings have no line breaks, so they're unaffected.
+.modal h3 {
+  white-space: pre-line;
+}
+
 // ── Upload zone ───────────────────────────────────────────────────────────────
 
 .upload {

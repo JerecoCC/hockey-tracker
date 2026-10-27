@@ -1789,9 +1789,11 @@ const ScoreImageModal = ({
     <>
       <Modal
         open={open}
+        // The game goes on its own line under "Generate Score Card:" (see .modal in the styles).
         title={
-          titleGameLabel ? `Generate Score Card: ${titleGameLabel}` : 'Generate Score Card'
+          titleGameLabel ? `Generate Score Card:\n${titleGameLabel}` : 'Generate Score Card'
         }
+        className={styles.modal}
         onClose={onClose}
         size="lg"
         disableBackdropClose={isStandaloneForm}
