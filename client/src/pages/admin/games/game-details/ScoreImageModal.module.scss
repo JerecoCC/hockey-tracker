@@ -1,6 +1,12 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+// The Modal renders its title as an h3; keep the title's line break after the colon so the
+// game sits on its own row. Body headings have no line breaks, so they're unaffected.
+.modal h3 {
+  white-space: pre-line;
+}
+
 // ── Upload zone ───────────────────────────────────────────────────────────────
 
 .upload {
@@ -76,10 +82,18 @@
     overflow: hidden;
     cursor: grab;
     user-select: none;
+    // Dragging pans the image instead of scrolling the page, so touch drags aren't cancelled.
+    touch-action: none;
   }
 
   &PreviewDragging {
     cursor: grabbing;
+
+    // The transform's origin moves with every drag step; easing it made the image trail the
+    // pointer. The zoom slider keeps its easing.
+    .uploadPreviewImg {
+      transition: none;
+    }
   }
 
   &PreviewImg {

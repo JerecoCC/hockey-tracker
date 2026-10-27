@@ -63,9 +63,10 @@ jest.mock('@/hooks/useFavoriteTeams', () => ({
   __esModule: true,
   default: () => ({ favorites: ['team-home', 'team-away'] }),
 }));
-jest.mock('@jerecocc/tracker-ui/components/Card/Card', () => ({ title, children, ...props }: any) => (
-  // Keep data-* attributes, such as a game card's mobile actions layout.
+jest.mock('@jerecocc/tracker-ui/components/Card/Card', () => ({ title, children, style, ...props }: any) => (
+  // Keep data-* attributes and style, such as a game card's mobile actions layout and tint.
   <section
+    style={style}
     {...Object.fromEntries(Object.entries(props).filter(([key]) => key.startsWith('data-')))}
   >
     {title && <h3>{title}</h3>}
@@ -510,6 +511,24 @@ describe('UserDashboard', () => {
     expect(
       screen.getByLabelText('Mark as watched').closest('[data-game-card-variant="card"]'),
     ).toHaveAttribute('data-mobile-actions-layout', 'aside');
+  });
+
+  it("tints game cards with the league's Google Calendar color, like the games page", () => {
+    mockDashboardQueries({
+      todayGames: [
+        makeGame({ id: 'game-1', status: 'final', league_calendar_color_id: 7 }),
+        makeGame({ id: 'game-2', status: 'final', league_calendar_color_id: null }),
+      ],
+    });
+
+    render(<UserDashboard />);
+
+    const [calendarColored, primaryColored] = screen
+      .getAllByLabelText('Mark as watched')
+      .map((button) => button.closest('[data-game-card-variant="card"]'));
+    // Peacock (colorId 7), then the league's primary color when no calendar color is known.
+    expect(calendarColored).toHaveStyle('--game-league-primary: #039be5');
+    expect(primaryColored).toHaveStyle('--game-league-primary: #334155');
   });
 
   it('hides the watch action for non-final dashboard games', () => {

@@ -4,6 +4,7 @@ import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
 import type { GameRecord } from '@/hooks/useGames';
 import usePersonalGames, { type PersonalGameResultType } from '@/hooks/usePersonalGames';
+import { formatScheduledDate } from '@/pages/admin/games/game-details/formatUtils';
 import styles from './PersonalGameModal.module.scss';
 
 const RESULT_OPTIONS: { value: PersonalGameResultType; label: string }[] = [
@@ -62,13 +63,21 @@ const PersonalGameScoreModal = ({ game, onClose }: Props) => {
   });
 
   if (!game) return null;
-  const awayLabel = game.away_team.code ?? game.away_team.name ?? 'Away';
-  const homeLabel = game.home_team.code ?? game.home_team.name ?? 'Home';
+  const awayCode = game.away_team.code ?? game.away_team.name ?? 'Away';
+  const homeCode = game.home_team.code ?? game.home_team.name ?? 'Home';
+  const awayName = game.away_team.name ?? awayCode;
+  const homeName = game.home_team.name ?? homeCode;
+  // Names the game like the score card title: "AWY @ HOM - Oct 26, 2026".
+  const gameLabel = [`${awayCode} @ ${homeCode}`, formatScheduledDate(game.scheduled_at)]
+    .filter(Boolean)
+    .join(' - ');
 
   return (
     <Modal
       open
-      title="Mark as Watched"
+      // The game goes on its own line under "Mark as Watched:" (see .titleBreak in the styles).
+      title={`Mark as Watched:\n${gameLabel}`}
+      className={styles.titleBreak}
       onClose={onClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Mark Watched'}
       confirmIcon="visibility"
@@ -81,12 +90,9 @@ const PersonalGameScoreModal = ({ game, onClose }: Props) => {
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <p className={styles.copy}>
-          Enter the final score of {awayLabel} @ {homeLabel} to mark it as watched.
-        </p>
-        <div className={styles.full}>
+        <div className={styles.scoreRow}>
           <ControlledInputField
-            label={`${awayLabel} Score`}
+            label={`${awayName} Score`}
             control={control}
             name="away_score"
             type="number"
@@ -97,10 +103,8 @@ const PersonalGameScoreModal = ({ game, onClose }: Props) => {
             required
             rules={scoreRules}
           />
-        </div>
-        <div className={styles.full}>
           <ControlledInputField
-            label={`${homeLabel} Score`}
+            label={`${homeName} Score`}
             control={control}
             name="home_score"
             type="number"

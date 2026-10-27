@@ -1030,14 +1030,13 @@ const ScoreImageModal = ({
     formGameDate,
   ]);
 
-  // Stable drag snapshot (avoids stale-closure issues with pointer events)
+  // The drag in progress: the last pointer position, and how far the image overhangs the frame
+  // on each axis (avoids stale-closure issues with pointer events).
   const dragRef = useRef<{
-    startX: number;
-    startY: number;
-    startCropX: number;
-    startCropY: number;
-    containerW: number;
-    containerH: number;
+    lastX: number;
+    lastY: number;
+    overflowX: number;
+    overflowY: number;
   } | null>(null);
 
   const resetCrop = useCallback(() => {
@@ -1131,15 +1130,29 @@ const ScoreImageModal = ({
 
   // ── Drag-to-pan handlers ──────────────────────────────────────────────────────
 
+  // How far the shown image overhangs the frame on each axis, in pixels. object-position puts
+  // the image's edge at crop% × (frame − image), and the zoom (scaled from that same point)
+  // makes it crop% × (frame − zoom × image), so 1% of crop moves the image overhang / 100 px.
+  const getPreviewOverflow = (frame: HTMLDivElement) => {
+    const img = frame.querySelector('img');
+    const frameW = frame.offsetWidth;
+    const frameH = frame.offsetHeight;
+    if (!img?.naturalWidth || !img.naturalHeight) return { x: 0, y: 0 };
+    const coverScale = Math.max(frameW / img.naturalWidth, frameH / img.naturalHeight);
+    return {
+      x: img.naturalWidth * coverScale * cropZoom - frameW,
+      y: img.naturalHeight * coverScale * cropZoom - frameH,
+    };
+  };
+
   const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
+    const overflow = getPreviewOverflow(e.currentTarget);
     dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startCropX: cropX,
-      startCropY: cropY,
-      containerW: e.currentTarget.offsetWidth,
-      containerH: e.currentTarget.offsetHeight,
+      lastX: e.clientX,
+      lastY: e.clientY,
+      overflowX: overflow.x,
+      overflowY: overflow.y,
     };
     setIsDragging(true);
   };
@@ -1147,12 +1160,16 @@ const ScoreImageModal = ({
   const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const d = dragRef.current;
     if (!d) return;
-    // Full-width drag → 100% crop range, scaled by zoom for finer control at high zoom
-    const sensitivity = 100 / cropZoom;
-    const dx = ((e.clientX - d.startX) / d.containerW) * sensitivity;
-    const dy = ((e.clientY - d.startY) / d.containerH) * sensitivity;
-    setCropX(Math.min(100, Math.max(0, d.startCropX - dx)));
-    setCropY(Math.min(100, Math.max(0, d.startCropY - dy)));
+    const moveX = e.clientX - d.lastX;
+    const moveY = e.clientY - d.lastY;
+    d.lastX = e.clientX;
+    d.lastY = e.clientY;
+    // The image follows the pointer pixel for pixel. Each move builds on the last one rather
+    // than the drag's start, so pushing past an edge and back moves the image right away.
+    const pan = (crop: number, move: number, overflow: number) =>
+      overflow > 0 ? Math.min(100, Math.max(0, crop - (move / overflow) * 100)) : crop;
+    setCropX((crop) => pan(crop, moveX, d.overflowX));
+    setCropY((crop) => pan(crop, moveY, d.overflowY));
   };
 
   const handlePointerUp = () => {
@@ -1772,9 +1789,11 @@ const ScoreImageModal = ({
     <>
       <Modal
         open={open}
+        // The game goes on its own line under "Generate Score Card:" (see .modal in the styles).
         title={
-          titleGameLabel ? `Generate Score Card: ${titleGameLabel}` : 'Generate Score Card'
+          titleGameLabel ? `Generate Score Card:\n${titleGameLabel}` : 'Generate Score Card'
         }
+        className={styles.modal}
         onClose={onClose}
         size="lg"
         disableBackdropClose={isStandaloneForm}

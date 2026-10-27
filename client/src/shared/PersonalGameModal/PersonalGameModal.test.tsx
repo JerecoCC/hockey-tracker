@@ -289,9 +289,25 @@ describe('PersonalGameScoreModal', () => {
     id: 'personal-1',
     is_personal: true,
     status: 'scheduled',
-    away_team: { id: 'team-ott', code: 'OTT' },
-    home_team: { id: 'team-mtl', code: 'MTL' },
+    away_team: { id: 'team-ott', code: 'OTT', name: 'Ottawa Charge' },
+    home_team: { id: 'team-mtl', code: 'MTL', name: 'Montreal Victoire' },
+    scheduled_at: '2026-10-26T00:00:00.000Z',
   } as unknown as GameRecord;
+
+  it('names the game in the title and the teams in full on the score fields', () => {
+    render(
+      <PersonalGameScoreModal
+        game={unscoredGame}
+        onClose={jest.fn()}
+      />,
+    );
+
+    // The title breaks after the colon; text matching reads that break as a space.
+    expect(screen.getByText('Mark as Watched: OTT @ MTL - Oct 26, 2026')).toBeInTheDocument();
+    expect(screen.getByLabelText(/Ottawa Charge Score/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Montreal Victoire Score/)).toBeInTheDocument();
+    expect(screen.queryByText(/to mark it as watched/)).not.toBeInTheDocument();
+  });
 
   it('records the score when a personal game is marked watched', async () => {
     mockRecordScore.mockResolvedValue({ id: 'personal-1' });
@@ -303,8 +319,8 @@ describe('PersonalGameScoreModal', () => {
       />,
     );
 
-    change('OTT Score', '2');
-    change('MTL Score', '3');
+    change('Ottawa Charge Score', '2');
+    change('Montreal Victoire Score', '3');
     change('Result', 'shootout');
     fireEvent.submit(document.getElementById('personal-game-score-form')!);
 
@@ -326,7 +342,7 @@ describe('PersonalGameScoreModal', () => {
       />,
     );
 
-    change('OTT Score', '2');
+    change('Ottawa Charge Score', '2');
     fireEvent.submit(document.getElementById('personal-game-score-form')!);
 
     expect(await screen.findByText('Score is required')).toBeInTheDocument();

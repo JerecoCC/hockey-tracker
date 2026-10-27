@@ -15,3 +15,12 @@ export const GOOGLE_CALENDAR_COLORS: { id: number; name: string; hex: string }[]
 
 export const getGoogleCalendarColor = (id: number | null | undefined) =>
   GOOGLE_CALENDAR_COLORS.find((color) => color.id === id) ?? null;
+
+/**
+ * The color a user's game cards are tinted with: the league's Google Calendar color, so cards
+ * match their synced events, falling back to the league's primary color.
+ */
+export const getLeagueCalendarColor = (game: {
+  league_calendar_color_id?: number | null;
+  league_primary_color?: string | null;
+}) => getGoogleCalendarColor(game.league_calendar_color_id)?.hex ?? game.league_primary_color;
