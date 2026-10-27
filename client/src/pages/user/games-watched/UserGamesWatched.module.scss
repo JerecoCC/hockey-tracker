@@ -67,41 +67,6 @@
 }
 
 // Search, then the league and season selects, wrapping as space runs out.
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: $space-sm;
-  margin-bottom: $space-md;
-}
-
-.search {
-  flex: 1 1 14rem;
-  min-width: 0;
-}
-
-.filterSelect {
-  flex: 0 1 12rem;
-  min-width: 9rem;
-}
-
-// The table sorts from its headers; only the phone list needs this select.
-.mobileSort {
-  display: none;
-}
-
-.visuallyHidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
 @media (max-width: $screen-mobile-max) {
   .sectionTitle {
     display: none;
@@ -122,21 +87,6 @@
   }
 
   .mobileListView {
-    display: block;
-  }
-
-  .filters {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .search,
-  .filterSelect {
-    flex: 0 0 auto;
-    width: 100%;
-  }
-
-  .mobileSort {
     display: block;
   }
 }

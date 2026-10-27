@@ -188,7 +188,7 @@ describe('UserGamesWatched', () => {
     renderWatchedPage();
 
     expect(screen.getByRole('heading', { name: 'Games Watched' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'All' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'All Years' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: '2026' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: '2025' })).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Team' })).toBeInTheDocument();

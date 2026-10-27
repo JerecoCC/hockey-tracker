@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -6,14 +6,16 @@ import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip
 import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import SearchInput from '@jerecocc/tracker-ui/components/SearchField/SearchInput';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
-import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
+import { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
 import Table, { type Column } from '@jerecocc/tracker-ui/components/Table/Table';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import type { GameRecord } from '@/hooks/useGames';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
+import FilterSelect from '@/shared/FilterSelect/FilterSelect';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
-import YearFilter from '@/shared/YearFilter/YearFilter';
+import useResponsiveFilters from '@/shared/ResponsiveFilters/useResponsiveFilters';
+import { ScheduleFilterSlot } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
 import {
   getWatchedLeagues,
   getWatchedSeasons,
@@ -55,40 +57,6 @@ const MOBILE_SORT_OPTIONS: SelectOption[] = [
   { value: 'wins', label: 'Most wins' },
   { value: 'team', label: 'Team name' },
 ];
-
-// A filter select labelled for screen readers; its value shows what it filters.
-const FilterSelect = ({
-  label,
-  className,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  className?: string;
-  value: string;
-  options: SelectOption[];
-  onChange: (value: string) => void;
-}) => {
-  const labelId = useId();
-  return (
-    <div className={[styles.filterSelect, className].filter(Boolean).join(' ')}>
-      <span
-        id={labelId}
-        className={styles.visuallyHidden}
-      >
-        {label}
-      </span>
-      <Select
-        value={value}
-        options={options}
-        onChange={onChange}
-        ariaLabelledBy={labelId}
-        width="full"
-      />
-    </div>
-  );
-};
 
 const formatRecord = ({ wins, losses, otSoLosses }: TeamWatchSummary['record']) =>
   `${wins}-${losses}-${otSoLosses}`;
@@ -275,7 +243,7 @@ const UserGamesWatched = () => {
   const years = useMemo(() => getWatchedYears(watchedGames), [watchedGames]);
   const yearOptions = useMemo<SelectOption[]>(
     () => [
-      { value: ALL, label: 'All' },
+      { value: ALL, label: 'All Years' },
       ...years.map((year) => ({ value: year, label: year })),
     ],
     [years],
@@ -351,57 +319,61 @@ const UserGamesWatched = () => {
       }),
     );
 
+  // Search and every filter share one row on desktop, like the games page's filters; phones
+  // also sort the team list from here, since it has no column headers.
+  const { toggle: filtersToggle, filters } = useResponsiveFilters((screenSize) => (
+    <>
+      <ScheduleFilterSlot wide>
+        <SearchInput
+          placeholder="Search teams..."
+          aria-label="Search teams"
+          value={search}
+          onChange={setSearch}
+        />
+      </ScheduleFilterSlot>
+      <FilterSelect
+        label="Year"
+        value={selectedYear}
+        options={yearOptions}
+        onChange={setSelectedYear}
+      />
+      <FilterSelect
+        label="League"
+        value={leagueId}
+        options={leagueOptions}
+        onChange={setLeagueId}
+      />
+      <FilterSelect
+        label="Season"
+        value={seasonId}
+        options={seasonOptions}
+        onChange={setSeasonId}
+      />
+      <FilterSelect
+        label="Game type"
+        value={gameType}
+        options={GAME_TYPE_OPTIONS}
+        onChange={setGameType}
+      />
+      {screenSize === 'mobile' && (
+        <FilterSelect
+          label="Sort teams"
+          value={sort.key}
+          options={MOBILE_SORT_OPTIONS}
+          onChange={(key) => handleSort(key, DEFAULT_SORT_DIRECTION[key as TeamWatchSortKey])}
+        />
+      )}
+    </>
+  ));
+
   return (
     <div className={styles.page}>
       <Section
         className={styles.gamesWatchedSection}
         title={<span className={styles.sectionTitle}>Games Watched</span>}
-        action={
-          <YearFilter
-            value={selectedYear}
-            options={yearOptions}
-            onChange={setSelectedYear}
-          />
-        }
+        action={filtersToggle}
       >
-        <div
-          className={styles.filters}
-          role="group"
-          aria-label="Filter watched teams"
-        >
-          <SearchInput
-            className={styles.search}
-            placeholder="Search teams..."
-            aria-label="Search teams"
-            value={search}
-            onChange={setSearch}
-          />
-          <FilterSelect
-            label="League"
-            value={leagueId}
-            options={leagueOptions}
-            onChange={setLeagueId}
-          />
-          <FilterSelect
-            label="Season"
-            value={seasonId}
-            options={seasonOptions}
-            onChange={setSeasonId}
-          />
-          <FilterSelect
-            label="Game type"
-            value={gameType}
-            options={GAME_TYPE_OPTIONS}
-            onChange={setGameType}
-          />
-          <FilterSelect
-            label="Sort teams"
-            className={styles.mobileSort}
-            value={sort.key}
-            options={MOBILE_SORT_OPTIONS}
-            onChange={(key) => handleSort(key, DEFAULT_SORT_DIRECTION[key as TeamWatchSortKey])}
-          />
-        </div>
+        {filters}
         <div className={styles.tableView}>
           <WatchedTeamsTable
             summaries={summaries}
