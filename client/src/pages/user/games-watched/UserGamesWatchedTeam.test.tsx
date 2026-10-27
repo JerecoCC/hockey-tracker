@@ -13,9 +13,9 @@ jest.mock('axios');
 jest.mock('@/hooks/useTeams');
 jest.mock('@jerecocc/tracker-ui/components/Select/Select', () => ({
   __esModule: true,
-  default: ({ value, options, onChange }: any) => (
+  default: ({ value, options, onChange, ariaLabelledBy }: any) => (
     <select
-      aria-label="Year"
+      aria-labelledby={ariaLabelledBy}
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
@@ -221,23 +221,16 @@ describe('UserGamesWatchedTeam', () => {
     expect(screen.getByTestId('team-hero-right-strip')).toBeInTheDocument();
     expect(screen.getByTestId('team-hero-primary-fill')).toBeInTheDocument();
     expect(screen.getByTestId('team-hero-right-primary-fill')).toBeInTheDocument();
-    expect(screen.getByLabelText('Toronto Maple Leafs watched games summary')).toHaveTextContent(
+    // The hero shows the record in place of the watched count, explained by a tooltip.
+    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('2-0-0');
+    expect(screen.getByLabelText('What the record shows')).toBeInTheDocument();
+    expect(screen.queryByText('W-L-OTL')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Toronto Maple Leafs watched games summary')).not.toHaveTextContent(
       '2x',
     );
-    expect(screen.getByLabelText('Toronto Maple Leafs watched games summary')).toHaveTextContent(
-      '2-0-0',
-    );
-    const heroStats = screen.getByTestId('team-hero-stats');
-    expect(heroStats).toHaveTextContent('2x2-0-0');
-    expect(within(heroStats).getByTestId('team-hero-stats-divider')).toHaveAttribute(
-      'aria-hidden',
-      'true',
-    );
-    expect(screen.queryByText('W-L-OTL')).not.toBeInTheDocument();
     expect(screen.queryByText('Seen')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('2 watched games shown')).toBeInTheDocument();
-    expect(screen.getByLabelText('2 watched games shown')).toHaveTextContent('2');
-    expect(screen.getByRole('option', { name: 'All' })).toBeInTheDocument();
+    expect(screen.getByLabelText('2 watched games shown')).toHaveTextContent('2Games');
+    expect(screen.getByRole('option', { name: 'All Years' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: '2026' })).toBeInTheDocument();
 
     const gameRows = screen.getAllByRole('listitem');
@@ -260,12 +253,8 @@ describe('UserGamesWatchedTeam', () => {
 
     expect(screen.getByRole('heading', { name: 'Blue Jackets' })).toBeInTheDocument();
     expect(screen.getByLabelText('Blue Jackets watched games summary')).toBeInTheDocument();
-    expect(screen.getByLabelText('Blue Jackets watched games summary')).toHaveTextContent('0x');
-    expect(screen.getByLabelText('Blue Jackets watched games summary')).toHaveTextContent(
-      '0-0-0',
-    );
-    expect(screen.getByLabelText('0 watched games shown')).toBeInTheDocument();
-    expect(screen.getByLabelText('0 watched games shown')).toHaveTextContent('0');
+    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('0-0-0');
+    expect(screen.getByLabelText('0 watched games shown')).toHaveTextContent('0Games');
     expect(screen.getByText('No watched games.')).toBeInTheDocument();
     expect(screen.queryByText('Watched team not found.')).not.toBeInTheDocument();
   });
@@ -321,16 +310,71 @@ describe('UserGamesWatchedTeam', () => {
 
     fireEvent.change(screen.getByLabelText('Year'), { target: { value: '2025' } });
 
-    expect(screen.getByLabelText('1 watched game shown')).toBeInTheDocument();
-    expect(screen.getByLabelText('1 watched game shown')).toHaveTextContent('1');
-    expect(screen.getByLabelText('Toronto Maple Leafs watched games summary')).toHaveTextContent(
-      '2x',
-    );
+    expect(screen.getByLabelText('1 watched game shown')).toHaveTextContent('1Game');
+    // The record follows the filters: just the 2025 win.
+    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('1-0-0');
     const gameRows = screen.getAllByRole('listitem');
     expect(gameRows).toHaveLength(1);
     expect(within(gameRows[0]).getByText('Dec 31, 2025')).toBeInTheDocument();
     expect(within(gameRows[0]).getByText('Watched on Jan 5, 2026')).toBeInTheDocument();
     expect(screen.queryByText('Jan 2, 2026 â€¢ 7:00 PM')).not.toBeInTheDocument();
+  });
+
+  it('filters team games by season, and the record with them', () => {
+    mockUseQuery.mockReturnValue({
+      isLoading: false,
+      data: [
+        makeWatchedGame('season-new-win', '2026-03-01T00:00:00Z', teamHome, teamOther, {
+          season_id: 'season-2026',
+          season_name: '2025-26',
+        }),
+        makeWatchedGame('season-old-loss', '2025-03-01T00:00:00Z', teamHome, teamAway, {
+          season_id: 'season-2025',
+          season_name: '2024-25',
+          home_score: 1,
+          away_score: 4,
+        }),
+      ],
+    });
+
+    renderTeamPage();
+
+    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('1-1-0');
+    expect(screen.getByRole('option', { name: 'All Seasons' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Season'), { target: { value: 'season-2025' } });
+
+    expect(screen.getByLabelText('1 watched game shown')).toBeInTheDocument();
+    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('0-1-0');
+    expect(within(screen.getAllByRole('listitem')[0]).getByText('Mar 1, 2025 • 7:00 PM'))
+      .toBeInTheDocument();
+  });
+
+  it('filters team games to home or away games', () => {
+    mockUseQuery.mockReturnValue({
+      isLoading: false,
+      data: [
+        makeWatchedGame('home-win', '2026-03-02T00:00:00Z', teamHome, teamOther),
+        makeWatchedGame('away-ot-loss', '2026-03-01T00:00:00Z', teamAway, teamHome, {
+          overtime_periods: 1,
+        }),
+      ],
+    });
+
+    renderTeamPage();
+
+    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('1-0-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Away' }));
+    expect(screen.getByLabelText('1 watched game shown')).toBeInTheDocument();
+    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('0-0-1');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Home' }));
+    expect(screen.getByLabelText('1 watched game shown')).toBeInTheDocument();
+    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('1-0-0');
+
+    fireEvent.click(screen.getByRole('button', { name: 'All' }));
+    expect(screen.getByLabelText('2 watched games shown')).toBeInTheDocument();
   });
 
   it('shows dashboard breadcrumbs back through games watched', () => {

@@ -183,8 +183,7 @@ $hero-mobile-value-size: 1.25rem;
   }
 }
 
-.heroPlace,
-.heroTeamMeta {
+.heroPlace {
   color: var(--app-text-muted, #{$text-dim});
   font-size: $font-xs;
   line-height: 1.2;
@@ -200,23 +199,23 @@ $hero-mobile-value-size: 1.25rem;
   transition: color $transition-layout ease;
 }
 
-.heroSeen {
+// The team's record over the games shown, with an info tooltip explaining it.
+.heroRecord {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: $space-xs;
+  gap: $space-sm;
   flex-shrink: 0;
 }
 
-.heroSeenValue {
+.heroRecordValue {
   color: var(--app-text-strong, #{$text-bright});
   font-size: 2.75rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   line-height: 1;
-  min-width: 2rem;
   text-align: center;
+  white-space: nowrap;
   transition: color $transition-layout ease;
 
   @media (max-width: $screen-mobile-max) {
@@ -228,51 +227,6 @@ $hero-mobile-value-size: 1.25rem;
   }
 }
 
-.heroSeenDesktop {
-  @media (max-width: $screen-phone-max) {
-    display: none;
-  }
-}
-
-.heroStats {
-  display: none;
-
-  @media (max-width: $screen-phone-max) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $space-md;
-  }
-}
-
-.heroStatsDivider {
-  display: none;
-
-  @media (max-width: $screen-phone-max) {
-    --divider-color: var(--app-text-muted, #{$text-dim});
-    --divider-vertical-margin-block: 0;
-
-    display: block;
-    height: $hero-mobile-value-size;
-  }
-}
-
-.heroTeamMeta {
-  @media (max-width: $screen-phone-max) {
-    color: var(--app-text-strong, #{$text-bright});
-    font-size: $hero-mobile-value-size;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-  }
-}
-
-.heroTeamMetaDesktop {
-  @media (max-width: $screen-phone-max) {
-    display: none;
-  }
-}
-
 @media (max-width: $screen-phone-max) {
   .heroName {
     font-size: $hero-mobile-value-size;
@@ -281,15 +235,10 @@ $hero-mobile-value-size: 1.25rem;
 
 .heroCardStuck {
   .heroPlace,
-  .heroTeamMeta,
   .heroName,
-  .heroSeenValue {
+  .heroRecordValue {
     color: var(--team-text);
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
-  }
-
-  .heroStatsDivider {
-    --divider-color: var(--team-text);
   }
 }
 

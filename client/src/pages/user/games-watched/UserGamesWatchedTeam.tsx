@@ -2,11 +2,12 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import Badge from '@jerecocc/tracker-ui/components/Badge/Badge';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
-import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
+import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
+import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import GameCard from '@/shared/GameCard/GameCard';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import StickyHeroCard from '@jerecocc/tracker-ui/components/StickyHeroCard/StickyHeroCard';
@@ -16,10 +17,13 @@ import type { GameRecord, GameStatus } from '@/hooks/useGames';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import { buildUserGameDetailsPath, userWatchedTeamRouteSlug } from '@/lib/routeSlugs';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
+import FilterSelect from '@/shared/FilterSelect/FilterSelect';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
-import YearFilter from '@/shared/YearFilter/YearFilter';
+import useResponsiveFilters from '@/shared/ResponsiveFilters/useResponsiveFilters';
+import { ScheduleFilterSlot } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
 import {
   getScheduledGameYear,
+  getWatchedSeasons,
   getWatchedTeamSummaries,
   getWatchedYears,
   type TeamWatchSummary,
@@ -30,7 +34,17 @@ import styles from './UserGamesWatchedTeam.module.scss';
 import { API, authHeaders } from '@/lib/apiClient';
 import { SCREEN_BREAKPOINTS } from '@/lib/screenSize';
 const ALL_YEARS = 'all';
+const ALL_SEASONS = 'all';
+const RECORD_TOOLTIP = 'Wins-Losses-OT Losses';
 const HERO_STICKY_TOP = 52;
+
+type TeamSide = 'all' | 'home' | 'away';
+
+const SIDE_OPTIONS: { value: TeamSide; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'home', label: 'Home' },
+  { value: 'away', label: 'Away' },
+];
 
 const getScrollContainer = (element: HTMLElement) => {
   let parent = element.parentElement;
@@ -172,8 +186,14 @@ const getLegacyTeamSlug = (team: WatchedTeam | TeamRecord) =>
 const teamMatchesSlug = (team: WatchedTeam | TeamRecord, teamSlug: string) =>
   team.id === teamSlug || getTeamSlug(team) === teamSlug || getLegacyTeamSlug(team) === teamSlug;
 
-const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
-  const { team, count, record } = summary;
+// The hero shows the team's record over the games currently shown, so it follows the filters.
+const TeamWatchedHero = ({
+  team,
+  record,
+}: {
+  team: WatchedTeam;
+  record: TeamWatchSummary['record'];
+}) => {
   const teamName = getTeamName(team);
   const heroCardRef = useRef<HTMLDivElement>(null);
   const [isTabletStuck, setIsTabletStuck] = useState(false);
@@ -264,27 +284,18 @@ const TeamWatchedHero = ({ summary }: { summary: TeamWatchSummary }) => {
             <div className={styles.heroText}>
               {team.place_name && <span className={styles.heroPlace}>{team.place_name}</span>}
               <h2 className={styles.heroName}>{teamName}</h2>
-              <span className={`${styles.heroTeamMeta} ${styles.heroTeamMetaDesktop}`}>
-                {formatRecord(record)}
-              </span>
             </div>
-          </div>
-          <div className={`${styles.heroSeen} ${styles.heroSeenDesktop}`}>
-            <span className={styles.heroSeenValue}>{count}x</span>
           </div>
           <div
-            className={styles.heroStats}
-            data-testid="team-hero-stats"
+            className={styles.heroRecord}
+            data-testid="team-hero-record"
           >
-            <div className={styles.heroSeen}>
-              <span className={styles.heroSeenValue}>{count}x</span>
-            </div>
-            <Divider
-              orientation="vertical"
-              className={styles.heroStatsDivider}
-              data-testid="team-hero-stats-divider"
+            <span className={styles.heroRecordValue}>{formatRecord(record)}</span>
+            <InfoTooltip
+              text={RECORD_TOOLTIP}
+              ariaLabel="What the record shows"
+              size="0.85rem"
             />
-            <span className={styles.heroTeamMeta}>{formatRecord(record)}</span>
           </div>
         </div>
       </section>
@@ -320,16 +331,12 @@ const UserGamesWatchedTeamSkeleton = () => (
                 width={220}
                 height={28}
               />
-              <Skeleton
-                variant="subtitle"
-                width={64}
-              />
             </div>
           </div>
-          <div className={styles.heroSeen}>
+          <div className={styles.heroRecord}>
             <Skeleton
               variant="title"
-              width={76}
+              width={120}
               height={44}
             />
           </div>
@@ -375,6 +382,8 @@ const UserGamesWatchedTeamSkeleton = () => (
 const UserGamesWatchedTeam = () => {
   const { teamSlug = '' } = useParams<{ teamSlug?: string }>();
   const [selectedYear, setSelectedYear] = useState(ALL_YEARS);
+  const [seasonId, setSeasonId] = useState(ALL_SEASONS);
+  const [side, setSide] = useState<TeamSide>('all');
   const { teams, loading: teamsLoading } = useTeams();
 
   const { data: watchedGames = [], isLoading: watchedGamesLoading } = useQuery<GameRecord[]>({
@@ -416,22 +425,75 @@ const UserGamesWatchedTeam = () => {
   const years = useMemo(() => getWatchedYears(allTeamGames), [allTeamGames]);
   const yearOptions = useMemo<SelectOption[]>(
     () => [
-      { value: ALL_YEARS, label: 'All' },
+      { value: ALL_YEARS, label: 'All Years' },
       ...years.map((year) => ({ value: year, label: year })),
     ],
     [years],
   );
 
-  const teamGames = useMemo(
-    () =>
-      selectedYear === ALL_YEARS
-        ? allTeamGames
-        : allTeamGames.filter((game) => getScheduledGameYear(game) === selectedYear),
-    [allTeamGames, selectedYear],
-  );
+  // Seasons the team was watched in, named with their league when it played in more than one.
+  const seasons = useMemo(() => getWatchedSeasons(allTeamGames), [allTeamGames]);
+  const seasonOptions = useMemo<SelectOption[]>(() => {
+    const multipleLeagues = new Set(seasons.map((season) => season.leagueId)).size > 1;
+    return [
+      { value: ALL_SEASONS, label: 'All Seasons' },
+      ...seasons.map((season) => ({
+        value: season.id,
+        label: multipleLeagues ? `${season.leagueCode} ${season.name}` : season.name,
+      })),
+    ];
+  }, [seasons]);
+
+  const teamGames = useMemo(() => {
+    const teamId = allTeamSummary?.team.id;
+    return allTeamGames.filter(
+      (game) =>
+        (selectedYear === ALL_YEARS || getScheduledGameYear(game) === selectedYear) &&
+        (seasonId === ALL_SEASONS || game.season_id === seasonId) &&
+        (side === 'all' || (side === 'home') === (game.home_team.id === teamId)),
+    );
+  }, [allTeamGames, allTeamSummary, seasonId, selectedYear, side]);
+
+  // The record over the games shown, so it matches the count and follows the filters.
+  const shownRecord = useMemo(() => {
+    const teamId = allTeamSummary?.team.id;
+    return (
+      getWatchedTeamSummaries(teamGames).find((summary) => summary.team.id === teamId)?.record ?? {
+        wins: 0,
+        losses: 0,
+        otSoLosses: 0,
+      }
+    );
+  }, [allTeamSummary, teamGames]);
 
   const teamName = allTeamSummary ? getTeamName(allTeamSummary.team) : 'Team';
   const isLoading = watchedGamesLoading || teamsLoading;
+
+  // Year, season and home/away share one row on desktop, like the games page's filters.
+  const { toggle: filtersToggle, filters } = useResponsiveFilters((screenSize) => (
+    <>
+      <FilterSelect
+        label="Year"
+        value={selectedYear}
+        options={yearOptions}
+        onChange={setSelectedYear}
+      />
+      <FilterSelect
+        label="Season"
+        value={seasonId}
+        options={seasonOptions}
+        onChange={setSeasonId}
+      />
+      <ScheduleFilterSlot fixed={screenSize === 'desktop'}>
+        <SegmentedControl
+          value={side}
+          onChange={(value) => setSide(value as TeamSide)}
+          options={SIDE_OPTIONS}
+          fullWidth={screenSize !== 'desktop'}
+        />
+      </ScheduleFilterSlot>
+    </>
+  ));
 
   usePageBreadcrumbs(
     isLoading
@@ -471,26 +533,28 @@ const UserGamesWatchedTeam = () => {
 
   return (
     <div className={styles.page}>
-      <TeamWatchedHero summary={allTeamSummary} />
+      <TeamWatchedHero
+        team={allTeamSummary.team}
+        record={shownRecord}
+      />
 
       <Section
         title={<span className={styles.sectionTitle}>Team Games Watched</span>}
         titleAccessory={
-          <Badge
+          <MetricTag
             value={teamGames.length}
+            label={teamGames.length === 1 ? 'Game' : 'Games'}
+            position="postfix"
             aria-label={`${teamGames.length} watched ${teamGames.length === 1 ? 'game' : 'games'} shown`}
           />
         }
-        action={
-          <YearFilter
-            value={selectedYear}
-            options={yearOptions}
-            onChange={setSelectedYear}
-          />
-        }
+        action={filtersToggle}
       >
+        {filters}
         {teamGames.length === 0 ? (
-          <EmptyMessage>No watched games.</EmptyMessage>
+          <EmptyMessage>
+            {allTeamGames.length > 0 ? 'No watched games match these filters.' : 'No watched games.'}
+          </EmptyMessage>
         ) : (
           <>
             <ResponsiveList className={styles.gameListItems}>
