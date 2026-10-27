@@ -62,6 +62,25 @@ describe('game schedule time utilities', () => {
     expect([morning, evening].sort(sortUserDayGames)).toEqual([evening, morning]);
   });
 
+  it('orders tied games the same way whatever order they arrive in', () => {
+    // Same status and start, like personal games bulk-added for one time slot.
+    const tied = (id: string, away: string) => ({
+      id,
+      league_code: 'MMGHL',
+      away_team: { code: away },
+      home_team: { code: 'MON' },
+      scheduled_at: '2026-10-27T00:00:00.000Z',
+      scheduled_time: '11:00',
+      scheduled_for: '2026-10-28',
+    });
+    const srg = tied('b', 'SRG');
+    const str = tied('a', 'STR');
+    const nhl = { ...tied('c', 'AAA'), league_code: 'NHL' };
+
+    expect([str, nhl, srg].sort(sortUserDayGames)).toEqual([srg, str, nhl]);
+    expect([nhl, srg, str].sort(sortUserDayGames)).toEqual([srg, str, nhl]);
+  });
+
   it('only permits watch dates after the original game date', () => {
     const game = { scheduled_at: '2026-07-18', scheduled_time: null };
 

@@ -6,6 +6,10 @@ export interface ScheduledGame {
 }
 
 export interface UserScheduledGame extends ScheduledGame {
+  id?: string;
+  league_code?: string | null;
+  away_team?: { code?: string | null } | null;
+  home_team?: { code?: string | null } | null;
   scheduled_for?: string | null;
   watched_by_user?: boolean;
   skipped_by_user?: boolean;
@@ -155,11 +159,26 @@ export const sortUserDayGames = (a: UserScheduledGame, b: UserScheduledGame) => 
   // so the time of day alone can't order them.
   const aStart = a.scheduled_time ? getScheduledInstant(a.scheduled_at, a.scheduled_time) : null;
   const bStart = b.scheduled_time ? getScheduledInstant(b.scheduled_at, b.scheduled_time) : null;
-  if (aStart && bStart) return aStart.getTime() - bStart.getTime();
-  if (!a.scheduled_time && !b.scheduled_time) return 0;
-  if (!a.scheduled_time) return 1;
-  if (!b.scheduled_time) return -1;
-  return a.scheduled_time.localeCompare(b.scheduled_time);
+  const startDiff =
+    aStart && bStart
+      ? aStart.getTime() - bStart.getTime()
+      : !a.scheduled_time && !b.scheduled_time
+        ? 0
+        : !a.scheduled_time
+          ? 1
+          : !b.scheduled_time
+            ? -1
+            : a.scheduled_time.localeCompare(b.scheduled_time);
+  if (startDiff !== 0) return startDiff;
+  // Games that still tie (same status and start) are ordered by league and matchup, then id.
+  // Each view loads its games through a different query, so leaving ties in arrival order let
+  // the week view, calendar and dashboard show the same day's games in different orders.
+  return (
+    (a.league_code ?? '').localeCompare(b.league_code ?? '') ||
+    (a.away_team?.code ?? '').localeCompare(b.away_team?.code ?? '') ||
+    (a.home_team?.code ?? '').localeCompare(b.home_team?.code ?? '') ||
+    (a.id ?? '').localeCompare(b.id ?? '')
+  );
 };
 
 export const formatGameTime = (
