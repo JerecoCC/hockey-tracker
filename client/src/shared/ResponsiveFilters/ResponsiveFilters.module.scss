@@ -1,0 +1,42 @@
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
+
+// Desktop: the main section beside its Filters section, like the game details summary
+// beside its linescore.
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+  gap: $page-section-gap;
+  align-items: start;
+}
+
+.main {
+  min-width: 0;
+}
+
+.panel {
+  min-width: 0;
+}
+
+// The filters stacked full-width, in the Filters section or the Filters sheet.
+.stack {
+  --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
+
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+
+  // No flexing in the column: a field's flex-basis (search sets flex: 1 for rows) would
+  // override its height.
+  > * {
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+// Tablets and phones: the filter button, at the right of the main section's header.
+.toggle {
+  display: inline-flex;
+  margin-left: auto;
+}
