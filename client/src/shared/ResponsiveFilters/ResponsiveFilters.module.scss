@@ -1,49 +1,42 @@
+@use 'styles/colors' as *;
 @use 'styles/mixins' as *;
 
-@use 'styles/colors' as *;
-
-// Desktop: the filters share one row under the section header, above a divider.
-.row {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-  margin-bottom: $space-md;
+// Desktop: the main section beside its Filters section, like the game details summary
+// beside its linescore.
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+  gap: $page-section-gap;
+  align-items: start;
 }
 
-// Like the games page's filter row: fields share the width, while the wide slot (search)
-// grows most and fixed slots (segmented controls) keep their size.
-.rowControls {
+.main {
+  min-width: 0;
+}
+
+.panel {
+  min-width: 0;
+}
+
+// The filters stacked full-width, in the Filters section or the Filters sheet.
+.stack {
   --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: $space-md;
 
-  > :not([class*='filterSlot']) {
-    flex: 1 1 130px;
+  // No flexing in the column: a field's flex-basis (search sets flex: 1 for rows) would
+  // override its height.
+  > * {
+    flex: 0 0 auto;
+    width: 100%;
     min-width: 0;
   }
 }
 
-// Tablets and phones: the filters stack full-width in the Filters sheet, like the games page.
-.drawerFilters.drawerFilters {
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: $space-md;
-  max-height: none;
-  margin-top: 0;
-  overflow: visible;
-  opacity: 1;
-
-  > :first-child {
-    display: none;
-  }
-
-  > * {
-    width: 100%;
-    max-width: none;
-    flex: 0 0 auto !important;
-    align-self: stretch;
-  }
+// Tablets and phones: the filter button, at the right of the main section's header.
+.toggle {
+  display: inline-flex;
+  margin-left: auto;
 }

@@ -20,7 +20,6 @@ import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import FilterSelect from '@/shared/FilterSelect/FilterSelect';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import useResponsiveFilters from '@/shared/ResponsiveFilters/useResponsiveFilters';
-import { ScheduleFilterSlot } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
 import {
   getScheduledGameYear,
   getWatchedSeasons,
@@ -469,8 +468,8 @@ const UserGamesWatchedTeam = () => {
   const teamName = allTeamSummary ? getTeamName(allTeamSummary.team) : 'Team';
   const isLoading = watchedGamesLoading || teamsLoading;
 
-  // Year, season and home/away share one row on desktop, like the games page's filters.
-  const { toggle: filtersToggle, filters } = useResponsiveFilters((screenSize) => (
+  // Year, season and home/away sit in a Filters section beside the games on desktop.
+  const { toggle: filtersToggle, layout } = useResponsiveFilters(() => (
     <>
       <FilterSelect
         label="Year"
@@ -484,14 +483,12 @@ const UserGamesWatchedTeam = () => {
         options={seasonOptions}
         onChange={setSeasonId}
       />
-      <ScheduleFilterSlot fixed={screenSize === 'desktop'}>
-        <SegmentedControl
-          value={side}
-          onChange={(value) => setSide(value as TeamSide)}
-          options={SIDE_OPTIONS}
-          fullWidth={screenSize !== 'desktop'}
-        />
-      </ScheduleFilterSlot>
+      <SegmentedControl
+        value={side}
+        onChange={(value) => setSide(value as TeamSide)}
+        options={SIDE_OPTIONS}
+        fullWidth
+      />
     </>
   ));
 
@@ -538,64 +535,67 @@ const UserGamesWatchedTeam = () => {
         record={shownRecord}
       />
 
-      <Section
-        title={<span className={styles.sectionTitle}>Team Games Watched</span>}
-        titleAccessory={
-          <MetricTag
-            value={teamGames.length}
-            label={teamGames.length === 1 ? 'Game' : 'Games'}
-            position="postfix"
-            aria-label={`${teamGames.length} watched ${teamGames.length === 1 ? 'game' : 'games'} shown`}
-          />
-        }
-        action={filtersToggle}
-      >
-        {filters}
-        {teamGames.length === 0 ? (
-          <EmptyMessage>
-            {allTeamGames.length > 0 ? 'No watched games match these filters.' : 'No watched games.'}
-          </EmptyMessage>
-        ) : (
-          <>
-            <ResponsiveList className={styles.gameListItems}>
-              {teamGames.map((game) => {
-                const showScore = game.status === 'final' || game.status === 'in_progress';
+      {layout(
+        <Section
+          title={<span className={styles.sectionTitle}>Team Games Watched</span>}
+          titleAccessory={
+            <MetricTag
+              value={teamGames.length}
+              label={teamGames.length === 1 ? 'Game' : 'Games'}
+              position="postfix"
+              aria-label={`${teamGames.length} watched ${teamGames.length === 1 ? 'game' : 'games'} shown`}
+            />
+          }
+          action={filtersToggle}
+        >
+          {teamGames.length === 0 ? (
+            <EmptyMessage>
+              {allTeamGames.length > 0
+                ? 'No watched games match these filters.'
+                : 'No watched games.'}
+            </EmptyMessage>
+          ) : (
+            <>
+              <ResponsiveList className={styles.gameListItems}>
+                {teamGames.map((game) => {
+                  const showScore = game.status === 'final' || game.status === 'in_progress';
 
-                return (
+                  return (
+                    <GameCard
+                      key={game.id}
+                      variant="list-item"
+                      game={game}
+                      tzPref="local"
+                      href={getGamePath(game)}
+                      showScore={showScore}
+                      statusLabel={formatStatusLabel(game)}
+                      originalDateLabel={formatDate(getGameDateValue(game))}
+                      timeLabel={formatTime(game.scheduled_time)}
+                      supplementalMeta={formatScheduledWatchDate(game.scheduled_for)}
+                    />
+                  );
+                })}
+              </ResponsiveList>
+              <div className={styles.gameCardGrid}>
+                {teamGames.map((game) => (
                   <GameCard
                     key={game.id}
-                    variant="list-item"
+                    variant="card"
                     game={game}
                     tzPref="local"
                     href={getGamePath(game)}
-                    showScore={showScore}
-                    statusLabel={formatStatusLabel(game)}
+                    showScore={game.status === 'final' || game.status === 'in_progress'}
                     originalDateLabel={formatDate(getGameDateValue(game))}
                     timeLabel={formatTime(game.scheduled_time)}
-                    supplementalMeta={formatScheduledWatchDate(game.scheduled_for)}
+                    showWatchedBanner={false}
+                    showTypeIndicator
                   />
-                );
-              })}
-            </ResponsiveList>
-            <div className={styles.gameCardGrid}>
-              {teamGames.map((game) => (
-                <GameCard
-                  key={game.id}
-                  variant="card"
-                  game={game}
-                  tzPref="local"
-                  href={getGamePath(game)}
-                  showScore={game.status === 'final' || game.status === 'in_progress'}
-                  originalDateLabel={formatDate(getGameDateValue(game))}
-                  timeLabel={formatTime(game.scheduled_time)}
-                  showWatchedBanner={false}
-                  showTypeIndicator
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </Section>
+                ))}
+              </div>
+            </>
+          )}
+        </Section>,
+      )}
     </div>
   );
 };

@@ -15,7 +15,6 @@ import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import FilterSelect from '@/shared/FilterSelect/FilterSelect';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import useResponsiveFilters from '@/shared/ResponsiveFilters/useResponsiveFilters';
-import { ScheduleFilterSlot } from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
 import {
   getWatchedLeagues,
   getWatchedSeasons,
@@ -319,18 +318,16 @@ const UserGamesWatched = () => {
       }),
     );
 
-  // Search and every filter share one row on desktop, like the games page's filters; phones
-  // also sort the team list from here, since it has no column headers.
-  const { toggle: filtersToggle, filters } = useResponsiveFilters((screenSize) => (
+  // Search and the filters sit in a Filters section beside the teams on desktop; phones also
+  // sort the team list from here, since it has no column headers.
+  const { toggle: filtersToggle, layout } = useResponsiveFilters((screenSize) => (
     <>
-      <ScheduleFilterSlot wide>
-        <SearchInput
-          placeholder="Search teams..."
-          aria-label="Search teams"
-          value={search}
-          onChange={setSearch}
-        />
-      </ScheduleFilterSlot>
+      <SearchInput
+        placeholder="Search teams..."
+        aria-label="Search teams"
+        value={search}
+        onChange={setSearch}
+      />
       <FilterSelect
         label="Year"
         value={selectedYear}
@@ -368,32 +365,33 @@ const UserGamesWatched = () => {
 
   return (
     <div className={styles.page}>
-      <Section
-        className={styles.gamesWatchedSection}
-        title={<span className={styles.sectionTitle}>Games Watched</span>}
-        action={filtersToggle}
-      >
-        {filters}
-        <div className={styles.tableView}>
-          <WatchedTeamsTable
-            summaries={summaries}
-            loading={isLoading}
-            emptyMessage={emptyMessage}
-            sortKey={sort.key}
-            sortDirection={sort.dir}
-            onSort={handleSort}
-            onSelectTeam={openTeam}
-          />
-        </div>
-        <div className={styles.mobileListView}>
-          <WatchedTeamsList
-            summaries={summaries}
-            loading={isLoading}
-            emptyMessage={emptyMessage}
-            onSelectTeam={openTeam}
-          />
-        </div>
-      </Section>
+      {layout(
+        <Section
+          className={styles.gamesWatchedSection}
+          title={<span className={styles.sectionTitle}>Games Watched</span>}
+          action={filtersToggle}
+        >
+          <div className={styles.tableView}>
+            <WatchedTeamsTable
+              summaries={summaries}
+              loading={isLoading}
+              emptyMessage={emptyMessage}
+              sortKey={sort.key}
+              sortDirection={sort.dir}
+              onSort={handleSort}
+              onSelectTeam={openTeam}
+            />
+          </div>
+          <div className={styles.mobileListView}>
+            <WatchedTeamsList
+              summaries={summaries}
+              loading={isLoading}
+              emptyMessage={emptyMessage}
+              onSelectTeam={openTeam}
+            />
+          </div>
+        </Section>,
+      )}
     </div>
   );
 };

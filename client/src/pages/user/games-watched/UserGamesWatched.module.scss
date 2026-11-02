@@ -78,10 +78,6 @@
 }
 
 @media (max-width: $screen-phone-max) {
-  .gamesWatchedSection > div:has([data-year-filter]) {
-    margin-bottom: $space-md;
-  }
-
   .tableView {
     display: none;
   }

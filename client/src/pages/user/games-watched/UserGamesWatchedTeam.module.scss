@@ -251,7 +251,8 @@ $hero-mobile-value-size: 1.25rem;
     display: none;
   }
 
-  .page div:has(> h3 > .sectionTitle) {
+  // Only the title text hides on phones; the game count stays, left of the filter button.
+  .page h3:has(> .sectionTitle) {
     display: none;
   }
 }
