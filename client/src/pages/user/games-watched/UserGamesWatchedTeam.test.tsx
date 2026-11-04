@@ -30,6 +30,28 @@ jest.mock('@jerecocc/tracker-ui/components/Select/Select', () => ({
     </select>
   ),
 }));
+jest.mock('@jerecocc/tracker-ui/components/MultiSelect/MultiSelect', () => ({
+  __esModule: true,
+  default: ({ value, options, onChange, ariaLabelledBy }: any) => (
+    <select
+      multiple
+      aria-labelledby={ariaLabelledBy}
+      value={value}
+      onChange={(event) =>
+        onChange(Array.from(event.target.selectedOptions, (option) => option.value))
+      }
+    >
+      {options.map((option: any) => (
+        <option
+          key={option.value}
+          value={option.value}
+        >
+          {option.label}
+        </option>
+      ))}
+    </select>
+  ),
+}));
 jest.mock('@jerecocc/tracker-ui/components/TeamLogo/TeamLogo', () => ({ code, alt }: any) => (
   <span aria-label={alt}>{code}</span>
 ));
@@ -375,6 +397,37 @@ describe('UserGamesWatchedTeam', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'All' }));
     expect(screen.getByLabelText('2 watched games shown')).toBeInTheDocument();
+  });
+
+  it('filters team games by opponent, listing the teams it was watched against', () => {
+    renderTeamPage();
+
+    // Toronto played the Rangers and the Bruins; the Rangers-Bruins game isn't Toronto's.
+    const opponents = screen.getByLabelText('Opponents');
+    expect(
+      Array.from((opponents as HTMLSelectElement).options, (option) => option.textContent),
+    ).toEqual(['Boston Bruins', 'New York Rangers']);
+
+    (within(opponents).getByRole('option', { name: 'New York Rangers' }) as HTMLOptionElement)
+      .selected = true;
+    fireEvent.change(opponents);
+
+    expect(screen.getByLabelText('1 watched game shown')).toBeInTheDocument();
+    expect(within(screen.getAllByRole('listitem')[0]).getByText('Feb 10, 2026 • 7:00 PM'))
+      .toBeInTheDocument();
+  });
+
+  it('filters team games by game type', () => {
+    renderTeamPage();
+
+    const gameTypes = screen.getByLabelText('Game types');
+    (within(gameTypes).getByRole('option', { name: 'Playoffs' }) as HTMLOptionElement).selected =
+      true;
+    fireEvent.change(gameTypes);
+
+    expect(screen.getByLabelText('1 watched game shown')).toBeInTheDocument();
+    expect(within(screen.getAllByRole('listitem')[0]).getByText('Round 1 · Game 2'))
+      .toBeInTheDocument();
   });
 
   it('shows dashboard breadcrumbs back through games watched', () => {
