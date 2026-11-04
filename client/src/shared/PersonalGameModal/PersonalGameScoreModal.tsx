@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
 import type { GameRecord } from '@/hooks/useGames';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import usePersonalGames, { type PersonalGameResultType } from '@/hooks/usePersonalGames';
 import { formatScheduledDate } from '@/pages/admin/games/game-details/formatUtils';
 import styles from './PersonalGameModal.module.scss';
@@ -52,14 +53,26 @@ const PersonalGameScoreModal = ({ game, onClose }: Props) => {
     if (game) reset({ away_score: '', home_score: '', result_type: 'regulation' });
   }, [game, reset]);
 
-  const onSubmit = handleSubmit(async (values) => {
+  // The modal hides while the score saves behind a progress toast, and reappears with the
+  // scores entered if it fails.
+  const { hidden, run } = useBackgroundModalAction({ target: game?.id ?? null, onDone: onClose });
+
+  const onSubmit = handleSubmit((values) => {
     if (!game) return;
-    const saved = await recordPersonalGameScore(game.id, {
-      away_score: Number(values.away_score),
-      home_score: Number(values.home_score),
-      result_type: values.result_type,
-    });
-    if (saved) onClose();
+    const matchup = `${game.away_team.code ?? 'Away'} @ ${game.home_team.code ?? 'Home'}`;
+    void run(
+      () =>
+        recordPersonalGameScore(game.id, {
+          away_score: Number(values.away_score),
+          home_score: Number(values.home_score),
+          result_type: values.result_type,
+        }),
+      {
+        pending: `Marking ${matchup} as watched…`,
+        success: `${matchup} marked as watched`,
+        error: 'Failed to record the score',
+      },
+    );
   });
 
   if (!game) return null;
@@ -74,7 +87,7 @@ const PersonalGameScoreModal = ({ game, onClose }: Props) => {
 
   return (
     <Modal
-      open
+      open={!hidden}
       // The game goes on its own line under "Mark as Watched:" (see .titleBreak in the styles).
       title={`Mark as Watched:\n${gameLabel}`}
       className={styles.titleBreak}

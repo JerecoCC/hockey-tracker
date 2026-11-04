@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import { toast } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
@@ -9,6 +8,7 @@ import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import PersonalGameModal from '@/shared/PersonalGameModal/PersonalGameModal';
 import type { GameRecord, TeamInfo } from '@/hooks/useGames';
 import { API, authHeaders } from '@/lib/apiClient';
@@ -87,7 +87,9 @@ const AddDayGamesModal = ({
   onClose,
 }: Props) => {
   const [locallyAddedIds, setLocallyAddedIds] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
+  // Saving runs behind a progress toast with the modal hidden; it reappears, still holding any
+  // games that failed to save, if some do.
+  const { hidden, run } = useBackgroundModalAction({ target: dateKey, onDone: onClose });
   const [addingPersonalGame, setAddingPersonalGame] = useState(false);
   const {
     data: games = [],
@@ -138,49 +140,53 @@ const AddDayGamesModal = ({
     return [gamesToWatch, otherGames];
   }, [availableGames, favoriteTeamIds, locallyAddedIds, scheduledIds]);
 
-  const save = async () => {
-    if (saving || locallyAddedIds.size === 0) return;
-    setSaving(true);
+  const save = () => {
+    if (locallyAddedIds.size === 0) return;
     const pendingGames = availableGames.filter((game) => locallyAddedIds.has(game.id));
-    const results = await Promise.allSettled(
-      pendingGames.map(async (game) => {
-        await axios.put(
-          `${API}/user/watched-games/${game.id}/schedule`,
-          { scheduled_for: dateKey },
-          { headers: authHeaders() },
+    const count = pendingGames.length;
+    void run(
+      async () => {
+        const results = await Promise.allSettled(
+          pendingGames.map(async (game) => {
+            await axios.put(
+              `${API}/user/watched-games/${game.id}/schedule`,
+              { scheduled_for: dateKey },
+              { headers: authHeaders() },
+            );
+            return { ...game, scheduled_for: dateKey, skipped_by_user: false };
+          }),
         );
-        return { ...game, scheduled_for: dateKey, skipped_by_user: false };
-      }),
+        const addedGames = results.flatMap((result) =>
+          result.status === 'fulfilled' ? [result.value] : [],
+        );
+        // Games that saved are kept even if others fail, so only the failures stay selected.
+        if (addedGames.length > 0) {
+          onAdded(addedGames);
+          const addedIds = new Set(addedGames.map((game) => game.id));
+          setLocallyAddedIds(
+            (previous) => new Set([...previous].filter((id) => !addedIds.has(id))),
+          );
+        }
+        if (addedGames.length < count) throw new Error('Some games could not be added');
+        return count;
+      },
+      {
+        pending: `Adding ${count} game${count === 1 ? '' : 's'} to watch…`,
+        success: `${count} game${count === 1 ? '' : 's'} added to watch on ${dateLabel}`,
+        error: 'Some games could not be added. Please try again.',
+      },
     );
-    const addedGames = results.flatMap((result) =>
-      result.status === 'fulfilled' ? [result.value] : [],
-    );
-    if (addedGames.length > 0) {
-      onAdded(addedGames);
-      const addedIds = new Set(addedGames.map((game) => game.id));
-      setLocallyAddedIds((previous) => new Set([...previous].filter((id) => !addedIds.has(id))));
-    }
-    setSaving(false);
-    if (results.some((result) => result.status === 'rejected')) {
-      toast.error('Some games could not be added. Please try again.');
-    } else {
-      onClose();
-    }
   };
 
   return (
     <>
       <Modal
-        open
+        open={!hidden}
         title="Edit games to watch"
-        onClose={() => {
-          if (!saving) onClose();
-        }}
-        onConfirm={() => void save()}
-        confirmLabel={saving ? 'Saving...' : 'Save'}
+        onClose={onClose}
+        onConfirm={save}
+        confirmLabel="Save"
         confirmDisabled={isLoading || isError || locallyAddedIds.size === 0}
-        busy={saving}
-        disableBackdropClose={saving}
       >
         <p className={styles.date}>{dateLabel} · Local time</p>
         {isLoading ? (
@@ -216,7 +222,6 @@ const AddDayGamesModal = ({
                       icon="add"
                       tooltip="Add personal game"
                       aria-label="Add personal game"
-                      disabled={saving}
                       onClick={() => setAddingPersonalGame(true)}
                     />
                   )}
@@ -266,7 +271,6 @@ const AddDayGamesModal = ({
                                       icon: 'cancel',
                                       intent: 'danger',
                                       tooltip: 'Cancel watch',
-                                      disabled: saving,
                                       onClick: () =>
                                         setLocallyAddedIds((previous) => {
                                           const next = new Set(previous);
@@ -281,7 +285,6 @@ const AddDayGamesModal = ({
                                     icon: 'add',
                                     intent: 'accent',
                                     tooltip: 'Add to games to watch',
-                                    disabled: saving,
                                     onClick: () =>
                                       setLocallyAddedIds((previous) =>
                                         new Set(previous).add(game.id),

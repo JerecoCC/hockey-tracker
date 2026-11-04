@@ -28,7 +28,7 @@ const ScheduleWatchModal = ({ open, game, value, busy, onChange, onClose, onSave
     reset,
     setValue,
     watch,
-    formState: { isDirty, isValid },
+    formState: { isValid },
   } = useForm<{ scheduled_for: string }>({
     defaultValues: { scheduled_for: value },
     mode: 'onChange',
@@ -38,10 +38,15 @@ const ScheduleWatchModal = ({ open, game, value, busy, onChange, onClose, onSave
   // means "not postponed", so it's reported to the caller as an empty value.
   const gameDateKey = game ? getOriginalGameDateKey(game, 'local') : null;
   const postponedTo = pickedDate && pickedDate !== gameDateKey ? pickedDate : '';
+  // Save is offered once the date differs from the game's saved postponement. Comparing with the
+  // save rather than the form's own start lets a modal reopened after a failed save (holding the
+  // unsaved date) be saved again straight away.
+  const changed = game
+    ? postponedTo !== (getScheduledWatchDateKey(game.scheduled_for) ?? '')
+    : false;
 
   // Initialise the form only when the modal opens (or the target game changes).
-  // Depending on `value` here would reset the form on every date pick, clearing
-  // `isDirty` and keeping the Save button permanently disabled.
+  // Depending on `value` here would reset the form on every date pick.
   useEffect(() => {
     if (open) reset({ scheduled_for: getScheduledWatchDateKey(value) ?? gameDateKey ?? '' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -59,7 +64,7 @@ const ScheduleWatchModal = ({ open, game, value, busy, onChange, onClose, onSave
       onClose={onClose}
       onConfirm={submit}
       confirmLabel={busy ? 'Saving…' : 'Save date'}
-      confirmDisabled={busy || !isDirty || !isValid || scheduleDateInvalid}
+      confirmDisabled={busy || !changed || !isValid || scheduleDateInvalid}
       busy={busy}
       footerStart={
         postponedTo ? (

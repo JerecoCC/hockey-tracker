@@ -9,6 +9,7 @@ import {
   ControlledTimePickerField,
 } from '@/components/form/ControlledFields';
 import type { GameRecord, GameType } from '@/hooks/useGames';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import usePersonalGames, {
   type PersonalGameInput,
   type PersonalGameResultType,
@@ -79,7 +80,12 @@ interface Props {
 const PersonalGameModal = ({ open, game, defaultDate, onClose }: Props) => {
   const { createPersonalGame, updatePersonalGame, deletePersonalGame } = usePersonalGames();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  // Saving and deleting run behind a progress toast with the modal hidden; it reappears with
+  // what was entered if they fail.
+  const { hidden, run } = useBackgroundModalAction({
+    target: open ? (game?.id ?? 'new') : null,
+    onDone: onClose,
+  });
 
   const {
     control,
@@ -141,7 +147,7 @@ const PersonalGameModal = ({ open, game, defaultDate, onClose }: Props) => {
   const [awayScore, homeScore] = useWatch({ control, name: ['away_score', 'home_score'] });
   const hasScore = awayScore !== '' || homeScore !== '';
 
-  const onSubmit = handleSubmit(async (values) => {
+  const onSubmit = handleSubmit((values) => {
     const scored = values.away_score !== '' && values.home_score !== '';
     const input: PersonalGameInput = {
       season_id: values.season_id || null,
@@ -157,25 +163,32 @@ const PersonalGameModal = ({ open, game, defaultDate, onClose }: Props) => {
       // A score means the game was watched; the server marks it watched on this date.
       watched_on: scored ? toLocalDateKey(new Date()) : null,
     };
-    const saved = game
-      ? await updatePersonalGame(game.id, input)
-      : await createPersonalGame(input);
-    if (saved) onClose();
+    void run(
+      () => (game ? updatePersonalGame(game.id, input) : createPersonalGame(input)),
+      game
+        ? { pending: 'Saving game…', success: 'Game updated', error: 'Failed to update game' }
+        : {
+            pending: 'Adding game…',
+            success: 'Game added to your schedule',
+            error: 'Failed to add game',
+          },
+    );
   });
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!game) return;
     if (!confirmingDelete) {
       setConfirmingDelete(true);
       return;
     }
-    setDeleting(true);
-    const ok = await deletePersonalGame(game.id);
-    setDeleting(false);
-    if (ok) onClose();
+    void run(() => deletePersonalGame(game.id), {
+      pending: 'Removing game…',
+      success: 'Game removed from your schedule',
+      error: 'Failed to remove game',
+    });
   };
 
-  const busy = isSubmitting || deleting;
+  const busy = isSubmitting;
   const scoreRules: RegisterOptions = {
     validate: (value: string, values) => {
       if (value !== '' && !SCORE_RE.test(value)) return 'Enter a whole number';
@@ -188,7 +201,7 @@ const PersonalGameModal = ({ open, game, defaultDate, onClose }: Props) => {
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={game ? 'Edit Personal Game' : 'Add Personal Game'}
       onClose={onClose}
       confirmLabel={busy ? 'Saving…' : game ? 'Save' : 'Add Personal Game'}
