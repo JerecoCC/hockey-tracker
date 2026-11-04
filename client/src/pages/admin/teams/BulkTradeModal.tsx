@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { useWatch, type Control, type UseFormSetValue } from 'react-hook-form';
 import BulkCreateModal from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
 import {
@@ -6,6 +6,7 @@ import {
   ControlledInputField,
   ControlledSelectField,
 } from '@/components/form/ControlledFields';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useTeams from '@/hooks/useTeams';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { ACQUISITION_TYPE_OPTIONS } from '../players/stintOptions';
@@ -103,6 +104,18 @@ const BulkTradeModal = ({
   bulkTradePlayers,
 }: Props) => {
   const { teams } = useTeams();
+  // The submitted move, kept until it's saved: the players are moved behind a progress toast with
+  // the modal hidden, and if that fails the modal reopens with this move restored, ready to save
+  // again.
+  const draftRef = useRef<FormValues | null>(null);
+  const closeModal = () => {
+    draftRef.current = null;
+    onClose();
+  };
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? 'bulk-trade' : null,
+    onDone: closeModal,
+  });
 
   const teamOptions = teams
     .filter((t) => t.league_id === leagueId && t.id !== teamId)
@@ -122,10 +135,10 @@ const BulkTradeModal = ({
 
   return (
     <BulkCreateModal<FormValues, RowValues>
-      open={open}
+      open={open && !hidden}
       title="Move Players"
       size="md"
-      onClose={onClose}
+      onClose={closeModal}
       formId="bulk-trade-form"
       confirmIcon="swap_horiz"
       confirmDisabled={!seasonId}
@@ -135,6 +148,7 @@ const BulkTradeModal = ({
         acquisition_type: 'trade',
         players: [{ ...EMPTY_ROW }],
       })}
+      restoreValues={draftRef.current ?? undefined}
       rowArrayName="players"
       createRow={() => ({ ...EMPTY_ROW })}
       columnsTemplate="4.5rem minmax(0, 1fr)"
@@ -184,22 +198,30 @@ const BulkTradeModal = ({
           </fieldset>
         </div>
       )}
-      onSubmit={async (data) => {
-        if (!seasonId || !data.to_team_id) return false;
+      onSubmit={(data) => {
+        if (!seasonId || !data.to_team_id) return Promise.resolve(false);
         const payload = data.players
           .filter((r) => r.player_id)
           .map((r) => ({
             playerId: r.player_id,
             jerseyNumber: r.jersey_number ? parseInt(r.jersey_number, 10) : null,
           }));
-        if (payload.length === 0) return false;
-        return bulkTradePlayers(
-          payload,
-          seasonId,
-          data.to_team_id,
-          data.trade_date,
-          data.acquisition_type || 'trade',
+        if (payload.length === 0) return Promise.resolve(false);
+        draftRef.current = data;
+        const toTeamId = data.to_team_id;
+        void runSettled(
+          () =>
+            bulkTradePlayers(
+              payload,
+              seasonId,
+              toTeamId,
+              data.trade_date,
+              data.acquisition_type || 'trade',
+            ),
+          { pending: `Moving ${payload.length} player${payload.length === 1 ? '' : 's'}…` },
         );
+        // The modal hides and closes itself, so it shouldn't reset or close here.
+        return Promise.resolve(false);
       }}
       renderRow={({ index, control, setValue, rows, isSubmitting, deleteButton }) => {
         const pickedIds = new Set(

@@ -7,6 +7,7 @@ import {
 } from '@/components/form/ControlledFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import {
   type CreatePlayerData,
@@ -91,7 +92,7 @@ const TeamPlayerEditModal = ({
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting, isDirty, isValid },
+    formState: { isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
     mode: 'onChange',
@@ -110,32 +111,37 @@ const TeamPlayerEditModal = ({
     onClose();
   }, [formValues, onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
-    if (!editTarget) return;
+  // Saving (photo upload included) runs behind a progress toast with the modal hidden; it
+  // reappears with what was entered if any step fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (editTarget?.id ?? null) : null,
+    onDone: handleClose,
+  });
 
+  const save = async (player: TeamPlayerRecord, data: FormValues) => {
     // Upload photo if a new file was selected
     let photoUrl: string | null = typeof data.photo === 'string' ? data.photo : null;
     if (data.photo instanceof File) {
       const url = await uploadPlayerPhoto(data.photo);
-      if (!url) return;
+      if (!url) return false;
       photoUrl = url;
     }
 
     // Update name + position on the global players record
-    const playerOk = await updatePlayer(editTarget.id, {
+    const playerOk = await updatePlayer(player.id, {
       first_name: data.first_name,
       last_name: data.last_name,
       position: data.position || null,
       ...(!isRetired ? { status: data.status } : {}),
     });
-    if (!playerOk) return;
+    if (!playerOk) return false;
 
     // Route jersey changes through the dated history mechanism instead of
     // silently overwriting the current player_teams value.
     if (seasonId) {
       const nextJerseyNumber = data.jersey_number ? Number(data.jersey_number) : null;
-      const teamOk = await updatePlayerTeam(editTarget.id, teamId, seasonId, {
-        ...(nextJerseyNumber !== editTarget.jersey_number
+      const teamOk = await updatePlayerTeam(player.id, teamId, seasonId, {
+        ...(nextJerseyNumber !== player.jersey_number
           ? {
               jersey_number: nextJerseyNumber,
               ...(nextJerseyNumber != null
@@ -145,21 +151,25 @@ const TeamPlayerEditModal = ({
           : {}),
         photo: photoUrl,
       });
-      if (!teamOk) return;
+      if (!teamOk) return false;
     }
 
-    handleClose();
+    return true;
+  };
+
+  const onSubmit = handleSubmit((data) => {
+    if (!editTarget) return;
+    void runSettled(() => save(editTarget, data), { pending: 'Saving player…' });
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="Edit Player"
       onClose={handleClose}
-      confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
+      confirmLabel="Save Changes"
       confirmForm="team-player-edit-form"
-      confirmDisabled={isSubmitting || !isDirty || !isValid}
-      busy={isSubmitting}
+      confirmDisabled={!isDirty || !isValid}
     >
       <form
         id="team-player-edit-form"
@@ -170,9 +180,7 @@ const TeamPlayerEditModal = ({
           control={control}
           name="photo"
           label="Player Photo"
-          shape="circle"
-          disabled={isSubmitting}
-          autoFocus
+          shape="circle"          autoFocus
         />
         <div className={styles.nameRowWithJersey}>
           <ControlledInputField
@@ -182,9 +190,7 @@ const TeamPlayerEditModal = ({
             name="jersey_number"
             placeholder="e.g. 97"
             min={0}
-            max={99}
-            disabled={isSubmitting}
-            rules={{
+            max={99}            rules={{
               validate: (v) =>
                 !v || (Number(v) >= 0 && Number(v) <= 99 && Number.isInteger(Number(v))),
             }}
@@ -195,18 +201,14 @@ const TeamPlayerEditModal = ({
             control={control}
             name="first_name"
             rules={{ required: true }}
-            placeholder="e.g. Connor"
-            disabled={isSubmitting}
-          />
+            placeholder="e.g. Connor"          />
           <ControlledInputField
             label="Last Name"
             required
             control={control}
             name="last_name"
             rules={{ required: true }}
-            placeholder="e.g. McDavid"
-            disabled={isSubmitting}
-          />
+            placeholder="e.g. McDavid"          />
         </div>
         {jerseyNumberChanged && normalizedJerseyNumber != null && (
           <div className={styles.fullRow}>
@@ -215,9 +217,7 @@ const TeamPlayerEditModal = ({
               control={control}
               name="jersey_effective_date"
               required
-              rules={{ required: true }}
-              disabled={isSubmitting}
-            />
+              rules={{ required: true }}            />
           </div>
         )}
         <div className={styles.row}>
@@ -228,9 +228,7 @@ const TeamPlayerEditModal = ({
             name="position"
             options={POSITION_OPTIONS}
             placeholder="Select position"
-            rules={{ required: true }}
-            disabled={isSubmitting}
-          />
+            rules={{ required: true }}          />
           {!isRetired && (
             <div className={styles.segmentedField}>
               <span className={styles.heightGroupLabel}>Status</span>
@@ -242,9 +240,7 @@ const TeamPlayerEditModal = ({
                     value={field.value}
                     onChange={(value) => field.onChange(value as PlayerStatus)}
                     variant="field"
-                    options={STATUS_OPTIONS}
-                    disabled={isSubmitting}
-                  />
+                    options={STATUS_OPTIONS}                  />
                 )}
               />
             </div>

@@ -27,25 +27,33 @@ const useUsers = () => {
     },
   });
 
-  const changeRole = async (id: string, role: 'admin' | 'user') => {
+  const changeRole = async (id: string, role: 'admin' | 'user'): Promise<boolean> => {
     setBusy(id);
     try {
       await axios.patch(`${API}/admin/users/${id}/role`, { role }, { headers: authHeaders() });
-      await queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Role updated');
+      // The list refreshes in the background, so callers aren't held up by it.
+      void queryClient.invalidateQueries({ queryKey: ['users'] });
+      return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update role'));
+      return false;
     } finally {
       setBusy(null);
     }
   };
 
-  const deleteUser = async (id: string) => {
+  const deleteUser = async (id: string): Promise<boolean> => {
     setBusy(id);
     try {
       await axios.delete(`${API}/admin/users/${id}`, { headers: authHeaders() });
-      await queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('User deleted');
+      // The list refreshes in the background, so callers aren't held up by it.
+      void queryClient.invalidateQueries({ queryKey: ['users'] });
+      return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete user'));
+      return false;
     } finally {
       setBusy(null);
     }

@@ -10,6 +10,7 @@ import SearchInput from '@jerecocc/tracker-ui/components/SearchField/SearchInput
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { useProjectedLineup } from '@/hooks/useProjectedLineup';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -106,9 +107,20 @@ const TeamPlayersTab = ({
   const [projectedLineupOpen, setProjectedLineupOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TeamPlayerRecord | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<TeamPlayerRecord | null>(null);
-  const [isRemoving, setIsRemoving] = useState(false);
   const [resetRosterOpen, setResetRosterOpen] = useState(false);
-  const [isResettingRoster, setIsResettingRoster] = useState(false);
+  // Removing a player and resetting the roster run behind a progress toast with their confirm
+  // dialog hidden; it reappears if they fail.
+  const { hidden: removeHidden, runSettled: runRemove } = useBackgroundModalAction({
+    target: confirmRemove?.id ?? null,
+    onDone: () => setConfirmRemove(null),
+  });
+  const { hidden: resetRosterHidden, runSettled: runResetRoster } = useBackgroundModalAction({
+    target: resetRosterOpen ? 'reset-roster' : null,
+    onDone: () => {
+      setResetRosterOpen(false);
+      setPlayerView('prospects');
+    },
+  });
 
   const rosterPlayers = allTeamPlayers.filter((p) => !p.is_prospect);
   const projectedPlayerIds = new Set(projectedLineupSlots.map((slot) => slot.player_id));
@@ -147,22 +159,14 @@ const TeamPlayersTab = ({
       return a.jersey_number - b.jersey_number;
     });
 
-  const handleConfirmRemove = async () => {
+  const handleConfirmRemove = () => {
     if (!confirmRemove) return;
-    setIsRemoving(true);
-    const ok = await removePlayerFromTeam(confirmRemove);
-    setIsRemoving(false);
-    if (ok) setConfirmRemove(null);
+    const player = confirmRemove;
+    void runRemove(() => removePlayerFromTeam(player), { pending: 'Removing player…' });
   };
 
-  const handleResetRoster = async () => {
-    setIsResettingRoster(true);
-    const ok = await resetRoster();
-    setIsResettingRoster(false);
-    if (ok) {
-      setResetRosterOpen(false);
-      setPlayerView('prospects');
-    }
+  const handleResetRoster = () => {
+    void runResetRoster(resetRoster, { pending: 'Resetting roster…' });
   };
 
   const renderPlayer = (p: TeamPlayerRecord) => {
@@ -484,7 +488,7 @@ const TeamPlayersTab = ({
           )}
 
           <ConfirmModal
-            open={resetRosterOpen}
+            open={resetRosterOpen && !resetRosterHidden}
             title="Reset Roster"
             body={
               <>
@@ -496,13 +500,12 @@ const TeamPlayersTab = ({
             confirmLabel="Reset Roster"
             confirmIcon="restart_alt"
             intent="danger"
-            busy={isResettingRoster}
             onConfirm={handleResetRoster}
             onCancel={() => setResetRosterOpen(false)}
           />
 
           <ConfirmModal
-            open={!!confirmRemove}
+            open={!!confirmRemove && !removeHidden}
             title="Remove From Team"
             body={
               confirmRemove ? (
@@ -520,7 +523,6 @@ const TeamPlayersTab = ({
             confirmLabel="Remove From Team"
             confirmIcon="person_remove"
             intent="danger"
-            busy={isRemoving}
             onConfirm={handleConfirmRemove}
             onCancel={() => setConfirmRemove(null)}
           />

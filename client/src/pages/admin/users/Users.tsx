@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Table from '@jerecocc/tracker-ui/components/Table/Table';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useUsers from '@/hooks/useUsers';
 import { getUserColumns, UserRecord } from './columns';
 import UserRoleModal, { RoleConfirm } from './UserRoleModal';
@@ -30,6 +31,25 @@ const UsersPage = () => {
     setSortDir(dir);
   };
 
+  const closeRoleConfirm = () => {
+    setRoleConfirmOpen(false);
+    setRoleConfirm(null);
+  };
+  const closeDeleteConfirm = () => {
+    setDeleteConfirmOpen(false);
+    setDeleteConfirm(null);
+  };
+  // Role changes and deletions run behind a progress toast with their confirm dialog hidden;
+  // the dialog reappears if the request fails.
+  const { hidden: roleHidden, runSettled: runRoleChange } = useBackgroundModalAction({
+    target: roleConfirmOpen ? (roleConfirm?.user.id ?? null) : null,
+    onDone: closeRoleConfirm,
+  });
+  const { hidden: deleteHidden, runSettled: runDelete } = useBackgroundModalAction({
+    target: deleteConfirmOpen ? (deleteConfirm?.id ?? null) : null,
+    onDone: closeDeleteConfirm,
+  });
+
   const confirmRole = (u: UserRecord, role: 'admin' | 'user') => {
     setRoleConfirm({ user: u, role });
     setRoleConfirmOpen(true);
@@ -58,32 +78,37 @@ const UsersPage = () => {
       </Card>
 
       <UserRoleModal
-        open={roleConfirmOpen}
+        open={roleConfirmOpen && !roleHidden}
         busy={busy}
         roleConfirm={roleConfirm}
-        onCancel={() => {
-          setRoleConfirmOpen(false);
-          setRoleConfirm(null);
-        }}
-        onConfirm={async () => {
-          await changeRole(roleConfirm!.user.id, roleConfirm!.role);
-          setRoleConfirmOpen(false);
-          setRoleConfirm(null);
+        onCancel={closeRoleConfirm}
+        onConfirm={() => {
+          if (!roleConfirm) return;
+          const { user: target, role } = roleConfirm;
+          void runRoleChange(
+            () => changeRole(target.id, role),
+            {
+              pending:
+                role === 'admin'
+                  ? `Making ${target.display_name} an admin…`
+                  : `Removing admin access from ${target.display_name}…`,
+            },
+          );
         }}
       />
 
       <UserDeleteModal
-        open={deleteConfirmOpen}
+        open={deleteConfirmOpen && !deleteHidden}
         busy={busy}
         target={deleteConfirm}
-        onCancel={() => {
-          setDeleteConfirmOpen(false);
-          setDeleteConfirm(null);
-        }}
-        onConfirm={async () => {
-          await deleteUser(deleteConfirm!.id);
-          setDeleteConfirmOpen(false);
-          setDeleteConfirm(null);
+        onCancel={closeDeleteConfirm}
+        onConfirm={() => {
+          if (!deleteConfirm) return;
+          const target = deleteConfirm;
+          void runDelete(
+            () => deleteUser(target.id),
+            { pending: `Deleting ${target.display_name}…` },
+          );
         }}
       />
     </>
