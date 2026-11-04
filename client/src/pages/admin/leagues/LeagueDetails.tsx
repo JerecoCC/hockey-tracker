@@ -18,6 +18,7 @@ import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import Tabs from '@jerecocc/tracker-ui/components/Tabs/Tabs';
 import TeamFormModal from '../teams/TeamFormModal';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
 import useLeagueDetails, { type LeagueSeasonRecord } from '@/hooks/useLeagueDetails';
 import useLeaguePlayers, { type PlayerRecord } from '@/hooks/useLeaguePlayers';
@@ -94,6 +95,20 @@ const LeagueDetailsPage = () => {
   const [playersPage, setPlayersPage] = useState(1);
   const [playersSearch, setPlayersSearch] = useState('');
   const [playersWarningsOnly, setPlayersWarningsOnly] = useState(false);
+  const closeDeleteSeason = () => {
+    setConfirmDeleteSeasonOpen(false);
+    setConfirmDeleteSeason(null);
+  };
+  // The delete dialogs hide while the team or season is deleted behind a progress toast, and
+  // reappear if the delete fails.
+  const { hidden: deleteTeamHidden, runSettled: runDeleteTeam } = useBackgroundModalAction({
+    target: confirmDeleteTeam?.id ?? null,
+    onDone: () => setConfirmDeleteTeam(null),
+  });
+  const { hidden: deleteSeasonHidden, runSettled: runDeleteSeason } = useBackgroundModalAction({
+    target: confirmDeleteSeasonOpen ? (confirmDeleteSeason?.id ?? null) : null,
+    onDone: closeDeleteSeason,
+  });
 
   usePageBreadcrumbs(
     leagueLoading
@@ -357,7 +372,7 @@ const LeagueDetailsPage = () => {
       </LeagueDetailsProvider>
 
       <ConfirmModal
-        open={confirmDeleteTeam !== null}
+        open={confirmDeleteTeam !== null && !deleteTeamHidden}
         title="Delete Team"
         body={
           <>
@@ -370,10 +385,13 @@ const LeagueDetailsPage = () => {
         intent="danger"
         busy={busy === confirmDeleteTeam?.id}
         onCancel={() => setConfirmDeleteTeam(null)}
-        onConfirm={async () => {
+        onConfirm={() => {
           if (!confirmDeleteTeam) return;
-          await deleteTeam(confirmDeleteTeam.id);
-          setConfirmDeleteTeam(null);
+          const { id: teamId } = confirmDeleteTeam;
+          void runDeleteTeam(
+            () => deleteTeam(teamId),
+            { pending: 'Deleting team…' },
+          );
         }}
       />
 
@@ -402,17 +420,17 @@ const LeagueDetailsPage = () => {
       />
 
       <SeasonDeleteModal
-        open={confirmDeleteSeasonOpen}
+        open={confirmDeleteSeasonOpen && !deleteSeasonHidden}
         busy={busy}
         target={confirmDeleteSeason as SeasonRecord | null}
-        onCancel={() => {
-          setConfirmDeleteSeasonOpen(false);
-          setConfirmDeleteSeason(null);
-        }}
-        onConfirm={async () => {
-          await deleteSeason(confirmDeleteSeason!.id);
-          setConfirmDeleteSeasonOpen(false);
-          setConfirmDeleteSeason(null);
+        onCancel={closeDeleteSeason}
+        onConfirm={() => {
+          if (!confirmDeleteSeason) return;
+          const { id: seasonId } = confirmDeleteSeason;
+          void runDeleteSeason(
+            () => deleteSeason(seasonId),
+            { pending: 'Deleting season…' },
+          );
         }}
       />
 

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useLeagues, { LeagueRecord } from '@/hooks/useLeagues';
 import { buildLeagueDetailsPath } from '@/lib/routeSlugs';
 import LeagueDeleteModal from './LeagueDeleteModal';
@@ -54,6 +55,18 @@ const LeaguesPage = () => {
     setModalOpen(false);
     setEditTarget(null);
   };
+
+  const closeDeleteModal = () => {
+    setConfirmDeleteOpen(false);
+    setConfirmDelete(null);
+  };
+
+  // The delete dialog hides while the league is deleted behind a progress toast, and reappears if
+  // the delete fails.
+  const { hidden: deleteHidden, runSettled: runDelete } = useBackgroundModalAction({
+    target: confirmDeleteOpen ? (confirmDelete?.id ?? null) : null,
+    onDone: closeDeleteModal,
+  });
 
   return (
     <>
@@ -127,17 +140,17 @@ const LeaguesPage = () => {
       </Section>
 
       <LeagueDeleteModal
-        open={confirmDeleteOpen}
+        open={confirmDeleteOpen && !deleteHidden}
         busy={busy}
         target={confirmDelete}
-        onCancel={() => {
-          setConfirmDeleteOpen(false);
-          setConfirmDelete(null);
-        }}
-        onConfirm={async () => {
-          await deleteLeague(confirmDelete!.id);
-          setConfirmDeleteOpen(false);
-          setConfirmDelete(null);
+        onCancel={closeDeleteModal}
+        onConfirm={() => {
+          if (!confirmDelete) return;
+          const { id } = confirmDelete;
+          void runDelete(
+            () => deleteLeague(id),
+            { pending: 'Deleting league…' },
+          );
         }}
       />
 

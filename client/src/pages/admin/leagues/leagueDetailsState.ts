@@ -19,7 +19,7 @@ interface LeaguePlayersContextValue {
   onAdd: () => void;
   onBulkAdd: () => void;
   onEdit: (player: PlayerRecord) => void;
-  onDelete: (playerId: string) => Promise<void>;
+  onDelete: (playerId: string) => Promise<boolean>;
 }
 
 export interface LeagueDetailsContextValue {

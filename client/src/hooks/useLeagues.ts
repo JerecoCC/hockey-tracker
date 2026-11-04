@@ -125,14 +125,17 @@ const useLeagues = (options: { mode?: LeagueDataMode } = {}) => {
     }
   };
 
-  const deleteLeague = async (id: string) => {
+  const deleteLeague = async (id: string): Promise<boolean> => {
     setBusy(id);
     try {
       await axios.delete(`${API}/admin/leagues/${id}`, { headers: authHeaders() });
       toast.success('League deleted');
-      await queryClient.invalidateQueries({ queryKey: ['leagues'] });
+      // The list refreshes in the background, so callers aren't held up by it.
+      void queryClient.invalidateQueries({ queryKey: ['leagues'] });
+      return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete league'));
+      return false;
     } finally {
       setBusy(null);
     }

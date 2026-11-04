@@ -21,6 +21,7 @@ import ReorderableField from '@jerecocc/tracker-ui/components/ReorderableField/R
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Tag, { type TagIntent } from '@jerecocc/tracker-ui/components/Tag/Tag';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useLeagueAwards, {
   type LeagueAwardPayload,
   type LeagueAwardRecord,
@@ -421,10 +422,24 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
     form.reset(emptyValues);
   };
 
-  const submit = form.handleSubmit(async (values) => {
+  // The modal hides while the award saves behind a progress toast, and reappears with what was
+  // entered if that fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: modalOpen ? (editTarget?.id ?? 'new') : null,
+    onDone: closeModal,
+  });
+  // The remove dialog hides the same way while the award is removed.
+  const { hidden: deleteHidden, runSettled: runDelete } = useBackgroundModalAction({
+    target: confirmDelete?.id ?? null,
+    onDone: () => setConfirmDelete(null),
+  });
+
+  const submit = form.handleSubmit((values) => {
     const payload = toPayload(values);
-    const ok = editTarget ? await updateAward(editTarget.id, payload) : await createAward(payload);
-    if (ok) closeModal();
+    void runSettled(
+      () => (editTarget ? updateAward(editTarget.id, payload) : createAward(payload)),
+      { pending: editTarget ? 'Saving award…' : 'Creating award…' },
+    );
   });
 
   const setRecipientType = (value: string) => {
@@ -860,7 +875,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
       </div>
 
       <Modal
-        open={modalOpen}
+        open={modalOpen && !hidden}
         title={editTarget ? 'Edit Award Definition' : 'Create Award'}
         onClose={closeModal}
         confirmForm="league-award-form"
@@ -1057,7 +1072,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
       </Modal>
 
       <ConfirmModal
-        open={confirmDelete !== null}
+        open={confirmDelete !== null && !deleteHidden}
         title="Remove Award Definition"
         body={
           <>
@@ -1067,9 +1082,10 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
         }
         confirmLabel="Remove"
         intent="danger"
-        onConfirm={async () => {
-          if (confirmDelete) await deleteAward(confirmDelete.id);
-          setConfirmDelete(null);
+        onConfirm={() => {
+          if (!confirmDelete) return;
+          const { id } = confirmDelete;
+          void runDelete(() => deleteAward(id), { pending: 'Removing award…' });
         }}
         onCancel={() => setConfirmDelete(null)}
       />

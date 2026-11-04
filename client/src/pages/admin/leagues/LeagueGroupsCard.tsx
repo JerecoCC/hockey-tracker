@@ -6,6 +6,7 @@ import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmMo
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import {
   type CreateGroupData,
   type GroupRecord,
@@ -99,7 +100,7 @@ interface Props {
   onEditTeam: (teamId: string) => void;
   onViewTeam: (teamId: string) => void;
   onDelete: (group: GroupRecord) => void;
-  onDeleteTeam: (teamId: string) => Promise<void>;
+  onDeleteTeam: (teamId: string) => Promise<boolean>;
   className?: string;
 }
 
@@ -121,7 +122,7 @@ interface GroupNodeProps {
   onCancel: () => void;
   onAddTeam: (g: GroupRecord) => void;
   onDelete: (g: GroupRecord) => void;
-  onDeleteTeam: (teamId: string) => Promise<void>;
+  onDeleteTeam: (teamId: string) => Promise<boolean>;
   onEditTeam: (teamId: string) => void;
   onViewTeam: (teamId: string) => void;
   onSetRole: (groupId: string, role: GroupRole) => Promise<void>;
@@ -147,7 +148,12 @@ const GroupNode = (props: GroupNodeProps) => {
     depth = 0,
   } = props;
   const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<GroupTeamRecord | null>(null);
-  const [isDeletingTeam, setIsDeletingTeam] = useState(false);
+  // The delete dialog hides while the team is deleted behind a progress toast, and reappears if
+  // the delete fails.
+  const { hidden: deleteTeamHidden, runSettled: runDeleteTeam } = useBackgroundModalAction({
+    target: confirmDeleteTeam?.id ?? null,
+    onDone: () => setConfirmDeleteTeam(null),
+  });
 
   const children = allGroups
     .filter((g) => g.parent_id === group.id)
@@ -320,7 +326,7 @@ const GroupNode = (props: GroupNodeProps) => {
       )}
 
       <ConfirmModal
-        open={confirmDeleteTeam !== null}
+        open={confirmDeleteTeam !== null && !deleteTeamHidden}
         title="Delete Team"
         body={
           <>
@@ -328,17 +334,17 @@ const GroupNode = (props: GroupNodeProps) => {
             be undone.
           </>
         }
-        confirmLabel={isDeletingTeam ? 'Deleting…' : 'Delete'}
+        confirmLabel="Delete"
         confirmIcon="delete"
         intent="danger"
-        busy={isDeletingTeam}
         onCancel={() => setConfirmDeleteTeam(null)}
-        onConfirm={async () => {
+        onConfirm={() => {
           if (!confirmDeleteTeam) return;
-          setIsDeletingTeam(true);
-          await onDeleteTeam(confirmDeleteTeam.id);
-          setIsDeletingTeam(false);
-          setConfirmDeleteTeam(null);
+          const { id: teamId } = confirmDeleteTeam;
+          void runDeleteTeam(
+            () => onDeleteTeam(teamId),
+            { pending: 'Deleting team…' },
+          );
         }}
       />
     </li>
@@ -366,7 +372,12 @@ const LeagueGroupsCard = (props: Props) => {
   } = props;
   const [inlineMode, setInlineMode] = useState<InlineMode>(null);
   const [confirmDeleteUngrouped, setConfirmDeleteUngrouped] = useState<TeamRecord | null>(null);
-  const [isDeletingUngrouped, setIsDeletingUngrouped] = useState(false);
+  // As in GroupNode, the delete dialog hides while the team is deleted behind a progress toast.
+  const { hidden: deleteUngroupedHidden, runSettled: runDeleteUngrouped } =
+    useBackgroundModalAction({
+      target: confirmDeleteUngrouped?.id ?? null,
+      onDone: () => setConfirmDeleteUngrouped(null),
+    });
 
   const roots = groups
     .filter((g) => g.parent_id === null)
@@ -506,7 +517,7 @@ const LeagueGroupsCard = (props: Props) => {
       )}
 
       <ConfirmModal
-        open={confirmDeleteUngrouped !== null}
+        open={confirmDeleteUngrouped !== null && !deleteUngroupedHidden}
         title="Delete Team"
         body={
           <>
@@ -514,17 +525,17 @@ const LeagueGroupsCard = (props: Props) => {
             cannot be undone.
           </>
         }
-        confirmLabel={isDeletingUngrouped ? 'Deleting…' : 'Delete'}
+        confirmLabel="Delete"
         confirmIcon="delete"
         intent="danger"
-        busy={isDeletingUngrouped}
         onCancel={() => setConfirmDeleteUngrouped(null)}
-        onConfirm={async () => {
+        onConfirm={() => {
           if (!confirmDeleteUngrouped) return;
-          setIsDeletingUngrouped(true);
-          await onDeleteTeam(confirmDeleteUngrouped.id);
-          setIsDeletingUngrouped(false);
-          setConfirmDeleteUngrouped(null);
+          const { id: teamId } = confirmDeleteUngrouped;
+          void runDeleteUngrouped(
+            () => onDeleteTeam(teamId),
+            { pending: 'Deleting team…' },
+          );
         }}
       />
     </Section>

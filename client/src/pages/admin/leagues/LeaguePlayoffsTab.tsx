@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { toast } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useBracketRuleSets, { type BracketRuleSet } from '@/hooks/useBracketRuleSets';
 import usePlayoffRuleGroups from '@/hooks/usePlayoffRuleGroups';
 import usePlayoffQualificationFormats, {
@@ -100,6 +102,17 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
     setQualificationModalOpen(false);
     setQualificationEditTarget(null);
   };
+
+  // The delete dialogs hide while the rule set or format is deleted behind a progress toast,
+  // and reappear if that fails.
+  const { hidden: deleteRuleSetHidden, runSettled: runDeleteRuleSet } = useBackgroundModalAction({
+    target: confirmDelete?.id ?? null,
+    onDone: () => setConfirmDelete(null),
+  });
+  const { hidden: deleteFormatHidden, runSettled: runDeleteFormat } = useBackgroundModalAction({
+    target: confirmDeleteQualification?.id ?? null,
+    onDone: () => setConfirmDeleteQualification(null),
+  });
 
   if (loading || qualificationFormatsLoading) {
     return <LeaguePlayoffsTabSkeleton className={className} />;
@@ -225,7 +238,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
       />
 
       <ConfirmModal
-        open={confirmDelete !== null}
+        open={confirmDelete !== null && !deleteRuleSetHidden}
         title="Delete Rule Set"
         body={
           <>
@@ -234,16 +247,25 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
           </>
         }
         confirmLabel="Delete"
-        confirmIntent="danger"
-        onConfirm={async () => {
-          if (confirmDelete) await deleteRuleSet(confirmDelete.id);
-          setConfirmDelete(null);
+        intent="danger"
+        onConfirm={() => {
+          if (!confirmDelete) return;
+          const { id } = confirmDelete;
+          void runDeleteRuleSet(
+            async () => {
+              // deleteRuleSet only reports failures, so the success message is shown here.
+              const ok = await deleteRuleSet(id);
+              if (ok) toast.success('Rule set deleted');
+              return ok;
+            },
+            { pending: 'Deleting rule set…' },
+          );
         }}
-        onClose={() => setConfirmDelete(null)}
+        onCancel={() => setConfirmDelete(null)}
       />
 
       <ConfirmModal
-        open={confirmDeleteQualification !== null}
+        open={confirmDeleteQualification !== null && !deleteFormatHidden}
         title="Delete Qualification Format"
         body={
           <>
@@ -252,12 +274,15 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
           </>
         }
         confirmLabel="Delete"
-        confirmIntent="danger"
-        onConfirm={async () => {
-          if (confirmDeleteQualification) await deleteFormat(confirmDeleteQualification.id);
-          setConfirmDeleteQualification(null);
+        intent="danger"
+        onConfirm={() => {
+          if (!confirmDeleteQualification) return;
+          const { id } = confirmDeleteQualification;
+          void runDeleteFormat(() => deleteFormat(id), {
+            pending: 'Deleting qualification format…',
+          });
         }}
-        onClose={() => setConfirmDeleteQualification(null)}
+        onCancel={() => setConfirmDeleteQualification(null)}
       />
     </>
   );
