@@ -244,8 +244,10 @@ describe('UserGamesWatchedTeam', () => {
     expect(screen.getByTestId('team-hero-primary-fill')).toBeInTheDocument();
     expect(screen.getByTestId('team-hero-right-primary-fill')).toBeInTheDocument();
     // The hero shows the record in place of the watched count, explained by a tooltip.
-    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('2-0-0');
-    expect(screen.getByLabelText('What the record shows')).toBeInTheDocument();
+    expect(screen.getByTestId('team-hero-record')).toHaveAttribute('aria-label', 'Record 2-0-0');
+    // W, L and OTL each show as a labelled stat, like the player details season stats.
+    const record = screen.getByTestId('team-hero-record');
+    expect(['W', 'L', 'OTL'].map((label) => within(record).getByText(label))).toHaveLength(3);
     expect(screen.queryByText('W-L-OTL')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Toronto Maple Leafs watched games summary')).not.toHaveTextContent(
       '2x',
@@ -275,7 +277,7 @@ describe('UserGamesWatchedTeam', () => {
 
     expect(screen.getByRole('heading', { name: 'Blue Jackets' })).toBeInTheDocument();
     expect(screen.getByLabelText('Blue Jackets watched games summary')).toBeInTheDocument();
-    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('0-0-0');
+    expect(screen.getByTestId('team-hero-record')).toHaveAttribute('aria-label', 'Record 0-0-0');
     expect(screen.getByLabelText('0 watched games shown')).toHaveTextContent('0Games');
     expect(screen.getByText('No watched games.')).toBeInTheDocument();
     expect(screen.queryByText('Watched team not found.')).not.toBeInTheDocument();
@@ -334,7 +336,7 @@ describe('UserGamesWatchedTeam', () => {
 
     expect(screen.getByLabelText('1 watched game shown')).toHaveTextContent('1Game');
     // The record follows the filters: just the 2025 win.
-    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('1-0-0');
+    expect(screen.getByTestId('team-hero-record')).toHaveAttribute('aria-label', 'Record 1-0-0');
     const gameRows = screen.getAllByRole('listitem');
     expect(gameRows).toHaveLength(1);
     expect(within(gameRows[0]).getByText('Dec 31, 2025')).toBeInTheDocument();
@@ -361,13 +363,13 @@ describe('UserGamesWatchedTeam', () => {
 
     renderTeamPage();
 
-    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('1-1-0');
+    expect(screen.getByTestId('team-hero-record')).toHaveAttribute('aria-label', 'Record 1-1-0');
     expect(screen.getByRole('option', { name: 'All Seasons' })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Season'), { target: { value: 'season-2025' } });
 
     expect(screen.getByLabelText('1 watched game shown')).toBeInTheDocument();
-    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('0-1-0');
+    expect(screen.getByTestId('team-hero-record')).toHaveAttribute('aria-label', 'Record 0-1-0');
     expect(within(screen.getAllByRole('listitem')[0]).getByText('Mar 1, 2025 • 7:00 PM'))
       .toBeInTheDocument();
   });
@@ -385,15 +387,15 @@ describe('UserGamesWatchedTeam', () => {
 
     renderTeamPage();
 
-    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('1-0-1');
+    expect(screen.getByTestId('team-hero-record')).toHaveAttribute('aria-label', 'Record 1-0-1');
 
     fireEvent.click(screen.getByRole('button', { name: 'Away' }));
     expect(screen.getByLabelText('1 watched game shown')).toBeInTheDocument();
-    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('0-0-1');
+    expect(screen.getByTestId('team-hero-record')).toHaveAttribute('aria-label', 'Record 0-0-1');
 
     fireEvent.click(screen.getByRole('button', { name: 'Home' }));
     expect(screen.getByLabelText('1 watched game shown')).toBeInTheDocument();
-    expect(screen.getByTestId('team-hero-record')).toHaveTextContent('1-0-0');
+    expect(screen.getByTestId('team-hero-record')).toHaveAttribute('aria-label', 'Record 1-0-0');
 
     fireEvent.click(screen.getByRole('button', { name: 'All' }));
     expect(screen.getByLabelText('2 watched games shown')).toBeInTheDocument();

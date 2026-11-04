@@ -199,31 +199,50 @@ $hero-mobile-value-size: 1.25rem;
   transition: color $transition-layout ease;
 }
 
-// The team's record over the games shown, with an info tooltip explaining it.
+// The team's record over the games shown: W, L and OTL stats, styled like the player details
+// season stats, at hero size.
 .heroRecord {
   display: flex;
-  align-items: center;
-  gap: $space-sm;
+  align-items: flex-end;
+  gap: $space-md;
   flex-shrink: 0;
+
+  @media (max-width: $screen-phone-max) {
+    gap: $space-sm;
+  }
 }
 
-.heroRecordValue {
+// The dashes between the stats sit on the values' line, at their size, as in "39-15-8".
+.heroRecordDash {
   color: var(--app-text-strong, #{$text-bright});
-  font-size: 2.75rem;
+  font-size: 2rem;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-  line-height: 1;
-  text-align: center;
-  white-space: nowrap;
-  transition: color $transition-layout ease;
+  line-height: 1.1;
 
   @media (max-width: $screen-mobile-max) {
-    font-size: 2rem;
+    font-size: 1.5rem;
   }
 
   @media (max-width: $screen-phone-max) {
     font-size: $hero-mobile-value-size;
+  }
+}
+
+.heroRecordStat {
+  --stat-item-gap: #{$space-xs};
+  --stat-item-label-font-weight: 600;
+  --stat-item-label-letter-spacing: 0.07em;
+  --stat-item-value-font-size: 2rem;
+  --stat-item-value-font-weight: 700;
+
+  min-width: 2.5rem;
+
+  @media (max-width: $screen-mobile-max) {
+    --stat-item-value-font-size: 1.5rem;
+  }
+
+  @media (max-width: $screen-phone-max) {
+    --stat-item-value-font-size: #{$hero-mobile-value-size};
   }
 }
 
@@ -236,8 +255,15 @@ $hero-mobile-value-size: 1.25rem;
 .heroCardStuck {
   .heroPlace,
   .heroName,
-  .heroRecordValue {
+  .heroRecordDash {
     color: var(--team-text);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  }
+
+  .heroRecordStat {
+    --stat-item-label-color: var(--team-text);
+    --stat-item-value-color: var(--team-text);
+
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
   }
 }
