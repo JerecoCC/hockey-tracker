@@ -1,18 +1,19 @@
 import type { ReactNode } from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ChangeJerseyModal from './ChangeJerseyModal';
 import JerseyHistoryEditModal from './JerseyHistoryEditModal';
 
 jest.mock('@jerecocc/tracker-ui/components/Modal/Modal', () => ({
   __esModule: true,
-  default: ({ children, title }: { children: ReactNode; title: string }) => (
-    <div
-      role="dialog"
-      aria-label={title}
-    >
-      {children}
-    </div>
-  ),
+  default: ({ children, open, title }: { children: ReactNode; open: boolean; title: string }) =>
+    open ? (
+      <div
+        role="dialog"
+        aria-label={title}
+      >
+        {children}
+      </div>
+    ) : null,
 }));
 
 jest.mock('@/components/form/ControlledFields', () => {
@@ -107,5 +108,64 @@ describe('jersey number modals', () => {
       expect(jerseyNumber).toHaveValue(42);
       expect(jerseyNumber).toHaveFocus();
     });
+  });
+
+  it('hides while the change saves and reappears with the edit when saving fails', async () => {
+    let finishSave: (ok: boolean) => void = () => {};
+    const updateJerseyHistoryEntry = jest.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finishSave = resolve;
+        }),
+    );
+    const onClose = jest.fn();
+    render(
+      <JerseyHistoryEditModal
+        open
+        entry={{
+          id: 'history-1',
+          player_id: 'player-1',
+          jersey_number: 42,
+          effective_from: '2026-01-01',
+          effective_to: null,
+        }}
+        onClose={onClose}
+        updateJerseyHistoryEntry={updateJerseyHistoryEntry}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Jersey #'), { target: { value: '43' } });
+    fireEvent.submit(document.getElementById('edit-jersey-history-form')!);
+
+    // Hidden straight away, while the save runs behind a progress toast...
+    await waitFor(() => expect(screen.queryByLabelText('Jersey #')).not.toBeInTheDocument());
+    expect(updateJerseyHistoryEntry).toHaveBeenCalledWith('history-1', {
+      jersey_number: 43,
+      effective_from: '2026-01-01',
+    });
+    // ...then back, still holding the edit, once it fails.
+    finishSave(false);
+    expect(await screen.findByLabelText('Jersey #')).toHaveValue(43);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('closes once the change saves', async () => {
+    const onClose = jest.fn();
+    render(
+      <ChangeJerseyModal
+        open
+        currentJerseyNumber={27}
+        onClose={onClose}
+        changeJerseyNumber={jest.fn().mockResolvedValue(true)}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Jersey #'), { target: { value: '9' } });
+    fireEvent.change(screen.getByLabelText('Effective Date'), {
+      target: { value: '2026-02-01' },
+    });
+    fireEvent.submit(document.getElementById('change-jersey-form')!);
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
 });

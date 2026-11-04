@@ -5,6 +5,7 @@ import { ControlledSelectField } from '@/components/form/ControlledFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import ReadOnlyField from '@jerecocc/tracker-ui/components/ReadOnlyField/ReadOnlyField';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type PlayerPhotoEntry, type PlayerStintRecord } from '@/hooks/useTeamPlayers';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import styles from '../leagues/PlayerFormModal.module.scss';
@@ -106,22 +107,30 @@ const ChangePhotoModal = ({
     setInheritedBannerDismissed(false);
   }, [open, selectedSeasonId, inheritedPhoto]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  // The modal hides while the photo uploads and saves behind a progress toast, and reappears
+  // with the season and photo chosen if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (stint?.id ?? null) : null,
+    onDone: handleClose,
+  });
+
+  const onSubmit = handleSubmit((data) => {
     if (!stint || !data.season_id) return;
-    let photoUrl = typeof data.photo === 'string' ? data.photo : null;
-    if (data.photo instanceof File) {
-      const uploadedUrl = await uploadPhoto(data.photo);
-      if (!uploadedUrl) return;
-      photoUrl = uploadedUrl;
-    }
-    if (!photoUrl) return;
-    const ok = await changePlayerPhoto(stint, data.season_id, photoUrl);
-    if (ok) handleClose();
+    const { photo, season_id: seasonId } = data;
+    if (!photo) return;
+    void runSettled(
+      async () => {
+        const photoUrl = photo instanceof File ? await uploadPhoto(photo) : photo;
+        if (!photoUrl) return false;
+        return changePlayerPhoto(stint, seasonId, photoUrl);
+      },
+      { pending: 'Saving season photo…' },
+    );
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={isEditMode ? 'Edit Season Photo' : 'Set Team Photo'}
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving...' : 'Save'}

@@ -7,6 +7,7 @@ import {
 } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type CreateSeasonData, type SeasonRecord } from '@/hooks/useSeasons';
 import styles from './SeasonFormModal.module.scss';
 
@@ -108,7 +109,14 @@ const SeasonFormModal = (props: Props) => {
     onClose();
   }, [formValues, onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  // The modal hides while the season saves behind a progress toast, and reappears with the
+  // details entered if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (editTarget?.id ?? 'new') : null,
+    onDone: handleClose,
+  });
+
+  const onSubmit = handleSubmit((data) => {
     const payload: CreateSeasonData = {
       league_id: data.league_id!,
       name: data.name.trim(),
@@ -135,13 +143,15 @@ const SeasonFormModal = (props: Props) => {
           ? goalieMinValue
           : null;
     }
-    const ok = editTarget ? await updateSeason(editTarget.id, payload) : await addSeason(payload);
-    if (ok) handleClose();
+    void runSettled(
+      () => (editTarget ? updateSeason(editTarget.id, payload) : addSeason(payload)),
+      { pending: editTarget ? 'Saving season…' : 'Creating season…' },
+    );
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={editTarget ? 'Edit Season' : 'Create Season'}
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Season'}

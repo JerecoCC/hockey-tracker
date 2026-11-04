@@ -1,5 +1,6 @@
 import { type DragEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'react-toastify';
 import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
@@ -21,6 +22,7 @@ import Select, { type SelectOption } from '@jerecocc/tracker-ui/components/Selec
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import StatItem from '@jerecocc/tracker-ui/components/StatItem/StatItem';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { usePlayoffSeries, type PlayoffSeriesRecord } from '@/hooks/useGames';
 import useLeaguePlayers, { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import useSeasonAwards, {
@@ -1038,12 +1040,27 @@ const SeasonAwardsTab = ({
     );
   };
 
-  const saveAwardSelection = async () => {
+  // The modal hides while the awards save behind a progress toast, and reappears with the
+  // selection made if it fails.
+  const awardSelectionAction = useBackgroundModalAction({
+    target: awardSelectionOpen ? 'award-selection' : null,
+    onDone: closeAwardSelectionModal,
+  });
+
+  const saveAwardSelection = () => {
     if (!awardSelectionHasChanges || awardSelectionSaving) return;
+    const draftIds = awardSelectionDraftIds;
     setAwardSelectionSaving(true);
-    const ok = await updateTrackedAwards(awardSelectionDraftIds);
-    setAwardSelectionSaving(false);
-    if (ok) closeAwardSelectionModal();
+    void awardSelectionAction.runSettled(
+      async () => {
+        try {
+          return await updateTrackedAwards(draftIds);
+        } finally {
+          setAwardSelectionSaving(false);
+        }
+      },
+      { pending: 'Saving season awards…' },
+    );
   };
 
   const openRecipientModal = (award: SeasonAwardRecord) => {
@@ -1068,6 +1085,13 @@ const SeasonAwardsTab = ({
     setRecipientWinnerSaving(false);
     recipientForm.reset();
   };
+
+  // The recipient modal hides while the winners save behind a progress toast, and reappears
+  // with the winners chosen if it fails.
+  const recipientAction = useBackgroundModalAction({
+    target: recipientAward?.award_id ?? null,
+    onDone: closeRecipientModal,
+  });
 
   const suppressAutomaticWinnerRecordKeys = (
     award: SeasonAwardRecord,
@@ -1101,12 +1125,19 @@ const SeasonAwardsTab = ({
     setClearWinnersTarget(null);
   };
 
-  const confirmClearWinners = async () => {
+  // The confirmation hides while the winners clear behind a progress toast, and reappears if
+  // clearing them fails.
+  const clearWinnersAction = useBackgroundModalAction({
+    target: clearWinnersTarget?.award_id ?? null,
+    onDone: () => setClearWinnersTarget(null),
+  });
+
+  const confirmClearWinners = () => {
     if (!clearWinnersTarget?.season_award_id || clearWinnersSaving) return;
 
-    const winners = clearWinnersTarget.recipients.filter(
-      (recipient) => recipient.role === 'winner',
-    );
+    const award = clearWinnersTarget;
+    const seasonAwardId = clearWinnersTarget.season_award_id;
+    const winners = award.recipients.filter((recipient) => recipient.role === 'winner');
     const winnerIds = winners.map((recipient) => recipient.id);
     if (winnerIds.length === 0) {
       setClearWinnersTarget(null);
@@ -1114,16 +1145,21 @@ const SeasonAwardsTab = ({
     }
 
     setClearWinnersSaving(true);
-    const ok = await clearWinners(clearWinnersTarget.season_award_id, winnerIds, {
-      refresh: false,
-    });
-    setClearWinnersSaving(false);
-
-    if (ok) {
-      suppressAutomaticWinnerRecordKeys(clearWinnersTarget, winners);
-      refresh();
-      setClearWinnersTarget(null);
-    }
+    void clearWinnersAction.runSettled(
+      async () => {
+        try {
+          const ok = await clearWinners(seasonAwardId, winnerIds, { refresh: false });
+          if (ok) {
+            suppressAutomaticWinnerRecordKeys(award, winners);
+            refresh();
+          }
+          return ok;
+        } finally {
+          setClearWinnersSaving(false);
+        }
+      },
+      { pending: winnerIds.length === 1 ? 'Clearing winner…' : 'Clearing winners…' },
+    );
   };
 
   const toggleRecipientWinner = (recipientId: string) => {
@@ -1255,31 +1291,38 @@ const SeasonAwardsTab = ({
     teamSelectionForm.reset(emptyTeamSelectionValues);
   };
 
-  const submitRecipient = recipientForm.handleSubmit(async (values) => {
+  const submitRecipient = recipientForm.handleSubmit((values) => {
     if (!activeRecipientAward?.season_award_id) return;
     if (!canAwardWinners(activeRecipientAward, playoffsStarted)) return;
-    if (!activeRecipientAward.allow_multiple_winners) {
-      for (const recipient of activeRecipientWinners) {
-        const ok = await deleteRecipient(activeRecipientAward.season_award_id, recipient.id, {
-          silent: true,
-          refresh: false,
-        });
-        if (!ok) return;
-      }
-    }
-    const ok = await addRecipient(
-      activeRecipientAward.season_award_id,
-      withAwardStatValue(activeRecipientAward, {
-        recipient_type: activeRecipientAward.recipient_type,
-        player_id: activeRecipientAward.recipient_type === 'player' ? values.recipient_id : null,
-        team_id: activeRecipientAward.recipient_type === 'team' ? values.recipient_id : null,
-        role: 'winner',
-      }),
+    const award = activeRecipientAward;
+    const seasonAwardId = activeRecipientAward.season_award_id;
+    const currentWinners = activeRecipientWinners;
+    void recipientAction.runSettled(
+      async () => {
+        if (!award.allow_multiple_winners) {
+          for (const recipient of currentWinners) {
+            const ok = await deleteRecipient(seasonAwardId, recipient.id, {
+              silent: true,
+              refresh: false,
+            });
+            if (!ok) return false;
+          }
+        }
+        return addRecipient(
+          seasonAwardId,
+          withAwardStatValue(award, {
+            recipient_type: award.recipient_type,
+            player_id: award.recipient_type === 'player' ? values.recipient_id : null,
+            team_id: award.recipient_type === 'team' ? values.recipient_id : null,
+            role: 'winner',
+          }),
+        );
+      },
+      { pending: `Recording ${award.name} winner…` },
     );
-    if (ok) closeRecipientModal();
   });
 
-  const submitRecipientWinners = async () => {
+  const submitRecipientWinners = () => {
     if (
       !activeRecipientAward?.season_award_id ||
       !canAwardWinners(activeRecipientAward, playoffsStarted) ||
@@ -1290,54 +1333,65 @@ const SeasonAwardsTab = ({
       return;
     }
 
-    setRecipientWinnerSaving(true);
-
+    const award = activeRecipientAward;
+    const seasonAwardId = activeRecipientAward.season_award_id;
+    const currentWinners = activeRecipientWinners;
     const desiredRecipientIds = new Set(recipientWinnerDraftIds);
     const allowedRecipientIds = new Set(activeRecipientWinnerOptions.map((option) => option.id));
     const winnersToKeep = new Set<string>();
 
-    for (const recipient of activeRecipientWinners) {
-      const recipientId = recipientValueId(recipient);
-      if (recipientId && desiredRecipientIds.has(recipientId) && !winnersToKeep.has(recipientId)) {
-        winnersToKeep.add(recipientId);
-        desiredRecipientIds.delete(recipientId);
-        continue;
-      }
+    setRecipientWinnerSaving(true);
+    // The winners are saved silently one by one, so the success message is shown here.
+    void recipientAction.runSettled(
+      async () => {
+        try {
+          for (const recipient of currentWinners) {
+            const recipientId = recipientValueId(recipient);
+            if (
+              recipientId &&
+              desiredRecipientIds.has(recipientId) &&
+              !winnersToKeep.has(recipientId)
+            ) {
+              winnersToKeep.add(recipientId);
+              desiredRecipientIds.delete(recipientId);
+              continue;
+            }
 
-      const ok = await deleteRecipient(activeRecipientAward.season_award_id, recipient.id, {
-        silent: true,
-        refresh: false,
-      });
-      if (!ok) {
-        setRecipientWinnerSaving(false);
-        return;
-      }
-    }
+            const ok = await deleteRecipient(seasonAwardId, recipient.id, {
+              silent: true,
+              refresh: false,
+            });
+            if (!ok) return false;
+          }
 
-    for (const recipientId of desiredRecipientIds) {
-      if (!allowedRecipientIds.has(recipientId)) continue;
+          for (const recipientId of desiredRecipientIds) {
+            if (!allowedRecipientIds.has(recipientId)) continue;
 
-      const ok = await addRecipient(
-        activeRecipientAward.season_award_id,
-        withAwardStatValue(activeRecipientAward, {
-          recipient_type: activeRecipientAward.recipient_type,
-          player_id: activeRecipientAward.recipient_type === 'player' ? recipientId : null,
-          team_id: activeRecipientAward.recipient_type === 'team' ? recipientId : null,
-          role: 'winner',
-        }),
-        {
-          silent: true,
-          refresh: false,
-        },
-      );
-      if (!ok) {
-        setRecipientWinnerSaving(false);
-        return;
-      }
-    }
+            const ok = await addRecipient(
+              seasonAwardId,
+              withAwardStatValue(award, {
+                recipient_type: award.recipient_type,
+                player_id: award.recipient_type === 'player' ? recipientId : null,
+                team_id: award.recipient_type === 'team' ? recipientId : null,
+                role: 'winner',
+              }),
+              {
+                silent: true,
+                refresh: false,
+              },
+            );
+            if (!ok) return false;
+          }
 
-    refresh();
-    closeRecipientModal();
+          refresh();
+          toast.success(`${award.name} winners saved`);
+          return true;
+        } finally {
+          setRecipientWinnerSaving(false);
+        }
+      },
+      { pending: `Saving ${award.name} winners…` },
+    );
   };
 
   const activeNominees = activeNomineeAward
@@ -1360,9 +1414,17 @@ const SeasonAwardsTab = ({
   const nomineeDraftCanSave =
     !nomineeDraftHasEmpty && !nomineeDraftHasDuplicates && nomineeDraftHasChanges;
 
-  const submitNominees = async () => {
-    if (!activeNomineeAward?.season_award_id || !nomineeDraftCanSave) return;
+  // The nominees modal hides while the nominees save behind a progress toast, and reappears with
+  // the nominees chosen if it fails.
+  const nomineesAction = useBackgroundModalAction({
+    target: nomineeAward?.award_id ?? null,
+    onDone: closeNomineesModal,
+  });
+
+  const submitNominees = () => {
+    if (!activeNomineeAward?.season_award_id || !nomineeDraftCanSave || nomineesSaving) return;
     const award = activeNomineeAward;
+    const seasonAwardId = activeNomineeAward.season_award_id;
     setNomineesSaving(true);
 
     const nominees = nomineeDraftRecipientIds.map((recipientId, index) =>
@@ -1375,11 +1437,16 @@ const SeasonAwardsTab = ({
       }),
     );
 
-    const ok = await saveNominees(award.season_award_id, nominees);
-    setNomineesSaving(false);
-    if (ok) {
-      closeNomineesModal();
-    }
+    void nomineesAction.runSettled(
+      async () => {
+        try {
+          return await saveNominees(seasonAwardId, nominees);
+        } finally {
+          setNomineesSaving(false);
+        }
+      },
+      { pending: `Saving ${award.name} nominees…` },
+    );
   };
 
   useEffect(() => {
@@ -1440,7 +1507,14 @@ const SeasonAwardsTab = ({
     void recordAutomaticWinners();
   }, [isEnded, playoffsStarted, suggestions, trackedAwards, withAwardStatValue]);
 
-  const submitTeamSelection = teamSelectionForm.handleSubmit(async (values) => {
+  // The team modal hides while the team saves behind a progress toast, and reappears with the
+  // players chosen if it fails.
+  const teamSelectionAction = useBackgroundModalAction({
+    target: teamSelectionAward?.award_id ?? null,
+    onDone: closeTeamSelectionModal,
+  });
+
+  const submitTeamSelection = teamSelectionForm.handleSubmit((values) => {
     if (
       !teamSelectionAward?.season_award_id ||
       !canAwardWinners(teamSelectionAward, playoffsStarted) ||
@@ -1450,37 +1524,44 @@ const SeasonAwardsTab = ({
       return;
     }
 
-    const existingWinners = teamSelectionAward.recipients.filter(
-      (recipient) => recipient.role === 'winner',
+    const award = teamSelectionAward;
+    const seasonAwardId = teamSelectionAward.season_award_id;
+    const existingWinners = award.recipients.filter((recipient) => recipient.role === 'winner');
+    // The players are saved silently one by one, so the success message is shown here.
+    void teamSelectionAction.runSettled(
+      async () => {
+        for (const recipient of existingWinners) {
+          const ok = await deleteRecipient(seasonAwardId, recipient.id, {
+            silent: true,
+            refresh: false,
+          });
+          if (!ok) return false;
+        }
+
+        for (const slot of TEAM_SELECTION_SLOTS) {
+          const ok = await addRecipient(
+            seasonAwardId,
+            withAwardStatValue(award, {
+              recipient_type: 'player',
+              player_id: values[slot.field],
+              role: 'winner',
+              rank: slot.rank,
+              notes: slot.group,
+            }),
+            {
+              silent: true,
+              refresh: false,
+            },
+          );
+          if (!ok) return false;
+        }
+
+        refresh();
+        toast.success(`${award.name} saved`);
+        return true;
+      },
+      { pending: `Saving ${award.name}…` },
     );
-    for (const recipient of existingWinners) {
-      const ok = await deleteRecipient(teamSelectionAward.season_award_id, recipient.id, {
-        silent: true,
-        refresh: false,
-      });
-      if (!ok) return;
-    }
-
-    for (const slot of TEAM_SELECTION_SLOTS) {
-      const ok = await addRecipient(
-        teamSelectionAward.season_award_id,
-        withAwardStatValue(teamSelectionAward, {
-          recipient_type: 'player',
-          player_id: values[slot.field],
-          role: 'winner',
-          rank: slot.rank,
-          notes: slot.group,
-        }),
-        {
-          silent: true,
-          refresh: false,
-        },
-      );
-      if (!ok) return;
-    }
-
-    refresh();
-    closeTeamSelectionModal();
   });
 
   const nomineeRecipientOptions =
@@ -1697,7 +1778,7 @@ const SeasonAwardsTab = ({
       </Section>
 
       <ConfirmModal
-        open={!!clearWinnersTarget}
+        open={!!clearWinnersTarget && !clearWinnersAction.hidden}
         title={clearWinnersConfirmLabel}
         body={
           clearWinnersTarget ? (
@@ -1718,7 +1799,7 @@ const SeasonAwardsTab = ({
       />
 
       <Modal
-        open={awardSelectionOpen}
+        open={awardSelectionOpen && !awardSelectionAction.hidden}
         title="Update Awards"
         onClose={closeAwardSelectionModal}
         onConfirm={saveAwardSelection}
@@ -1771,7 +1852,7 @@ const SeasonAwardsTab = ({
       </Modal>
 
       <Modal
-        open={!!recipientAward}
+        open={!!recipientAward && !recipientAction.hidden}
         title={
           activeRecipientAward
             ? `${activeRecipientAward.recipient_type === 'team' ? 'Award Team' : 'Award Player'}: ${
@@ -1881,7 +1962,7 @@ const SeasonAwardsTab = ({
       </Modal>
 
       <Modal
-        open={!!nomineeAward}
+        open={!!nomineeAward && !nomineesAction.hidden}
         title={activeNomineeAward ? `Nominees: ${activeNomineeAward.name}` : 'Nominees'}
         onClose={closeNomineesModal}
         onConfirm={submitNominees}
@@ -1973,7 +2054,7 @@ const SeasonAwardsTab = ({
       </Modal>
 
       <Modal
-        open={!!teamSelectionAward}
+        open={!!teamSelectionAward && !teamSelectionAction.hidden}
         title={teamSelectionAward ? `Set Team: ${teamSelectionAward.name}` : 'Set Team'}
         onClose={closeTeamSelectionModal}
         confirmForm="season-award-team-selection-form"

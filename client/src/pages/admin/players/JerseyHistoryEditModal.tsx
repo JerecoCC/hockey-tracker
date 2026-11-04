@@ -5,6 +5,7 @@ import {
   ControlledInputField,
 } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type JerseyHistoryEntry, type UpdateJerseyHistoryEntryData } from '@/hooks/useTeamPlayers';
 import styles from '../leagues/PlayerFormModal.module.scss';
 
@@ -50,18 +51,28 @@ const JerseyHistoryEditModal = ({ open, entry, onClose, updateJerseyHistoryEntry
     onClose();
   }, [formValues, onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  // The modal hides while the change saves behind a progress toast, and reappears with the
+  // number and date entered if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (entry?.id ?? null) : null,
+    onDone: handleClose,
+  });
+
+  const onSubmit = handleSubmit((data) => {
     if (!entry) return;
-    const ok = await updateJerseyHistoryEntry(entry.id, {
-      jersey_number: Number(data.jersey_number),
-      effective_from: data.effective_from,
-    });
-    if (ok) handleClose();
+    void runSettled(
+      () =>
+        updateJerseyHistoryEntry(entry.id, {
+          jersey_number: Number(data.jersey_number),
+          effective_from: data.effective_from,
+        }),
+      { pending: 'Saving jersey number change…' },
+    );
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="Edit Jersey Number Change"
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving...' : 'Save'}

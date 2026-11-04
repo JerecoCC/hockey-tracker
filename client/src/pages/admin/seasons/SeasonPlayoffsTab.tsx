@@ -12,6 +12,7 @@ import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import Banner from '@jerecocc/tracker-ui/components/Banner/Banner';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type PlayoffSeriesRecord, type SeriesStatus, usePlayoffSeries } from '@/hooks/useGames';
 import { type PlayoffFormatRule } from '@/hooks/useLeagues';
 import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
@@ -131,6 +132,8 @@ interface ChoicePick {
 
 interface ChoicePickModalProps {
   open: boolean;
+  /** Hides the modal while its picks are being applied, keeping them for if it shows again. */
+  hidden?: boolean;
   choices: ChoicePick[];
   confirmLabel?: string;
   onConfirm: (picks: ChoicePick[]) => void | Promise<void>;
@@ -139,6 +142,7 @@ interface ChoicePickModalProps {
 
 const ChoicePickModal = ({
   open,
+  hidden = false,
   choices,
   confirmLabel = 'Apply Simulation',
   onConfirm,
@@ -162,7 +166,7 @@ const ChoicePickModal = ({
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="Opponent Picks"
       onClose={onClose}
       confirmLabel={confirmLabel}
@@ -416,7 +420,7 @@ const BracketSlot = ({
             logo={series.home_team_logo}
             logoDark={series.home_team_logo_dark}
             logoLight={series.home_team_logo_light}
-            code={series.home_team_code}
+            code={series.home_team_code ?? ''}
             size={20}
             shape="square"
           />
@@ -444,7 +448,7 @@ const BracketSlot = ({
             logo={series.away_team_logo}
             logoDark={series.away_team_logo_dark}
             logoLight={series.away_team_logo_light}
-            code={series.away_team_code}
+            code={series.away_team_code ?? ''}
             size={20}
             shape="square"
           />
@@ -529,6 +533,12 @@ const SeasonPlayoffsTab = ({
   );
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [savingPlayoffSettings, setSavingPlayoffSettings] = useState(false);
+  // The settings modal hides while the settings save behind a progress toast, and reappears
+  // with the choices made if it fails.
+  const playoffSettingsAction = useBackgroundModalAction({
+    target: settingsModalOpen ? 'playoff-settings' : null,
+    onDone: () => setSettingsModalOpen(false),
+  });
   const bracketCanvasRef = useRef<HTMLDivElement | null>(null);
   const bracketSlotRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [bracketConnectorPaths, setBracketConnectorPaths] = useState<BracketConnectorPath[]>([]);
@@ -632,6 +642,20 @@ const SeasonPlayoffsTab = ({
     Record<string, string | null>
   >({});
   const [pendingRuleSlots, setPendingRuleSlots] = useState<BracketSlotRule[]>([]);
+  const closePickModal = () => {
+    setPickModalOpen(false);
+    setPendingChoices([]);
+    setPartialSimResult({});
+    setPartialSimResultTeamIds({});
+    setPendingRuleSlots([]);
+  };
+  // When seeding, the pick modal hides while the round 1 series are created behind a progress
+  // toast. Each series reports its own result, and the modal closes either way, as it did before,
+  // since some of the series may already have been created.
+  const pickAction = useBackgroundModalAction({
+    target: pickModalOpen ? 'choice-picks' : null,
+    onDone: closePickModal,
+  });
 
   /**
    * Persists round 1 matchups to the database using the resolved slot map.
@@ -844,11 +868,21 @@ const SeasonPlayoffsTab = ({
       setSimulatedSlotTeams(buildSimulatedSlotTeams(resultTeamIds));
       setSimulatedSlots(result);
     }
-    setPickModalOpen(false);
-    setPendingChoices([]);
-    setPartialSimResult({});
-    setPartialSimResultTeamIds({});
-    setPendingRuleSlots([]);
+    closePickModal();
+  };
+
+  const handleConfirmPicks = (picks: ChoicePick[]) => {
+    if (!playoffsStarted) {
+      void finalizeSimulation(picks);
+      return;
+    }
+    void pickAction.runSettled(
+      async () => {
+        await finalizeSimulation(picks);
+        return true;
+      },
+      { pending: 'Seeding matchups…' },
+    );
   };
 
   // ── Derived bracket structure ─────────────────────────────────────────────────
@@ -957,19 +991,24 @@ const SeasonPlayoffsTab = ({
   const closePlayoffSettingsModal = () => {
     if (!savingPlayoffSettings) setSettingsModalOpen(false);
   };
-  const handleSavePlayoffSettings = async () => {
-    if (!hasDraftPlayoffSettingsChange) return;
+  const handleSavePlayoffSettings = () => {
+    if (!hasDraftPlayoffSettingsChange || savingPlayoffSettings) return;
     const playoffValue = parseInt(draftBestOfPlayoff, 10);
+    const payload = {
+      bracket_rule_set_id: draftBracketRuleSetId,
+      best_of_playoff: playoffValue !== leagueBestOfPlayoff ? playoffValue : null,
+    };
     setSavingPlayoffSettings(true);
-    try {
-      const saved = await updateSeason(seasonId, {
-        bracket_rule_set_id: draftBracketRuleSetId,
-        best_of_playoff: playoffValue !== leagueBestOfPlayoff ? playoffValue : null,
-      });
-      if (saved) setSettingsModalOpen(false);
-    } finally {
-      setSavingPlayoffSettings(false);
-    }
+    void playoffSettingsAction.runSettled(
+      async () => {
+        try {
+          return await updateSeason(seasonId, payload);
+        } finally {
+          setSavingPlayoffSettings(false);
+        }
+      },
+      { pending: 'Saving playoff settings…' },
+    );
   };
   const canSimulateFirstRound =
     !!bracketStructure &&
@@ -1565,19 +1604,14 @@ const SeasonPlayoffsTab = ({
       <>
         <ChoicePickModal
           open={pickModalOpen}
+          hidden={pickAction.hidden}
           choices={pendingChoices}
           confirmLabel={playoffsStarted ? 'Seed Matchups' : 'Apply Simulation'}
-          onConfirm={finalizeSimulation}
-          onClose={() => {
-            setPickModalOpen(false);
-            setPendingChoices([]);
-            setPartialSimResult({});
-            setPartialSimResultTeamIds({});
-            setPendingRuleSlots([]);
-          }}
+          onConfirm={handleConfirmPicks}
+          onClose={closePickModal}
         />
         <Modal
-          open={settingsModalOpen}
+          open={settingsModalOpen && !playoffSettingsAction.hidden}
           title="Edit Playoff Settings"
           onClose={closePlayoffSettingsModal}
           confirmLabel={savingPlayoffSettings ? 'Saving...' : 'Save Changes'}

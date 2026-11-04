@@ -5,6 +5,7 @@ import {
   ControlledSelectField,
 } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import {
   type PlayerStintRecord,
   type UpdateStintData,
@@ -134,32 +135,45 @@ const StintEditModal = ({
     onClose();
   }, [formValues, onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  // The modal hides while the stint saves behind a progress toast, and reappears with the
+  // details entered if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (stint?.id ?? 'new') : null,
+    onDone: handleClose,
+  });
+
+  const onSubmit = handleSubmit((data) => {
     if (mode === 'create') {
       const seasonId = inferSeasonId(data.team_id, data.start_date, data.end_date);
       if (!seasonId) return;
-      const ok = await createStint({
-        team_id: data.team_id,
-        season_id: seasonId,
-        is_prospect: false,
-        position: data.position || null,
-        acquisition_type: data.acquisition_type || 'free_agency',
-        start_date: data.start_date || null,
-        end_date: data.end_date || null,
-      });
-      if (ok) handleClose();
+      void runSettled(
+        () =>
+          createStint({
+            team_id: data.team_id,
+            season_id: seasonId,
+            is_prospect: false,
+            position: data.position || null,
+            acquisition_type: data.acquisition_type || 'free_agency',
+            start_date: data.start_date || null,
+            end_date: data.end_date || null,
+          }),
+        { pending: 'Recording stint…' },
+      );
     } else {
       if (!stint) return;
       const seasonId = inferSeasonId(data.team_id, data.start_date, data.end_date);
-      const ok = await updateStint(stint.id, {
-        team_id: data.team_id,
-        ...(seasonId ? { season_id: seasonId } : {}),
-        position: data.position || null,
-        acquisition_type: data.acquisition_type || null,
-        start_date: data.start_date || null,
-        end_date: data.end_date || null,
-      });
-      if (ok) handleClose();
+      void runSettled(
+        () =>
+          updateStint(stint.id, {
+            team_id: data.team_id,
+            ...(seasonId ? { season_id: seasonId } : {}),
+            position: data.position || null,
+            acquisition_type: data.acquisition_type || null,
+            start_date: data.start_date || null,
+            end_date: data.end_date || null,
+          }),
+        { pending: 'Saving stint…' },
+      );
     }
   });
 
@@ -173,7 +187,7 @@ const StintEditModal = ({
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={title}
       onClose={handleClose}
       confirmLabel={confirmLabel}

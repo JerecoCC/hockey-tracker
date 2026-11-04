@@ -10,6 +10,7 @@ import {
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import type { SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useGames, {
   type CreateGameData,
   type GameRecord,
@@ -189,7 +190,14 @@ const GameFormModal = ({
     ? teamOptions.filter((option) => 'value' in option && option.value !== teamContext.teamId)
     : teamOptions;
 
-  const onSubmit = handleSubmit(async (data) => {
+  // The modal hides while the game saves behind a progress toast, and reappears with the
+  // details entered if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (editTarget?.id ?? 'new') : null,
+    onDone: handleClose,
+  });
+
+  const onSubmit = handleSubmit((data) => {
     const homeTeamId =
       isTeamContextCreate && teamContext
         ? data.team_side === 'home'
@@ -215,15 +223,16 @@ const GameFormModal = ({
       shootout: data.shootout === 'true',
       notes: data.notes || null,
     };
-    const ok = editTarget
-      ? await updateGame(editTarget.id, payload)
-      : (await createGame(payload)) !== null;
-    if (ok) handleClose();
+    void runSettled(
+      async () =>
+        editTarget ? updateGame(editTarget.id, payload) : (await createGame(payload)) !== null,
+      { pending: editTarget ? 'Saving game…' : 'Creating game…' },
+    );
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={
         editTarget
           ? 'Edit Game'

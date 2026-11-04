@@ -8,6 +8,7 @@ import {
 } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import {
   type CreatePlayerData,
   type PlayerRecord,
@@ -135,7 +136,14 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
     onClose();
   }, [formValues, onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  // The modal hides while the player saves behind a progress toast, and reappears with the
+  // changes entered if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (player?.id ?? null) : null,
+    onDone: handleClose,
+  });
+
+  const onSubmit = handleSubmit((data) => {
     if (!player) return;
     const feetError = validateFeet(data.height_ft);
     const inchesError = validateInches(data.height_in);
@@ -150,7 +158,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
 
     const hasFt = data.height_ft !== '';
     const hasIn = data.height_in !== '';
-    const ok = await updatePlayer(player.id, {
+    const payload: Partial<CreatePlayerData> = {
       league_player_number: data.league_player_number.trim() || null,
       ...(!isRetired ? { status: data.status } : {}),
       shoots: data.shoots || null,
@@ -168,8 +176,8 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
               data.rookie_season_id === NO_ROOKIE_SEASON ? null : data.rookie_season_id,
           }
         : {}),
-    });
-    if (ok) handleClose();
+    };
+    void runSettled(() => updatePlayer(player.id, payload), { pending: 'Saving player info…' });
   });
 
   const normalizeBirthCity = (value: string) => {
@@ -192,7 +200,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="Edit Player Info"
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
