@@ -4,6 +4,7 @@ import MoreActionsMenu, {
   type MoreActionsMenuItem,
 } from '@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu';
 import type { GameRecord } from '@/hooks/useGames';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
 import useUserGameWatchActions from '@/hooks/useUserGameWatchActions';
 import { canMarkGameWatched } from '@/lib/gamePresentation';
@@ -26,6 +27,12 @@ const UserGameWatchActions = ({ game, onDownloadScoreCard }: Props) => {
     useUserGameWatchActions(game);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
+  // The postpone modal hides while the new date saves behind a progress toast, and reappears
+  // with that date if it fails.
+  const scheduleAction = useBackgroundModalAction({
+    target: scheduleOpen ? game.id : null,
+    onDone: () => setScheduleOpen(false),
+  });
 
   const watched = !!game.watched_by_user;
   const skipped = !!game.skipped_by_user;
@@ -101,15 +108,16 @@ const UserGameWatchActions = ({ game, onDownloadScoreCard }: Props) => {
       </div>
 
       <ScheduleWatchModal
-        open={scheduleOpen}
+        open={scheduleOpen && !scheduleAction.hidden}
         game={game}
         value={scheduleDate}
         busy={busy}
         onChange={setScheduleDate}
         onClose={() => setScheduleOpen(false)}
         onSave={() => {
-          void postponeWatch(scheduleDate || null).then((ok) => {
-            if (ok) setScheduleOpen(false);
+          const scheduledFor = scheduleDate || null;
+          void scheduleAction.runSettled(() => postponeWatch(scheduledFor), {
+            pending: scheduledFor ? 'Postponing watch…' : 'Saving watch date…',
           });
         }}
       />

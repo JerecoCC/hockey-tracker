@@ -9,6 +9,7 @@ import Select from '@jerecocc/tracker-ui/components/Select/Select';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import TimePicker from '@jerecocc/tracker-ui/components/TimePicker/TimePicker';
 import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import {
@@ -211,7 +212,6 @@ const GoalieStatsEditModal = ({
   removeGoalieStint,
   removeGoalieStat,
 }: Props) => {
-  const [submitting, setSubmitting] = useState(false);
   const [adding, setAdding] = useState(false);
   const [removedGoalieIds, setRemovedGoalieIds] = useState<string[]>([]);
   const [removedStintIds, setRemovedStintIds] = useState<string[]>([]);
@@ -454,64 +454,72 @@ const GoalieStatsEditModal = ({
     goals_against: stintRow.goals_against === '' ? null : parseNumber(stintRow.goals_against),
   });
 
-  const handleSave = async () => {
-    setSubmitting(true);
-    try {
-      for (const goalieId of removedGoalieIds) {
-        const ok = await removeGoalieStat(goalieId);
-        if (!ok) return;
-      }
+  // The modal hides while the goalie stats save behind a progress toast, and reappears if a step
+  // fails. Each step that went through refreshes the goalie stats, which rebuilds the form from
+  // them (as it did while the modal stayed open), so saving again doesn't repeat those steps.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? game.id : null,
+    onDone: onClose,
+  });
 
-      for (const stintId of removedStintIds) {
-        const ok = await removeGoalieStint(stintId);
-        if (!ok) return;
-      }
+  const saveGoalieStats = async () => {
+    for (const goalieId of removedGoalieIds) {
+      const ok = await removeGoalieStat(goalieId);
+      if (!ok) return false;
+    }
 
-      for (const row of getValues('rows')) {
-        for (let index = 0; index < row.stints.length; index += 1) {
-          const stintRow = row.stints[index];
-          const originalStint = originalStintForRow(row, stintRow);
-          if (!originalStint) {
-            const rows = await addGoalieStint(buildGoalieSwitchData(row, stintRow));
-            if (!rows) return;
-            continue;
-          }
+    for (const stintId of removedStintIds) {
+      const ok = await removeGoalieStint(stintId);
+      if (!ok) return false;
+    }
 
-          const patch: UpdateGoalieStintData = {};
-          if (stintRow.entered_period !== originalStint.entered_period) {
-            patch.entered_period = stintRow.entered_period;
-          }
-          if ((stintRow.entered_time || null) !== originalStint.entered_time) {
-            patch.entered_time = stintRow.entered_time || null;
-          }
-          if ((stintRow.exited_period || null) !== originalStint.exited_period) {
-            patch.exited_period = stintRow.exited_period || null;
-          }
-          if ((stintRow.exited_time || null) !== originalStint.exited_time) {
-            patch.exited_time = stintRow.exited_time || null;
-          }
-          const shots = parseNumber(stintRow.shots_against);
-          if (shots !== originalStint.shots_against) patch.shots_against = shots;
+    for (const row of getValues('rows')) {
+      for (let index = 0; index < row.stints.length; index += 1) {
+        const stintRow = row.stints[index];
+        const originalStint = originalStintForRow(row, stintRow);
+        if (!originalStint) {
+          const rows = await addGoalieStint(buildGoalieSwitchData(row, stintRow));
+          if (!rows) return false;
+          continue;
+        }
 
-          if (stintRow.goals_against === '') {
-            if (originalStint.goals_against_override != null) patch.goals_against = null;
-          } else {
-            const goalsAgainst = parseNumber(stintRow.goals_against);
-            if (goalsAgainst !== originalStint.goals_against_override) {
-              patch.goals_against = goalsAgainst;
-            }
-          }
+        const patch: UpdateGoalieStintData = {};
+        if (stintRow.entered_period !== originalStint.entered_period) {
+          patch.entered_period = stintRow.entered_period;
+        }
+        if ((stintRow.entered_time || null) !== originalStint.entered_time) {
+          patch.entered_time = stintRow.entered_time || null;
+        }
+        if ((stintRow.exited_period || null) !== originalStint.exited_period) {
+          patch.exited_period = stintRow.exited_period || null;
+        }
+        if ((stintRow.exited_time || null) !== originalStint.exited_time) {
+          patch.exited_time = stintRow.exited_time || null;
+        }
+        const shots = parseNumber(stintRow.shots_against);
+        if (shots !== originalStint.shots_against) patch.shots_against = shots;
 
-          if (Object.keys(patch).length > 0) {
-            const rows = await updateGoalieStint(stintRow.id, patch);
-            if (!rows) return;
+        if (stintRow.goals_against === '') {
+          if (originalStint.goals_against_override != null) patch.goals_against = null;
+        } else {
+          const goalsAgainst = parseNumber(stintRow.goals_against);
+          if (goalsAgainst !== originalStint.goals_against_override) {
+            patch.goals_against = goalsAgainst;
           }
         }
+
+        if (Object.keys(patch).length > 0) {
+          const rows = await updateGoalieStint(stintRow.id, patch);
+          if (!rows) return false;
+        }
       }
-      onClose();
-    } finally {
-      setSubmitting(false);
     }
+    return true;
+  };
+
+  const handleSave = () => {
+    if (hidden) return;
+    void runSettled(saveGoalieStats, { pending: 'Saving goalie stats…' });
   };
 
   const handleRemoveStint = (goalieIdx: number, stintId: string) => {
@@ -630,18 +638,17 @@ const GoalieStatsEditModal = ({
     );
   };
 
-  const busy = submitting;
+  const busy = hidden;
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="Edit Goalie Stats"
       onClose={onClose}
       disableBackdropClose
-      confirmLabel={submitting ? 'Saving...' : 'Save'}
+      confirmLabel="Save"
       onConfirm={handleSave}
       confirmDisabled={busy || !hasChanges || !isValid}
-      busy={submitting}
       size="lg"
       footerStart={
         hasAvailableGoalies ? (

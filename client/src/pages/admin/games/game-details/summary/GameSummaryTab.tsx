@@ -11,6 +11,7 @@ import {
 } from 'react';
 import useGameGoals from '@/hooks/useGameGoals';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { useNavigate } from 'react-router-dom';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
@@ -316,15 +317,14 @@ const GameSummaryTab = ({
       const [minutes, seconds] = time.split(':').map(Number);
       return (minutes || 0) * 60 + (seconds || 0);
     };
-    return [...goals]
-      .sort((a, b) => {
-        const periodDiff = periodRank(a.period) - periodRank(b.period);
-        if (periodDiff !== 0) return periodDiff;
-        const timeDiff = toSecs(a.period_time) - toSecs(b.period_time);
-        if (timeDiff !== 0) return timeDiff;
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-      })
-      .at(-1)?.id;
+    const sortedGoals = [...goals].sort((a, b) => {
+      const periodDiff = periodRank(a.period) - periodRank(b.period);
+      if (periodDiff !== 0) return periodDiff;
+      const timeDiff = toSecs(a.period_time) - toSecs(b.period_time);
+      if (timeDiff !== 0) return timeDiff;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
+    return sortedGoals.length > 0 ? sortedGoals[sortedGoals.length - 1].id : undefined;
   }, [goals]);
   const lockGoalTimingFields =
     !!editGoal && (editGoal.id !== lastRecordedGoalId || attempts.length > 0);
@@ -379,6 +379,16 @@ const GameSummaryTab = ({
   const [starsModalOpen, setStarsModalOpen] = useState(false);
   const [starsEditMode, setStarsEditMode] = useState(false);
   const [endGameReadyForStars, setEndGameReadyForStars] = useState(false);
+  // Memoized so the stars modal only resets its picks when the saved stars change, not on every
+  // render (it hides while saving and must reappear with the picks if the save fails).
+  const savedStars = useMemo(
+    () => ({
+      star1: game.star_1_id ?? '',
+      star2: game.star_2_id ?? '',
+      star3: game.star_3_id ?? '',
+    }),
+    [game.star_1_id, game.star_2_id, game.star_3_id],
+  );
 
   // ── Shots edit modal ─────────────────────────────────────────────────────
   const [shotsEditModalOpen, setShotsEditModalOpen] = useState(false);
@@ -421,6 +431,20 @@ const GameSummaryTab = ({
 
   // ── Delete Game confirm ──────────────────────────────────────────────────
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  // The confirm hides while the game deletes behind a progress toast; the page then goes back to
+  // the season, or the confirm reappears if the delete fails.
+  const deleteGameAction = useBackgroundModalAction({
+    target: confirmDeleteOpen ? game.id : null,
+    onDone: () =>
+      navigate(
+        buildSeasonDetailsPath({
+          leagueCode: game.league_code,
+          leagueId,
+          seasonName: game.season_name,
+          seasonId,
+        }),
+      ),
+  });
 
   // ── Record Shots modal state ─────────────────────────────────────────────
   const [shotsPeriod, setShotsPeriod] = useState<string | null>(null);
@@ -470,19 +494,18 @@ const GameSummaryTab = ({
 
   // ── Delete Goal confirm ──────────────────────────────────────────────────
   const [confirmDeleteGoal, setConfirmDeleteGoal] = useState<GoalRecord | null>(null);
-  const [deletingGoal, setDeletingGoal] = useState(false);
+  // The confirm hides while the goal deletes behind a progress toast, and reappears if it fails.
+  const deleteGoalAction = useBackgroundModalAction({
+    target: confirmDeleteGoal?.id ?? null,
+    onDone: () => setConfirmDeleteGoal(null),
+  });
   const requestDeleteGoal = (goalId: string) => {
     setConfirmDeleteGoal(goals.find((goal) => goal.id === goalId) ?? null);
   };
-  const handleConfirmDeleteGoal = async () => {
-    if (!confirmDeleteGoal) return;
-    setDeletingGoal(true);
-    try {
-      await deleteGoal(confirmDeleteGoal.id);
-    } finally {
-      setDeletingGoal(false);
-      setConfirmDeleteGoal(null);
-    }
+  const handleConfirmDeleteGoal = () => {
+    if (!confirmDeleteGoal || deleteGoalAction.hidden) return;
+    const goalId = confirmDeleteGoal.id;
+    void deleteGoalAction.runSettled(() => deleteGoal(goalId), { pending: 'Deleting goal…' });
   };
 
   const handleAddGoal = useCallback(
@@ -599,7 +622,8 @@ const GameSummaryTab = ({
         className={summaryContentClassName}
         aria-disabled={isGoalScoring || undefined}
         data-goal-scoring-locked={isGoalScoring || undefined}
-        inert={isGoalScoring ? '' : undefined}
+        // React 18's DOM typings omit `inert`; spread it so the attribute is still forwarded as-is.
+        {...(isGoalScoring ? { inert: '' } : {})}
         onClickCapture={isGoalScoring ? stopLockedInteraction : undefined}
         onKeyDownCapture={isGoalScoring ? stopLockedKeyInteraction : undefined}
       >
@@ -744,9 +768,9 @@ const GameSummaryTab = ({
                 canEndGame={
                   editable &&
                   isInProgress &&
-                  [PERIOD.THIRD, PERIOD.OVERTIME, PERIOD.SHOOTOUT].includes(
-                    game.current_period ?? '',
-                  ) &&
+                  (game.current_period === PERIOD.THIRD ||
+                    game.current_period === PERIOD.OVERTIME ||
+                    game.current_period === PERIOD.SHOOTOUT) &&
                   (game.current_period !== PERIOD.SHOOTOUT || soComplete) &&
                   (game.current_period !== PERIOD.OVERTIME ||
                     goals.some((g) => g.period === PERIOD.OVERTIME)) &&
@@ -992,15 +1016,7 @@ const GameSummaryTab = ({
               primaryColor: game.home_team.primary_color,
               textColor: game.home_team.text_color,
             }}
-            initialStars={
-              starsEditMode && game
-                ? {
-                    star1: game.star_1_id ?? '',
-                    star2: game.star_2_id ?? '',
-                    star3: game.star_3_id ?? '',
-                  }
-                : undefined
-            }
+            initialStars={starsEditMode ? savedStars : undefined}
             onClose={() => setStarsModalOpen(false)}
             onSave={updateStars}
             onEndGame={async (payload) => {
@@ -1049,9 +1065,7 @@ const GameSummaryTab = ({
             lineup={lineup}
             onClose={() => setShotsEditModalOpen(false)}
             updatePeriodShots={updatePeriodShots}
-            upsertGoalieStat={async (data) => {
-              await upsertGoalieStat(data);
-            }}
+            upsertGoalieStat={upsertGoalieStat}
           />
         )}
 
@@ -1071,7 +1085,7 @@ const GameSummaryTab = ({
       {/* ── Delete Game confirm ── */}
       {editable && (
         <ConfirmModal
-          open={confirmDeleteOpen}
+          open={confirmDeleteOpen && !deleteGameAction.hidden}
           title="Delete Game"
           body={`Delete ${game.away_team.code} @ ${game.home_team.code}? This will remove all goals, lineups, and related data. This cannot be undone.`}
           confirmLabel="Delete"
@@ -1079,20 +1093,9 @@ const GameSummaryTab = ({
           intent="danger"
           busy={busy === 'deleting'}
           onCancel={() => setConfirmDeleteOpen(false)}
-          onConfirm={async () => {
-            const ok = await deleteGame();
-            if (ok) {
-              navigate(
-                buildSeasonDetailsPath({
-                  leagueCode: game.league_code,
-                  leagueId,
-                  seasonName: game.season_name,
-                  seasonId,
-                }),
-              );
-            } else {
-              setConfirmDeleteOpen(false);
-            }
+          onConfirm={() => {
+            if (deleteGameAction.hidden) return;
+            void deleteGameAction.runSettled(deleteGame, { pending: 'Deleting game…' });
           }}
         />
       )}
@@ -1100,7 +1103,7 @@ const GameSummaryTab = ({
       {/* ── Delete Goal confirm ── */}
       {editable && confirmDeleteGoal && (
         <ConfirmModal
-          open={!!confirmDeleteGoal}
+          open={!deleteGoalAction.hidden}
           title="Delete Goal"
           body={`Delete the ${
             confirmDeleteGoal.team_id === game.away_team.id
@@ -1117,7 +1120,6 @@ const GameSummaryTab = ({
           confirmLabel="Delete"
           confirmIcon="delete"
           intent="danger"
-          busy={deletingGoal}
           onCancel={() => setConfirmDeleteGoal(null)}
           onConfirm={handleConfirmDeleteGoal}
         />

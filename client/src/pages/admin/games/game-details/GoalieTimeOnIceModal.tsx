@@ -1,9 +1,10 @@
-import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { ControlledTimePickerField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import PlayerAvatar from '@jerecocc/tracker-ui/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GoalieStatRecord, type UpdateGoalieStintData } from '@/hooks/useGameGoalieStats';
 import { type GoalRecord } from '@/hooks/useGameGoals';
@@ -40,7 +41,10 @@ const GoalieTimeOnIceModal = ({
   onClose,
   updateGoalieStint,
 }: Props) => {
-  const [submitting, setSubmitting] = useState(false);
+  // Set once the times are submitted: the form then keeps what was entered until the modal
+  // closes, even when a partly-saved edit refreshes the goalie stats, so a failed save reappears
+  // with it.
+  const keepDraftRef = useRef(false);
   // Cap the picker at the game's full length (regulation + any overtime).
   const maxMinutes = Math.ceil(gameMaxToiSeconds(game, goals) / 60);
 
@@ -93,40 +97,53 @@ const GoalieTimeOnIceModal = ({
   const { fields } = useFieldArray({ control, name: 'stints' });
 
   useLayoutEffect(() => {
-    if (open) reset(formValues);
+    if (open && !keepDraftRef.current) reset(formValues);
   }, [open, formValues, reset]);
 
   const handleClose = useCallback(() => {
+    keepDraftRef.current = false;
     reset(formValues);
     onClose();
   }, [formValues, onClose, reset]);
 
-  const handleConfirm = async () => {
+  // The modal hides while the times save behind a progress toast, and reappears with the times
+  // entered if any of them fail. Rows that did save then match their prefill, so saving again
+  // skips them.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? game.id : null,
+    onDone: () => {
+      keepDraftRef.current = false;
+      onClose();
+    },
+  });
+
+  const saveTimes = async () => {
     const { stints } = getValues();
-    setSubmitting(true);
-    try {
-      for (let i = 0; i < rows.length; i += 1) {
-        const value = stints[i]?.time_on_ice ?? '';
-        // Persist only rows the admin actually changed.
-        if (value && value !== rows[i].prefill) {
-          await updateGoalieStint(rows[i].id, { time_on_ice: mmssToSeconds(value) });
-        }
+    for (let i = 0; i < rows.length; i += 1) {
+      const value = stints[i]?.time_on_ice ?? '';
+      // Persist only rows the admin actually changed.
+      if (value && value !== rows[i].prefill) {
+        const saved = await updateGoalieStint(rows[i].id, { time_on_ice: mmssToSeconds(value) });
+        if (!saved) return false;
       }
-      handleClose();
-    } finally {
-      setSubmitting(false);
     }
+    return true;
+  };
+
+  const handleConfirm = () => {
+    if (hidden) return;
+    keepDraftRef.current = true;
+    void runSettled(saveTimes, { pending: 'Saving time on ice…' });
   };
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="Edit Time on Ice"
       onClose={handleClose}
-      confirmLabel={submitting ? 'Saving…' : 'Save'}
+      confirmLabel="Save"
       onConfirm={handleConfirm}
-      confirmDisabled={submitting || !isDirty || !isValid}
-      busy={submitting}
+      confirmDisabled={!isDirty || !isValid}
     >
       {fields.length === 0 ? (
         <p className={styles.noGoalsText}>No goalie stats recorded.</p>
@@ -177,7 +194,6 @@ const GoalieTimeOnIceModal = ({
                       maxDurationMinutes={maxMinutes}
                       control={control}
                       name={`stints.${i}.time_on_ice`}
-                      disabled={submitting}
                       rules={{ required: 'Required' }}
                     />
                   </td>

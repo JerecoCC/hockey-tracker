@@ -3,14 +3,15 @@ import { type GameRosterEntry } from '@/hooks/useGameRoster';
 
 interface Props {
   entry: GameRosterEntry | null;
-  busy: boolean;
+  /** Hides the confirm while the removal runs in the background. */
+  hidden?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-const RemoveFromLineupModal = ({ entry, busy, onConfirm, onCancel }: Props) => (
+const RemoveFromLineupModal = ({ entry, hidden = false, onConfirm, onCancel }: Props) => (
   <ConfirmModal
-    open={!!entry}
+    open={!!entry && !hidden}
     title="Remove from Lineup"
     body={
       entry ? (
@@ -28,7 +29,6 @@ const RemoveFromLineupModal = ({ entry, busy, onConfirm, onCancel }: Props) => (
     confirmLabel="Remove"
     confirmIcon="person_remove"
     intent="danger"
-    busy={busy}
     onConfirm={onConfirm}
     onCancel={onCancel}
   />

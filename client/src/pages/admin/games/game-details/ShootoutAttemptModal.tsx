@@ -4,6 +4,7 @@ import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Select from '@jerecocc/tracker-ui/components/Select/Select';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type PostAttemptData, type PutAttemptData } from '@/hooks/useShootoutAttempts';
@@ -135,24 +136,26 @@ const ShootoutAttemptModal = ({
     },
   ];
 
-  const handleConfirm = handleSubmit(async (values) => {
+  // The modal hides while the attempt saves behind a progress toast, and reappears with the
+  // attempt entered if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({ target: mode, onDone: onClose });
+
+  const handleConfirm = handleSubmit((values) => {
     const teamId = values.team === 'away' ? game.away_team.id : game.home_team.id;
     const payload = {
       team_id: teamId,
       shooter_id: values.shooterId,
       scored: values.scored === 'goal',
     };
-    if (isEditMode) {
-      await onUpdate(mode as string, payload);
-    } else {
-      await onAdd(payload);
-    }
-    onClose();
+    void runSettled(
+      () => (isEditMode ? onUpdate(mode as string, payload) : onAdd(payload)),
+      { pending: isEditMode ? 'Saving attempt…' : 'Recording attempt…' },
+    );
   });
 
   return (
     <Modal
-      open={mode !== null}
+      open={mode !== null && !hidden}
       title={isEditMode ? 'Edit Attempt' : `Add Attempt — ${attemptTeamName}`}
       onClose={onClose}
       confirmLabel={isSubmitting ? 'Saving…' : isEditMode ? 'Save Changes' : 'Record Attempt'}

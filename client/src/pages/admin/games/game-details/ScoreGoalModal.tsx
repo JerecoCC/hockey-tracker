@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
@@ -6,6 +6,7 @@ import Select from '@jerecocc/tracker-ui/components/Select/Select';
 import TimePicker from '@jerecocc/tracker-ui/components/TimePicker/TimePicker';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalRecord, type PostGoalData } from '@/hooks/useGameGoals';
@@ -60,13 +61,12 @@ const ScoreGoalModal = ({
   onAdd,
   onUpdate,
 }: Props) => {
-  const [submitting, setSubmitting] = useState(false);
   const {
     handleSubmit,
     reset,
     setValue,
     watch,
-    formState: { isDirty, isValid },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: {
       goalTeam: null,
@@ -210,7 +210,15 @@ const ScoreGoalModal = ({
     };
   });
 
-  const handleConfirm = handleSubmit(async (values) => {
+  // The modal hides while the goal saves behind a progress toast, and reappears with the goal
+  // entered if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (editGoal?.id ?? `new-${period}`) : null,
+    onDone: onClose,
+  });
+  const submitting = isSubmitting || hidden;
+
+  const handleConfirm = handleSubmit((values) => {
     if (!values.goalTeam) return;
     if (!values.goalPeriodTime) return;
     if (goalParticipantError) return;
@@ -226,22 +234,14 @@ const ScoreGoalModal = ({
       assist_1_id: values.goalAssist1Id || null,
       assist_2_id: values.goalAssist2Id || null,
     };
-    setSubmitting(true);
-    try {
-      if (editGoal) {
-        await onUpdate(editGoal.id, payload);
-      } else {
-        await onAdd(payload);
-      }
-      onClose();
-    } finally {
-      setSubmitting(false);
-    }
+    void runSettled(() => (editGoal ? onUpdate(editGoal.id, payload) : onAdd(payload)), {
+      pending: editGoal ? 'Saving goal…' : 'Recording goal…',
+    });
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={editGoal ? 'Edit Goal' : `Score Goal — ${PERIOD_TITLE_LABEL[period]}`}
       onClose={onClose}
       confirmLabel={submitting ? 'Saving…' : editGoal ? 'Save Changes' : 'Record Goal'}

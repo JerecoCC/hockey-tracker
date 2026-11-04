@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { ControlledTimePickerField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import styles from './GameDetailsPage.module.scss';
 import { etHHMMtoISO } from './formatUtils';
 
@@ -31,14 +32,22 @@ const StartGameModal = ({ open, scheduledAt, isStarting, disabled, onClose, onSt
     onClose();
   };
 
-  const onSubmit = handleSubmit(async (data) => {
-    const ok = await onStart(etHHMMtoISO(data.start_time, scheduledAt));
-    if (ok) handleClose();
+  // The modal hides while the game starts behind a progress toast, and reappears with the start
+  // time entered if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? 'start' : null,
+    onDone: handleClose,
+  });
+
+  const onSubmit = handleSubmit((data) => {
+    void runSettled(() => onStart(etHHMMtoISO(data.start_time, scheduledAt)), {
+      pending: 'Starting game…',
+    });
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="Start Game"
       onClose={handleClose}
       confirmLabel={isSubmitting || isStarting ? 'Starting…' : 'Start Game'}
