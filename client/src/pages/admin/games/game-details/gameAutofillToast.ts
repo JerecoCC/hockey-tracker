@@ -1,4 +1,4 @@
-import { toast, type Id, type TypeOptions } from 'react-toastify';
+import { toast, type Id, type ToastOptions, type TypeOptions } from 'react-toastify';
 import type { GameAutofillProgress } from './gameAutofillTypes';
 
 export const AUTOFILL_RESULT_TOAST_MS = 4000;
@@ -20,7 +20,7 @@ interface GameAutofillProgressToast {
   finish: (type: TypeOptions, message: string) => void;
 }
 
-const commonLoadingToastOptions = (progressClassName: string) => ({
+const commonLoadingToastOptions = (progressClassName: string): ToastOptions => ({
   autoClose: false,
   closeButton: false,
   closeOnClick: false,

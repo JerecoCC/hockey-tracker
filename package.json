@@ -12,7 +12,7 @@
     "test": "npm test --prefix client -- --runInBand && npm test --prefix server -- --runInBand",
     "test:client": "npm test --prefix client -- --runInBand",
     "test:server": "npm test --prefix server -- --runInBand",
-    "typecheck": "node client/node_modules/typescript/bin/tsc --noEmit --project client/tsconfig.json"
+    "typecheck": "node client/node_modules/typescript/bin/tsc --noEmit --project client/tsconfig.app.json && node client/node_modules/typescript/bin/tsc --noEmit --project client/tsconfig.node.json"
   },
   "keywords": [],
   "author": "",

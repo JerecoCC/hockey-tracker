@@ -93,6 +93,8 @@ const game = {
   time_end: null,
   home_team: { id: 'team-home', name: 'Home Team', code: 'HOM', logo: null, primary_color: '#111', secondary_color: '#222', text_color: '#fff' },
   away_team: { id: 'team-away', name: 'Away Team', code: 'AWY', logo: null, primary_color: '#333', secondary_color: '#444', text_color: '#fff' },
+  home_score: 0,
+  away_score: 0,
   overtime_periods: null,
   shootout: false,
   shootout_first_team_id: null,

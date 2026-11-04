@@ -7,14 +7,21 @@ import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import useTabState from '@/hooks/useTabState';
 import useGameRoster from '@/hooks/useGameRoster';
 import useGameLineup from '@/hooks/useGameLineup';
+import type { ComponentProps } from 'react';
 import GameDetailsPage from './GameDetailsPage';
+import type ScoreboardCard from './ScoreboardCard';
+import type GameLineupsTab from './lineups/GameLineupsTab';
 
 const mockNavigate = jest.fn();
 const mockUseParams = jest.fn();
 const mockUsePageBreadcrumbs = jest.fn();
 const mockSummaryTab = jest.fn((_props: any) => <div>summary</div>);
-const mockLineupsTab = jest.fn(() => <div>lineups</div>);
-const mockScoreboardCard = jest.fn(() => <div>scoreboard</div>);
+const mockLineupsTab = jest.fn((_props: ComponentProps<typeof GameLineupsTab>) => (
+  <div>lineups</div>
+));
+const mockScoreboardCard = jest.fn((_props: ComponentProps<typeof ScoreboardCard>) => (
+  <div>scoreboard</div>
+));
 const mockManualMoveReportModal = jest.fn(({ open, reports }: any) =>
   open ? (
     <div>manual updates: {reports.map((report: any) => report.gameLabel).join(', ')}</div>
@@ -205,7 +212,7 @@ describe('GameDetailsPage', () => {
       mockSummaryTab.mock.calls[0][0].playerHrefBuilder('team-1', 'player-9', 'John', 'Smith'),
     ).toBe('/leagues/nhl/teams/hom/players/john-smith');
     expect(
-      mockLineupsTab.mock.calls[0][0].playerHrefBuilder('team-1', 'player-9', 'John', 'Smith'),
+      mockLineupsTab.mock.calls[0][0].playerHrefBuilder?.('team-1', 'player-9', 'John', 'Smith'),
     ).toBe('/leagues/nhl/teams/hom/players/john-smith');
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(true);
     expect(mockLineupsTab.mock.calls[0][0].isEditMode).toBe(false);

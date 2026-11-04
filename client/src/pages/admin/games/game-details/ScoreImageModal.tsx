@@ -161,7 +161,9 @@ function getScoreCardShareMode(): ScoreCardShareMode {
   } catch {
     // File or canShare unsupported; fall through to the clipboard.
   }
-  if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') return 'copy';
+  if (typeof navigator.clipboard?.write === 'function' && typeof ClipboardItem !== 'undefined') {
+    return 'copy';
+  }
   return null;
 }
 

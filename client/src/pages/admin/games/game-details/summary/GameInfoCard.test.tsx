@@ -31,6 +31,8 @@ const baseGame: GameRecord = {
     secondary_color: '#333',
     text_color: '#fff',
   },
+  home_score: 0,
+  away_score: 0,
   overtime_periods: null,
   shootout: false,
   shootout_first_team_id: null,

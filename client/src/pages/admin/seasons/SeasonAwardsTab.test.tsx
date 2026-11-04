@@ -42,6 +42,7 @@ const skater = {
   team_logo: null,
   team_primary_color: '#003e7e',
   team_text_color: '#ffffff',
+  team_stint_created: null,
   gp: 10,
   goals: 4,
   assists: 6,

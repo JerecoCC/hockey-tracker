@@ -58,6 +58,7 @@ const stint = (
   shots_against: 1,
   goals_against: 0,
   goals_against_override: null,
+  time_on_ice: null,
   saves: 1,
 });
 

@@ -16,6 +16,8 @@ const groupTeam = (id: string): GroupTeamRecord => ({
   name: id,
   code: id.toUpperCase(),
   logo: null,
+  primary_color: '#000000',
+  text_color: '#ffffff',
 });
 
 describe('playoff bracket slot key normalization', () => {

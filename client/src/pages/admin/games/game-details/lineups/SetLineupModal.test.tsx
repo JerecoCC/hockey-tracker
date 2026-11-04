@@ -46,7 +46,21 @@ const makePlayers = (): TeamPlayerRecord[] => [
 ];
 
 const makeLineup = (inherited = false): LineupEntry[] => [
-  { id: 'le6', game_id: 'g1', team_id: 't1', player_id: 'g1', position_slot: 'G', inherited },
+  {
+    id: 'le6',
+    game_id: 'g1',
+    team_id: 't1',
+    player_id: 'g1',
+    position_slot: 'G',
+    player_first_name: 'Frank',
+    player_last_name: 'F',
+    player_photo: null,
+    jersey_number: 30,
+    date_of_birth: null,
+    start_date: null,
+    acquisition_type: null,
+    inherited,
+  },
 ];
 
 const defaultProps = {

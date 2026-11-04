@@ -49,14 +49,8 @@ describe('playoff series document title', () => {
   it('uses slot team nicknames, custom matchup name, and playoff season end year', () => {
     expect(
       buildPlayoffSeriesDocumentTitle(makeSeries(), {
-        id: 'season-1',
         name: '2024-25',
-        league_id: 'league-1',
-        start_date: '2024-10-01',
         end_date: '2025-06-30',
-        is_current: false,
-        games_per_season: 82,
-        created_at: '2024-01-01T00:00:00.000Z',
       }),
     ).toBe('Maple Leafs - Red Wings · Atlantic Final · Playoffs 2025');
   });

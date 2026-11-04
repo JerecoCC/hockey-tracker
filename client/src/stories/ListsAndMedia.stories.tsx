@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from '@storybook/react';
 import Breadcrumbs from '@jerecocc/tracker-ui/components/Breadcrumbs/Breadcrumbs';
 import BreadcrumbTitleRow from '@jerecocc/tracker-ui/components/Breadcrumbs/BreadcrumbTitleRow';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
@@ -8,7 +8,7 @@ import InfoItem from '@jerecocc/tracker-ui/components/InfoItem/InfoItem';
 import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import MoreActionsMenu from '@jerecocc/tracker-ui/components/MoreActionsMenu/MoreActionsMenu';
 import SearchableList from '@jerecocc/tracker-ui/components/SearchableList/SearchableList';
-import SelectableListItem from '@jerecocc/tracker-ui/components/Select/SelectableListItem';
+import SelectableListItem from '@jerecocc/tracker-ui/components/SelectableListItem/SelectableListItem';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
 import { formatPlayerPosition } from '@/lib/playerPosition';

@@ -80,13 +80,17 @@ describe('useSeasons', () => {
 
     let success!: boolean;
     await act(async () => {
-      success = await result.current.addSeason({ league_id: 'league-1', start_date: '2025-10-01' });
+      success = await result.current.addSeason({
+        league_id: 'league-1',
+        name: '2025-26',
+        start_date: '2025-10-01',
+      });
     });
 
     expect(success).toBe(true);
     expect(mockedAxios.post).toHaveBeenCalledWith(
       expect.stringContaining('/admin/seasons'),
-      { league_id: 'league-1', start_date: '2025-10-01' },
+      { league_id: 'league-1', name: '2025-26', start_date: '2025-10-01' },
       expect.any(Object),
     );
     expect(toast.success).toHaveBeenCalledWith('Season created!');
@@ -99,7 +103,7 @@ describe('useSeasons', () => {
 
     let success!: boolean;
     await act(async () => {
-      success = await result.current.addSeason({ league_id: 'league-1' });
+      success = await result.current.addSeason({ league_id: 'league-1', name: '2025-26' });
     });
 
     expect(success).toBe(false);

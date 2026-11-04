@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { autofillGameFromNhlGamecenter } from './nhlGameAutofill';
-import { isManualPlayerMovementRequiredError } from './gameAutofillTypes';
 import type { GameRecord } from '@/hooks/useGames';
 
 jest.mock('axios');
@@ -61,6 +60,44 @@ const game = {
   best_of_shootout: 3,
 } as unknown as GameRecord;
 
+/** A boxscore player row as the NHL feed sends it: skaters may carry a single `name` instead of first/last. */
+interface NhlBoxscorePlayerFixture {
+  playerId: number;
+  sweaterNumber: number;
+  firstName?: { default: string };
+  lastName?: { default: string };
+  name?: { default: string };
+  toi?: string;
+  shotsAgainst?: number;
+  goalsAgainst?: number;
+}
+
+type NhlTeamPlayerStatsFixture = Record<
+  'forwards' | 'defense' | 'goalies',
+  NhlBoxscorePlayerFixture[]
+>;
+
+const boxscorePlayerStats: Record<'awayTeam' | 'homeTeam', NhlTeamPlayerStatsFixture> = {
+  awayTeam: {
+    forwards: [
+      { playerId: 1, sweaterNumber: 24, firstName: { default: 'Seth' }, lastName: { default: 'Jarvis' } },
+      { playerId: 2, sweaterNumber: 37, firstName: { default: 'Andrei' }, lastName: { default: 'Svechnikov' } },
+      { playerId: 3, sweaterNumber: 71, firstName: { default: 'Taylor' }, lastName: { default: 'Hall' } },
+    ],
+    defense: [],
+    goalies: [],
+  },
+  homeTeam: {
+    forwards: [
+      { playerId: 4, sweaterNumber: 36, firstName: { default: 'Mats' }, lastName: { default: 'Zuccarello' } },
+      { playerId: 5, sweaterNumber: 97, firstName: { default: 'Kirill' }, lastName: { default: 'Kaprizov' } },
+      { playerId: 6, sweaterNumber: 12, firstName: { default: 'Matt' }, lastName: { default: 'Boldy' } },
+    ],
+    defense: [],
+    goalies: [],
+  },
+};
+
 const boxscore = {
   gameDate: '2025-11-19',
   startTimeUTC: '2025-11-20T02:30:00Z',
@@ -69,26 +106,7 @@ const boxscore = {
   homeTeam: { id: 30, abbrev: 'MIN', score: 4 },
   periodDescriptor: { number: 4, periodType: 'SO' },
   gameOutcome: { lastPeriodType: 'SO' },
-  playerByGameStats: {
-    awayTeam: {
-      forwards: [
-        { playerId: 1, sweaterNumber: 24, firstName: { default: 'Seth' }, lastName: { default: 'Jarvis' } },
-        { playerId: 2, sweaterNumber: 37, firstName: { default: 'Andrei' }, lastName: { default: 'Svechnikov' } },
-        { playerId: 3, sweaterNumber: 71, firstName: { default: 'Taylor' }, lastName: { default: 'Hall' } },
-      ],
-      defense: [],
-      goalies: [],
-    },
-    homeTeam: {
-      forwards: [
-        { playerId: 4, sweaterNumber: 36, firstName: { default: 'Mats' }, lastName: { default: 'Zuccarello' } },
-        { playerId: 5, sweaterNumber: 97, firstName: { default: 'Kirill' }, lastName: { default: 'Kaprizov' } },
-        { playerId: 6, sweaterNumber: 12, firstName: { default: 'Matt' }, lastName: { default: 'Boldy' } },
-      ],
-      defense: [],
-      goalies: [],
-    },
-  },
+  playerByGameStats: boxscorePlayerStats,
 };
 
 const shootoutReportHtml = `

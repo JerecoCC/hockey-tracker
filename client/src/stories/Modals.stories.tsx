@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from '@storybook/react';
 import BulkCreateModal from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import { ControlledInputField } from '@/components/form/ControlledFields';

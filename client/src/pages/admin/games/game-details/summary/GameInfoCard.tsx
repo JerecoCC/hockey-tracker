@@ -167,14 +167,16 @@ const GameInfoCard = ({
         </div>
       </Section>
 
-      <GameInfoEditModal
-        open={editOpen}
-        game={game}
-        isSaving={busy === 'update-info'}
-        disabled={!!busy}
-        onClose={() => setEditOpen(false)}
-        onSave={updateGameInfo}
-      />
+      {updateGameInfo && (
+        <GameInfoEditModal
+          open={editOpen}
+          game={game}
+          isSaving={busy === 'update-info'}
+          disabled={!!busy}
+          onClose={() => setEditOpen(false)}
+          onSave={updateGameInfo}
+        />
+      )}
     </>
   );
 };

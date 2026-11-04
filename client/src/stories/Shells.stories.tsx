@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from '@storybook/react';
 import { useEffect, type ReactNode } from 'react';
 import { Route, Routes, useNavigate } from 'react-router-dom';
 import AdminLayout from '@/shared/AdminLayout/AdminLayout';

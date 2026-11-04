@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from '@storybook/react';
 import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
 import ActionOverlay from '@jerecocc/tracker-ui/components/ActionOverlay/ActionOverlay';
 import AddRowBar from '@jerecocc/tracker-ui/components/AddRowBar/AddRowBar';

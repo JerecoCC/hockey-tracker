@@ -46,7 +46,6 @@ import GameAutofillManualMoveReportModal from '@/pages/admin/games/game-details/
 import { buildGameDetailsPath, buildSeasonDayGamesPath } from '@/lib/routeSlugs';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import {
-  clampDateKeyToRange,
   clampMonthKeyToRange,
   clampWeekStartDateKey,
   firstWeekStartForMonth,
@@ -121,11 +120,6 @@ const formatGameTime = (game: GameRecord, hideResult = false): string | undefine
   }
   return game.scheduled_time ? formatTime(game.scheduled_time, game.scheduled_at) : undefined;
 };
-
-const MONTH_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
-  month: 'long',
-  year: 'numeric',
-});
 
 const shouldShowGameScore = (game: GameRecord) =>
   game.status === 'final' ||
@@ -294,20 +288,6 @@ const fmtDaySummaryWeekday = (key: string) => {
   });
 };
 
-const SHORT_FMT = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
-const SHORT_FMT_YEAR = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-});
-
-const fmtWeekRange = (start: Date, end: Date) => {
-  if (start.getFullYear() === end.getFullYear()) {
-    return `${SHORT_FMT.format(start)} – ${SHORT_FMT_YEAR.format(end)}`;
-  }
-  return `${SHORT_FMT_YEAR.format(start)} – ${SHORT_FMT_YEAR.format(end)}`;
-};
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const getScrollParent = (el: HTMLElement): HTMLElement => {
@@ -381,10 +361,6 @@ const SeasonGamesTab = ({
       clampWeekStartDateKey(dateToISO(toDay(new Date())), seasonStartDate, seasonEndDate),
     );
   const [weekStart, setWeekStartState] = useState<Date>(todayWeekStart);
-  const weekEnd = addDays(weekStart, 6);
-  const visibleWeekEnd = fromISODate(
-    clampDateKeyToRange(dateToISO(weekEnd), seasonStartDate, seasonEndDate),
-  );
 
   useEffect(() => {
     setWeekStartState(todayWeekStart());
