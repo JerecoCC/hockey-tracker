@@ -8,6 +8,7 @@ import {
 import GroupedFields from '@jerecocc/tracker-ui/components/GroupedFields/GroupedFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type TeamDetailRecord } from '@/hooks/useTeamDetails';
 import { type CreateTeamData } from '@/hooks/useTeams';
 import { descriptionHtmlToTextarea, textareaToDescriptionHtml } from '@/lib/descriptionHtml';
@@ -87,7 +88,7 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting, isDirty, isValid },
+    formState: { isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
     mode: 'onChange',
@@ -102,7 +103,14 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
     onClose();
   }, [formValues, onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  // Saving (logo uploads included) runs behind a progress toast with the modal hidden; it
+  // reappears with what was entered if the save fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? team.id : null,
+    onDone: handleClose,
+  });
+
+  const save = async (data: FormValues) => {
     const logoDarkUrl = await resolveUploadedAsset(data.logo_dark, uploadLogo);
     const logoLightUrl = await resolveUploadedAsset(data.logo_light, uploadLogo);
     const iconUrl = await resolveUploadedAsset(data.icon, uploadLogo);
@@ -111,7 +119,7 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
       (data.logo_light instanceof File && !logoLightUrl) ||
       (data.icon instanceof File && !iconUrl)
     ) {
-      return;
+      return false;
     }
     const payload: Partial<CreateTeamData> = {
       logo_dark: logoDarkUrl,
@@ -128,19 +136,21 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
       home_arena: data.home_arena || undefined,
       description: textareaToDescriptionHtml(data.description),
     };
-    const ok = await updateTeam(team.id, payload);
-    if (ok) handleClose();
+    return updateTeam(team.id, payload);
+  };
+
+  const onSubmit = handleSubmit((data) => {
+    void runSettled(() => save(data), { pending: 'Saving team…' });
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="Edit Team"
       onClose={handleClose}
-      confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
+      confirmLabel="Save Changes"
       confirmForm="team-edit-form"
-      confirmDisabled={isSubmitting || !isDirty || !isValid}
-      busy={isSubmitting}
+      confirmDisabled={!isDirty || !isValid}
     >
       <form
         id="team-edit-form"
@@ -155,13 +165,9 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
           hint="Upload .ico"
           fullWidth
           previewSize="icon"
-          pasteMode="focus"
-          disabled={isSubmitting}
-        />
+          pasteMode="focus"        />
         <TeamLogoUploadGroup
-          control={control}
-          disabled={isSubmitting}
-        />
+          control={control}        />
         <div className={styles.identityRow}>
           <ControlledInputField
             label="Code"
@@ -170,42 +176,32 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
             name="code"
             rules={{ required: true }}
             transform={(v) => v.toUpperCase()}
-            placeholder="TOR"
-            disabled={isSubmitting}
-          />
+            placeholder="TOR"          />
           <ControlledInputField
             label="Place Name"
             control={control}
             name="place_name"
             placeholder="e.g. Toronto or PWHL"
-            autoFocus
-            disabled={isSubmitting}
-          />
+            autoFocus          />
           <ControlledInputField
             label="Team Name"
             required
             control={control}
             name="team_name"
             rules={{ required: true }}
-            placeholder="e.g. Maple Leafs"
-            disabled={isSubmitting}
-          />
+            placeholder="e.g. Maple Leafs"          />
         </div>
         <div className={styles.locationRow}>
           <ControlledInputField
             label="City"
             control={control}
             name="city"
-            placeholder="e.g. Toronto"
-            disabled={isSubmitting}
-          />
+            placeholder="e.g. Toronto"          />
           <ControlledInputField
             label="Home Arena"
             control={control}
             name="home_arena"
-            placeholder="e.g. Scotiabank Arena"
-            disabled={isSubmitting}
-          />
+            placeholder="e.g. Scotiabank Arena"          />
         </div>
         <GroupedFields
           legend="Team Colors"
@@ -214,30 +210,22 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
           <ControlledColorPickerField
             label="Primary"
             control={control}
-            name="primary_color"
-            disabled={isSubmitting}
-          />
+            name="primary_color"          />
           <ControlledColorPickerField
             label="Secondary"
             control={control}
-            name="secondary_color"
-            disabled={isSubmitting}
-          />
+            name="secondary_color"          />
           <ControlledColorPickerField
             label="Text"
             control={control}
-            name="text_color"
-            disabled={isSubmitting}
-          />
+            name="text_color"          />
         </GroupedFields>
         <ControlledTextareaField
           label="Description"
           control={control}
           name="description"
           rows={6}
-          placeholder="Add a description..."
-          disabled={isSubmitting}
-        />
+          placeholder="Add a description..."        />
       </form>
     </Modal>
   );

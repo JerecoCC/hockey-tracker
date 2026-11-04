@@ -12,6 +12,7 @@ import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useTeamHistory, { type TeamIteration } from '@/hooks/useTeamHistory';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
@@ -108,7 +109,7 @@ const TeamHistoryTab = ({
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting, isDirty, isValid },
+    formState: { isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: {
       place_name: '',
@@ -128,6 +129,17 @@ const TeamHistoryTab = ({
     setModalOpen(false);
     setEditTarget(null);
   };
+
+  // Saving and deleting a version run behind a progress toast with their modal hidden; it
+  // reappears (with what was entered, for the form) if they fail.
+  const { hidden: formHidden, runSettled: runFormSave } = useBackgroundModalAction({
+    target: modalOpen ? (editTarget?.id ?? 'new') : null,
+    onDone: closeModal,
+  });
+  const { hidden: deleteHidden, runSettled: runDelete } = useBackgroundModalAction({
+    target: deleteTarget?.id ?? null,
+    onDone: () => setDeleteTarget(null),
+  });
 
   const openAdd = () => {
     setEditTarget(null);
@@ -181,7 +193,7 @@ const TeamHistoryTab = ({
     reset,
   ]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  const save = async (data: FormValues) => {
     const logoDarkUrl = await resolveUploadedAsset(data.logo_dark, uploadLogo);
     const logoLightUrl = await resolveUploadedAsset(data.logo_light, uploadLogo);
     const iconUrl = await resolveUploadedAsset(data.icon, uploadLogo);
@@ -190,7 +202,7 @@ const TeamHistoryTab = ({
       (data.logo_light instanceof File && !logoLightUrl) ||
       (data.icon instanceof File && !iconUrl)
     ) {
-      return;
+      return false;
     }
     const payload = {
       name: displayTeamName(data.place_name, data.team_name),
@@ -204,10 +216,13 @@ const TeamHistoryTab = ({
       start_date: data.start_date || null,
       end_date: data.end_date || null,
     };
-    const ok = isEditing
-      ? await updateIteration(editTarget.id, payload)
-      : await addIteration(payload);
-    if (ok) closeModal();
+    return editTarget ? updateIteration(editTarget.id, payload) : addIteration(payload);
+  };
+
+  const onSubmit = handleSubmit((data) => {
+    void runFormSave(() => save(data), {
+      pending: isEditing ? 'Saving version…' : 'Recording version…',
+    });
   });
 
   return (
@@ -247,7 +262,7 @@ const TeamHistoryTab = ({
                   imageDark={iter.logo_dark}
                   imageLight={iter.logo_light}
                   name={iter.name}
-                  rightContent={{ type: 'code', value: iter.code }}
+                  rightContent={iter.code ? { type: 'code', value: iter.code } : undefined}
                   primaryColor={primaryColor}
                   textColor={textColor}
                   subtitle={subtitle}
@@ -279,14 +294,13 @@ const TeamHistoryTab = ({
 
       {/* ── Record / edit version modal ── */}
       <Modal
-        open={modalOpen}
+        open={modalOpen && !formHidden}
         title={isEditing ? 'Edit Team Version' : 'Record Version'}
         onClose={closeModal}
-        confirmLabel={isSubmitting ? 'Saving…' : isEditing ? 'Save Changes' : 'Record Version'}
+        confirmLabel={isEditing ? 'Save Changes' : 'Record Version'}
         confirmIcon={isEditing ? 'edit' : 'history'}
         confirmForm="team-history-form"
-        confirmDisabled={isSubmitting || !isDirty || !isValid}
-        busy={isSubmitting}
+        confirmDisabled={!isDirty || !isValid}
       >
         <form
           id="team-history-form"
@@ -297,93 +311,74 @@ const TeamHistoryTab = ({
             <LogoUpload
               control={control}
               name="logo_dark"
-              label="Logo (Dark)"
-              disabled={isSubmitting}
-            />
+              label="Logo (Dark)"            />
             <LogoUpload
               control={control}
               name="logo_light"
-              label="Logo (Light)"
-              disabled={isSubmitting}
-            />
+              label="Logo (Light)"            />
             <LogoUpload
               control={control}
               name="icon"
               label="Header Icon"
               accept="image/x-icon,image/vnd.microsoft.icon,.ico"
-              hint="Upload .ico"
-              disabled={isSubmitting}
-            />
+              hint="Upload .ico"            />
           </div>
           <div className={styles.historyFormRow}>
             <ControlledInputField
               label="Place Name"
               control={control}
               name="place_name"
-              placeholder="e.g. Toronto or PWHL"
-              disabled={isSubmitting}
-            />
+              placeholder="e.g. Toronto or PWHL"            />
             <ControlledInputField
               label="Team Name"
               required
               control={control}
               name="team_name"
               rules={{ required: true }}
-              placeholder="e.g. Maple Leafs"
-              disabled={isSubmitting}
-            />
+              placeholder="e.g. Maple Leafs"            />
           </div>
           <ControlledInputField
             label="Code"
             control={control}
             name="code"
-            placeholder="e.g. TOR"
-            disabled={isSubmitting}
-          />
+            placeholder="e.g. TOR"          />
           <div className={styles.historyFormRow}>
             <ControlledDatePickerField
               label="Start Date"
               control={control}
               name="start_date"
-              placeholder="YYYY-MM-DD"
-              disabled={isSubmitting}
-            />
+              placeholder="YYYY-MM-DD"            />
             <ControlledDatePickerField
               label="End Date"
               control={control}
               name="end_date"
-              placeholder="YYYY-MM-DD (leave blank if current)"
-              disabled={isSubmitting}
-            />
+              placeholder="YYYY-MM-DD (leave blank if current)"            />
           </div>
           <ControlledTextareaField
             label="Note"
             control={control}
             name="note"
-            placeholder="e.g. Rebranded after relocation"
-            disabled={isSubmitting}
-          />
+            placeholder="e.g. Rebranded after relocation"          />
         </form>
       </Modal>
 
       {/* ── Delete confirmation ── */}
       <ConfirmModal
-        open={!!deleteTarget}
+        open={!!deleteTarget && !deleteHidden}
         title="Delete Version"
         body={
           <>
             Delete the <strong>{deleteTarget?.name}</strong> version? This cannot be undone.
           </>
         }
-        confirmLabel={busy ? 'Deleting…' : 'Delete'}
+        confirmLabel="Delete"
         confirmIcon="delete"
         intent="danger"
-        busy={busy}
         onCancel={() => setDeleteTarget(null)}
-        onConfirm={async () => {
+        onConfirm={() => {
           if (!deleteTarget) return;
-          const ok = await deleteIteration(deleteTarget.id);
-          if (ok) setDeleteTarget(null);
+          const { id } = deleteTarget;
+          void runDelete(() => deleteIteration(id), { pending: 'Deleting version…' });
         }}
       />
     </>

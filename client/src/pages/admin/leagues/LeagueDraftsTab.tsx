@@ -13,6 +13,7 @@ import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Slider from '@jerecocc/tracker-ui/components/Slider/Slider';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useLeagueDraftDates, {
   type LeagueDraftDateRecord,
   type LeagueDraftEventPayload,
@@ -242,7 +243,6 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
   const [confirmDelete, setConfirmDelete] = useState<DraftEvent | null>(null);
   const [dayRanges, setDayRanges] = useState<DraftDayRange[]>([]);
   const [rangeDirty, setRangeDirty] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const form = useForm<DraftFormValues>({
     defaultValues: emptyValues,
     mode: 'onChange',
@@ -291,6 +291,26 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
     setDayRanges((previous) => normalizeDayRanges(draftDatesInRange, totalRounds, previous));
   }, [datesCrossYears, draftDatesInRange, totalRounds]);
 
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditTarget(null);
+    form.reset(emptyValues);
+    setDayRanges([]);
+    setRangeDirty(false);
+  };
+
+  // The modal hides while the draft saves behind a progress toast, and reappears with the dates
+  // and round ranges entered if that fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: modalOpen ? (editTarget ? String(editTarget.draftYear) : 'new') : null,
+    onDone: closeModal,
+  });
+  // The remove dialog hides the same way while the draft is removed.
+  const { hidden: deleteHidden, runSettled: runDelete } = useBackgroundModalAction({
+    target: confirmDelete ? String(confirmDelete.draftYear) : null,
+    onDone: () => setConfirmDelete(null),
+  });
+
   if (loading) return <LeagueDraftsTabSkeleton className={className} />;
 
   const openCreate = () => {
@@ -329,15 +349,6 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
     setModalOpen(true);
   };
 
-  const closeModal = () => {
-    setModalOpen(false);
-    setEditTarget(null);
-    form.reset(emptyValues);
-    setDayRanges([]);
-    setRangeDirty(false);
-    setSubmitting(false);
-  };
-
   const updateDayRoundRange = (index: number, value: [number, number]) => {
     setDayRanges((current) => {
       const next = normalizeDayRanges(draftDatesInRange, totalRounds, current);
@@ -364,7 +375,7 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
 
   const canSubmit =
     (form.formState.isDirty || rangeDirty) &&
-    !submitting &&
+    !hidden &&
     form.formState.isValid &&
     !!draftYear &&
     draftYear >= 1900 &&
@@ -380,7 +391,7 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
     dayRanges.length === draftDatesInRange.length &&
     dayRanges.length > 0;
 
-  const submit = form.handleSubmit(async (values) => {
+  const submit = form.handleSubmit((values) => {
     if (!canSubmit || !draftYear || !totalRounds) return;
 
     const payload: LeagueDraftEventPayload = {
@@ -395,12 +406,11 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
       })),
     };
 
-    setSubmitting(true);
-    const ok = editTarget
-      ? await updateDraftEvent(editTarget.draftYear, payload)
-      : await createDraftEvent(payload);
-    setSubmitting(false);
-    if (ok) closeModal();
+    void runSettled(
+      () =>
+        editTarget ? updateDraftEvent(editTarget.draftYear, payload) : createDraftEvent(payload),
+      { pending: editTarget ? 'Saving draft…' : 'Creating draft…' },
+    );
   });
 
   return (
@@ -589,14 +599,13 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
       </div>
 
       <Modal
-        open={modalOpen}
+        open={modalOpen && !hidden}
         title={editTarget ? 'Edit Draft' : 'Create Draft'}
         onClose={closeModal}
         confirmForm="league-draft-form"
-        confirmLabel={submitting ? 'Saving...' : editTarget ? 'Save Changes' : 'Create Draft'}
+        confirmLabel={editTarget ? 'Save Changes' : 'Create Draft'}
         confirmIcon="save"
         confirmDisabled={!canSubmit}
-        busy={submitting}
       >
         <form
           id="league-draft-form"
@@ -610,7 +619,6 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
               label="Start Date"
               placeholder="YYYY-MM-DD"
               required
-              disabled={submitting}
               rules={{ required: 'Start date is required' }}
             />
             <ControlledDatePickerField
@@ -619,7 +627,6 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
               label="End Date"
               placeholder="YYYY-MM-DD"
               required
-              disabled={submitting}
               rules={{ required: 'End date is required' }}
             />
             <ControlledInputField
@@ -631,7 +638,6 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
               min={2}
               max={99}
               required
-              disabled={submitting}
               rules={{
                 required: 'Total rounds is required',
                 min: { value: 2, message: 'Must be greater than 1' },
@@ -693,7 +699,6 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
                     {index === 0 ? (
                       <Slider
                         className={styles.draftDaySlider}
-                        label="End Round"
                         min={sliderMin}
                         max={sliderMax}
                         step={1}
@@ -706,7 +711,6 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
                       <Slider
                         className={styles.draftDaySlider}
                         type="range"
-                        label="Round Range"
                         min={sliderMin}
                         max={sliderMax}
                         step={1}
@@ -727,7 +731,7 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
       </Modal>
 
       <ConfirmModal
-        open={confirmDelete !== null}
+        open={confirmDelete !== null && !deleteHidden}
         title="Remove Draft"
         body={
           <>
@@ -736,9 +740,10 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
         }
         confirmLabel="Remove"
         intent="danger"
-        onConfirm={async () => {
-          if (confirmDelete) await deleteDraftEvent(confirmDelete.draftYear);
-          setConfirmDelete(null);
+        onConfirm={() => {
+          if (!confirmDelete) return;
+          const { draftYear: year } = confirmDelete;
+          void runDelete(() => deleteDraftEvent(year), { pending: `Removing ${year} draft…` });
         }}
         onCancel={() => setConfirmDelete(null)}
       />

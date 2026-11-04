@@ -39,6 +39,8 @@ const game = {
     secondary_color: '#444444',
     text_color: '#ffffff',
   },
+  home_score: 0,
+  away_score: 0,
   overtime_periods: 1,
   shootout: false,
   shootout_first_team_id: 'away-team',

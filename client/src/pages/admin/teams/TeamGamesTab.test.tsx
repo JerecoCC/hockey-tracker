@@ -559,7 +559,7 @@ describe('TeamGamesTab', () => {
     const originalCreateElement = document.createElement.bind(document);
     const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
     const clickMock = jest.fn();
-    let createdAnchor: HTMLAnchorElement | null = null;
+    let createdAnchor = null as HTMLAnchorElement | null;
     document.documentElement.style.setProperty('--app-text-strong', '#0f172a');
     const createElementSpy = jest.spyOn(document, 'createElement').mockImplementation((tagName) => {
       const element = originalCreateElement(tagName);
@@ -571,9 +571,8 @@ describe('TeamGamesTab', () => {
     });
     const getBoundingClientRectSpy = jest
       .spyOn(HTMLElement.prototype, 'getBoundingClientRect')
-      .mockImplementation(function () {
-        const element = this as HTMLElement;
-        if (element.classList.contains('calendarScroll')) {
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.classList.contains('calendarScroll')) {
           return {
             bottom: 0,
             height: 0,
@@ -586,7 +585,7 @@ describe('TeamGamesTab', () => {
             toJSON: () => ({}),
           } as DOMRect;
         }
-        if (element.classList.contains('grid')) {
+        if (this.classList.contains('grid')) {
           return {
             bottom: 0,
             height: 0,
@@ -599,7 +598,7 @@ describe('TeamGamesTab', () => {
             toJSON: () => ({}),
           } as DOMRect;
         }
-        if (element.classList.contains('dayCell') || element.classList.contains('emptyCell')) {
+        if (this.classList.contains('dayCell') || this.classList.contains('emptyCell')) {
           return {
             bottom: 0,
             height: 0,

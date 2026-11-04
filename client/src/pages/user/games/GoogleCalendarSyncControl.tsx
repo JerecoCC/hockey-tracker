@@ -1,10 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import { toast, type ToastOptions } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { API, authHeaders } from '@/lib/apiClient';
 import GoogleLogo from '@/shared/GoogleLogo/GoogleLogo';
 import {
@@ -56,7 +57,7 @@ const connectErrorMessage = (reason: string | null) => {
   }
 };
 
-const loadingToastOptions = {
+const loadingToastOptions: ToastOptions = {
   autoClose: false,
   closeButton: false,
   closeOnClick: false,
@@ -139,6 +140,13 @@ const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlP
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Disconnecting runs behind a progress toast with the modal hidden; it reappears if that fails.
+  // (Connecting redirects to Google, and syncing already closes the modal and streams its own
+  // progress toast.)
+  const { hidden, run } = useBackgroundModalAction({
+    target: open ? 'google-calendar' : null,
+    onDone: () => setOpen(false),
+  });
   const { data: status } = useQuery<GoogleCalendarStatus>({
     queryKey: ['google-calendar-status'],
     queryFn: async () => {
@@ -213,19 +221,19 @@ const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlP
     }
   };
 
-  const disconnect = async () => {
+  const disconnect = () => {
     if (busy) return;
-    setBusy(true);
-    try {
-      await axios.delete(`${API}/user/calendar/google`, { headers: authHeaders() });
-      await queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
-      setOpen(false);
-      toast.success('Google Calendar disconnected');
-    } catch {
-      toast.error('Failed to disconnect Google Calendar');
-    } finally {
-      setBusy(false);
-    }
+    void run(
+      async () => {
+        await axios.delete(`${API}/user/calendar/google`, { headers: authHeaders() });
+        await queryClient.invalidateQueries({ queryKey: ['google-calendar-status'] });
+      },
+      {
+        pending: 'Disconnecting Google Calendar…',
+        success: 'Google Calendar disconnected',
+        error: 'Failed to disconnect Google Calendar',
+      },
+    );
   };
 
   const connected = !!status?.connected;
@@ -278,7 +286,7 @@ const GoogleCalendarSyncControl = ({ renderTrigger }: GoogleCalendarSyncControlP
       )}
 
       <Modal
-        open={open}
+        open={open && !hidden}
         title="Google Calendar Sync"
         onClose={() => {
           if (!busy) setOpen(false);

@@ -246,5 +246,38 @@ describe('BulkAddPlayersModal – submit', () => {
         expect.objectContaining({ first_name: 'Wayne', last_name: 'Gretzky' }),
       ]),
     );
+    await waitFor(() => expect(defaultProps.onClose).toHaveBeenCalledTimes(1));
+  });
+
+  it('hides while saving and reopens with the entered rows if the save fails', async () => {
+    let finishSave: (ok: boolean) => void = () => {};
+    mockBulkAddPlayers.mockReturnValueOnce(
+      new Promise<boolean>((resolve) => {
+        finishSave = resolve;
+      }),
+    );
+    render(<BulkAddPlayersModal {...defaultProps} />);
+
+    fireEvent.change(screen.getByPlaceholderText('First name'), { target: { value: 'Wayne' } });
+    fireEvent.change(screen.getByPlaceholderText('Last name'), { target: { value: 'Gretzky' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /position/i }), {
+      target: { value: 'C' },
+    });
+    fireEvent.change(screen.getByRole('combobox', { name: /shoots/i }), { target: { value: 'L' } });
+
+    const submitButton = screen.getByRole('button', { name: /save 1 player\b/i });
+    await waitFor(() => expect(submitButton).toBeEnabled());
+    fireEvent.click(submitButton);
+
+    await waitFor(() =>
+      expect(screen.queryByText('Bulk Create Players')).not.toBeInTheDocument(),
+    );
+
+    finishSave(false);
+
+    expect(await screen.findByText('Bulk Create Players')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('First name')).toHaveValue('Wayne');
+    expect(screen.getByPlaceholderText('Last name')).toHaveValue('Gretzky');
+    expect(defaultProps.onClose).not.toHaveBeenCalled();
   });
 });

@@ -66,6 +66,7 @@ import {
   type PlayerShoots,
 } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useLeagueDraftDates, { type LeagueDraftDateRecord } from '@/hooks/useLeagueDraftDates';
 import { getDraftPickStartDate } from '@/lib/draftDates';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -122,6 +123,8 @@ const PLAYER_POSITION_TAG_INTENTS: Record<PlayerPosition, TagIntent> = {
   RD: 'info',
   G: 'warning',
 };
+const isPlayerPosition = (value: string): value is PlayerPosition =>
+  Object.prototype.hasOwnProperty.call(PLAYER_POSITION_TAG_INTENTS, value);
 
 const buildNhlPlayerPageUrl = (leaguePlayerNumber: string) =>
   `${NHL_PLAYER_PAGE_BASE_URL}/${encodeURIComponent(leaguePlayerNumber)}`;
@@ -2335,7 +2338,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
   );
   const id = isLegacyIdRoute ? playerSlug : routeLookup?.player_id;
   const leagueId = isLegacyIdRoute ? leagueCode : routeLookup?.league_id;
-  const teamId = isLegacyIdRoute ? routeTeamCode : routeLookup?.team_id;
+  const teamId = isLegacyIdRoute ? routeTeamCode : (routeLookup?.team_id ?? undefined);
   const { player, stats, loading: playerDetailsLoading } = usePlayerDetails(id, { mode });
   const loading = routeLookupLoading || playerDetailsLoading;
   const { awards: playerAwards, loading: playerAwardsLoading } = usePlayerAwards(id, { mode });
@@ -2547,25 +2550,46 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     return updateStint(stint.id, payload);
   };
 
-  const handleDeleteStint = async () => {
+  // The delete confirmations hide while the delete runs behind a progress toast, and reappear
+  // if it fails.
+  const deleteStintAction = useBackgroundModalAction({
+    target: deletingStint?.id ?? null,
+    onDone: () => setDeletingStint(null),
+  });
+  const deletePhotoEntryAction = useBackgroundModalAction({
+    target: deletingPhotoEntry ? (deletingPhotoEntry.id ?? 'unsaved') : null,
+    onDone: () => setDeletingPhotoEntry(null),
+  });
+  const deleteJerseyHistoryEntryAction = useBackgroundModalAction({
+    target: deletingJerseyHistoryEntry?.id ?? null,
+    onDone: () => setDeletingJerseyHistoryEntry(null),
+  });
+
+  const handleDeleteStint = () => {
     if (!deletingStint) return;
-    const ok = await deleteStint(deletingStint.id);
-    if (ok) setDeletingStint(null);
+    const stintId = deletingStint.id;
+    void deleteStintAction.runSettled(() => deleteStint(stintId), {
+      pending: 'Deleting stint…',
+    });
   };
 
-  const handleDeletePhotoEntry = async () => {
+  const handleDeletePhotoEntry = () => {
     if (!deletingPhotoEntry?.id) {
       setDeletingPhotoEntry(null);
       return;
     }
-    const ok = await deletePlayerPhoto(deletingPhotoEntry.id);
-    if (ok) setDeletingPhotoEntry(null);
+    const photoId = deletingPhotoEntry.id;
+    void deletePhotoEntryAction.runSettled(() => deletePlayerPhoto(photoId), {
+      pending: 'Deleting season photo…',
+    });
   };
 
-  const handleDeleteJerseyHistoryEntry = async () => {
+  const handleDeleteJerseyHistoryEntry = () => {
     if (!deletingJerseyHistoryEntry) return;
-    const ok = await deleteJerseyHistoryEntry(deletingJerseyHistoryEntry.id);
-    if (ok) setDeletingJerseyHistoryEntry(null);
+    const entryId = deletingJerseyHistoryEntry.id;
+    void deleteJerseyHistoryEntryAction.runSettled(() => deleteJerseyHistoryEntry(entryId), {
+      pending: 'Deleting jersey number change…',
+    });
   };
 
   const movePlayer = async (
@@ -2716,36 +2740,52 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
     setManualMovementSourceOpen(true);
   };
 
-  const handleApplyManualMovementStints = async () => {
+  // The confirmation hides while the stints apply behind a progress toast, and reappears if
+  // applying them fails.
+  const applyManualMovementAction = useBackgroundModalAction({
+    target: manualMovementApplyOpen ? 'apply-manual-movement' : null,
+    onDone: () => setManualMovementApplyOpen(false),
+  });
+
+  const handleApplyManualMovementStints = () => {
     if (
+      manualMovementApplying ||
       manualMovementStintImport.stints.length === 0 ||
       manualMovementStintImport.issues.length > 0
     ) {
       return;
     }
 
+    const { stints: importStints } = manualMovementStintImport;
     setManualMovementApplying(true);
-    try {
-      const result = await reconcilePlayerStints(manualMovementStintImport.stints, {
-        source: 'nhl_puckpedia',
-      });
-      if (!result) return;
+    void applyManualMovementAction.runSettled(
+      async () => {
+        try {
+          const result = await reconcilePlayerStints(importStints, {
+            source: 'nhl_puckpedia',
+          });
+          if (!result) return false;
 
-      const { create, update, adopt, unchanged, conflict } = result.summary;
-      const applied = create + update + adopt;
-      if (conflict > 0) {
-        toast.warn(
-          `${applied} team stint${applied === 1 ? '' : 's'} applied; ${conflict} manual conflict${conflict === 1 ? '' : 's'} preserved.`,
-        );
-      } else {
-        toast.success(
-          `${applied} team stint${applied === 1 ? '' : 's'} applied${unchanged > 0 ? `; ${unchanged} already up to date` : ''}.`,
-        );
-      }
-      setManualMovementApplyOpen(false);
-    } finally {
-      setManualMovementApplying(false);
-    }
+          const { create, update, adopt, unchanged, conflict } = result.summary;
+          const applied = create + update + adopt;
+          if (conflict > 0) {
+            toast.warn(
+              `${applied} team stint${applied === 1 ? '' : 's'} applied; ${conflict} manual conflict${conflict === 1 ? '' : 's'} preserved.`,
+            );
+          } else {
+            toast.success(
+              `${applied} team stint${applied === 1 ? '' : 's'} applied${unchanged > 0 ? `; ${unchanged} already up to date` : ''}.`,
+            );
+          }
+          return true;
+        } finally {
+          setManualMovementApplying(false);
+        }
+      },
+      {
+        pending: `Applying ${importStints.length} team stint${importStints.length === 1 ? '' : 's'}…`,
+      },
+    );
   };
 
   const fetchNhlProxy = async <T,>(url: string) => {
@@ -3212,9 +3252,10 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
       : []),
   ];
   const positionLabel = formatPlayerPosition(effectivePosition);
-  const positionTagIntent = effectivePosition
-    ? PLAYER_POSITION_TAG_INTENTS[effectivePosition]
-    : 'neutral';
+  const positionTagIntent =
+    effectivePosition && isPlayerPosition(effectivePosition)
+      ? PLAYER_POSITION_TAG_INTENTS[effectivePosition]
+      : 'neutral';
   const isGoalie = effectivePosition === 'G';
   const buildGamePath = (row: PlayerLastFiveGameRecord) =>
     isAdminView
@@ -3972,7 +4013,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           />
 
           <ConfirmModal
-            open={manualMovementApplyOpen}
+            open={manualMovementApplyOpen && !applyManualMovementAction.hidden}
             title="Apply Team Stints"
             body={
               <>
@@ -3990,7 +4031,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           />
 
           <ConfirmModal
-            open={!!deletingPhotoEntry}
+            open={!!deletingPhotoEntry && !deletePhotoEntryAction.hidden}
             title="Delete Season Photo"
             body={
               deletingPhotoEntry ? (
@@ -4011,7 +4052,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           />
 
           <ConfirmModal
-            open={!!deletingJerseyHistoryEntry}
+            open={!!deletingJerseyHistoryEntry && !deleteJerseyHistoryEntryAction.hidden}
             title="Delete Jersey Number Change"
             body={
               deletingJerseyHistoryEntry ? (
@@ -4032,7 +4073,7 @@ const PlayerDetailsPage = ({ mode = 'admin' }: PlayerDetailsPageProps) => {
           />
 
           <ConfirmModal
-            open={!!deletingStint}
+            open={!!deletingStint && !deleteStintAction.hidden}
             title="Delete Stint"
             body={
               deletingStint ? (

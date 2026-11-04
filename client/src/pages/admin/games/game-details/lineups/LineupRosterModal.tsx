@@ -11,6 +11,7 @@ import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import LoadingSpinner from '@jerecocc/tracker-ui/components/LoadingSpinner/LoadingSpinner';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
 import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playerSearch';
@@ -67,12 +68,17 @@ const LineupRosterModal = ({
   const jerseyInput = watch('jerseyInput');
   const query = watch('query');
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [submitting, setSubmitting] = useState(false);
   const [pendingMissing, setPendingMissing] = useState<number[]>([]);
   const [alreadyAdded, setAlreadyAdded] = useState<JerseyNotice[]>([]);
   const [prospectMatches, setProspectMatches] = useState<JerseyNotice[]>([]);
   const [showProspects, setShowProspects] = useState(false);
   const [movingPlayerId, setMovingPlayerId] = useState<string | null>(null);
+  // The modal hides while the players are added behind a progress toast, and reappears with the
+  // same selection if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? teamId : null,
+    onDone: () => finishSubmit(),
+  });
 
   const { data: allPlayers = [], isFetching } = useQuery<TeamPlayerRecord[]>({
     queryKey: [
@@ -94,7 +100,7 @@ const LineupRosterModal = ({
     enabled: open,
   });
   const loadingPlayers = isFetching && allPlayers.length === 0;
-  const controlsDisabled = submitting;
+  const controlsDisabled = hidden;
 
   const hasProspects = allPlayers.some((p) => p.is_prospect);
 
@@ -228,22 +234,23 @@ const LineupRosterModal = ({
     setProspectMatches([]);
   };
 
-  const handleSubmit = async () => {
-    if (selectedCount === 0 && pendingMissing.length === 0) return;
-    if (selectedCount > 0) {
-      setSubmitting(true);
-      let ok = false;
-      try {
-        ok = await addToGameRoster([...selected]);
-      } finally {
-        setSubmitting(false);
-      }
-      if (!ok) return;
-    }
+  const finishSubmit = () => {
     if (pendingMissing.length > 0) {
       onMissingJerseys?.(pendingMissing);
     }
     handleClose();
+  };
+
+  const handleSubmit = () => {
+    if (controlsDisabled || (selectedCount === 0 && pendingMissing.length === 0)) return;
+    if (selectedCount === 0) {
+      finishSubmit();
+      return;
+    }
+    const playerIds = [...selected];
+    void runSettled(() => addToGameRoster(playerIds), {
+      pending: `Adding ${playerIds.length} player${playerIds.length !== 1 ? 's' : ''} to the lineup…`,
+    });
   };
 
   const footerSummary =
@@ -255,11 +262,10 @@ const LineupRosterModal = ({
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={`Add to ${teamName} Lineup`}
       onClose={handleClose}
       size="md"
-      busy={submitting}
       footer={
         <div className={styles.footerActions}>
           <span className={styles.footerSummary}>{footerSummary}</span>
@@ -292,7 +298,7 @@ const LineupRosterModal = ({
             disabled={controlsDisabled || (selectedCount === 0 && pendingMissing.length === 0)}
             className={styles.footerSave}
           >
-            {submitting ? 'Adding...' : 'Add to Lineup'}
+            Add to Lineup
           </Button>
         </div>
       }

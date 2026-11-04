@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { ControlledInputField } from '@/components/form/ControlledFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type CreateTeamData, type TeamRecord } from '@/hooks/useTeams';
 import TeamLogoUploadGroup from './TeamLogoUploadGroup';
 import styles from './TeamFormModal.module.scss';
@@ -74,7 +75,7 @@ const TeamFormModal = (props: Props) => {
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting, isDirty, isValid },
+    formState: { isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
     mode: 'onChange',
@@ -89,7 +90,14 @@ const TeamFormModal = (props: Props) => {
     onClose();
   }, [formValues, onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  // Saving (logo uploads included) runs behind a progress toast with the modal hidden; it
+  // reappears with what was entered if the save fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (editTarget?.id ?? 'new') : null,
+    onDone: handleClose,
+  });
+
+  const save = async (data: FormValues) => {
     const logoDarkUrl = await resolveUploadedAsset(data.logo_dark, uploadLogo);
     const logoLightUrl = await resolveUploadedAsset(data.logo_light, uploadLogo);
     const iconUrl = await resolveUploadedAsset(data.icon, uploadLogo);
@@ -98,7 +106,7 @@ const TeamFormModal = (props: Props) => {
       (data.logo_light instanceof File && !logoLightUrl) ||
       (data.icon instanceof File && !iconUrl)
     ) {
-      return;
+      return false;
     }
     const payload: CreateTeamData = {
       name: displayTeamName(data.place_name, data.team_name),
@@ -110,19 +118,23 @@ const TeamFormModal = (props: Props) => {
       icon: iconUrl,
       league_id: data.league_id || null,
     };
-    const ok = editTarget ? await updateTeam(editTarget.id, payload) : await addTeam(payload);
-    if (ok) handleClose();
+    return editTarget ? updateTeam(editTarget.id, payload) : addTeam(payload);
+  };
+
+  const onSubmit = handleSubmit((data) => {
+    void runSettled(() => save(data), {
+      pending: editTarget ? 'Saving team…' : 'Creating team…',
+    });
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={editTarget ? 'Edit Team' : 'Create Team'}
       onClose={handleClose}
-      confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Team'}
+      confirmLabel={editTarget ? 'Save Changes' : 'Create Team'}
       confirmForm="team-form"
-      confirmDisabled={isSubmitting || !isDirty || !isValid}
-      busy={isSubmitting}
+      confirmDisabled={!isDirty || !isValid}
     >
       <form
         id="team-form"
@@ -138,11 +150,9 @@ const TeamFormModal = (props: Props) => {
           fullWidth
           previewSize="icon"
           pasteMode="focus"
-          disabled={isSubmitting}
         />
         <TeamLogoUploadGroup
           control={control}
-          disabled={isSubmitting}
         />
         <div className={styles.identityRow}>
           <ControlledInputField
@@ -153,7 +163,6 @@ const TeamFormModal = (props: Props) => {
             rules={{ required: true }}
             transform={(v) => v.toUpperCase()}
             placeholder="TOR"
-            disabled={isSubmitting}
           />
           <ControlledInputField
             label="Place Name"
@@ -161,7 +170,6 @@ const TeamFormModal = (props: Props) => {
             name="place_name"
             placeholder="e.g. Toronto or PWHL"
             autoFocus
-            disabled={isSubmitting}
           />
           <ControlledInputField
             label="Team Name"
@@ -170,7 +178,6 @@ const TeamFormModal = (props: Props) => {
             name="team_name"
             rules={{ required: true }}
             placeholder="e.g. Maple Leafs"
-            disabled={isSubmitting}
           />
         </div>
       </form>

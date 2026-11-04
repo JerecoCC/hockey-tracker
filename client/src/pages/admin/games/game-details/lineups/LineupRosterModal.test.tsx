@@ -5,7 +5,15 @@ import axios from 'axios';
 import LineupRosterModal from './LineupRosterModal';
 
 jest.mock('axios');
-jest.mock('react-toastify', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
+jest.mock('react-toastify', () => ({
+  toast: {
+    success: jest.fn(),
+    error: jest.fn(),
+    loading: jest.fn(),
+    dismiss: jest.fn(),
+    update: jest.fn(),
+  },
+}));
 jest.mock('@jerecocc/tracker-ui/components/Icon/Icon', () => ({ name }: { name: string }) => <span>{name}</span>);
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;

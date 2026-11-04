@@ -140,14 +140,17 @@ const useSeasons = (leagueId?: string, options: { mode?: SeasonsMode } = {}) => 
     }
   };
 
-  const deleteSeason = async (id: string) => {
+  const deleteSeason = async (id: string): Promise<boolean> => {
     setBusy(id);
     try {
       await axios.delete(`${API}/admin/seasons/${id}`, { headers: authHeaders() });
       toast.success('Season deleted');
-      await queryClient.invalidateQueries({ queryKey: ['seasons'] });
+      // The list refreshes in the background, so callers aren't held up by it.
+      void queryClient.invalidateQueries({ queryKey: ['seasons'] });
+      return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete season'));
+      return false;
     } finally {
       setBusy(null);
     }

@@ -433,7 +433,7 @@ describe('ScoreImageModal', () => {
     const user = userEvent.setup();
     const originalCreateElement = document.createElement.bind(document);
     const clickMock = jest.fn();
-    let createdAnchor: HTMLAnchorElement | null = null;
+    const createdAnchors: HTMLAnchorElement[] = [];
     mockUseLeagues.mockReturnValue({
       leagues: [
         {
@@ -454,7 +454,7 @@ describe('ScoreImageModal', () => {
     jest.spyOn(document, 'createElement').mockImplementation((tagName) => {
       const element = originalCreateElement(tagName);
       if (String(tagName).toLowerCase() === 'a') {
-        createdAnchor = element as HTMLAnchorElement;
+        createdAnchors.push(element as HTMLAnchorElement);
         Object.defineProperty(element, 'click', { value: clickMock });
       }
       return element;
@@ -570,7 +570,7 @@ describe('ScoreImageModal', () => {
     );
     expect(exportedImageSources).not.toContain('/logos/away-light.png');
     expect(exportedImageSources).not.toContain('/logos/home-light.png');
-    expect(createdAnchor?.download).toBe('AWY vs HOM - 2026-03-05.png');
+    expect(createdAnchors[createdAnchors.length - 1]?.download).toBe('AWY vs HOM - 2026-03-05.png');
   });
 
   it('uses league code, playoffs, game year, and matchup label for playoff games', () => {

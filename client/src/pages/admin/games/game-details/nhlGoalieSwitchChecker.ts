@@ -362,7 +362,7 @@ function getTeamMeta(source: NhlLandingFeed, side: TeamSide): TeamMeta {
   const team = side === 'away' ? source.awayTeam : source.homeTeam;
   return {
     id: toOptionalNumber(team?.id),
-    abbrev: readLocalizedText(team?.abbrev) ?? team?.abbrev ?? side.toUpperCase(),
+    abbrev: readLocalizedText(team?.abbrev) ?? side.toUpperCase(),
   };
 }
 
@@ -370,7 +370,7 @@ function normalizeGoalies(rawGoalies: unknown, teamMeta: TeamMeta): Goalie[] {
   if (!Array.isArray(rawGoalies)) return [];
 
   return (rawGoalies as NhlGoalieFeedRow[])
-    .map((raw) => {
+    .map((raw): Goalie | null => {
       const playerId = toOptionalNumber(raw?.playerId ?? raw?.goalieId ?? raw?.id);
       if (playerId == null) return null;
 
@@ -388,7 +388,7 @@ function normalizeGoalies(rawGoalies: unknown, teamMeta: TeamMeta): Goalie[] {
         saves: toOptionalNumber(raw?.saves),
         goalsAgainst: toOptionalNumber(raw?.goalsAgainst),
         starter: typeof raw?.starter === 'boolean' ? raw.starter : undefined,
-      } satisfies Goalie;
+      };
     })
     .filter((goalie): goalie is Goalie => !!goalie);
 }
@@ -552,7 +552,7 @@ export function buildGoalieStintsFromShiftChart(
   const goalieTeamById = buildGoalieTeamMap(teamGoalies);
 
   const rawStints = rows
-    .map((row: NhlShiftChartRow) => {
+    .map((row: NhlShiftChartRow): GoalieStint | null => {
       const playerId = toOptionalNumber(row?.playerId);
       if (playerId == null) return null;
 
@@ -574,7 +574,7 @@ export function buildGoalieStintsFromShiftChart(
         exitedPeriod: endTime ? periodLabel(period) : null,
         exitedTime: endTime,
         toi: goalie.toi ?? (typeof row?.duration === 'string' ? row.duration : undefined),
-      } satisfies GoalieStint;
+      };
     })
     .filter((stint): stint is GoalieStint => !!stint)
     .sort(
@@ -726,14 +726,14 @@ function collectGoalieIds(
 
 function toObservation(play: NhlPlay, goalieId: number, side: TeamSide): GoalieObservation {
   const period = toOptionalNumber(play?.periodDescriptor?.number) ?? 1;
+  const timeInPeriod = typeof play?.timeInPeriod === 'string' ? play.timeInPeriod : '00:00';
   return {
     teamSide: side,
     goalieId,
     period,
-    timeInPeriod: typeof play?.timeInPeriod === 'string' ? play.timeInPeriod : '00:00',
+    timeInPeriod,
     sortOrder:
-      toOptionalNumber(play?.sortOrder) ??
-      period * 100000 + parseClockSeconds(play?.timeInPeriod ?? '00:00'),
+      toOptionalNumber(play?.sortOrder) ?? period * 100000 + parseClockSeconds(timeInPeriod),
     typeDescKey: typeof play?.typeDescKey === 'string' ? play.typeDescKey : undefined,
   };
 }

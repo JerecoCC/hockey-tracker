@@ -2400,7 +2400,7 @@ function buildGoalieStintPayloads(
 
   const seenGoalieStints = new Map<number, number>();
   return rawStints
-    .map((stint) => {
+    .map((stint): GoalieStintPayload | null => {
       const matchedGoalie = matchedByNhlId.get(stint.goalieId);
       if (!matchedGoalie) return null;
 
@@ -2424,7 +2424,7 @@ function buildGoalieStintPayloads(
         shots_against: useGoalieTotals ? goalieStat?.shots_against ?? 0 : 0,
         goals_against: useGoalieTotals ? goalieStat?.goals_against ?? null : null,
         ...(timeOnIce == null ? {} : { time_on_ice: timeOnIce }),
-      } satisfies GoalieStintPayload;
+      };
     })
     .filter((stint): stint is GoalieStintPayload => !!stint);
 }
@@ -2968,7 +2968,9 @@ function isShootoutPlay(play: NhlPlay) {
   );
 }
 
-function goalieActuallyPlayed(goalie: NhlBoxscorePlayer) {
+function goalieActuallyPlayed(
+  goalie: Pick<NhlBoxscorePlayer, 'toi' | 'shotsAgainst' | 'saves' | 'goalsAgainst'>,
+) {
   const toi = String(goalie?.toi ?? '').trim();
   return (
     (!!toi && toi !== '00:00' && toi !== '0:00') ||
@@ -2991,8 +2993,8 @@ function readText(value: unknown): string | undefined {
   return undefined;
 }
 
-async function syncJerseyNumberHistory(players: MatchedPlayer[], gameDate: string) {
-  const effectiveDate = gameDate.slice(0, 10);
+async function syncJerseyNumberHistory(players: MatchedPlayer[], gameDate: string | null) {
+  const effectiveDate = (gameDate ?? '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveDate)) {
     throw new Error('A valid game date is required to record jersey number changes.');
   }

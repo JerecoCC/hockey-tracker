@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Checklist from '@jerecocc/tracker-ui/components/Checklist/Checklist';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type SeasonGroupRecord, type LeagueTeam } from '@/hooks/useSeasonDetails';
 import styles from './SeasonDetails.module.scss';
 
@@ -19,7 +20,12 @@ interface Props {
 const SeasonTeamOverrideModal = (props: Props) => {
   const { open, group, groups, leagueTeams, onClose, onSave } = props;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
+  // The modal hides while the teams save behind a progress toast, and reappears with the teams
+  // selected if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (group?.id ?? null) : null,
+    onDone: onClose,
+  });
 
   // Teams already assigned to any OTHER group in this season
   const takenIds = new Set(
@@ -47,29 +53,25 @@ const SeasonTeamOverrideModal = (props: Props) => {
       return next;
     });
 
-  const handleSave = async () => {
-    if (!group || saving) return;
-    setSaving(true);
-    const ok = await onSave(group.id, [...selectedIds]);
-    setSaving(false);
-    if (ok) onClose();
+  const handleSave = () => {
+    if (!group || hidden) return;
+    const groupId = group.id;
+    const teamIds = [...selectedIds];
+    void runSettled(() => onSave(groupId, teamIds), {
+      pending: `Saving ${group.name} teams…`,
+    });
   };
 
   const title = group ? `Add Teams to Group — ${group.name}` : 'Add Teams to Group';
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={title}
       onClose={onClose}
       onConfirm={handleSave}
-      confirmLabel={
-        saving
-          ? 'Saving…'
-          : `Save Override (${selectedIds.size} team${selectedIds.size === 1 ? '' : 's'})`
-      }
-      confirmDisabled={saving || leagueTeams.length === 0}
-      busy={saving}
+      confirmLabel={`Save Override (${selectedIds.size} team${selectedIds.size === 1 ? '' : 's'})`}
+      confirmDisabled={leagueTeams.length === 0}
     >
       <Checklist
         key={group?.id ?? 'none'}

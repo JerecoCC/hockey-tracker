@@ -8,6 +8,7 @@ import BulkCreateModal, {
   type BulkCreateRowRenderProps,
 } from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
 import type { SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type CreateGameData, type GameType } from '@/hooks/useGames';
 import { type SeasonTeam } from '@/hooks/useSeasonDetails';
 import { CREATE_GAME_TYPE_OPTIONS } from './gameTypeOptions';
@@ -155,6 +156,18 @@ const BulkCreateGamesModal = ({
   defaultDate,
 }: Props) => {
   const rowsRef = useRef<RowValues[]>([]);
+  // The submitted games, kept until they're created: the games are created behind a progress toast
+  // with the modal hidden, and if that fails the modal reopens with these rows restored, ready to
+  // save again.
+  const draftRef = useRef<{ rows: RowValues[] } | null>(null);
+  const closeModal = () => {
+    draftRef.current = null;
+    onClose();
+  };
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? 'bulk' : null,
+    onDone: closeModal,
+  });
   const createRow = useCallback(
     () => ({
       ...EMPTY_ROW,
@@ -176,12 +189,15 @@ const BulkCreateGamesModal = ({
 
   return (
     <BulkCreateModal<{ rows: RowValues[] }, RowValues>
-      createDefaultValues={() => ({ rows: [{ ...EMPTY_ROW, scheduled_date: defaultDate ?? '' }] })}
+      createDefaultValues={() => ({
+        rows: [{ ...EMPTY_ROW, scheduled_date: defaultDate ?? '' }],
+      })}
+      restoreValues={draftRef.current ?? undefined}
       rowArrayName="rows"
-      open={open}
+      open={open && !hidden}
       title={defaultDate ? `Bulk Create — ${fmtModalDate(defaultDate)}` : 'Bulk Create Games'}
       size="xl"
-      onClose={onClose}
+      onClose={closeModal}
       formId="bulk-create-games-form"
       createRow={createRow}
       columnsTemplate="0.9fr 0.9fr 1.1fr 1.1fr 1.2fr"
@@ -200,7 +216,8 @@ const BulkCreateGamesModal = ({
       }
       shouldConfirmRemove={shouldConfirmRemove}
       getRemoveConfirmBody={() => 'Remove this game from the list?'}
-      onSubmit={async (data) => {
+      onSubmit={(data) => {
+        draftRef.current = data;
         const payload: CreateGameData[] = data.rows.map((row) => ({
           season_id: seasonId,
           home_team_id: row.home_team_id!,
@@ -211,7 +228,11 @@ const BulkCreateGamesModal = ({
           scheduled_time: null,
           venue: row.venue || null,
         }));
-        return bulkCreateGames(payload);
+        void runSettled(() => bulkCreateGames(payload), {
+          pending: `Creating ${payload.length} game${payload.length === 1 ? '' : 's'}…`,
+        });
+        // The modal hides and closes itself, so it shouldn't reset or close here.
+        return Promise.resolve(false);
       }}
       renderAfterRows={({ rows }) => (
         <RowsTracker

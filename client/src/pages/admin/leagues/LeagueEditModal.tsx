@@ -8,6 +8,7 @@ import {
 } from '@/components/form/ControlledFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
 import { type CreateLeagueData } from '@/hooks/useLeagues';
 import { descriptionHtmlToTextarea, textareaToDescriptionHtml } from '@/lib/descriptionHtml';
@@ -110,17 +111,24 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
     onClose();
   }, [formValues, onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  // The modal hides while the league (and any new logo) saves behind a progress toast, and
+  // reappears with what was entered if that fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? league.id : null,
+    onDone: handleClose,
+  });
+
+  const saveLeague = async (data: FormValues) => {
     let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
     if (data.logo instanceof File) {
       const url = await uploadLogo(data.logo);
-      if (!url) return;
+      if (!url) return false;
       logoUrl = url;
     }
     let iconUrl: string | null = typeof data.icon === 'string' ? data.icon : null;
     if (data.icon instanceof File) {
       const url = await uploadLogo(data.icon);
-      if (!url) return;
+      if (!url) return false;
       iconUrl = url;
     }
     const payload: Partial<CreateLeagueData> = {
@@ -140,13 +148,16 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
           : Number(data.google_calendar_color_id),
       description: textareaToDescriptionHtml(data.description) ?? undefined,
     };
-    const ok = await updateLeague(league.id, payload);
-    if (ok) handleClose();
+    return updateLeague(league.id, payload);
+  };
+
+  const onSubmit = handleSubmit((data) => {
+    void runSettled(() => saveLeague(data), { pending: 'Saving league…' });
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="Edit League"
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}

@@ -1,8 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { toast } from 'react-toastify';
 
-import { API, authHeaders, getApiErrorMessage as apiError } from '@/lib/apiClient';
+import { API, authHeaders } from '@/lib/apiClient';
 import { toLocalDateKey } from '@/lib/gameSchedule';
 import type { GameRecord, GameType } from './useGames';
 
@@ -56,86 +55,54 @@ const usePersonalGames = () => {
       predicate: (query) => PERSONAL_GAME_QUERY_ROOTS.has(String(query.queryKey[0])),
     });
 
-  const createPersonalGame = async (input: PersonalGameInput): Promise<GameRecord | null> => {
-    try {
-      const { data } = await axios.post<GameRecord>(`${API}/user/personal-games`, input, {
-        headers: authHeaders(),
-      });
-      toast.success('Game added to your schedule');
-      await refreshGameLists();
-      return data;
-    } catch (err) {
-      toast.error(apiError(err, 'Failed to add game'));
-      return null;
-    }
+  // These run behind the modals' progress toasts (see useBackgroundModalAction): they throw on
+  // failure rather than toasting, and the game lists refresh in the background so the success
+  // message doesn't wait on them.
+
+  const createPersonalGame = async (input: PersonalGameInput): Promise<GameRecord> => {
+    const { data } = await axios.post<GameRecord>(`${API}/user/personal-games`, input, {
+      headers: authHeaders(),
+    });
+    void refreshGameLists();
+    return data;
   };
 
-  const updatePersonalGame = async (
-    id: string,
-    input: PersonalGameInput,
-  ): Promise<GameRecord | null> => {
-    try {
-      const { data } = await axios.patch<GameRecord>(`${API}/user/personal-games/${id}`, input, {
-        headers: authHeaders(),
-      });
-      toast.success('Game updated');
-      await refreshGameLists();
-      return data;
-    } catch (err) {
-      toast.error(apiError(err, 'Failed to update game'));
-      return null;
-    }
+  const updatePersonalGame = async (id: string, input: PersonalGameInput): Promise<GameRecord> => {
+    const { data } = await axios.patch<GameRecord>(`${API}/user/personal-games/${id}`, input, {
+      headers: authHeaders(),
+    });
+    void refreshGameLists();
+    return data;
   };
 
   /** Adds several unplayed games under one season; nothing is saved if any row is invalid. */
-  const bulkCreatePersonalGames = async (input: PersonalGameBulkInput): Promise<boolean> => {
-    try {
-      const { data } = await axios.post<{ created: number }>(
-        `${API}/user/personal-games/bulk`,
-        input,
-        { headers: authHeaders() },
-      );
-      toast.success(
-        `${data.created} personal game${data.created === 1 ? '' : 's'} added to your schedule`,
-      );
-      await refreshGameLists();
-      return true;
-    } catch (err) {
-      toast.error(apiError(err, 'Failed to add games'));
-      return false;
-    }
+  const bulkCreatePersonalGames = async (input: PersonalGameBulkInput): Promise<number> => {
+    const { data } = await axios.post<{ created: number }>(
+      `${API}/user/personal-games/bulk`,
+      input,
+      { headers: authHeaders() },
+    );
+    void refreshGameLists();
+    return data.created;
   };
 
   /** Records the final score after watching, which also marks the game watched. */
   const recordPersonalGameScore = async (
     id: string,
     score: PersonalGameScore,
-  ): Promise<GameRecord | null> => {
-    try {
-      const { data } = await axios.patch<GameRecord>(
-        `${API}/user/personal-games/${id}`,
-        { ...score, watched_on: toLocalDateKey(new Date()) },
-        { headers: authHeaders() },
-      );
-      toast.success('Score recorded and marked as watched');
-      await refreshGameLists();
-      return data;
-    } catch (err) {
-      toast.error(apiError(err, 'Failed to record the score'));
-      return null;
-    }
+  ): Promise<GameRecord> => {
+    const { data } = await axios.patch<GameRecord>(
+      `${API}/user/personal-games/${id}`,
+      { ...score, watched_on: toLocalDateKey(new Date()) },
+      { headers: authHeaders() },
+    );
+    void refreshGameLists();
+    return data;
   };
 
-  const deletePersonalGame = async (id: string): Promise<boolean> => {
-    try {
-      await axios.delete(`${API}/user/personal-games/${id}`, { headers: authHeaders() });
-      toast.success('Game removed from your schedule');
-      await refreshGameLists();
-      return true;
-    } catch (err) {
-      toast.error(apiError(err, 'Failed to remove game'));
-      return false;
-    }
+  const deletePersonalGame = async (id: string): Promise<void> => {
+    await axios.delete(`${API}/user/personal-games/${id}`, { headers: authHeaders() });
+    void refreshGameLists();
   };
 
   return {

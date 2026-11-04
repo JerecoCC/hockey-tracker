@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { toast } from 'react-toastify';
 import BorderedFieldset from '@jerecocc/tracker-ui/components/BorderedFieldset/BorderedFieldset';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
@@ -14,6 +15,7 @@ export interface GroupEntry {
   name: string;
   role: 'conference' | 'division' | null;
 }
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useBracketRuleSets, {
   type BracketRuleSet,
   type BracketSlotRule,
@@ -648,8 +650,15 @@ const BracketRulesModal = ({
     [allSlots, effectiveStructure.rounds],
   );
 
+  // The modal hides while the rule set saves behind a progress toast, and reappears with the
+  // rules entered if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (ruleSetId ?? 'new') : null,
+    onDone: onClose,
+  });
+
   const onSubmit = handleSubmit(
-    async ({ name, qualificationFormatId, slots, roundNames, matchupNames, roundBestOf }) => {
+    ({ name, qualificationFormatId, slots, roundNames, matchupNames, roundBestOf }) => {
       const payload = [...serializeSlots(slots), ...buildAutoWinnerSlots(effectiveStructure)];
       // roundNames arrives as a sparse array (numeric-keyed paths → RHF array treatment),
       // so index 0 may be undefined. Guard against that before calling .trim().
@@ -664,31 +673,39 @@ const BracketRulesModal = ({
       const roundBestOfPayload = cleanRoundBestOf(inBracket(roundBestOf));
       const qualificationFormatIdPayload =
         qualificationFormatId === NO_QUALIFICATION_FORMAT_VALUE ? null : qualificationFormatId;
-      let savedId = ruleSetId;
-      if (ruleSetId) {
-        await updateSlots(
-          ruleSetId,
-          name || 'Bracket Rules',
-          payload,
-          roundNamesPayload,
-          matchupNamesPayload,
-          qualificationFormatIdPayload,
-          roundBestOfPayload,
-        );
-      } else {
-        const created = await createRuleSet(
-          name || 'Bracket Rules',
-          payload,
-          roundNamesPayload,
-          matchupNamesPayload,
-          qualificationFormatIdPayload,
-          roundBestOfPayload,
-        );
-        if (!created) return;
-        savedId = created.id;
-      }
-      if (savedId) onSave?.(savedId);
-      onClose();
+      // The rule set hook only toasts failures, so the success message is shown here.
+      void runSettled(
+        async () => {
+          let savedId = ruleSetId;
+          if (ruleSetId) {
+            const ok = await updateSlots(
+              ruleSetId,
+              name || 'Bracket Rules',
+              payload,
+              roundNamesPayload,
+              matchupNamesPayload,
+              qualificationFormatIdPayload,
+              roundBestOfPayload,
+            );
+            if (!ok) return false;
+          } else {
+            const created = await createRuleSet(
+              name || 'Bracket Rules',
+              payload,
+              roundNamesPayload,
+              matchupNamesPayload,
+              qualificationFormatIdPayload,
+              roundBestOfPayload,
+            );
+            if (!created) return false;
+            savedId = created.id;
+          }
+          toast.success(ruleSetId ? 'Rule set saved' : 'Rule set created');
+          if (savedId) onSave?.(savedId);
+          return true;
+        },
+        { pending: ruleSetId ? 'Saving rule set…' : 'Creating rule set…' },
+      );
     },
   );
 
@@ -697,7 +714,7 @@ const BracketRulesModal = ({
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={actionLabel}
       onClose={onClose}
       confirmLabel={isSubmitting ? 'Saving...' : confirmActionLabel}
@@ -799,7 +816,9 @@ const BracketRulesModal = ({
                             .filter(Boolean)
                             .join(' ')}
                           aria-hidden={!matchupLabelsOpen}
-                          inert={!matchupLabelsOpen}
+                          // React 18 drops boolean `inert` and its DOM typings omit the
+                          // attribute; spread the string form so collapsed fields are inert.
+                          {...(!matchupLabelsOpen ? { inert: '' } : {})}
                         >
                           <div className={styles.bracketRulesMatchupLabelFields}>
                             {Array.from({ length: r.series }, (_, mi) => {

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { useProjectedLineup } from '@/hooks/useProjectedLineup';
 import ProjectedLineupModal from './ProjectedLineupModal';
@@ -9,21 +9,22 @@ jest.mock('@/hooks/useProjectedLineup', () => ({
 
 jest.mock('@jerecocc/tracker-ui/components/Modal/Modal', () => ({
   __esModule: true,
-  default: ({ children, title, onConfirm, confirmDisabled, busy }: any) => (
-    <div
-      role="dialog"
-      aria-label={title}
-    >
-      {children}
-      <button
-        type="button"
-        disabled={confirmDisabled || busy}
-        onClick={onConfirm}
+  default: ({ open, children, title, onConfirm, confirmDisabled, busy }: any) =>
+    open ? (
+      <div
+        role="dialog"
+        aria-label={title}
       >
-        Save Projection
-      </button>
-    </div>
-  ),
+        {children}
+        <button
+          type="button"
+          disabled={confirmDisabled || busy}
+          onClick={onConfirm}
+        >
+          Save Projection
+        </button>
+      </div>
+    ) : null,
 }));
 
 jest.mock('@jerecocc/tracker-ui/components/Tabs/Tabs', () => ({
@@ -338,6 +339,59 @@ describe('ProjectedLineupModal', () => {
     await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
     expect(save.mock.calls[0][0]).toHaveLength(REQUIRED_SLOT_ASSIGNMENTS.length);
     expect(save.mock.calls[0][0]).toEqual(expect.arrayContaining(REQUIRED_SLOT_ASSIGNMENTS));
+  });
+
+  it('hides while the projection saves and reappears with it if the save fails', async () => {
+    let finishSave!: (ok: boolean) => void;
+    save.mockReturnValueOnce(
+      new Promise<boolean>((resolve) => {
+        finishSave = resolve;
+      }),
+    );
+    const onClose = jest.fn();
+    render(
+      <ProjectedLineupModal
+        open
+        onClose={onClose}
+        teamId="team-1"
+        seasonId="season-1"
+        teamName="Test Team"
+        players={players}
+      />,
+    );
+    REQUIRED_SLOT_ASSIGNMENTS.forEach(({ player_id, slot_key }) => dropPlayer(player_id, slot_key));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Projection' }));
+
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await act(async () => finishSave(false));
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('lineup-slot-F1_LW')).getByLabelText('Alex Wing'),
+    ).toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('closes once the projection saves', async () => {
+    const onClose = jest.fn();
+    render(
+      <ProjectedLineupModal
+        open
+        onClose={onClose}
+        teamId="team-1"
+        seasonId="season-1"
+        teamName="Test Team"
+        players={players}
+      />,
+    );
+    REQUIRED_SLOT_ASSIGNMENTS.forEach(({ player_id, slot_key }) => dropPlayer(player_id, slot_key));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Projection' }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
 
   it('does not allow saving a complete projection until it changes', async () => {

@@ -35,8 +35,8 @@ const mockRouteParams = {
   playerSlug: 'john-smith',
 };
 const mockUsePageBreadcrumbs = jest.fn();
-const mockJerseyHistoryEditModal = jest.fn(() => null);
-const mockChangePhotoModal = jest.fn(() => null);
+const mockJerseyHistoryEditModal = jest.fn((_props: unknown) => null);
+const mockChangePhotoModal = jest.fn((_props: unknown) => null);
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 const mockedToast = toast as jest.Mocked<typeof toast>;
 
@@ -45,6 +45,7 @@ jest.mock('react-toastify', () => ({
   toast: {
     loading: jest.fn(),
     update: jest.fn(),
+    dismiss: jest.fn(),
     success: jest.fn(),
     error: jest.fn(),
     warn: jest.fn(),
@@ -4242,6 +4243,7 @@ describe('buildManualMovementStintImport', () => {
 describe('collapseSameTeamStints', () => {
   const stint = (id: string, teamId: string, startDate: string | null, endDate: string | null) => ({
     id,
+    player_id: 'player-1',
     team_id: teamId,
     season_id: `season-${id}`,
     team: {

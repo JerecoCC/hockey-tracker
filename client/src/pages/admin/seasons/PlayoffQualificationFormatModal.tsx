@@ -1,8 +1,9 @@
-import { useCallback, type ReactNode } from 'react';
+import { useCallback, useRef, type ReactNode } from 'react';
 import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
 import BulkCreateModal, {
   type BulkCreateRowRenderProps,
 } from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type PlayoffFormatRule } from '@/hooks/useLeagues';
 import styles from './PlayoffQualificationFormatModal.module.scss';
 
@@ -93,6 +94,19 @@ const PlayoffQualificationFormatModal = ({
   onSubmit,
   onClose,
 }: Props) => {
+  // The submitted format, kept until it's saved: the format saves behind a progress toast with the
+  // modal hidden, and if that fails the modal reopens with this draft restored, ready to save
+  // again.
+  const draftRef = useRef<FormValues | null>(null);
+  const closeModal = () => {
+    draftRef.current = null;
+    onClose();
+  };
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? mode : null,
+    onDone: closeModal,
+  });
+
   const createDefaultValues = useCallback(
     () => ({
       name: initialName,
@@ -105,12 +119,13 @@ const PlayoffQualificationFormatModal = ({
 
   return (
     <BulkCreateModal<FormValues, RuleRowValues>
-      open={open}
+      open={open && !hidden}
       title={isCreate ? 'Create Qualification Format' : 'Edit Qualification Format'}
       size="lg"
-      onClose={onClose}
+      onClose={closeModal}
       formId="playoff-qualification-format-form"
       createDefaultValues={createDefaultValues}
+      restoreValues={draftRef.current ?? undefined}
       rowArrayName="rules"
       createRow={() => ({ ...EMPTY_RULE })}
       columnsTemplate="1.1fr 1.4fr 0.7fr"
@@ -128,16 +143,23 @@ const PlayoffQualificationFormatModal = ({
       }
       shouldConfirmRemove={shouldConfirmRemoveRule}
       getRemoveConfirmBody={() => 'Remove this rule from the format?'}
-      onSubmit={(data) =>
-        onSubmit({
-          name: data.name.trim(),
-          rules: data.rules.map((rule) => ({
-            scope: rule.scope,
-            method: rule.method,
-            count: Number(rule.count),
-          })),
-        })
-      }
+      onSubmit={(data) => {
+        draftRef.current = data;
+        void runSettled(
+          () =>
+            onSubmit({
+              name: data.name.trim(),
+              rules: data.rules.map((rule) => ({
+                scope: rule.scope,
+                method: rule.method,
+                count: Number(rule.count),
+              })),
+            }),
+          { pending: isCreate ? 'Creating qualification format…' : 'Saving qualification format…' },
+        );
+        // The modal hides and closes itself, so it shouldn't reset or close here.
+        return Promise.resolve(false);
+      }}
       renderBeforeRows={({ control, isSubmitting }) => (
         <div className={styles.nameField}>
           <ControlledInputField

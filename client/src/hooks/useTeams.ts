@@ -112,14 +112,17 @@ const useTeams = (options: { mode?: TeamsMode } = {}) => {
     }
   };
 
-  const deleteTeam = async (id: string) => {
+  const deleteTeam = async (id: string): Promise<boolean> => {
     setBusy(id);
     try {
       await axios.delete(`${API}/admin/teams/${id}`, { headers: authHeaders() });
       toast.success('Team deleted');
-      await queryClient.invalidateQueries({ queryKey: ['teams'] });
+      // The list refreshes in the background, so callers aren't held up by it.
+      void queryClient.invalidateQueries({ queryKey: ['teams'] });
+      return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete team'));
+      return false;
     } finally {
       setBusy(null);
     }

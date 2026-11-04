@@ -5,7 +5,7 @@ import { useProjectedLineup } from '@/hooks/useProjectedLineup';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import TeamPlayersTab from './TeamPlayersTab';
 
-const mockProjectedLineupModal = jest.fn(() => null);
+const mockProjectedLineupModal = jest.fn((_props: unknown) => null);
 const mockMoreActionsMenu = jest.fn();
 
 jest.mock('react-router-dom', () => ({
@@ -206,10 +206,10 @@ describe('TeamPlayersTab', () => {
     );
     expect(projectedLineupButton).toHaveClass('filledAccent');
     expect(projectedLineupButton.querySelector('svg')).toBeInTheDocument();
-    expect(mockMoreActionsMenu.mock.calls.at(-1)?.[0].items).not.toEqual(
+    expect(mockMoreActionsMenu.mock.lastCall?.[0].items).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ label: 'Projected Lineup' })]),
     );
-    expect(mockMoreActionsMenu.mock.calls.at(-1)?.[0].items).toEqual(
+    expect(mockMoreActionsMenu.mock.lastCall?.[0].items).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ label: 'Reset Roster', icon: 'restart_alt' }),
       ]),
@@ -225,7 +225,7 @@ describe('TeamPlayersTab', () => {
 
     await user.click(screen.getByRole('button', { name: 'Reset Roster' }));
     const resetButtons = screen.getAllByRole('button', { name: 'Reset Roster' });
-    await user.click(resetButtons.at(-1)!);
+    await user.click(resetButtons[resetButtons.length - 1]);
 
     expect(teamPlayersState.resetRoster).toHaveBeenCalledTimes(1);
     expect(screen.getByPlaceholderText('Search reserves...')).toBeInTheDocument();

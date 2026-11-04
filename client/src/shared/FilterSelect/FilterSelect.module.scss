@@ -9,3 +9,9 @@
   white-space: nowrap;
   border: 0;
 }
+
+// Selected chips size to their label (team or game type name) instead of the multi-select's
+// 96px cap, which cut them short with room to spare; the field still clips any that overflow.
+.multiSelect [class*='_pill_'] {
+  max-width: 100%;
+}

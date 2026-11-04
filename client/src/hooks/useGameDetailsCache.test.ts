@@ -99,6 +99,9 @@ const LINEUP_ENTRY: LineupEntry = {
   player_last_name: 'Smith',
   player_photo: null,
   jersey_number: 12,
+  date_of_birth: null,
+  start_date: null,
+  acquisition_type: null,
 };
 
 const GOALIE_STAT: GoalieStatRecord = {

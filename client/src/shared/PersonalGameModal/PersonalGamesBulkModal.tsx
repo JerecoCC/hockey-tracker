@@ -17,6 +17,7 @@ import {
   ControlledTimePickerField,
 } from '@/components/form/ControlledFields';
 import type { GameType } from '@/hooks/useGames';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import usePersonalGames from '@/hooks/usePersonalGames';
 import styles from './PersonalGameModal.module.scss';
 import usePersonalGameOptions, { type PersonalGameOption } from './usePersonalGameOptions';
@@ -232,6 +233,18 @@ const PersonalGamesBulkModal = ({ open, onClose, defaultDate }: Props) => {
   const [teamOptions, setTeamOptions] = useState<PersonalGameOption[]>([]);
   const [teamsEnabled, setTeamsEnabled] = useState(false);
   const rowsRef = useRef<RowValues[]>([]);
+  // The submitted games, kept until they're saved: the games are added behind a progress toast with
+  // the modal hidden, and if that fails the modal reopens with these rows restored, ready to save
+  // again.
+  const draftRef = useRef<FormValues | null>(null);
+  const closeModal = () => {
+    draftRef.current = null;
+    onClose();
+  };
+  const { hidden, run } = useBackgroundModalAction({
+    target: open ? 'bulk' : null,
+    onDone: closeModal,
+  });
 
   const handleTeamOptionsChange = useCallback(
     (options: PersonalGameOption[], leagueId: string) => {
@@ -253,10 +266,10 @@ const PersonalGamesBulkModal = ({ open, onClose, defaultDate }: Props) => {
 
   return (
     <BulkCreateModal<FormValues, RowValues>
-      open={open}
+      open={open && !hidden}
       title="Bulk Add Personal Games"
       size="xl"
-      onClose={onClose}
+      onClose={closeModal}
       formId="bulk-personal-games-form"
       createDefaultValues={() => ({
         league_id: '',
@@ -264,6 +277,7 @@ const PersonalGamesBulkModal = ({ open, onClose, defaultDate }: Props) => {
         game_type: 'regular',
         rows: [{ ...EMPTY_ROW, scheduled_at: defaultDate ?? '' }],
       })}
+      restoreValues={draftRef.current ?? undefined}
       rowArrayName="rows"
       createRow={createRow}
       columnsTemplate="1.2fr 1.2fr 0.9fr 0.9fr"
@@ -284,18 +298,31 @@ const PersonalGamesBulkModal = ({ open, onClose, defaultDate }: Props) => {
         [row.away_team_id, row.home_team_id, row.scheduled_at].some(hasRowValue)
       }
       getRemoveConfirmBody={() => 'Remove this game from the list?'}
-      onSubmit={(data) =>
-        bulkCreatePersonalGames({
-          season_id: data.season_id || null,
-          games: data.rows.map((row) => ({
-            away_team_id: row.away_team_id!,
-            home_team_id: row.home_team_id!,
-            game_type: data.game_type,
-            scheduled_at: row.scheduled_at,
-            scheduled_time: row.scheduled_time || null,
-          })),
-        })
-      }
+      onSubmit={(data) => {
+        draftRef.current = data;
+        const count = data.rows.length;
+        void run(
+          () =>
+            bulkCreatePersonalGames({
+              season_id: data.season_id || null,
+              games: data.rows.map((row) => ({
+                away_team_id: row.away_team_id!,
+                home_team_id: row.home_team_id!,
+                game_type: data.game_type,
+                scheduled_at: row.scheduled_at,
+                scheduled_time: row.scheduled_time || null,
+              })),
+            }),
+          {
+            pending: `Adding ${count} personal game${count === 1 ? '' : 's'}…`,
+            success: (created) =>
+              `${created} personal game${created === 1 ? '' : 's'} added to your schedule`,
+            error: 'Failed to add games',
+          },
+        );
+        // The modal hides and closes itself, so it shouldn't reset or close here.
+        return Promise.resolve(false);
+      }}
       renderBeforeRows={(ctx) => (
         <LeagueSeasonFields
           open={open}

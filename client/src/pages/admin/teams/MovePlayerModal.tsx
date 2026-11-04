@@ -6,6 +6,7 @@ import {
   ControlledSelectField,
 } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import useTeams from '@/hooks/useTeams';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
@@ -132,7 +133,7 @@ const MovePlayerModal = ({
     reset,
     setValue,
     watch,
-    formState: { isSubmitting, isDirty, isValid },
+    formState: { isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
     mode: 'onChange',
@@ -189,37 +190,47 @@ const MovePlayerModal = ({
     onClose();
   }, [formValues, onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  // The move runs behind a progress toast with the modal hidden; it reappears with what was
+  // entered if the move fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (player?.id ?? null) : null,
+    onDone: handleClose,
+  });
+
+  const onSubmit = handleSubmit((data) => {
     if (!player || !data.to_team_id) return;
+    const toTeamId = data.to_team_id;
     const jerseyNumber =
       !isPostSeasonMove && data.jersey_number ? Number(data.jersey_number) : null;
     const jerseyEffectiveDate = isJerseyNumberChanged ? data.jersey_effective_date : null;
     const position = data.position || null;
     const rosterSeasonId = isPostSeasonMove ? data.target_season_id || null : null;
-    const ok = await movePlayer(
-      player.id,
-      seasonId,
-      data.to_team_id,
-      data.trade_date,
-      jerseyNumber,
-      jerseyEffectiveDate,
-      position,
-      data.acquisition_type || 'trade',
-      rosterSeasonId,
+    void runSettled(
+      () =>
+        movePlayer(
+          player.id,
+          seasonId,
+          toTeamId,
+          data.trade_date,
+          jerseyNumber,
+          jerseyEffectiveDate,
+          position,
+          data.acquisition_type || 'trade',
+          rosterSeasonId,
+        ),
+      { pending: `Moving ${player.first_name} ${player.last_name}…` },
     );
-    if (ok) handleClose();
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={player ? `Move ${player.first_name} ${player.last_name}` : 'Move Player'}
       onClose={handleClose}
-      confirmLabel={isSubmitting ? 'Moving...' : 'Move Player'}
+      confirmLabel="Move Player"
       confirmIcon="swap_horiz"
       confirmForm="move-player-form"
-      confirmDisabled={isSubmitting || !isDirty || !isValid}
-      busy={isSubmitting}
+      confirmDisabled={!isDirty || !isValid}
     >
       <div className={styles.layout}>
         <form
@@ -232,9 +243,7 @@ const MovePlayerModal = ({
             control={control}
             name="position"
             options={POSITION_OPTIONS}
-            placeholder="Inherit from player..."
-            disabled={isSubmitting}
-          />
+            placeholder="Inherit from player..."          />
           <div className={`${styles.teamRow} ${isPostSeasonMove ? styles.teamRowSingle : ''}`}>
             <ControlledSelectField
               label="Move To"
@@ -244,9 +253,7 @@ const MovePlayerModal = ({
               options={teamOptions}
               placeholder="Select destination team..."
               searchable
-              rules={{ required: true }}
-              disabled={isSubmitting}
-            />
+              rules={{ required: true }}            />
             {!isPostSeasonMove && (
               <ControlledInputField
                 type="number"
@@ -255,9 +262,7 @@ const MovePlayerModal = ({
                 name="jersey_number"
                 placeholder="e.g. 97"
                 min={0}
-                max={99}
-                disabled={isSubmitting}
-              />
+                max={99}              />
             )}
           </div>
           {isJerseyNumberChanged && (
@@ -266,9 +271,7 @@ const MovePlayerModal = ({
               control={control}
               name="jersey_effective_date"
               required
-              rules={{ required: 'Jersey effective date is required' }}
-              disabled={isSubmitting}
-            />
+              rules={{ required: 'Jersey effective date is required' }}            />
           )}
           <fieldset className={styles.fieldGroup}>
             <legend className={styles.groupLabel}>MOVEMENT</legend>
@@ -277,17 +280,13 @@ const MovePlayerModal = ({
                 label="Type"
                 control={control}
                 name="acquisition_type"
-                options={ACQUISITION_TYPE_OPTIONS}
-                disabled={isSubmitting}
-              />
+                options={ACQUISITION_TYPE_OPTIONS}              />
               <ControlledDatePickerField
                 label="Date"
                 control={control}
                 name="trade_date"
                 required
-                rules={{ required: 'Move date is required' }}
-                disabled={isSubmitting}
-              />
+                rules={{ required: 'Move date is required' }}              />
             </div>
             {isPostSeasonMove && (
               <ControlledSelectField
@@ -298,9 +297,7 @@ const MovePlayerModal = ({
                 placeholder="Select roster season..."
                 searchable
                 required
-                rules={{ required: 'Roster season is required' }}
-                disabled={isSubmitting}
-              />
+                rules={{ required: 'Roster season is required' }}              />
             )}
           </fieldset>
         </form>

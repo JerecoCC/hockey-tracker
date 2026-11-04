@@ -16,13 +16,13 @@ import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import useGroupAlignmentSets, {
   type AlignmentGroupRecord,
   type GroupAlignmentSet,
   type GroupAlignmentStructureType,
 } from '@/hooks/useGroupAlignmentSets';
-import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type TeamRecord } from '@/hooks/useTeams';
 import { useLeagueDetailsContext } from './leagueDetailsState';
 import {
@@ -323,7 +323,7 @@ const CreateAlignmentGroupModal = ({
   onCreate,
 }: {
   open: boolean;
-  parentGroup?: SeasonGroupRecord | null;
+  parentGroup?: AlignmentGroupRecord | null;
   disabled: boolean;
   onClose: () => void;
   onCreate: (payload: {
@@ -408,7 +408,7 @@ const EditAlignmentGroupModal = ({
   onUpdate,
 }: {
   open: boolean;
-  group: SeasonGroupRecord;
+  group: AlignmentGroupRecord;
   disabled: boolean;
   onClose: () => void;
   onUpdate: (payload: { name: string }) => Promise<boolean>;
@@ -823,16 +823,28 @@ const AlignmentPanel = ({
     discardEdits();
   };
 
-  const onSubmit = handleSubmit(async ({ name, structure_type }) => {
-    const saved = await onSave(
-      alignmentSet.id,
-      buildAlignmentConfigPayload(name, structure_type, draftDetails),
+  // The editor hides while the alignment saves behind a progress toast, and reappears with the
+  // draft edits if that fails.
+  const { hidden: saveHidden, runSettled } = useBackgroundModalAction({
+    target: editMode ? alignmentSet.id : null,
+    onDone: onStopEdit,
+  });
+
+  const onSubmit = handleSubmit(({ name, structure_type }) => {
+    void runSettled(
+      async () => {
+        const saved = await onSave(
+          alignmentSet.id,
+          buildAlignmentConfigPayload(name, structure_type, draftDetails),
+        );
+        if (saved) {
+          setDraftDetails(draftFromDetails(saved));
+          setDraftDirty(false);
+        }
+        return saved;
+      },
+      { pending: 'Saving alignment…' },
     );
-    if (saved) {
-      setDraftDetails(draftFromDetails(saved));
-      setDraftDirty(false);
-      onStopEdit();
-    }
   });
 
   const headerMeta = alignmentCountLabel(alignmentSet);
@@ -1098,7 +1110,7 @@ const AlignmentPanel = ({
         ]}
       />
       <Modal
-        open={editMode}
+        open={editMode && !saveHidden}
         title={`Edit Alignment - ${alignmentSet.name}`}
         onClose={handleCancelEdit}
         onConfirm={onSubmit}
@@ -1325,10 +1337,19 @@ const CreateAlignmentModal = ({
     }));
   };
 
-  const onSubmit = handleSubmit(async ({ name, structure_type }) => {
+  // The modal hides while the alignment is created behind a progress toast, and reappears with
+  // the draft groups and teams if that fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? 'new' : null,
+    onDone: onClose,
+  });
+
+  const onSubmit = handleSubmit(({ name, structure_type }) => {
     if (!structure_type) return;
-    const created = await onCreate(buildAlignmentConfigPayload(name, structure_type, draftDetails));
-    if (created) onClose();
+    void runSettled(
+      () => onCreate(buildAlignmentConfigPayload(name, structure_type, draftDetails)),
+      { pending: 'Creating alignment…' },
+    );
   });
 
   const roots = draftDetails.groups
@@ -1338,7 +1359,7 @@ const CreateAlignmentModal = ({
   return (
     <>
       <Modal
-        open={open}
+        open={open && !hidden}
         title="Create Alignment"
         onClose={onClose}
         onConfirm={onSubmit}
@@ -1515,6 +1536,12 @@ const LeagueAlignmentsTab = (props: Props) => {
     saveAlignmentConfig,
     deleteAlignmentSet,
   } = useGroupAlignmentSets(league.id);
+  // The delete dialog hides while the alignment is deleted behind a progress toast, and
+  // reappears if that fails.
+  const { hidden: deleteHidden, runSettled: runDelete } = useBackgroundModalAction({
+    target: confirmDelete?.id ?? null,
+    onDone: () => setConfirmDelete(null),
+  });
 
   const loadAlignmentDetails = useCallback(
     async (alignmentSetId: string) => {
@@ -1620,7 +1647,7 @@ const LeagueAlignmentsTab = (props: Props) => {
       />
 
       <ConfirmModal
-        open={confirmDelete !== null}
+        open={confirmDelete !== null && !deleteHidden}
         title="Delete Alignment"
         body={
           <>
@@ -1633,13 +1660,17 @@ const LeagueAlignmentsTab = (props: Props) => {
         intent="danger"
         busy={alignmentBusy === confirmDelete?.id}
         onCancel={() => setConfirmDelete(null)}
-        onConfirm={async () => {
+        onConfirm={() => {
           if (!confirmDelete) return;
-          const ok = await deleteAlignmentSet(confirmDelete.id);
-          if (ok) {
-            setConfirmDelete(null);
-            setEditingAlignmentId((current) => (current === confirmDelete.id ? null : current));
-          }
+          const { id } = confirmDelete;
+          void runDelete(
+            async () => {
+              const ok = await deleteAlignmentSet(id);
+              if (ok) setEditingAlignmentId((current) => (current === id ? null : current));
+              return ok;
+            },
+            { pending: 'Deleting alignment…' },
+          );
         }}
       />
     </>

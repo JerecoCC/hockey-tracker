@@ -35,6 +35,7 @@ const makeSeasonTeam = (
 ): SeasonTeam => ({
   ...makeTeam(id, placeName, teamName, code),
   secondary_color: '#abcdef',
+  home_arena: null,
   inherited: false,
 });
 

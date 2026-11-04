@@ -1,8 +1,9 @@
-import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { ControlledInputField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
@@ -29,7 +30,8 @@ interface Props {
   lineup: LineupEntry[];
   onClose: () => void;
   updatePeriodShots: (period: string, home: number, away: number) => Promise<boolean | undefined>;
-  upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<void>;
+  /** Resolves falsy when the goalie stat fails to save. */
+  upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<unknown>;
 }
 
 const ShotsEditModal = ({
@@ -45,7 +47,9 @@ const ShotsEditModal = ({
   updatePeriodShots,
   upsertGoalieStat,
 }: Props) => {
-  const [submitting, setSubmitting] = useState(false);
+  // Set once the shots are submitted: the form then keeps what was entered until the modal
+  // closes, even when a partly-saved edit refreshes the game, so a failed save reappears with it.
+  const keepDraftRef = useRef(false);
   const formValues = useMemo<ShotsEditFormValues>(
     () => ({
       periods: periods.map((p) => {
@@ -70,17 +74,27 @@ const ShotsEditModal = ({
   const { fields } = useFieldArray({ control, name: 'periods' });
 
   useLayoutEffect(() => {
-    reset(formValues);
+    if (!keepDraftRef.current) reset(formValues);
   }, [formValues, reset]);
 
   const handleClose = useCallback(() => {
+    keepDraftRef.current = false;
     reset(formValues);
     onClose();
   }, [formValues, onClose, reset]);
 
-  const handleConfirm = async () => {
+  // The modal hides while the shots save behind a progress toast, and reappears with the shots
+  // entered if any of them fail.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? game.id : null,
+    onDone: () => {
+      keepDraftRef.current = false;
+      onClose();
+    },
+  });
+
+  const saveShots = async () => {
     const { periods: rows } = getValues();
-    setSubmitting(true);
 
     // Build the complete merged period shots from form values.
     const mergedShots = periods.map((p, i) => {
@@ -99,7 +113,7 @@ const ShotsEditModal = ({
       const periodId = periods[i]?.id;
       const ps = mergedShots[i];
       if (!periodId || !ps) continue;
-      await updatePeriodShots(periodId, ps.home_shots, ps.away_shots);
+      if (!(await updatePeriodShots(periodId, ps.home_shots, ps.away_shots))) return false;
     }
 
     // Recompute and upsert goalie shots-against based on the new shot totals.
@@ -112,16 +126,22 @@ const ShotsEditModal = ({
     for (const goalie of goalieRosterList) {
       const sa = parseInt(computeAutoSA(goalie, goalieStats, game, mergedShots, goals), 10);
       if (!isNaN(sa)) {
-        await upsertGoalieStat({
+        const saved = await upsertGoalieStat({
           goalie_id: goalie.player_id,
           team_id: goalie.team_id,
           shots_against: sa,
         });
+        if (!saved) return false;
       }
     }
 
-    setSubmitting(false);
-    handleClose();
+    return true;
+  };
+
+  const handleConfirm = () => {
+    if (hidden) return;
+    keepDraftRef.current = true;
+    void runSettled(saveShots, { pending: 'Saving shots…' });
   };
 
   const teamRows = [
@@ -149,13 +169,12 @@ const ShotsEditModal = ({
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="Edit Shots"
       onClose={handleClose}
-      confirmLabel={submitting ? 'Saving…' : 'Save'}
+      confirmLabel="Save"
       onConfirm={handleConfirm}
-      confirmDisabled={submitting || !isDirty || !isValid}
-      busy={submitting}
+      confirmDisabled={!isDirty || !isValid}
     >
       <table className={`${styles.periodsTable} ${styles.shotsEditTable}`}>
         <thead>
@@ -200,7 +219,6 @@ const ShotsEditModal = ({
                     name={`periods.${i}.${row.fieldKey}`}
                     placeholder="0"
                     min={0}
-                    disabled={submitting}
                     transform={(v) => v.replace(/[^0-9]/g, '')}
                   />
                 </td>

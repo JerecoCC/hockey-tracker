@@ -7,6 +7,7 @@ import {
 } from '@/components/form/ControlledFields';
 import LogoUpload from '@jerecocc/tracker-ui/components/LogoUpload/LogoUpload';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type CreateLeagueData, type LeagueRecord } from '@/hooks/useLeagues';
 import styles from './Leagues.module.scss';
 
@@ -84,17 +85,24 @@ const LeagueFormModal = (props: Props) => {
     onClose();
   }, [formValues, onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  // The modal hides while the league (and any new logo) saves behind a progress toast, and
+  // reappears with what was entered if that fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (editTarget?.id ?? 'new') : null,
+    onDone: handleClose,
+  });
+
+  const saveLeague = async (data: FormValues) => {
     let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
     if (data.logo instanceof File) {
       const url = await uploadLogo(data.logo);
-      if (!url) return;
+      if (!url) return false;
       logoUrl = url;
     }
     let iconUrl: string | null = typeof data.icon === 'string' ? data.icon : null;
     if (data.icon instanceof File) {
       const url = await uploadLogo(data.icon);
-      if (!url) return;
+      if (!url) return false;
       iconUrl = url;
     }
     const payload: CreateLeagueData = {
@@ -107,13 +115,18 @@ const LeagueFormModal = (props: Props) => {
       scoring_system: data.scoring_system,
       goalie_min_regular_minutes: parseInt(data.goalie_min_regular_minutes, 10),
     };
-    const ok = editTarget ? await updateLeague(editTarget.id, payload) : await addLeague(payload);
-    if (ok) handleClose();
+    return editTarget ? updateLeague(editTarget.id, payload) : addLeague(payload);
+  };
+
+  const onSubmit = handleSubmit((data) => {
+    void runSettled(() => saveLeague(data), {
+      pending: editTarget ? 'Saving league…' : 'Creating league…',
+    });
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={editTarget ? 'Edit League' : 'Create League'}
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create League'}

@@ -16,6 +16,7 @@ import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/S
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import Tabs from '@jerecocc/tracker-ui/components/Tabs/Tabs';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagues, { type PlayoffFormatRule } from '@/hooks/useLeagues';
@@ -344,6 +345,16 @@ const SeasonDetailsPage = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showStartSeasonConfirm, setShowStartSeasonConfirm] = useState(false);
   const [showStartPlayoffsConfirm, setShowStartPlayoffsConfirm] = useState(false);
+  // The start confirmations hide while the season or playoffs start behind a progress toast,
+  // and reappear if it fails.
+  const startSeasonAction = useBackgroundModalAction({
+    target: showStartSeasonConfirm ? 'start-season' : null,
+    onDone: () => setShowStartSeasonConfirm(false),
+  });
+  const startPlayoffsAction = useBackgroundModalAction({
+    target: showStartPlayoffsConfirm ? 'start-playoffs' : null,
+    onDone: () => setShowStartPlayoffsConfirm(false),
+  });
 
   // ── Stats state ───────────────────────────────────────────────────────────────
   type GoalieLeaderStat = 'save_pct' | 'gaa' | 'shutouts';
@@ -1539,22 +1550,21 @@ const SeasonDetailsPage = () => {
       />
 
       <ConfirmModal
-        open={showStartSeasonConfirm}
+        open={showStartSeasonConfirm && !startSeasonAction.hidden}
         title="Start Season"
         body="Mark this season as in progress? Preseason-only configuration will be locked."
-        confirmLabel={busy === 'start-season' ? 'Startingâ€¦' : 'Start Season'}
+        confirmLabel={busy === 'start-season' ? 'Starting…' : 'Start Season'}
         confirmIcon="play_arrow"
         intent="accent"
         busy={busy === 'start-season'}
         onCancel={() => setShowStartSeasonConfirm(false)}
-        onConfirm={async () => {
-          const ok = await startSeason();
-          if (ok) setShowStartSeasonConfirm(false);
+        onConfirm={() => {
+          void startSeasonAction.runSettled(startSeason, { pending: 'Starting season…' });
         }}
       />
 
       <ConfirmModal
-        open={showStartPlayoffsConfirm}
+        open={showStartPlayoffsConfirm && !startPlayoffsAction.hidden}
         title="Start Playoffs"
         body={
           <>
@@ -1568,12 +1578,15 @@ const SeasonDetailsPage = () => {
         intent="accent"
         busy={busy === 'start-playoffs'}
         onCancel={() => setShowStartPlayoffsConfirm(false)}
-        onConfirm={async () => {
-          const ok = await startPlayoffs();
-          if (ok) {
-            setShowStartPlayoffsConfirm(false);
-            handleTabChange(SEASON_TAB_INDEX.PLAYOFFS);
-          }
+        onConfirm={() => {
+          void startPlayoffsAction.runSettled(
+            async () => {
+              const ok = await startPlayoffs();
+              if (ok) handleTabChange(SEASON_TAB_INDEX.PLAYOFFS);
+              return ok;
+            },
+            { pending: 'Starting playoffs…' },
+          );
         }}
       />
 

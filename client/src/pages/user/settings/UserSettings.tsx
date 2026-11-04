@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
 import Accordion from '@jerecocc/tracker-ui/components/Accordion/Accordion';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
@@ -88,6 +89,20 @@ const UserSettings = () => {
   const { isFavorite, toggle, busy, pendingRemoval, confirmRemoval, cancelRemoval } =
     useFavoriteTeams();
   const [leagueSearch, setLeagueSearch] = useState('');
+  // Confirming a removal hides the dialog behind a progress toast while the request runs. The
+  // favorites hook clears the pending removal when it succeeds, which closes the dialog for good;
+  // if it fails the removal stays pending and the dialog shows again.
+  const [removalHidden, setRemovalHidden] = useState(false);
+  const handleConfirmRemoval = async () => {
+    setRemovalHidden(true);
+    const toastId = toast.loading('Removing favorite team…');
+    try {
+      await confirmRemoval();
+    } finally {
+      toast.dismiss(toastId);
+      setRemovalHidden(false);
+    }
+  };
   const displayName = user?.display_name ?? user?.displayName ?? 'Player';
   const { firstName, lastName } = getUserNameParts(displayName);
   const authProvider = user?.is_google ? 'Google' : 'Email';
@@ -268,7 +283,7 @@ const UserSettings = () => {
         </aside>
       </div>
       <ConfirmModal
-        open={!!pendingRemoval}
+        open={!!pendingRemoval && !removalHidden}
         title="Remove favorite team?"
         body={
           pendingRemoval
@@ -277,9 +292,8 @@ const UserSettings = () => {
         }
         confirmLabel="Remove favorite and schedules"
         intent="danger"
-        busy={busy}
         onCancel={cancelRemoval}
-        onConfirm={() => void confirmRemoval()}
+        onConfirm={() => void handleConfirmRemoval()}
       />
     </div>
   );

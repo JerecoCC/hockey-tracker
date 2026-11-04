@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { ControlledSelectField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 
 interface StarPayload {
@@ -102,20 +103,23 @@ const ThreeStarsModal = ({
     };
   });
 
-  const onSubmit = handleSubmit(async (data) => {
+  // The modal hides while the stars save (or the game ends) behind a progress toast, and
+  // reappears with the stars picked if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (editMode ? 'edit' : 'end-game') : null,
+    onDone: handleClose,
+  });
+
+  const onSubmit = handleSubmit((data) => {
     const payload: StarPayload = { star1: data.star1, star2: data.star2, star3: data.star3 };
-    if (editMode) {
-      const ok = await onSave(payload);
-      if (ok) handleClose();
-    } else {
-      const ok = await onEndGame(payload);
-      if (ok) handleClose();
-    }
+    void runSettled(() => (editMode ? onSave(payload) : onEndGame(payload)), {
+      pending: editMode ? 'Saving three stars…' : 'Ending game…',
+    });
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={editMode ? 'Edit Three Stars' : 'End Game — 3 Stars'}
       onClose={handleClose}
       confirmLabel={editMode ? (busy ? 'Saving…' : 'Save') : 'End Game'}

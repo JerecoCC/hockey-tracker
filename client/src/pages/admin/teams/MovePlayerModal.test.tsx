@@ -222,6 +222,44 @@ describe('MovePlayerModal', () => {
     });
   });
 
+  it('hides while the move runs and reappears with the entered move if it fails', async () => {
+    const user = userEvent.setup();
+    let finishMove!: (ok: boolean) => void;
+    const movePlayer = jest.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finishMove = resolve;
+        }),
+    );
+    const onClose = jest.fn();
+
+    render(
+      <MovePlayerModal
+        open
+        player={player}
+        currentTeamId="team-current"
+        seasonId="season-2025"
+        leagueId="league-1"
+        seasons={seasons}
+        onClose={onClose}
+        movePlayer={movePlayer}
+      />,
+    );
+
+    await user.selectOptions(screen.getByLabelText('Move To'), 'team-next');
+    await user.type(screen.getByLabelText('Date'), '2026-07-15');
+    await user.click(screen.getByRole('button', { name: 'Move' }));
+
+    await waitFor(() => expect(movePlayer).toHaveBeenCalledTimes(1));
+    expect(screen.queryByLabelText('Move To')).not.toBeInTheDocument();
+
+    finishMove(false);
+
+    expect(await screen.findByLabelText('Move To')).toHaveValue('team-next');
+    expect(screen.getByLabelText('Date')).toHaveValue('2026-07-15');
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('keeps the inherited jersey number for an in-season move', async () => {
     const user = userEvent.setup();
     const movePlayer = jest.fn().mockResolvedValue(true);

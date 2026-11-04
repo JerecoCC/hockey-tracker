@@ -545,7 +545,8 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
       aria-disabled={locked || undefined}
       data-autofill-locked={isGameAutofilling && locked ? true : undefined}
       data-game-details-locked={locked || undefined}
-      inert={locked ? '' : undefined}
+      // React 18's DOM typings omit `inert`; spread it so the attribute is still forwarded as-is.
+      {...(locked ? { inert: '' } : {})}
       onClickCapture={
         locked
           ? (event) => {

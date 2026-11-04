@@ -1433,7 +1433,6 @@ describe('UserGames schedule views', () => {
   });
 
   it("shows a postponed watch game's original date in the user timezone", async () => {
-    const user = userEvent.setup();
     const originalEtDate = localDateString(1);
     const timezoneShiftedGame = {
       ...games[0],
@@ -1790,7 +1789,6 @@ describe('UserGames schedule views', () => {
   });
 
   it('keeps local date placement correct for games with a date-only scheduled_at', async () => {
-    const user = userEvent.setup();
     const dateOnlyKey = localDateString(1);
     const dateOnlyGame = {
       ...games[0],
@@ -1818,7 +1816,6 @@ describe('UserGames schedule views', () => {
   });
 
   it('keeps local date placement correct for midnight-UTC scheduled_at placeholders', async () => {
-    const user = userEvent.setup();
     const intendedEtDate = localDateString(1);
     const midnightPlaceholderGame = {
       ...games[0],
@@ -2071,7 +2068,7 @@ describe('UserGames schedule views', () => {
       expect.any(Function),
     );
 
-    const updater = mockSetQueryData.mock.calls.at(-1)?.[1];
+    const updater = mockSetQueryData.mock.lastCall?.[1];
     expect(updater(games)[0]).toEqual(
       expect.objectContaining({
         id: 'game-1',
@@ -2249,7 +2246,7 @@ describe('UserGames schedule views', () => {
       ),
     );
 
-    const updater = mockSetQueryData.mock.calls.at(-1)?.[1];
+    const updater = mockSetQueryData.mock.lastCall?.[1];
     expect(updater(games)[0]).toEqual(
       expect.objectContaining({
         id: 'game-1',
@@ -2286,7 +2283,7 @@ describe('UserGames schedule views', () => {
       { queryKey: ['user-games'] },
       expect.any(Function),
     );
-    const updater = mockSetQueriesData.mock.calls.at(-1)?.[1];
+    const updater = mockSetQueriesData.mock.lastCall?.[1];
     expect(updater(games)[0]).toEqual(
       expect.objectContaining({
         id: 'game-1',
@@ -2317,7 +2314,7 @@ describe('UserGames schedule views', () => {
       expect.any(Function),
     );
 
-    const updater = mockSetQueriesData.mock.calls.at(-1)?.[1];
+    const updater = mockSetQueriesData.mock.lastCall?.[1];
     expect(updater(games)).toEqual([games[1]]);
     expect(toast.success).toHaveBeenCalledWith('AWY @ HOM skipped');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
@@ -2339,7 +2336,7 @@ describe('UserGames schedule views', () => {
       expect.any(Function),
     );
 
-    const updater = mockSetQueriesData.mock.calls.at(-1)?.[1];
+    const updater = mockSetQueriesData.mock.lastCall?.[1];
     expect(updater([skippedGame])[0]).toEqual(
       expect.objectContaining({
         id: 'game-skipped',
@@ -2367,7 +2364,7 @@ describe('UserGames schedule views', () => {
       expect.any(Function),
     );
 
-    const updater = mockSetQueriesData.mock.calls.at(-1)?.[1];
+    const updater = mockSetQueriesData.mock.lastCall?.[1];
     expect(updater(games)[1]).toEqual(
       expect.objectContaining({
         id: 'game-2',

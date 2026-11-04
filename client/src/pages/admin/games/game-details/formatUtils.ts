@@ -156,7 +156,7 @@ export const formatScheduledDate = (
 ): string | null => {
   if (!scheduledAt) return null;
   const rawDateKey = extractDatePart(scheduledAt);
-  if (DATE_ONLY_RE.test(scheduledAt) || (rawDateKey && ISO_MIDNIGHT_RE.test(scheduledAt))) {
+  if (rawDateKey && (DATE_ONLY_RE.test(scheduledAt) || ISO_MIDNIGHT_RE.test(scheduledAt))) {
     return formatter.format(etNoonFromDateKey(rawDateKey));
   }
 

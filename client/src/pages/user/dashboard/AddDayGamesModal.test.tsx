@@ -8,7 +8,9 @@ import { getOriginalGameDateKey, formatGameTime } from '@/lib/gameSchedule';
 import AddDayGamesModal from './AddDayGamesModal';
 
 jest.mock('axios');
-jest.mock('react-toastify', () => ({ toast: { error: jest.fn() } }));
+jest.mock('react-toastify', () => ({
+  toast: { error: jest.fn(), loading: jest.fn(() => 'progress-toast'), update: jest.fn() },
+}));
 // The real form pulls in the full tracker-ui bundle; this stand-in shows when and for what day it opens.
 jest.mock('@/shared/PersonalGameModal/PersonalGameModal', () => ({ open, defaultDate }: any) =>
   open ? <div data-testid="personal-game-modal">{defaultDate}</div> : null,
@@ -65,7 +67,11 @@ const setup = (
   return { onAdded, onClose };
 };
 
-beforeEach(() => jest.resetAllMocks());
+beforeEach(() => {
+  jest.resetAllMocks();
+  // Reset clears the mocked toast id, which the progress toast is updated through.
+  (toast.loading as jest.Mock).mockReturnValue('progress-toast');
+});
 
 it('shows games to watch with dashboard actions and full-name team tooltips', async () => {
   const game = makeGame('favorite', {
@@ -180,7 +186,13 @@ it('moves an added game into games to watch and keeps existing games out of othe
   ).toBeInTheDocument();
   fireEvent.click(within(restoredOthers).getByRole('button', { name: 'Add to games to watch' }));
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+  // Saving runs behind a progress toast that turns into the success message.
+  expect(toast.loading).toHaveBeenCalledWith('Adding 1 game to watch…');
   await waitFor(() => expect(onClose).toHaveBeenCalled());
+  expect(toast.update).toHaveBeenCalledWith(
+    'progress-toast',
+    expect.objectContaining({ type: 'success', isLoading: false }),
+  );
   expect(mockAxios.put).toHaveBeenCalledTimes(1);
   expect(mockAxios.put).toHaveBeenCalledWith(
     expect.stringContaining('/user/watched-games/other/schedule'),
@@ -208,9 +220,17 @@ it('keeps a game available for retry when adding it fails', async () => {
   const addButton = await screen.findByRole('button', { name: 'Add to games to watch' });
   fireEvent.click(addButton);
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-  await waitFor(() => expect(toast.error).toHaveBeenCalled());
+  // The modal hides while saving; when the save fails the toast shows the error and the modal
+  // reappears with the game still staged.
+  await waitFor(() =>
+    expect(toast.update).toHaveBeenCalledWith(
+      'progress-toast',
+      expect.objectContaining({ type: 'error', isLoading: false }),
+    ),
+  );
   expect(onAdded).not.toHaveBeenCalled();
   expect(onClose).not.toHaveBeenCalled();
+  expect(await screen.findByRole('button', { name: 'Save' })).toBeEnabled();
   mockAxios.put.mockResolvedValueOnce({ data: {} });
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
   await waitFor(() =>

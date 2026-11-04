@@ -4,6 +4,7 @@ import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import BulkCreateModal from '@jerecocc/tracker-ui/components/BulkCreateModal/BulkCreateModal';
 import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type PlayerPosition } from '@/hooks/useLeaguePlayers';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import styles from './LineupCreatePlayersModal.module.scss';
@@ -156,17 +157,29 @@ const LineupCreatePlayersModal = ({
     crossTeamConfirmedRef.current = false;
   }, [open]);
 
+  // The submitted players, kept until they're created: the players are created behind a progress
+  // toast with the modal hidden, and if that fails the modal reopens with these rows restored,
+  // ready to save again.
+  const draftRef = useRef<FormValues | null>(null);
+
   const handleClose = () => {
+    draftRef.current = null;
     setDuplicateErrors([]);
     setCrossTeamWarnings([]);
     crossTeamConfirmedRef.current = false;
     onClose();
   };
 
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? teamId : null,
+    onDone: handleClose,
+  });
+
   const handleCreateAnyway = () => {
     crossTeamConfirmedRef.current = true;
     setCrossTeamWarnings([]);
-    document.getElementById('lineup-create-players-form')?.requestSubmit();
+    const form = document.getElementById('lineup-create-players-form');
+    if (form instanceof HTMLFormElement) form.requestSubmit();
   };
 
   const getDefaultValues = (): FormValues => ({
@@ -178,7 +191,8 @@ const LineupCreatePlayersModal = ({
 
   return (
     <BulkCreateModal<FormValues, RowValues>
-      open={open}
+      open={open && !hidden}
+      restoreValues={draftRef.current ?? undefined}
       title={`Create Players for ${teamName}`}
       size="lg"
       disableBackdropClose
@@ -319,12 +333,21 @@ const LineupCreatePlayersModal = ({
           position: row.position as PlayerPosition,
           jersey_number: row.jersey_number !== '' ? Number(row.jersey_number) : null,
         }));
-        const createdIds = await createAndRosterPlayers(teamId, seasonId, payload);
-        if (createdIds === null) return false;
-        if (createdIds.length > 0 && onPlayersCreated) {
-          await onPlayersCreated(createdIds);
-        }
-        return true;
+        draftRef.current = data;
+        const count = payload.length;
+        void runSettled(
+          async () => {
+            const createdIds = await createAndRosterPlayers(teamId, seasonId, payload);
+            if (createdIds === null) return false;
+            if (createdIds.length > 0 && onPlayersCreated) {
+              await onPlayersCreated(createdIds);
+            }
+            return true;
+          },
+          { pending: `Creating ${count} player${count !== 1 ? 's' : ''}…` },
+        );
+        // The modal hides and closes itself, so it shouldn't reset or close here.
+        return false;
       }}
       renderRow={({ index, control, rows, isSubmitting, autoFocus, deleteButton }) => {
         const goaliesInForm = rows.filter((p) => p?.position === 'G').length;

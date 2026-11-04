@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { autofillGameFromPwhlGamecenter } from './pwhlGameAutofill';
-import { isManualPlayerMovementRequiredError } from './gameAutofillTypes';
 import type { GameRecord } from '@/hooks/useGames';
 
 jest.mock('axios');

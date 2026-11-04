@@ -10,6 +10,7 @@ import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { missingPlayerDataIndicator } from '@/lib/playerDataStatus';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -51,7 +52,7 @@ interface LeaguePlayersListSectionProps {
   onSearchChange: (query: string) => void;
   onWarningsOnlyChange?: (warningsOnly: boolean) => void;
   onEdit?: (player: PlayerRecord) => void;
-  onDelete?: (playerId: string) => Promise<void>;
+  onDelete?: (playerId: string) => Promise<boolean>;
 }
 
 const PLAYER_SKELETON_ROW_COUNT = 15;
@@ -166,7 +167,12 @@ export const LeaguePlayersListSection = ({
   onDelete,
 }: LeaguePlayersListSectionProps) => {
   const [confirmDelete, setConfirmDelete] = useState<PlayerRecord | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  // The delete dialog hides while the player is deleted behind a progress toast, and reappears if
+  // the delete fails.
+  const { hidden: deleteHidden, runSettled: runDelete } = useBackgroundModalAction({
+    target: confirmDelete?.id ?? null,
+    onDone: () => setConfirmDelete(null),
+  });
   const [paginationFetchPage, setPaginationFetchPage] = useState<number | null>(null);
   const [searchFetchKey, setSearchFetchKey] = useState<string | null>(null);
   const paginationFetchStartedRef = useRef(false);
@@ -214,12 +220,13 @@ export const LeaguePlayersListSection = ({
     onSearchChange(query);
   };
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = () => {
     if (!confirmDelete || !onDelete) return;
-    setIsDeleting(true);
-    await onDelete(confirmDelete.id);
-    setIsDeleting(false);
-    setConfirmDelete(null);
+    const { id } = confirmDelete;
+    void runDelete(
+      () => onDelete(id),
+      { pending: 'Deleting player…' },
+    );
   };
 
   return (
@@ -368,7 +375,7 @@ export const LeaguePlayersListSection = ({
       </div>
 
       <ConfirmModal
-        open={!!confirmDelete}
+        open={!!confirmDelete && !deleteHidden}
         title="Delete Player"
         body={
           confirmDelete ? (
@@ -386,7 +393,6 @@ export const LeaguePlayersListSection = ({
         confirmLabel="Delete"
         confirmIcon="delete"
         intent="danger"
-        busy={isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDelete(null)}
       />

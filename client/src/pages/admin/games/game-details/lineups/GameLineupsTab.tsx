@@ -7,6 +7,7 @@ import ListItem from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useTeamPlayers from '@/hooks/useTeamPlayers';
 import useGameLineup, { type LineupEntry } from '@/hooks/useGameLineup';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
@@ -82,7 +83,6 @@ const GameLineupsTab = ({
   const [confirmRemove, setConfirmRemove] = useState<{ entry: GameRosterEntry } | null>(null);
   const [confirmFinalCorrection, setConfirmFinalCorrection] = useState(false);
   const [finalLineupCorrection, setFinalLineupCorrection] = useState(false);
-  const [removingFromRoster, setRemovingFromRoster] = useState(false);
   const [addingStarterPlayerId, setAddingStarterPlayerId] = useState<string | null>(null);
   const [visibleTeam, setVisibleTeam] = useState<'away' | 'home'>('away');
 
@@ -116,12 +116,18 @@ const GameLineupsTab = ({
       .map((e) => [e.player_id, e]),
   );
 
-  const handleConfirmRemove = async () => {
-    if (!confirmRemove) return;
-    setRemovingFromRoster(true);
-    await removeFromRoster(confirmRemove.entry.id);
-    setRemovingFromRoster(false);
-    setConfirmRemove(null);
+  // The confirm hides while the player is removed behind a progress toast, and reappears if the
+  // removal fails.
+  const removeAction = useBackgroundModalAction({
+    target: confirmRemove?.entry.id ?? null,
+    onDone: () => setConfirmRemove(null),
+  });
+  const handleConfirmRemove = () => {
+    if (!confirmRemove || removeAction.hidden) return;
+    const { entry } = confirmRemove;
+    void removeAction.runSettled(() => removeFromRoster(entry.id), {
+      pending: `Removing ${entry.first_name} ${entry.last_name} from the lineup…`,
+    });
   };
 
   const handleConfirmFinalCorrection = () => {
@@ -516,7 +522,7 @@ const GameLineupsTab = ({
       {!lineupActionsLocked && (
         <RemoveFromLineupModal
           entry={confirmRemove?.entry ?? null}
-          busy={removingFromRoster}
+          hidden={removeAction.hidden}
           onConfirm={handleConfirmRemove}
           onCancel={() => setConfirmRemove(null)}
         />

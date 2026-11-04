@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import RadioList, { type RadioListOption } from '@jerecocc/tracker-ui/components/RadioList/RadioList';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type LineupEntry, type LineupPositionSlot } from '@/hooks/useGameLineup';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -53,7 +54,12 @@ const SetLineupModal = ({
 }: Props) => {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [savedSelected, setSavedSelected] = useState<Set<string>>(new Set());
-  const [saving, setSaving] = useState(false);
+  // The modal hides while the starting goalie saves behind a progress toast, and reappears with
+  // the goalie picked if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? teamId : null,
+    onDone: onClose,
+  });
 
   const sortedPlayers = useMemo(
     () => players.filter(isGoalie).sort(compareByRosterOrder),
@@ -76,7 +82,7 @@ const SetLineupModal = ({
   const selectedCount = selected.size;
   const selectedGoalieCount = selectedPlayers.filter(isGoalie).length;
   const canSave =
-    !saving &&
+    !hidden &&
     selectedCount === MAX_STARTERS &&
     selectedGoalieCount === REQUIRED_GOALIES &&
     hasChanges;
@@ -107,7 +113,7 @@ const SetLineupModal = ({
   );
 
   const selectGoalie = (playerId: string) => {
-    if (saving) return;
+    if (hidden) return;
     setSelected(new Set([playerId]));
   };
 
@@ -134,38 +140,27 @@ const SetLineupModal = ({
     [displayedPlayers],
   );
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!canSave) return;
     const goalie = selectedPlayers.find(isGoalie);
     const slots: Array<{ position_slot: LineupPositionSlot; player_id: string | null }> = [
       { position_slot: 'G', player_id: goalie?.id ?? null },
     ];
-
-    setSaving(true);
-    let ok = false;
-    try {
-      ok = await saveTeamLineup(teamId, slots, teamName);
-    } finally {
-      setSaving(false);
-    }
-    if (ok) onClose();
-  };
-
-  const handleClose = () => {
-    if (!saving) onClose();
+    void runSettled(() => saveTeamLineup(teamId, slots, teamName), {
+      pending: 'Saving starting goalie…',
+    });
   };
 
   const selectedValue = selectedPlayers[0]?.id ?? null;
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={`${correctionMode ? 'Correct Final Starting Goalie' : 'Set Starting Goalie'} - ${teamName}`}
-      onClose={handleClose}
+      onClose={onClose}
       size="md"
-      busy={saving}
       onConfirm={handleSave}
-      confirmLabel={saving ? 'Saving...' : correctionMode ? 'Save Correction' : 'Save'}
+      confirmLabel={correctionMode ? 'Save Correction' : 'Save'}
       confirmIcon="set_lineup"
       confirmDisabled={!canSave}
     >
@@ -176,7 +171,6 @@ const SetLineupModal = ({
           value={selectedValue}
           onChange={selectGoalie}
           options={goalieOptions}
-          disabled={saving}
           ariaLabel="Starting goalie"
           className={styles.list}
         />

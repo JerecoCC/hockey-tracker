@@ -10,6 +10,7 @@ import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/S
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import Tabs from '@jerecocc/tracker-ui/components/Tabs/Tabs';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { useProjectedLineup, type ProjectedLineupSlot } from '@/hooks/useProjectedLineup';
 import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playerSearch';
@@ -166,6 +167,12 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
   const [dragPlayerId, setDragPlayerId] = useState<string | null>(null);
   const [dropSlotKey, setDropSlotKey] = useState<string | null>(null);
   const savedAssignments = useMemo(() => assignmentsFromSlots(slots), [slots]);
+  // Saving runs behind a progress toast with the modal hidden; it reappears with the lineup as
+  // arranged if the save fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? `${teamId}:${seasonId}` : null,
+    onDone: onClose,
+  });
 
   useEffect(() => {
     if (open && !loading) setAssignments(savedAssignments);
@@ -277,13 +284,13 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
     if (target) updateAssignment(playerId, target.key);
   };
 
-  const handleSave = async () => {
+  const handleSave = () => {
     if (!canSave) return;
     const projectedSlots = ALL_SLOTS.flatMap((slot) => {
       const playerId = assignments[slot.key];
       return playerId ? [{ slot_key: slot.key, player_id: playerId }] : [];
     });
-    if (await save(projectedSlots)) onClose();
+    void runSettled(() => save(projectedSlots), { pending: 'Saving projected lineup…' });
   };
 
   const renderLoadingTab = (tab: PositionTabDefinition) => (
@@ -534,7 +541,7 @@ const ProjectedLineupModal = ({ open, onClose, teamId, seasonId, teamName, playe
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={`Projected Lineup - ${teamName}`}
       className={styles.modal}
       onClose={onClose}

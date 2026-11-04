@@ -118,6 +118,8 @@ interface UserTeamOptionRecord {
   name: string | null;
   code: string | null;
   logo: string | null;
+  logo_dark: string | null;
+  logo_light: string | null;
   league_id: string | null;
 }
 
@@ -710,7 +712,6 @@ const UserGames = () => {
   const [scoreCardTarget, setScoreCardTarget] = useState<GameRecord | null>(null);
   const [scoreImageOpen, setScoreImageOpen] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
-  const [scheduleBusy, setScheduleBusy] = useState(false);
   const [calendarDownloadBusy, setCalendarDownloadBusy] = useState(false);
   const [calendarImageLayout, setCalendarImageLayout] = useState(false);
   const seededTeamFilterLeagueRef = useRef<string | null>(null);
@@ -1057,7 +1058,7 @@ const UserGames = () => {
     { optimistic = false }: { optimistic?: boolean } = {},
   ) => {
     const gameId = game.id;
-    if (actionGameId === gameId || scheduleBusy) return false;
+    if (actionGameId === gameId) return false;
     if (isInvalidWatchScheduleDate(game, scheduledFor, tzPref)) {
       toast.error('Choose a watch date after the game date');
       return false;
@@ -1258,17 +1259,18 @@ const UserGames = () => {
     }
   };
 
+  // The modal closes straight away while its progress toast tracks the save, and reopens with
+  // the same game and date if the save fails.
   const saveSchedule = async () => {
-    if (!scheduleTarget || scheduleBusy) return;
-    const normalizedScheduleDate = getScheduledWatchDateKey(scheduleDate);
-    setScheduleBusy(true);
-    try {
-      const ok = await saveScheduleForGame(scheduleTarget, normalizedScheduleDate);
-      if (!ok) return;
-      setScheduleTarget(null);
-      setScheduleDate('');
-    } finally {
-      setScheduleBusy(false);
+    if (!scheduleTarget) return;
+    const target = scheduleTarget;
+    const date = scheduleDate;
+    setScheduleTarget(null);
+    setScheduleDate('');
+    const ok = await saveScheduleForGame(target, getScheduledWatchDateKey(date));
+    if (!ok) {
+      setScheduleTarget(target);
+      setScheduleDate(date);
     }
   };
 
@@ -1873,10 +1875,9 @@ const UserGames = () => {
           open
           game={scheduleTarget}
           value={scheduleDate}
-          busy={scheduleBusy}
+          busy={false}
           onChange={setScheduleDate}
           onClose={() => {
-            if (scheduleBusy) return;
             setScheduleTarget(null);
             setScheduleDate('');
           }}

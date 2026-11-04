@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { ControlledDatePickerField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import styles from '../leagues/PlayerFormModal.module.scss';
 
 interface Props {
@@ -47,14 +48,20 @@ const RetirePlayerModal = ({ open, playerName, busy = false, onClose, onRetire }
     if (open) reset({ retirement_date: easternToday() });
   }, [open, reset]);
 
-  const onSubmit = handleSubmit(async ({ retirement_date }) => {
-    const ok = await onRetire(retirement_date);
-    if (ok) onClose();
+  // The modal hides while the player is retired behind a progress toast, and reappears with the
+  // date entered if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? 'retire' : null,
+    onDone: onClose,
+  });
+
+  const onSubmit = handleSubmit(({ retirement_date }) => {
+    void runSettled(() => onRetire(retirement_date), { pending: `Retiring ${playerName}…` });
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="Retire Player"
       onClose={onClose}
       confirmLabel={saving ? 'Retiring...' : 'Retire Player'}

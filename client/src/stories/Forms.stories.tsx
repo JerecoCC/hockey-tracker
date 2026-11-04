@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react-vite';
+import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import CheckboxField from '@jerecocc/tracker-ui/components/CheckboxField/CheckboxField';

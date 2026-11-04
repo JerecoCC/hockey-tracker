@@ -121,7 +121,11 @@ interface PwhlPeriodRow {
 }
 
 interface PwhlTeamRow {
-  info?: { id?: string | number | null } | null;
+  info?: {
+    id?: string | number | null;
+    name?: string | null;
+    abbreviation?: string | null;
+  } | null;
   skaters?: OneOrMany<PwhlPlayerRow>;
   goalies?: OneOrMany<PwhlGoalieLogRow>;
   goalieLog?: OneOrMany<PwhlGoalieLogRow>;
@@ -153,6 +157,7 @@ interface PwhlAutofillSummaryMeta {
     date?: string | null;
     startTime?: string | null;
     endTime?: string | null;
+    venue?: string | null;
   } | null;
   visitingTeam?: PwhlTeamRow | null;
   homeTeam?: PwhlTeamRow | null;
@@ -1130,8 +1135,8 @@ async function syncLeaguePlayerNumbers(matched: Record<TeamSide, MatchedPlayer[]
   );
 }
 
-async function syncJerseyNumberHistory(players: MatchedPlayer[], gameDate: string) {
-  const effectiveDate = gameDate.slice(0, 10);
+async function syncJerseyNumberHistory(players: MatchedPlayer[], gameDate: string | null) {
+  const effectiveDate = (gameDate ?? '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(effectiveDate)) {
     throw new Error('A valid game date is required to record jersey number changes.');
   }

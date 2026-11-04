@@ -14,7 +14,7 @@ const streamBody = (...chunks: string[]) => {
           : { done: true, value: undefined },
       ),
     }),
-  } as ReadableStream<Uint8Array>;
+  };
 };
 
 afterEach(() => {

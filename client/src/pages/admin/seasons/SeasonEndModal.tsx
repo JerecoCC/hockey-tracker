@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { ControlledDatePickerField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import styles from './SeasonFormModal.module.scss';
 
 interface FormValues {
@@ -40,14 +41,20 @@ const SeasonEndModal = ({ open, currentEndDate, busy, onClose, onConfirm }: Prop
     onClose();
   }, [formValues, onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
-    const ok = await onConfirm(data.end_date);
-    if (ok) handleClose();
+  // The modal hides while the season ends behind a progress toast, and reappears with the date
+  // entered if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? 'end-season' : null,
+    onDone: handleClose,
+  });
+
+  const onSubmit = handleSubmit((data) => {
+    void runSettled(() => onConfirm(data.end_date), { pending: 'Ending season…' });
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="End Season"
       onClose={handleClose}
       confirmLabel={isSubmitting || busy ? 'Saving…' : 'End Season'}

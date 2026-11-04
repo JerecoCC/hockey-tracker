@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import Checklist from '@jerecocc/tracker-ui/components/Checklist/Checklist';
 import { ControlledInputField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { type PlayerRosterInput } from '@/hooks/useTeamPlayers';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -44,7 +45,6 @@ const AddPlayersModal = ({
   const [query, setQuery] = useState('');
   // Map from player_id -> jersey number string (empty = null)
   const [selected, setSelected] = useState<Record<string, string>>({});
-  const [submitting, setSubmitting] = useState(false);
   const { control, reset, setValue, unregister } = useForm<{ jerseys: Record<string, string> }>({
     defaultValues: { jerseys: {} },
   });
@@ -116,7 +116,14 @@ const AddPlayersModal = ({
     onClose();
   };
 
-  const handleSubmit = async () => {
+  // Adding runs behind a progress toast with the modal hidden; it reappears with the same
+  // players selected if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? `${teamId}:${seasonId ?? ''}` : null,
+    onDone: handleClose,
+  });
+
+  const handleSubmit = () => {
     if (!seasonId) {
       toast.error('Please select a season');
       return;
@@ -129,23 +136,21 @@ const AddPlayersModal = ({
       player_id,
       jersey_number: num !== '' ? Number(num) : null,
     }));
-    setSubmitting(true);
-    const ok = await addPlayersToRoster(teamId, seasonId, players);
-    setSubmitting(false);
-    if (ok) handleClose();
+    void runSettled(() => addPlayersToRoster(teamId, seasonId, players), {
+      pending: `Adding ${players.length} player${players.length === 1 ? '' : 's'} to the roster…`,
+    });
   };
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={`Add ${titlePlayerLabel} to Roster`}
       onClose={handleClose}
       size="md"
       onConfirm={handleSubmit}
-      confirmLabel={submitting ? 'Adding…' : 'Add to Roster'}
+      confirmLabel="Add to Roster"
       confirmIcon="group_add"
-      confirmDisabled={submitting || selectedCount === 0}
-      busy={submitting}
+      confirmDisabled={selectedCount === 0}
       footerStart={
         <span>
           {selectedCount > 0

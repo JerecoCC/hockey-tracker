@@ -334,6 +334,37 @@ describe('PersonalGameScoreModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('hides while the score saves and reappears with it entered when saving fails', async () => {
+    let failSave: (error: Error) => void = () => {};
+    mockRecordScore.mockReturnValue(
+      new Promise((_, reject) => {
+        failSave = reject;
+      }),
+    );
+    const onClose = jest.fn();
+    render(
+      <PersonalGameScoreModal
+        game={unscoredGame}
+        onClose={onClose}
+      />,
+    );
+
+    change('Ottawa Charge Score', '2');
+    change('Montreal Victoire Score', '3');
+    fireEvent.submit(document.getElementById('personal-game-score-form')!);
+
+    // Hidden straight away, while the save runs behind a progress toast...
+    await waitFor(() =>
+      expect(screen.queryByLabelText('Ottawa Charge Score')).not.toBeInTheDocument(),
+    );
+    // ...then back, still holding the scores, once it fails.
+    failSave(new Error('Offline'));
+    expect(await screen.findByLabelText('Ottawa Charge Score')).toHaveValue('2');
+    expect(screen.getByLabelText('Montreal Victoire Score')).toHaveValue('3');
+    expect(mockRecordScore).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it('needs both scores before marking watched', async () => {
     render(
       <PersonalGameScoreModal

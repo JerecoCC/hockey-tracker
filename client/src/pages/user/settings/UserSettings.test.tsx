@@ -8,7 +8,9 @@ jest.mock('axios');
 jest.mock('@jerecocc/tracker-ui', () => ({
   SearchInput: jest.requireActual('@jerecocc/tracker-ui/components/SearchField/SearchInput').default,
 }));
-jest.mock('react-toastify', () => ({ toast: { error: jest.fn() } }));
+jest.mock('react-toastify', () => ({
+  toast: { error: jest.fn(), loading: jest.fn(), dismiss: jest.fn() },
+}));
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ user: { display_name: 'Taylor', role: 'user' } }),
 }));
@@ -128,9 +130,12 @@ it('retains the favorite and confirmation dialog if saving fails, allowing a ret
   const { client } = setup();
   fireEvent.click(screen.getByRole('button', { name: 'Remove from favorites' }));
   fireEvent.click(await screen.findByRole('button', { name: 'Remove favorite and schedules' }));
+  expect(toast.loading).toHaveBeenCalledWith('Removing favorite team…');
   await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Failed to update favorites'));
   expect(client.getQueryData(['user-favorites'])).toEqual(['team-1', 'team-2']);
-  expect(screen.getByText('Remove favorite team?')).toBeInTheDocument();
+  // The dialog, hidden while the removal ran, shows again so it can be retried.
+  expect(await screen.findByText('Remove favorite team?')).toBeInTheDocument();
+  expect(toast.dismiss).toHaveBeenCalled();
   mockAxios.delete.mockResolvedValueOnce({ data: {} });
   fireEvent.click(screen.getByRole('button', { name: 'Remove favorite and schedules' }));
   await waitFor(() => expect(client.getQueryData(['user-favorites'])).toEqual(['team-2']));

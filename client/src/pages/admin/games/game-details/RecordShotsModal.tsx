@@ -8,6 +8,7 @@ import {
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
 import { type GoalieStatRecord, type UpdateGoalieStintData } from '@/hooks/useGameGoalieStats';
 import fieldStyles from '@/shared/trackerFieldStyles.module.scss';
@@ -72,7 +73,6 @@ const RecordShotsModal = ({
   onNextOTPeriod,
   onEndGameReady,
 }: Props) => {
-  const [submitting, setSubmitting] = useState(false);
   const [soFirstTeam, setSoFirstTeam] = useState<'away' | 'home' | null>('home');
   // Per-stint time-on-ice inputs (MM:SS), keyed by stint id. Required to end a game.
   const [toiInputs, setToiInputs] = useState<Record<string, string>>({});
@@ -125,6 +125,25 @@ const RecordShotsModal = ({
       stat.stints.every((st) => parseToiInput(toiInputs[st.id] ?? '') != null),
     );
 
+  // Once the period is recorded, the modal closes and the game moves on (next period, next
+  // overtime or the three stars).
+  const finish = () => {
+    onClose();
+    if (nextAction.type === 'advance') {
+      onAdvancePeriod(nextAction.next);
+    } else if (nextAction.type === 'next-ot') {
+      onNextOTPeriod();
+    } else {
+      onEndGameReady();
+    }
+  };
+  // The modal hides while the period saves behind a progress toast, and reappears with what was
+  // entered if the shots fail to save.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? `${period}:${nextAction.type}` : null,
+    onDone: finish,
+  });
+
   const isNextOT = nextAction.type === 'next-ot';
   // "OT1", "OT2", etc. → "Overtime 1", "Overtime 2", etc.
   const otNumMatch = /^OT([0-9]+)$/.exec(period);
@@ -138,29 +157,22 @@ const RecordShotsModal = ({
       : isNextOT
         ? `Record Shots — ${periodTitleLabel}`
         : `Record Shots — ${PERIOD_LABEL[period] ?? period} Period`;
-  const confirmLabel = submitting
-    ? 'Saving…'
-    : isEndGame
-      ? 'Award Three Stars'
-      : nextAction.type === 'advance'
-        ? nextAction.label
-        : isNextOT
-          ? 'Next Overtime'
-          : 'Confirm';
+  const confirmLabel = isEndGame
+    ? 'Award Three Stars'
+    : nextAction.type === 'advance'
+      ? nextAction.label
+      : isNextOT
+        ? 'Next Overtime'
+        : 'Confirm';
 
-  const handleConfirm = async (e?: FormEvent) => {
-    e?.preventDefault();
+  const savePeriod = async () => {
     const { away_shots, home_shots, end_time } = getValues();
     const isSOEndGame = period === PERIOD.SHOOTOUT && isEndGame;
-    setSubmitting(true);
     if (!isSOEndGame) {
       const away = parseInt(away_shots || '0', 10);
       const home = parseInt(home_shots || '0', 10);
       const ok = await updatePeriodShots(period, home, away);
-      if (!ok) {
-        setSubmitting(false);
-        return;
-      }
+      if (!ok) return false;
     }
     if (isEndGame && end_time) {
       // Anchor to the game's actual start date in ET (falling back to scheduled date).
@@ -188,27 +200,26 @@ const RecordShotsModal = ({
         }
       }
     }
-    setSubmitting(false);
-    onClose();
-    if (nextAction.type === 'advance') {
-      onAdvancePeriod(nextAction.next);
-    } else if (nextAction.type === 'next-ot') {
-      onNextOTPeriod();
-    } else {
-      onEndGameReady();
-    }
+    return true;
+  };
+
+  const handleConfirm = (e?: FormEvent) => {
+    e?.preventDefault();
+    if (hidden) return;
+    void runSettled(savePeriod, {
+      pending: isEndGame ? 'Saving the final period…' : 'Recording shots…',
+    });
   };
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={modalTitle}
       onClose={onClose}
       confirmLabel={confirmLabel}
       confirmIcon={isEndGame ? 'star' : 'flag'}
       confirmForm="record-shots-form"
-      confirmDisabled={submitting || !isValid || !endTimeValid || !shootsFirstValid || !toiValid}
-      busy={submitting}
+      confirmDisabled={!isValid || !endTimeValid || !shootsFirstValid || !toiValid}
     >
       <form
         id="record-shots-form"
@@ -222,7 +233,6 @@ const RecordShotsModal = ({
           showShootsFirst={showShootsFirst}
           soFirstTeam={soFirstTeam}
           setSoFirstTeam={setSoFirstTeam}
-          submitting={submitting}
           goalieStats={goalieStats}
           toiInputs={toiInputs}
           onToiChange={setToiField}
@@ -241,7 +251,6 @@ interface BodyProps {
   showShootsFirst: boolean;
   soFirstTeam: 'away' | 'home' | null;
   setSoFirstTeam: Dispatch<SetStateAction<'away' | 'home' | null>>;
-  submitting: boolean;
   goalieStats: GoalieStatRecord[];
   toiInputs: Record<string, string>;
   onToiChange: (stintId: string, value: string) => void;
@@ -255,7 +264,6 @@ const RecordShotsBody = ({
   showShootsFirst,
   soFirstTeam,
   setSoFirstTeam,
-  submitting,
   goalieStats,
   toiInputs,
   onToiChange,
@@ -319,7 +327,6 @@ const RecordShotsBody = ({
                   name={row.fieldName}
                   placeholder="0"
                   min={0}
-                  disabled={submitting}
                   transform={(v) => v.replace(/[^0-9]/g, '')}
                   autoFocus={rowIdx === 0}
                 />
@@ -334,7 +341,6 @@ const RecordShotsBody = ({
           required
           control={control}
           name="end_time"
-          disabled={submitting}
           rules={{ required: 'End time is required' }}
         />
       )}
@@ -392,7 +398,6 @@ const RecordShotsBody = ({
                       aria-label={`${name} time on ice`}
                       aria-invalid={invalid}
                       value={toiInputs[st.id] ?? ''}
-                      disabled={submitting}
                       onChange={(e) => onToiChange(st.id, e.target.value)}
                     />
                   </div>
@@ -439,7 +444,6 @@ const RecordShotsBody = ({
                 ),
               };
             })}
-            disabled={submitting}
           />
         </>
       )}

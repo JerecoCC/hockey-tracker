@@ -1,15 +1,16 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
-import InfoTooltip from '@jerecocc/tracker-ui/components/InfoTooltip/InfoTooltip';
 import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
+import { type MultiSelectOption } from '@jerecocc/tracker-ui/components/MultiSelect/MultiSelect';
 import GameCard from '@/shared/GameCard/GameCard';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import { type SelectOption } from '@jerecocc/tracker-ui/components/Select/Select';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
+import StatItem from '@jerecocc/tracker-ui/components/StatItem/StatItem';
 import StickyHeroCard from '@jerecocc/tracker-ui/components/StickyHeroCard/StickyHeroCard';
 import TeamLogo from '@jerecocc/tracker-ui/components/TeamLogo/TeamLogo';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
@@ -17,7 +18,7 @@ import type { GameRecord, GameStatus } from '@/hooks/useGames';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import { buildUserGameDetailsPath, userWatchedTeamRouteSlug } from '@/lib/routeSlugs';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
-import FilterSelect from '@/shared/FilterSelect/FilterSelect';
+import FilterSelect, { FilterMultiSelect } from '@/shared/FilterSelect/FilterSelect';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import useResponsiveFilters from '@/shared/ResponsiveFilters/useResponsiveFilters';
 import {
@@ -34,10 +35,31 @@ import { API, authHeaders } from '@/lib/apiClient';
 import { SCREEN_BREAKPOINTS } from '@/lib/screenSize';
 const ALL_YEARS = 'all';
 const ALL_SEASONS = 'all';
-const RECORD_TOOLTIP = 'Wins-Losses-OT Losses';
+const RECORD_STATS: {
+  key: keyof TeamWatchSummary['record'];
+  label: string;
+  tooltip: string;
+}[] = [
+  { key: 'wins', label: 'W', tooltip: 'Wins' },
+  { key: 'losses', label: 'L', tooltip: 'Losses' },
+  { key: 'otSoLosses', label: 'OTL', tooltip: 'OT Losses' },
+];
 const HERO_STICKY_TOP = 52;
 
 type TeamSide = 'all' | 'home' | 'away';
+
+// A square of a game type's color, which the multi-select shows beside the option and its chip.
+const gameTypeSwatch = (color: string) =>
+  `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><rect width="20" height="20" rx="5" fill="${color}"/></svg>`,
+  )}`;
+
+// In the game cards' type stripe colors: slate preseason, blue regular season, amber playoffs.
+const GAME_TYPE_OPTIONS: MultiSelectOption[] = [
+  { value: 'preseason', label: 'Preseason', logo: gameTypeSwatch('#64748b') },
+  { value: 'regular', label: 'Regular Season', logo: gameTypeSwatch('#93c5fd') },
+  { value: 'playoff', label: 'Playoffs', logo: gameTypeSwatch('#fbbf24') },
+];
 
 const SIDE_OPTIONS: { value: TeamSide; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -168,6 +190,9 @@ const formatStatusLabel = (game: GameRecord) => {
 const gameIncludesTeam = (game: GameRecord, teamId: string) =>
   game.home_team.id === teamId || game.away_team.id === teamId;
 
+const getOpponent = (game: GameRecord, teamId: string | undefined) =>
+  game.home_team.id === teamId ? game.away_team : game.home_team;
+
 const getTeamSlug = (team: WatchedTeam | TeamRecord) =>
   userWatchedTeamRouteSlug({
     teamCode: team.code,
@@ -285,16 +310,31 @@ const TeamWatchedHero = ({
               <h2 className={styles.heroName}>{teamName}</h2>
             </div>
           </div>
+          {/* The record as separate stats, labelled like the player details season stats. */}
           <div
             className={styles.heroRecord}
             data-testid="team-hero-record"
+            role="group"
+            aria-label={`Record ${formatRecord(record)}`}
           >
-            <span className={styles.heroRecordValue}>{formatRecord(record)}</span>
-            <InfoTooltip
-              text={RECORD_TOOLTIP}
-              ariaLabel="What the record shows"
-              size="0.85rem"
-            />
+            {RECORD_STATS.map(({ key, label, tooltip }, index) => (
+              <Fragment key={key}>
+                {index > 0 && (
+                  <span
+                    className={styles.heroRecordDash}
+                    aria-hidden="true"
+                  >
+                    -
+                  </span>
+                )}
+                <StatItem
+                  className={styles.heroRecordStat}
+                  label={label}
+                  tooltip={tooltip}
+                  value={record[key]}
+                />
+              </Fragment>
+            ))}
           </div>
         </div>
       </section>
@@ -383,6 +423,8 @@ const UserGamesWatchedTeam = () => {
   const [selectedYear, setSelectedYear] = useState(ALL_YEARS);
   const [seasonId, setSeasonId] = useState(ALL_SEASONS);
   const [side, setSide] = useState<TeamSide>('all');
+  const [opponentIds, setOpponentIds] = useState<string[]>([]);
+  const [gameTypes, setGameTypes] = useState<string[]>([]);
   const { teams, loading: teamsLoading } = useTeams();
 
   const { data: watchedGames = [], isLoading: watchedGamesLoading } = useQuery<GameRecord[]>({
@@ -443,15 +485,37 @@ const UserGamesWatchedTeam = () => {
     ];
   }, [seasons]);
 
+  // Every team this one was watched against, by name.
+  const opponentOptions = useMemo<MultiSelectOption[]>(() => {
+    const teamId = allTeamSummary?.team.id;
+    const opponents = new Map<string, MultiSelectOption>();
+    for (const game of allTeamGames) {
+      const opponent = getOpponent(game, teamId);
+      if (opponents.has(opponent.id)) continue;
+      opponents.set(opponent.id, {
+        value: opponent.id,
+        label: opponent.name ?? opponent.code ?? 'Unnamed Team',
+        code: opponent.code ?? undefined,
+        logo: opponent.logo,
+        logoDark: opponent.logo_dark,
+        logoLight: opponent.logo_light,
+      });
+    }
+    return [...opponents.values()].sort((a, b) => a.label.localeCompare(b.label));
+  }, [allTeamGames, allTeamSummary]);
+
+  // Opponents and game types filter by any selected; selecting none filters nothing.
   const teamGames = useMemo(() => {
     const teamId = allTeamSummary?.team.id;
     return allTeamGames.filter(
       (game) =>
         (selectedYear === ALL_YEARS || getScheduledGameYear(game) === selectedYear) &&
         (seasonId === ALL_SEASONS || game.season_id === seasonId) &&
-        (side === 'all' || (side === 'home') === (game.home_team.id === teamId)),
+        (side === 'all' || (side === 'home') === (game.home_team.id === teamId)) &&
+        (opponentIds.length === 0 || opponentIds.includes(getOpponent(game, teamId).id)) &&
+        (gameTypes.length === 0 || gameTypes.includes(game.game_type)),
     );
-  }, [allTeamGames, allTeamSummary, seasonId, selectedYear, side]);
+  }, [allTeamGames, allTeamSummary, gameTypes, opponentIds, seasonId, selectedYear, side]);
 
   // The record over the games shown, so it matches the count and follows the filters.
   const shownRecord = useMemo(() => {
@@ -482,6 +546,22 @@ const UserGamesWatchedTeam = () => {
         value={seasonId}
         options={seasonOptions}
         onChange={setSeasonId}
+      />
+      <FilterMultiSelect
+        label="Opponents"
+        value={opponentIds}
+        options={opponentOptions}
+        placeholder="All Opponents"
+        emptyMessage="No opponents watched"
+        searchable
+        onChange={setOpponentIds}
+      />
+      <FilterMultiSelect
+        label="Game types"
+        value={gameTypes}
+        options={GAME_TYPE_OPTIONS}
+        placeholder="All Game Types"
+        onChange={setGameTypes}
       />
       <SegmentedControl
         value={side}

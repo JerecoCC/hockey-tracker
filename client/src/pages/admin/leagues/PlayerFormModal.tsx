@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { ControlledInputField, ControlledSelectField } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import {
   type CreatePlayerData,
   type PlayerRecord,
@@ -111,7 +112,14 @@ const PlayerFormModal = ({
     onClose();
   }, [formValues, onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  // The modal hides while the player saves behind a progress toast, and reappears with what was
+  // entered if that fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? (editTarget?.id ?? 'new') : null,
+    onDone: handleClose,
+  });
+
+  const savePlayer = async (data: FormValues) => {
     const payload: CreatePlayerData = {
       first_name: data.first_name,
       last_name: data.last_name,
@@ -130,14 +138,20 @@ const PlayerFormModal = ({
       : addPlayer
         ? await addPlayer(payload)
         : false;
-    if (!ok) return;
+    if (!ok) return false;
 
     if (editTarget && updateJerseyNumber) {
       const newJersey = data.jersey_number ? Number(data.jersey_number) : null;
       await updateJerseyNumber(newJersey);
     }
 
-    handleClose();
+    return true;
+  };
+
+  const onSubmit = handleSubmit((data) => {
+    void runSettled(() => savePlayer(data), {
+      pending: editTarget ? 'Saving player…' : 'Creating player…',
+    });
   });
 
   const statusField = (
@@ -154,7 +168,7 @@ const PlayerFormModal = ({
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title={editTarget ? 'Edit Player' : 'Create Player'}
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Player'}

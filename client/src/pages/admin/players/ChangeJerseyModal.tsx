@@ -5,6 +5,7 @@ import {
   ControlledInputField,
 } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import styles from '../leagues/PlayerFormModal.module.scss';
 
 interface FormValues {
@@ -44,15 +45,23 @@ const ChangeJerseyModal = ({ open, onClose, changeJerseyNumber }: Props) => {
     onClose();
   }, [onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  // The modal hides while the change saves behind a progress toast, and reappears with the
+  // number and date entered if it fails.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? 'jersey-change' : null,
+    onDone: handleClose,
+  });
+
+  const onSubmit = handleSubmit((data) => {
     if (!data.effective_date) return;
-    const ok = await changeJerseyNumber(Number(data.jersey_number), data.effective_date);
-    if (ok) handleClose();
+    void runSettled(() => changeJerseyNumber(Number(data.jersey_number), data.effective_date), {
+      pending: `Changing jersey number to #${data.jersey_number}…`,
+    });
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="Record Jersey Number Change"
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving...' : 'Save'}

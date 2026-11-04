@@ -7,6 +7,7 @@ import {
   ControlledTimePickerField,
 } from '@/components/form/ControlledFields';
 import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
+import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import { type GameRecord, type GameType, type UpdateGameInfoData } from '@/hooks/useGames';
 import styles from './GameDetailsPage.module.scss';
 import { etHHMMtoISO, isoToETHHMM, scheduledDateInputValue } from './formatUtils';
@@ -82,7 +83,14 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
     onClose();
   }, [formValues, onClose, reset]);
 
-  const onSubmit = handleSubmit(async (data) => {
+  // The modal hides while the game info saves behind a progress toast, and reappears with the
+  // edits entered if it fails. A successful save updates the game, which resets the form above.
+  const { hidden, runSettled } = useBackgroundModalAction({
+    target: open ? game.id : null,
+    onDone: onClose,
+  });
+
+  const onSubmit = handleSubmit((data) => {
     // Anchor all times to the game's scheduled ET date so edits made on a
     // different day don't corrupt the stored timestamps.
     const etBase = data.scheduled_date || undefined;
@@ -103,7 +111,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
       }
     }
 
-    const ok = await onSave({
+    const payload: UpdateGameInfoData = {
       venue: data.venue || null,
       scheduled_at: data.scheduled_date || null,
       scheduled_time: data.scheduled_time || null,
@@ -123,13 +131,13 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
       league_game_number: data.league_game_number.trim() || null,
       time_start: startISO,
       time_end: endISO,
-    });
-    if (ok) handleClose();
+    };
+    void runSettled(() => onSave(payload), { pending: 'Saving game info…' });
   });
 
   return (
     <Modal
-      open={open}
+      open={open && !hidden}
       title="Edit Game Info"
       onClose={handleClose}
       confirmLabel={isSubmitting || isSaving ? 'Saving…' : 'Save'}
