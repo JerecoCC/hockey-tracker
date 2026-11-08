@@ -64,8 +64,9 @@ import { isGameOverdueForFinal } from '@/lib/gameSchedule';
 import styles from './SeasonGamesTab.module.scss';
 
 import { API, authHeaders, getAggregateErrorMessage as getErrorMessage } from '@/lib/apiClient';
-const SEASON_WEEK_SUMMARY_STICKY_TOP = '52px';
 const SEASON_WEEK_SUMMARY_STICKY_TOP_PX = 52;
+// On tablets and phones the page header also holds the season tab strip.
+const SEASON_WEEK_SUMMARY_TABBED_HEADER_STICKY_TOP_PX = 87;
 const SEASON_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX = 8;
 const SEASON_WEEK_SUMMARY_SCROLL_SETTLE_MS = 180;
 const AUTOFILL_RESULT_TOAST_MS = 4000;
@@ -541,7 +542,12 @@ const SeasonGamesTab = ({
     return map;
   }, [filteredGames, gameDateKey]);
 
-  const isMobileView = useScreenSize() === 'mobile';
+  const screenSize = useScreenSize();
+  const isMobileView = screenSize === 'mobile';
+  const weekSummaryStickyTopPx =
+    screenSize === 'desktop'
+      ? SEASON_WEEK_SUMMARY_STICKY_TOP_PX
+      : SEASON_WEEK_SUMMARY_TABBED_HEADER_STICKY_TOP_PX;
   const [filtersVisible, setFiltersVisible] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formDate, setFormDate] = useState<string | null>(null);
@@ -563,7 +569,7 @@ const SeasonGamesTab = ({
   const isWeekSummaryStuck = useScheduleWeekSummaryStuck({
     active: view === 'list',
     sentinelRef: weekSummarySentinelRef,
-    stickyTopPx: SEASON_WEEK_SUMMARY_STICKY_TOP_PX,
+    stickyTopPx: weekSummaryStickyTopPx,
   });
 
   useEffect(() => {
@@ -1268,12 +1274,14 @@ const SeasonGamesTab = ({
               loading={loading}
               activeDateKey={activeSummaryDay}
               stuck={isWeekSummaryStuck}
+              stickyOnMobile
+              fitMobileViewport
               onSelectDate={scrollToDay}
               formatDate={fmtDaySummaryDate}
               formatWeekday={fmtDaySummaryWeekday}
               formatHeading={fmtDayHeading}
               summaryRef={weekSummaryCardRef}
-              stickyTop={SEASON_WEEK_SUMMARY_STICKY_TOP}
+              stickyTop={`${weekSummaryStickyTopPx}px`}
             />
           </>
         )}
