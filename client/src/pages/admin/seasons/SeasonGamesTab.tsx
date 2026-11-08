@@ -28,6 +28,7 @@ import { useScheduleWeekSummaryStuck } from '@/shared/ScheduleGamesLayout/useSch
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import useGames, { type GameRecord, type GameStatus, type GameType } from '@/hooks/useGames';
+import useScreenSize from '@/hooks/useScreenSize';
 import GameCard from '@/shared/GameCard/GameCard';
 import Select from '@jerecocc/tracker-ui/components/Select/Select';
 import MultiSelect, { type MultiSelectOption } from '@jerecocc/tracker-ui/components/MultiSelect/MultiSelect';
@@ -540,6 +541,7 @@ const SeasonGamesTab = ({
     return map;
   }, [filteredGames, gameDateKey]);
 
+  const isMobileView = useScreenSize() === 'mobile';
   const [filtersVisible, setFiltersVisible] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formDate, setFormDate] = useState<string | null>(null);
@@ -1123,84 +1125,112 @@ const SeasonGamesTab = ({
     );
   };
 
+  const periodPicker =
+    view === 'list' ? (
+      <PeriodPicker
+        className={isMobileView ? styles.mobilePeriodPicker : undefined}
+        numericDates={isMobileView}
+        value={dateToISO(weekStart)}
+        onChange={(v) => setWeekStart(v ? fromISODate(v) : toDay(new Date()))}
+        onPrevious={() => setWeekStart((d) => addDays(d, -7))}
+        onNext={() => setWeekStart((d) => addDays(d, 7))}
+      />
+    ) : (
+      <PeriodPicker
+        className={isMobileView ? styles.mobilePeriodPicker : undefined}
+        kind="month"
+        value={toMonthPickerValue(calendarMonth)}
+        onChange={changeCalendarMonth}
+        onPrevious={goToPreviousCalendarMonth}
+        onNext={goToNextCalendarMonth}
+      />
+    );
+
+  const viewSegmentedControl = (
+    <SegmentedControl
+      value={view}
+      onChange={(value) => handleViewChange(value as SeasonGamesView)}
+      className={scheduleViewSegmentedControlClassName}
+      options={[
+        {
+          value: 'list',
+          label: <Icon name="view_list" />,
+          tooltip: 'Week view',
+          ariaLabel: 'Week view',
+        },
+        {
+          value: 'calendar',
+          label: <Icon name="calendar_month" />,
+          tooltip: 'Month view',
+          ariaLabel: 'Month view',
+        },
+      ]}
+    />
+  );
+
+  // On mobile the create actions shrink to icon buttons beside the title, and the view and
+  // filter controls move to the picker's row below it.
+  const createActions = !isEnded && (
+    <>
+      <Button
+        variant="outlined"
+        intent="accent"
+        icon="playlist_add"
+        iconHeight={isMobileView ? 'field' : undefined}
+        tooltip={isMobileView ? 'Bulk Create' : undefined}
+        onClick={() => setBulkDate('')}
+      >
+        {isMobileView ? undefined : 'Bulk Create'}
+      </Button>
+      <Button
+        icon="add"
+        iconHeight={isMobileView ? 'field' : undefined}
+        tooltip={isMobileView ? 'Create Game' : undefined}
+        onClick={() => handleAdd()}
+      >
+        {isMobileView ? undefined : 'Create Game'}
+      </Button>
+    </>
+  );
+
+  const filterToggle = (
+    <Toggle
+      variant={isMobileView ? 'button' : 'toggle'}
+      active={filtersVisible}
+      onActiveChange={() => setFiltersVisible((v) => !v)}
+      icon="filter_list"
+      activeTooltip="Hide filters"
+      inactiveTooltip="Show filters"
+      ariaLabel={filtersVisible ? 'Hide filters' : 'Show filters'}
+      className={styles.filterVisibilitySwitch}
+    />
+  );
+
   return (
     <>
       <div className={styles.scheduleLayout}>
         <Section
           noHeaderMargin
-          title={
-            <ScheduleGamesTitle
-              picker={
-                view === 'list' ? (
-                  <PeriodPicker
-                    value={dateToISO(weekStart)}
-                    onChange={(v) => setWeekStart(v ? fromISODate(v) : toDay(new Date()))}
-                    onPrevious={() => setWeekStart((d) => addDays(d, -7))}
-                    onNext={() => setWeekStart((d) => addDays(d, 7))}
-                  />
-                ) : (
-                  <PeriodPicker
-                    kind="month"
-                    value={toMonthPickerValue(calendarMonth)}
-                    onChange={changeCalendarMonth}
-                    onPrevious={goToPreviousCalendarMonth}
-                    onNext={goToNextCalendarMonth}
-                  />
-                )
-              }
-            />
-          }
+          title={<ScheduleGamesTitle picker={isMobileView ? undefined : periodPicker} />}
           action={
-            <ScheduleGamesActions>
-              {!isEnded && (
+            <ScheduleGamesActions className={isMobileView ? styles.mobileActions : undefined}>
+              {createActions}
+              {!isMobileView && (
                 <>
-                  <Button
-                    variant="outlined"
-                    intent="accent"
-                    icon="playlist_add"
-                    onClick={() => setBulkDate('')}
-                  >
-                    Bulk Create
-                  </Button>
-                  <Button
-                    icon="add"
-                    onClick={() => handleAdd()}
-                  >
-                    Create Game
-                  </Button>
+                  {viewSegmentedControl}
+                  {filterToggle}
                 </>
               )}
-              <SegmentedControl
-                value={view}
-                onChange={(value) => handleViewChange(value as SeasonGamesView)}
-                className={scheduleViewSegmentedControlClassName}
-                options={[
-                  {
-                    value: 'list',
-                    label: <Icon name="view_list" />,
-                    tooltip: 'Week view',
-                    ariaLabel: 'Week view',
-                  },
-                  {
-                    value: 'calendar',
-                    label: <Icon name="calendar_month" />,
-                    tooltip: 'Month view',
-                    ariaLabel: 'Month view',
-                  },
-                ]}
-              />
-              <Toggle
-                variant="toggle"
-                active={filtersVisible}
-                onActiveChange={() => setFiltersVisible((v) => !v)}
-                icon="filter_list"
-                activeTooltip="Hide filters"
-                inactiveTooltip="Show filters"
-                className={styles.filterVisibilitySwitch}
-              />
             </ScheduleGamesActions>
           }
         >
+          {isMobileView && (
+            <div className={styles.mobileToolbar}>
+              {periodPicker}
+              {viewSegmentedControl}
+              {filterToggle}
+            </div>
+          )}
           <ScheduleFilters visible={filtersVisible}>
             <Select
               value={gameTypeFilter}

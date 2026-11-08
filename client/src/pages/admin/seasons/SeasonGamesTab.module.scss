@@ -50,6 +50,38 @@
   --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 }
 
+@media (max-width: $screen-mobile-max) {
+  .mobileActions {
+    flex-wrap: nowrap;
+  }
+
+  // Period picker, view switch and filter toggle share a row below the title.
+  .mobileToolbar {
+    --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
+
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    margin-top: $space-md;
+    min-width: 0;
+  }
+
+  // Tightened so the week label fits beside the view and filter controls.
+  .mobilePeriodPicker.mobilePeriodPicker {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    padding-inline: 2px;
+    gap: 0;
+    font-size: $font-sm;
+
+    // The date trigger; the previous and next arrows keep their width.
+    button:not(:first-child, :last-child) {
+      padding-inline: $space-xs;
+    }
+  }
+}
+
 .dayActions {
   display: flex;
   gap: $space-sm;
