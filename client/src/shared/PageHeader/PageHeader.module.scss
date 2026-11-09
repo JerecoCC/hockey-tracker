@@ -122,7 +122,6 @@
     @media (max-width: $screen-tablet-max) {
       display: flex;
       overflow-x: auto;
-      padding: 0 $space-lg;
       scrollbar-width: none;
 
       &::-webkit-scrollbar {
