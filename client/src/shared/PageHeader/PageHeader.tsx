@@ -5,8 +5,10 @@ import { useMobileTabs } from '@/context/MobileTabsContext';
 import Icon from '@jerecocc/tracker-ui/components/Icon/Icon';
 import styles from './PageHeader.module.scss';
 
+// Routes that show the app logo and name in place of a page title.
+const BRAND_ROUTES = new Set(['/admin/leagues']);
+
 const EXACT_TITLES: Record<string, string> = {
-  '/admin/leagues': 'Leagues',
   '/admin/users': 'Users',
   '/dashboard': 'Dashboard',
   '/dashboard/games-watched': 'Games Watched',
@@ -102,6 +104,16 @@ const PageHeader = ({ onMenuToggle, mobileTitleLeftRef }: PageHeaderProps) => {
             ref={mobileTitleLeftRef}
             className={styles.mobileTitleLeft}
           />
+          {BRAND_ROUTES.has(pathname) && (
+            <h1 className={styles.brand}>
+              <img
+                src="/favicon.svg"
+                alt=""
+                className={styles.brandIcon}
+              />
+              Hockey Tracker
+            </h1>
+          )}
           {/* Route title – hidden on mobile when tabs are present */}
           {title && (
             <h1
