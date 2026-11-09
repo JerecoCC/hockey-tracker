@@ -55,22 +55,40 @@
     flex-wrap: nowrap;
   }
 
-  // Period picker, view switch and filter toggle share a row below the title.
+  // Period picker, view switch and filter toggle share a row below the title. On the
+  // narrowest phones the switch and toggle wrap to their own row under the picker.
   .mobileToolbar {
     --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: $space-xs;
+    gap: $space-sm $space-xs;
     margin-top: $space-md;
     min-width: 0;
   }
 
-  // Tightened so the week label fits beside the view and filter controls.
-  .mobilePeriodPicker.mobilePeriodPicker {
+  // Takes almost none of the spare width beside the picker, but all of it once wrapped
+  // to its own row, where the view switch stretches to fill it.
+  .mobileViewControls {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: $space-xs;
+  }
+
+  .mobileViewSegmentedControl.mobileViewSegmentedControl {
     flex: 1 1 auto;
     width: auto;
     min-width: 0;
+  }
+
+  // Tightened so the week label fits beside the view and filter controls; it never
+  // shrinks below its label, which is what wraps the row.
+  .mobilePeriodPicker.mobilePeriodPicker {
+    flex: 1000 1 auto;
+    width: auto;
+    min-width: max-content;
     padding-inline: 2px;
     gap: 0;
     font-size: $font-sm;

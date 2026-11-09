@@ -1156,7 +1156,13 @@ const SeasonGamesTab = ({
     <SegmentedControl
       value={view}
       onChange={(value) => handleViewChange(value as SeasonGamesView)}
-      className={scheduleViewSegmentedControlClassName}
+      fullWidth={isMobileView}
+      className={[
+        scheduleViewSegmentedControlClassName,
+        isMobileView ? styles.mobileViewSegmentedControl : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       options={[
         {
           value: 'list',
@@ -1233,8 +1239,10 @@ const SeasonGamesTab = ({
           {isMobileView && (
             <div className={styles.mobileToolbar}>
               {periodPicker}
-              {viewSegmentedControl}
-              {filterToggle}
+              <div className={styles.mobileViewControls}>
+                {viewSegmentedControl}
+                {filterToggle}
+              </div>
             </div>
           )}
           <ScheduleFilters visible={filtersVisible}>
