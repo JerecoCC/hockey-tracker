@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { toast } from 'react-toastify';
-import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
@@ -20,6 +19,7 @@ import {
 } from './LeagueTabSkeletonHelpers';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
+import SectionActionButton from '@/shared/SectionActionButton/SectionActionButton';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -125,13 +125,11 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
           className={[styles.playoffsTabCard, className].filter(Boolean).join(' ')}
           title="Playoff Rule Sets"
           action={
-            <Button
+            <SectionActionButton
               icon="add"
-              size="medium"
+              label="Create Rule Set"
               onClick={openCreate}
-            >
-              Create Rule Set
-            </Button>
+            />
           }
         >
           {ruleSets.length === 0 ? (
@@ -171,13 +169,11 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
           className={[styles.playoffsTabCard, className].filter(Boolean).join(' ')}
           title="Qualification Formats"
           action={
-            <Button
+            <SectionActionButton
               icon="add"
-              size="medium"
+              label="Create Format"
               onClick={openCreateQualification}
-            >
-              Create Format
-            </Button>
+            />
           }
         >
           {qualificationFormats.length === 0 ? (

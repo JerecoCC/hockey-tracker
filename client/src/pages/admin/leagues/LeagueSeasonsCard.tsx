@@ -1,9 +1,9 @@
-import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import { useLeagueDetailsContext } from './leagueDetailsState';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
+import SectionActionButton from '@/shared/SectionActionButton/SectionActionButton';
 import { getSeasonTagPhase, seasonPhasePresentation } from '@/lib/seasonPhase';
 import styles from './LeagueDetails.module.scss';
 
@@ -36,13 +36,11 @@ const LeagueSeasonsCard = (props: Props) => {
       className={className}
       title="Seasons"
       action={
-        <Button
+        <SectionActionButton
           icon="add"
-          size="medium"
+          label="Create Season"
           onClick={onAddSeason}
-        >
-          Create Season
-        </Button>
+        />
       }
     >
       {seasons.length === 0 ? (

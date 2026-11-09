@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useForm } from 'react-hook-form';
 import ActionOverlay from '@jerecocc/tracker-ui/components/ActionOverlay/ActionOverlay';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import SectionActionButton from '@/shared/SectionActionButton/SectionActionButton';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import {
   ControlledDatePickerField,
@@ -420,13 +421,11 @@ const LeagueDraftsTab = ({ leagueId, className }: { leagueId: string; className?
           className={[styles.col12, className].filter(Boolean).join(' ')}
           title="Drafts"
           action={
-            <Button
+            <SectionActionButton
               icon="add"
-              size="medium"
+              label="Create Draft"
               onClick={openCreate}
-            >
-              Create Draft
-            </Button>
+            />
           }
         >
           {draftEvents.length === 0 ? (

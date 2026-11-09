@@ -1,5 +1,4 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Pagination from '@jerecocc/tracker-ui/components/Pagination/Pagination';
@@ -19,6 +18,7 @@ import { getPlayerStatus, PLAYER_STATUS_LABELS, type PlayerStatus } from '@/lib/
 import { useLeagueDetailsContext } from './leagueDetailsState';
 import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
+import SectionActionButton from '@/shared/SectionActionButton/SectionActionButton';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -444,22 +444,18 @@ const LeaguePlayersTab = ({ className }: Props) => {
       }
       action={
         <div className={styles.playerActionButtons}>
-          <Button
+          <SectionActionButton
             variant="outlined"
             intent="accent"
             icon="group_add"
-            size="medium"
+            label="Bulk Create"
             onClick={onBulkAdd}
-          >
-            Bulk Create
-          </Button>
-          <Button
+          />
+          <SectionActionButton
             icon="add"
-            size="medium"
+            label="Create Player"
             onClick={onAdd}
-          >
-            Create Player
-          </Button>
+          />
         </div>
       }
       onPageChange={onPageChange}
