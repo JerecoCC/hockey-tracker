@@ -125,6 +125,7 @@ const LeagueInfoCard = ({ league, onEdit, className }: Props) => (
         { label: 'Text', color: league.text_color },
       ]}
       editIconOnly
+      stackOnMobile
       showDivider={false}
     />
 
