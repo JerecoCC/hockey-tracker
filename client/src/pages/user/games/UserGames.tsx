@@ -1554,7 +1554,7 @@ const UserGames = () => {
           label: isMobileView ? (
             <>
               <Icon name="view_list" />
-              <span>Week view</span>
+              <span>Week</span>
             </>
           ) : (
             <Icon name="view_list" />
@@ -1568,7 +1568,7 @@ const UserGames = () => {
           label: isMobileView ? (
             <>
               <Icon name="calendar_month" />
-              <span>Month view</span>
+              <span>Month</span>
             </>
           ) : (
             <Icon name="calendar_month" />
@@ -1663,12 +1663,14 @@ const UserGames = () => {
       >
         {isMobileView ? (
           <div className={styles.mobileToolbar}>
-            <div className={styles.mobileToolbarRow}>{periodPickerControl}</div>
+            <div className={styles.mobileToolbarRow}>
+              {periodPickerControl}
+              {moreActionsControl}
+            </div>
             <div className={styles.mobileToolbarViewRow}>
               {viewSegmentedControl}
               <div className={styles.mobileToolbarActions}>
                 {filterToggle}
-                {moreActionsControl}
               </div>
             </div>
           </div>
