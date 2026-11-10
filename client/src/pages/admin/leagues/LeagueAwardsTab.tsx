@@ -1,6 +1,7 @@
 import { type DragEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import SectionActionButton from '@/shared/SectionActionButton/SectionActionButton';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import {
@@ -722,13 +723,11 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
           className={[styles.col12, className].filter(Boolean).join(' ')}
           title="Awards"
           action={
-            <Button
+            <SectionActionButton
               icon="add"
-              size="medium"
+              label="Create Award"
               onClick={openCreate}
-            >
-              Create Award
-            </Button>
+            />
           }
         >
           {awards.length === 0 ? (

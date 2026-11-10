@@ -31,8 +31,14 @@ const setup = (pathname = '/admin/leagues', user = adminUser) => {
 beforeEach(() => jest.clearAllMocks());
 
 describe('PageHeader – title resolution', () => {
+  it('shows the app logo and name instead of a title on the leagues page', () => {
+    const { container } = setup('/admin/leagues');
+    expect(screen.getByRole('heading', { name: 'Hockey Tracker' })).toBeInTheDocument();
+    expect(container.querySelector('img[src="/favicon.svg"]')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Leagues' })).not.toBeInTheDocument();
+  });
+
   it.each([
-    ['/admin/leagues', 'Leagues'],
     ['/admin/users', 'Users'],
     ['/admin/leagues/123', 'League Details'],
     ['/admin/leagues/123/teams/456', 'Team Details'],

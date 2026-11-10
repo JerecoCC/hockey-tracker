@@ -81,8 +81,6 @@ export interface GameCardProps {
   warningBanner?: string | null;
   /** Renders a left accent stripe coloured by game type. */
   showTypeIndicator?: boolean;
-  /** Keeps actions visible in a vertical rail on the right at the mobile breakpoint. */
-  mobileActionsAside?: boolean;
 }
 
 const run = (handler: () => MaybePromise) => {
@@ -254,7 +252,6 @@ const GameCardVariant = ({
   showWatchedBanner = true,
   warningBanner = null,
   showTypeIndicator = false,
-  mobileActionsAside = false,
   onOpen,
 }: GameCardProps) => {
   const showScore = showScoreProp ?? shouldShowWatchedScore(game);
@@ -300,7 +297,6 @@ const GameCardVariant = ({
     <Card
       variant="border"
       data-game-card-variant="card"
-      data-mobile-actions-layout={mobileActionsAside ? 'aside' : undefined}
       className={[
         styles.card,
         hasTypeIndicator ? styles.withTypeIndicator : '',

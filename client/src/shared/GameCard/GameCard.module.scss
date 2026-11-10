@@ -341,7 +341,8 @@
     --game-card-inline-padding: #{$space-md};
   }
 
-  .card[data-mobile-actions-layout='aside'] {
+  // Phones have no hover to reveal the actions, so the rail always shows.
+  .card {
     .gameActions {
       width: var(--game-card-action-rail-width);
       margin-left: 0;
@@ -354,9 +355,9 @@
       transform: none;
       transition: none;
     }
+  }
 
-    .watchedRibbon {
-      right: var(--game-card-watched-action-offset);
-    }
+  .withActions .watchedRibbon {
+    right: var(--game-card-watched-action-offset);
   }
 }

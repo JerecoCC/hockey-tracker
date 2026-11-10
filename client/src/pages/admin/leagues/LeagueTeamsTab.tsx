@@ -1,4 +1,3 @@
-import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import SearchableList from '@jerecocc/tracker-ui/components/SearchableList/SearchableList';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
@@ -11,6 +10,7 @@ import {
   type TabSkeletonProps,
 } from './LeagueTabSkeletonHelpers';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
+import SectionActionButton from '@/shared/SectionActionButton/SectionActionButton';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -30,13 +30,11 @@ const LeagueTeamsTab = (props: Props) => {
         className={[styles.col12, className].filter(Boolean).join(' ')}
         title="Teams"
         action={
-          <Button
+          <SectionActionButton
             icon="add"
-            size="medium"
+            label="Create Team"
             onClick={onAddTeam}
-          >
-            Create Team
-          </Button>
+          />
         }
       >
         <SearchableList

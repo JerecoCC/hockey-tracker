@@ -211,3 +211,18 @@
     content: none;
   }
 }
+
+// Phones have no hover to reveal the actions, so every row shows them.
+@media (max-width: $screen-mobile-max) {
+  .item .actions {
+    // Relative so z-index keeps the buttons above the row's stretched link.
+    position: relative;
+    max-width: none;
+    margin-left: 0;
+    overflow: visible;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+    transition: none;
+  }
+}

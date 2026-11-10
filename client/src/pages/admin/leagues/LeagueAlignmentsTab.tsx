@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import SectionActionButton from '@/shared/SectionActionButton/SectionActionButton';
 import Checklist from '@jerecocc/tracker-ui/components/Checklist/Checklist';
 import ConfirmModal from '@jerecocc/tracker-ui/components/ConfirmModal/ConfirmModal';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
@@ -1591,13 +1592,11 @@ const LeagueAlignmentsTab = (props: Props) => {
             className={styles.alignmentHeaderCard}
             title={<AlignmentCardTitle />}
             action={
-              <Button
+              <SectionActionButton
                 icon="add"
-                size="medium"
+                label="Create Alignment"
                 onClick={() => setCreateModalOpen(true)}
-              >
-                Create Alignment
-              </Button>
+              />
             }
             noHeaderMargin
           >

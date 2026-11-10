@@ -503,14 +503,14 @@ describe('UserDashboard', () => {
     });
   });
 
-  it('keeps game actions visible in a side rail on mobile, like the games week view', () => {
+  it('renders game actions in the card action rail, like the games week view', () => {
     mockDashboardQueries({ todayGames: [makeGame({ status: 'final' })] });
 
     render(<UserDashboard />);
 
     expect(
-      screen.getByLabelText('Mark as watched').closest('[data-game-card-variant="card"]'),
-    ).toHaveAttribute('data-mobile-actions-layout', 'aside');
+      screen.getByLabelText('Mark as watched').closest('[data-game-card-actions]'),
+    ).toBeInTheDocument();
   });
 
   it("tints game cards with the league's Google Calendar color, like the games page", () => {
