@@ -234,6 +234,8 @@ interface ScheduleWeekListProps<T> {
   loading?: boolean;
   dayRefs?: MutableRefObject<Record<string, HTMLDivElement | null>>;
   formatHeading: (dateKey: string) => string;
+  /** The visible day title, when it should be shorter than the heading used in labels. */
+  formatTitle?: (dateKey: string) => string;
   getDayTitleLink?: (
     dateKey: string,
     dayGames: T[],
@@ -255,6 +257,7 @@ export const ScheduleWeekList = <T,>({
   loading = false,
   dayRefs,
   formatHeading,
+  formatTitle = formatHeading,
   getDayTitleLink,
   renderDayAction,
   renderDayContent,
@@ -264,6 +267,7 @@ export const ScheduleWeekList = <T,>({
   <div className={styles.dayList}>
     {days.map(([dateKey, dayGames]) => {
       const heading = formatHeading(dateKey);
+      const visibleHeading = formatTitle(dateKey);
       const isToday = dateKey === getTodayDateKey();
       const titleLink = getDayTitleLink?.(dateKey, dayGames);
       const title = titleLink ? (
@@ -272,7 +276,7 @@ export const ScheduleWeekList = <T,>({
           className={styles.dayTitleLink}
           aria-label={titleLink.ariaLabel ?? `View games for ${heading}`}
         >
-          <span>{heading}</span>
+          <span>{visibleHeading}</span>
           <span
             className={styles.dayTitleLinkIndicator}
             aria-hidden
@@ -284,7 +288,7 @@ export const ScheduleWeekList = <T,>({
           </span>
         </Link>
       ) : (
-        heading
+        visibleHeading
       );
 
       return (

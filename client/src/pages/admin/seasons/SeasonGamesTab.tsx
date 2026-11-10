@@ -278,6 +278,16 @@ const fmtDayHeading = (key: string) => {
   });
 };
 
+// Day titles on phones: "Tue, 11/03".
+const fmtDayTitleShort = (key: string) => {
+  const [y, mo, d] = key.split('-').map(Number);
+  return new Date(y, mo - 1, d).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: '2-digit',
+    day: '2-digit',
+  });
+};
+
 const fmtDaySummaryDate = (key: string) => {
   const [, mo, d] = key.split('-').map(Number);
   return `${mo}/${d}`;
@@ -1360,6 +1370,7 @@ const SeasonGamesTab = ({
               loading={loading}
               dayRefs={dayRefs}
               formatHeading={fmtDayHeading}
+              formatTitle={isMobileView ? fmtDayTitleShort : undefined}
               getDayTitleLink={(dateKey, dayGames) => ({
                 href: dayGamesPath(dateKey),
                 ariaLabel:
