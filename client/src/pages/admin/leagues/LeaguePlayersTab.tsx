@@ -10,6 +10,7 @@ import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
 import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
+import useScreenSize from '@/hooks/useScreenSize';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { missingPlayerDataIndicator } from '@/lib/playerDataStatus';
 import { formatPlayerPosition } from '@/lib/playerPosition';
@@ -17,6 +18,7 @@ import { normalizePlayerSearchText, playerSearchTextIncludes } from '@/lib/playe
 import { getPlayerStatus, PLAYER_STATUS_LABELS, type PlayerStatus } from '@/lib/playerStatus';
 import { useLeagueDetailsContext } from './leagueDetailsState';
 import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
+import PlayerListCard from './PlayerListCard';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
 import SectionActionButton from '@/shared/SectionActionButton/SectionActionButton';
 import styles from './LeagueDetails.module.scss';
@@ -107,14 +109,17 @@ const playerDataIndicator = (
   return ` ${missingPlayerDataIndicator}`;
 };
 
-const playerSubtitle = (player: PlayerRecord, showLastSeasonSubtitle: boolean) => {
-  const position = formatPlayerPosition(player.position);
+const playerLastPlayed = (player: PlayerRecord, showLastSeasonSubtitle: boolean) => {
   const status = getPlayerStatus(player);
   const showLastSeason = status === 'inactive' || status === 'retired';
-  const lastSeason =
-    showLastSeasonSubtitle && showLastSeason && player.last_season_name
-      ? `Last played: ${player.last_season_name}`
-      : null;
+  return showLastSeasonSubtitle && showLastSeason && player.last_season_name
+    ? `Last played: ${player.last_season_name}`
+    : undefined;
+};
+
+const playerSubtitle = (player: PlayerRecord, showLastSeasonSubtitle: boolean) => {
+  const position = formatPlayerPosition(player.position);
+  const lastSeason = playerLastPlayed(player, showLastSeasonSubtitle);
   return [position, lastSeason].filter(Boolean).join(' | ') || undefined;
 };
 
@@ -166,6 +171,7 @@ export const LeaguePlayersListSection = ({
   onEdit,
   onDelete,
 }: LeaguePlayersListSectionProps) => {
+  const isMobileView = useScreenSize() === 'mobile';
   const [confirmDelete, setConfirmDelete] = useState<PlayerRecord | null>(null);
   // The delete dialog hides while the player is deleted behind a progress toast, and reappears if
   // the delete fails.
@@ -288,6 +294,20 @@ export const LeaguePlayersListSection = ({
                             }
                           : null,
                       ];
+
+                      if (isMobileView) {
+                        return (
+                          <PlayerListCard
+                            key={p.id}
+                            player={p}
+                            href={playerHref}
+                            nameSuffix={playerDataIndicator(p, minimumGamesForDataIndicator)}
+                            note={playerLastPlayed(p, showLastSeasonSubtitle)}
+                            tags={renderPlayerTags(p, rookieSeasonId)}
+                            actions={actions}
+                          />
+                        );
+                      }
 
                       return (
                         <ListItem
