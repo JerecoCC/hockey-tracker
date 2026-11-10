@@ -8,7 +8,6 @@ import MetricTag from '@jerecocc/tracker-ui/components/MetricTag/MetricTag';
 import SearchableList from '@jerecocc/tracker-ui/components/SearchableList/SearchableList';
 import Select from '@jerecocc/tracker-ui/components/Select/Select';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
-import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import Tooltip from '@jerecocc/tracker-ui/components/Tooltip/Tooltip';
 import { type AlignmentGroupRecord, type GroupAlignmentSet } from '@/hooks/useGroupAlignmentSets';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
@@ -224,22 +223,14 @@ const GroupNode = ({
             root: styles.groupAccordion,
             header: styles.groupHeader,
           }}
-          label={<span className={styles.groupLabel}>{group.name}</span>}
+          label={<span className={styles.groupLabel}>{groupName}</span>}
           headerRight={
-            <>
-              <MetricTag
-                className={styles.groupTeamCount}
-                value={teamCount}
-                label={teamCountLabel}
-                position="postfix"
-              />
-              {roleLabel ? (
-                <Tag
-                  label={roleLabel}
-                  intent={group.role === 'division' ? 'success' : 'accent'}
-                />
-              ) : null}
-            </>
+            <MetricTag
+              className={styles.groupTeamCount}
+              value={teamCount}
+              label={teamCountLabel}
+              position="postfix"
+            />
           }
         >
           {groupBody}
