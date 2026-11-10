@@ -367,7 +367,7 @@ export const LeaguePlayersListSection = ({
                 <span className={styles.playerFilterToggles}>
                   <Toggle
                     active={warningsOnly}
-                    variant="toggle"
+                    variant={isMobileView ? 'button' : 'toggle'}
                     ariaLabel="Warnings only"
                     activeIcon="warning"
                     inactiveIcon="warning"
