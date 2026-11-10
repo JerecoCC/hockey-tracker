@@ -1182,6 +1182,7 @@ const SeasonDetailsPage = () => {
                             size="medium"
                             icon="ranking_star"
                             iconHeight="field"
+                            className="field-height-on-phones"
                             tooltip="All Leaders"
                             aria-label="View all forward leaders"
                             onClick={() => handleStatsSubTabChange('Forwards')}
@@ -1232,6 +1233,7 @@ const SeasonDetailsPage = () => {
                             size="medium"
                             icon="ranking_star"
                             iconHeight="field"
+                            className="field-height-on-phones"
                             tooltip="All Leaders"
                             aria-label="View all defense leaders"
                             onClick={() => handleStatsSubTabChange('Defense')}
@@ -1290,6 +1292,7 @@ const SeasonDetailsPage = () => {
                             size="medium"
                             icon="ranking_star"
                             iconHeight="field"
+                            className="field-height-on-phones"
                             tooltip="All Leaders"
                             aria-label="View all goalie leaders"
                             onClick={() => handleStatsSubTabChange('Goalies')}

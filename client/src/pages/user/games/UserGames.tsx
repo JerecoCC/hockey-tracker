@@ -1605,7 +1605,9 @@ const UserGames = () => {
           size="medium"
           iconHeight="field"
           iconSize="1.35rem"
-          wrapperClassName={isMobileView ? styles.mobileMoreActions : undefined}
+          wrapperClassName={
+            isMobileView ? `${styles.mobileMoreActions} field-height-on-phones` : undefined
+          }
           items={[
             {
               label: 'Add Personal Game',

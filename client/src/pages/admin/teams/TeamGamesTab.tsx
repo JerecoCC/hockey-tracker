@@ -329,7 +329,7 @@ const TeamGamesTab = ({
           iconHeight="field"
           aria-label="Download monthly schedule"
           tooltip="Download monthly schedule"
-          className={styles.calendarExportButton}
+          className="field-height-on-phones"
           onClick={() => void handleDownloadMonthImage()}
           disabled={exportingMonthImage || scheduledGames.length === 0}
         />

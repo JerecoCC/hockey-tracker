@@ -423,6 +423,7 @@ const SeasonTeamsCard = ({
               variant="filled"
               intent="accent"
               iconHeight="field"
+              className="field-height-on-phones"
               tooltip="Save alignment"
               disabled={busy === 'update' || !draftAlignmentSetId}
               onClick={handleSaveAlignment}
