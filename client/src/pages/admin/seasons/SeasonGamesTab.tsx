@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { toast, type TypeOptions } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
@@ -559,6 +560,12 @@ const SeasonGamesTab = ({
       ? SEASON_WEEK_SUMMARY_STICKY_TOP_PX
       : SEASON_WEEK_SUMMARY_TABBED_HEADER_STICKY_TOP_PX;
   const [filtersVisible, setFiltersVisible] = useState(true);
+  // Phones keep the filters in a sheet instead, so they don't push the games down.
+  const [filtersSheetOpen, setFiltersSheetOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isMobileView) setFiltersSheetOpen(false);
+  }, [isMobileView]);
   const [formOpen, setFormOpen] = useState(false);
   const [formDate, setFormDate] = useState<string | null>(null);
   const [bulkDate, setBulkDate] = useState<string | null>(null);
@@ -1215,17 +1222,46 @@ const SeasonGamesTab = ({
     </>
   );
 
+  const filtersShown = isMobileView ? filtersSheetOpen : filtersVisible;
   const filterToggle = (
     <Toggle
       variant={isMobileView ? 'button' : 'toggle'}
-      active={filtersVisible}
-      onActiveChange={() => setFiltersVisible((v) => !v)}
+      active={filtersShown}
+      onActiveChange={() =>
+        isMobileView ? setFiltersSheetOpen((open) => !open) : setFiltersVisible((v) => !v)
+      }
       icon="filter_list"
       activeTooltip="Hide filters"
       inactiveTooltip="Show filters"
-      ariaLabel={filtersVisible ? 'Hide filters' : 'Show filters'}
+      ariaLabel={filtersShown ? 'Hide filters' : 'Show filters'}
       className={styles.filterVisibilitySwitch}
     />
+  );
+
+  const filterControls = (
+    <>
+      <Select
+        value={gameTypeFilter}
+        options={GAME_TYPE_OPTIONS}
+        onChange={setGameTypeFilter}
+      />
+      <Select
+        value={statusFilter}
+        options={STATUS_FILTER_OPTIONS}
+        onChange={setStatusFilter}
+      />
+      <ScheduleFilterSlot wide>
+        <MultiSelect
+          value={teamFilter}
+          options={teamFilterOptions}
+          placeholder="All Teams"
+          emptyMessage="No teams in this season"
+          selectionLayout="scroll"
+          onChange={setTeamFilter}
+          searchable
+        />
+      </ScheduleFilterSlot>
+    </>
   );
 
   return (
@@ -1255,30 +1291,26 @@ const SeasonGamesTab = ({
               </div>
             </div>
           )}
-          <ScheduleFilters visible={filtersVisible}>
-            <Select
-              value={gameTypeFilter}
-              options={GAME_TYPE_OPTIONS}
-              onChange={setGameTypeFilter}
-            />
-            <Select
-              value={statusFilter}
-              options={STATUS_FILTER_OPTIONS}
-              onChange={setStatusFilter}
-            />
-            <ScheduleFilterSlot wide>
-              <MultiSelect
-                value={teamFilter}
-                options={teamFilterOptions}
-                placeholder="All Teams"
-                emptyMessage="No teams in this season"
-                selectionLayout="scroll"
-                onChange={setTeamFilter}
-                searchable
-              />
-            </ScheduleFilterSlot>
-          </ScheduleFilters>
+          {!isMobileView && (
+            <ScheduleFilters visible={filtersVisible}>{filterControls}</ScheduleFilters>
+          )}
         </Section>
+
+        {isMobileView && (
+          <Modal
+            open={filtersSheetOpen}
+            title="Filters"
+            onClose={() => setFiltersSheetOpen(false)}
+            hideFooter
+          >
+            <ScheduleFilters
+              visible
+              className={styles.sheetFilters}
+            >
+              {filterControls}
+            </ScheduleFilters>
+          </Modal>
+        )}
 
         {/* ── Day cards ── */}
         {view === 'list' && (
