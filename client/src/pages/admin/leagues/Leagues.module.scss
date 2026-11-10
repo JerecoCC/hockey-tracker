@@ -112,3 +112,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+// The season phase tag, shown under the league name on phones.
+.mobilePhaseTag {
+  display: flex;
+  margin-top: $space-xs;
+}

@@ -1,15 +1,17 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useLeagues, { LeagueRecord } from '@/hooks/useLeagues';
+import useScreenSize from '@/hooks/useScreenSize';
 import { buildLeagueDetailsPath } from '@/lib/routeSlugs';
 import LeagueDeleteModal from './LeagueDeleteModal';
 import LeagueFormModal from './LeagueFormModal';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
+import SectionActionButton from '@/shared/SectionActionButton/SectionActionButton';
 import styles from './Leagues.module.scss';
 
 const LEAGUE_PHASE_TAGS: Record<
@@ -32,6 +34,7 @@ const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
 
 const LeaguesPage = () => {
   const navigate = useNavigate();
+  const isMobileView = useScreenSize() === 'mobile';
   const { leagues, loading, busy, uploadLogo, addLeague, updateLeague, deleteLeague } =
     useLeagues();
   const [modalOpen, setModalOpen] = useState(false);
@@ -73,13 +76,11 @@ const LeaguesPage = () => {
       <Section
         title="Leagues"
         action={
-          <Button
+          <SectionActionButton
             icon="add"
-            size="medium"
+            label="Create League"
             onClick={openModal}
-          >
-            Create League
-          </Button>
+          />
         }
       >
         {loading ? (
@@ -103,10 +104,9 @@ const LeaguesPage = () => {
                   placeholder={league.code.slice(0, 3)}
                   eyebrow={league.code}
                   name={league.name}
-                  rightContent={{
-                    type: 'tag',
-                    ...phaseTag,
-                  }}
+                  // Phones wrap the name and move the season phase tag under it.
+                  wrapName={isMobileView}
+                  rightContent={isMobileView ? undefined : { type: 'tag', ...phaseTag }}
                   primaryColor={league.primary_color}
                   textColor={league.text_color}
                   onClick={() => navigate(leagueHref)}
@@ -132,7 +132,16 @@ const LeaguesPage = () => {
                       },
                     ] satisfies ListItemAction[]
                   }
-                />
+                >
+                  {isMobileView && (
+                    <span className={styles.mobilePhaseTag}>
+                      <Tag
+                        label={phaseTag.label}
+                        intent={phaseTag.intent}
+                      />
+                    </span>
+                  )}
+                </ListItem>
               );
             })}
       </ResponsiveList>
