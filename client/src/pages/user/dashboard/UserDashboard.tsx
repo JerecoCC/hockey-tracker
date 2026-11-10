@@ -19,10 +19,13 @@ import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import StatItem from '@jerecocc/tracker-ui/components/StatItem/StatItem';
 import { useAuth } from '@/context/AuthContext';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
+import useScreenSize from '@/hooks/useScreenSize';
 import { type GameRecord } from '@/hooks/useGames';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import {
   DATE_ONLY_RE,
+  formatScheduleDayHeading,
+  formatScheduleDayTitleShort,
   getOriginalGameDateKey,
   getScheduledWatchDateKey,
   isInvalidWatchScheduleDate,
@@ -34,6 +37,10 @@ import { getLeagueCalendarColor } from '@/lib/googleCalendarColors';
 import { buildUserWatchedTeamPath } from '@/lib/routeSlugs';
 import { getWatchedTeamSummaries, type TeamWatchSummary } from '@/lib/watchedTeams';
 import ResponsiveList from '@/shared/ResponsiveList/ResponsiveList';
+import {
+  ScheduleWeekList,
+  type ScheduleDayGroup,
+} from '@/shared/ScheduleGamesLayout/ScheduleGamesLayout';
 import styles from './UserDashboard.module.scss';
 import AddDayGamesModal from './AddDayGamesModal';
 
@@ -46,16 +53,6 @@ const USER_TIMEZONE: GameTimezone = 'local';
 
 const dateToISO = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-const fmtDayHeading = (key: string) => {
-  const [year, month, day] = key.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
 
 const sortWatchedTeamSummaries = (a: TeamWatchSummary, b: TeamWatchSummary) => {
   if (b.count !== a.count) return b.count - a.count;
@@ -124,6 +121,7 @@ const WatchedTeamItem = ({
 
 const UserDashboard = () => {
   const { user } = useAuth();
+  const isMobileView = useScreenSize() === 'mobile';
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { favorites } = useFavoriteTeams();
@@ -191,6 +189,7 @@ const UserDashboard = () => {
 
   // The query filters the effective watch date in the user's local timezone.
   const todayGames = useMemo(() => [...games].sort(sortUserDayGames), [games]);
+  const todayDays: ScheduleDayGroup<GameRecord>[] = [[todayKey, todayGames]];
   const watchedTeamCounts = useMemo(
     () =>
       new Map(
@@ -434,9 +433,13 @@ const UserDashboard = () => {
 
       <div className={styles.contentGrid}>
         <div className={styles.mainColumn}>
-          <Section
-            title={fmtDayHeading(todayKey)}
-            action={
+          {/* The same day section as the games page week view. */}
+          <ScheduleWeekList
+            days={todayDays}
+            loading={gamesLoading}
+            formatHeading={formatScheduleDayHeading}
+            formatTitle={isMobileView ? formatScheduleDayTitleShort : undefined}
+            renderDayAction={() => (
               <div className={styles.dayActions}>
                 {isAdmin && (
                   <div className={styles.testDateControl}>
@@ -467,15 +470,10 @@ const UserDashboard = () => {
                   iconHeight="field"
                 />
               </div>
-            }
-          >
-            {gamesLoading ? (
-              <EmptyMessage>Loading...</EmptyMessage>
-            ) : todayGames.length === 0 ? (
-              <EmptyMessage>No games scheduled for today.</EmptyMessage>
-            ) : (
+            )}
+            renderDayContent={(_dateKey, dayGames) => (
               <div className={styles.todayGamesGrid}>
-                {todayGames.map((game) => {
+                {dayGames.map((game) => {
                   const watched = !!game.watched_by_user;
                   const skipped = !!game.skipped_by_user;
                   const canMarkWatched = canMarkGameWatched(game);
@@ -513,7 +511,7 @@ const UserDashboard = () => {
                 })}
               </div>
             )}
-          </Section>
+          />
         </div>
 
         <aside className={styles.sideColumn}>
@@ -571,7 +569,7 @@ const UserDashboard = () => {
         <AddDayGamesModal
           key={todayKey}
           dateKey={todayKey}
-          dateLabel={fmtDayHeading(todayKey)}
+          dateLabel={formatScheduleDayHeading(todayKey)}
           favoriteTeamIds={favorites}
           scheduledGames={todayGames}
           getGameActions={getDashboardGameActions}

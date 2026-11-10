@@ -61,7 +61,11 @@ import {
   isDayAutofillStatus,
   partitionAutofillingGames,
 } from './seasonGamesAutofillUtils';
-import { isGameOverdueForFinal } from '@/lib/gameSchedule';
+import {
+  formatScheduleDayHeading,
+  formatScheduleDayTitleShort,
+  isGameOverdueForFinal,
+} from '@/lib/gameSchedule';
 import styles from './SeasonGamesTab.module.scss';
 
 import { API, authHeaders, getAggregateErrorMessage as getErrorMessage } from '@/lib/apiClient';
@@ -268,25 +272,6 @@ const toMonthPickerValue = (d: Date) =>
 const fromMonthPickerValue = (value: string) => {
   const [year, month] = value.split('-').map(Number);
   return new Date(year, month - 1, 1);
-};
-
-const fmtDayHeading = (key: string) => {
-  const [y, mo, d] = key.split('-').map(Number);
-  return new Date(y, mo - 1, d).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
-};
-
-// Day titles on phones: "Tue, 11/03".
-const fmtDayTitleShort = (key: string) => {
-  const [y, mo, d] = key.split('-').map(Number);
-  return new Date(y, mo - 1, d).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: '2-digit',
-    day: '2-digit',
-  });
 };
 
 const fmtDaySummaryDate = (key: string) => {
@@ -778,7 +763,7 @@ const SeasonGamesTab = ({
     const failures: string[] = [];
     const manualMoveReportsForRun: GameAutofillManualMoveReport[] = [];
     let filled = 0;
-    const dayLabel = fmtDayHeading(dateKey);
+    const dayLabel = formatScheduleDayHeading(dateKey);
     const nhlCandidates = candidates.filter((game) => isNhlGame(game, leagueCode));
     const needsScheduleLoad = nhlCandidates.length > 0;
     const prefillProgressSteps = needsScheduleLoad ? 1 : 0;
@@ -1329,7 +1314,7 @@ const SeasonGamesTab = ({
               onSelectDate={scrollToDay}
               formatDate={fmtDaySummaryDate}
               formatWeekday={fmtDaySummaryWeekday}
-              formatHeading={fmtDayHeading}
+              formatHeading={formatScheduleDayHeading}
               summaryRef={weekSummaryCardRef}
               stickyTop={`${weekSummaryStickyTopPx}px`}
             />
@@ -1368,10 +1353,10 @@ const SeasonGamesTab = ({
                     href: dayGamesPath(dateKey),
                     ariaLabel:
                       gameCount > 0
-                        ? `View ${gameCount} ${gameCount === 1 ? 'game' : 'games'} on ${fmtDayHeading(
+                        ? `View ${gameCount} ${gameCount === 1 ? 'game' : 'games'} on ${formatScheduleDayHeading(
                             dateKey,
                           )}`
-                        : `View games on ${fmtDayHeading(dateKey)}`,
+                        : `View games on ${formatScheduleDayHeading(dateKey)}`,
                   };
                 }}
                 getDayHeaderRight={({ dateKey }) => {
@@ -1401,16 +1386,16 @@ const SeasonGamesTab = ({
               days={groupedByDate}
               loading={loading}
               dayRefs={dayRefs}
-              formatHeading={fmtDayHeading}
-              formatTitle={isMobileView ? fmtDayTitleShort : undefined}
+              formatHeading={formatScheduleDayHeading}
+              formatTitle={isMobileView ? formatScheduleDayTitleShort : undefined}
               getDayTitleLink={(dateKey, dayGames) => ({
                 href: dayGamesPath(dateKey),
                 ariaLabel:
                   dayGames.length > 0
                     ? `View ${dayGames.length} ${
                         dayGames.length === 1 ? 'game' : 'games'
-                      } on ${fmtDayHeading(dateKey)}`
-                    : `View games on ${fmtDayHeading(dateKey)}`,
+                      } on ${formatScheduleDayHeading(dateKey)}`
+                    : `View games on ${formatScheduleDayHeading(dateKey)}`,
               })}
               renderDayAction={(dateKey, dayGames) => {
                 const canHideScores = hasFinalGame(dayGames);
@@ -1427,7 +1412,7 @@ const SeasonGamesTab = ({
                         inactiveIcon="visibility_off"
                         activeTooltip="Hide scores"
                         inactiveTooltip="Show scores"
-                        ariaLabel={`${scoresHidden ? 'Show' : 'Hide'} scores for ${fmtDayHeading(dateKey)}`}
+                        ariaLabel={`${scoresHidden ? 'Show' : 'Hide'} scores for ${formatScheduleDayHeading(dateKey)}`}
                       />
                     )}
                     {!isEnded && (

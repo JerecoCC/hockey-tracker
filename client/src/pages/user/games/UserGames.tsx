@@ -55,6 +55,8 @@ import {
   DATE_ONLY_RE,
   dateKeyToDate,
   formatGameTime,
+  formatScheduleDayHeading,
+  formatScheduleDayTitleShort,
   getOriginalGameDateKey,
   getScheduledWatchDateKey,
   isInvalidWatchScheduleDate,
@@ -142,25 +144,6 @@ const toDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
 
 const MONTH_ONLY_RE = /^[0-9]{4}-[0-9]{2}$/;
-
-const fmtDayHeading = (key: string) => {
-  const [y, mo, d] = key.split('-').map(Number);
-  return new Date(y, mo - 1, d).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
-};
-
-// Day titles on phones: "Tue, 11/03".
-const fmtDayTitleShort = (key: string) => {
-  const [y, mo, d] = key.split('-').map(Number);
-  return new Date(y, mo - 1, d).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: '2-digit',
-    day: '2-digit',
-  });
-};
 
 const fmtDaySummaryDate = (key: string) => {
   const [, mo, d] = key.split('-').map(Number);
@@ -1731,7 +1714,7 @@ const UserGames = () => {
             onSelectDate={scrollToDay}
             formatDate={fmtDaySummaryDate}
             formatWeekday={fmtDaySummaryWeekday}
-            formatHeading={fmtDayHeading}
+            formatHeading={formatScheduleDayHeading}
             summaryRef={weekSummaryCardRef}
             stickyTop={USER_WEEK_SUMMARY_STICKY_TOP}
           />
@@ -1744,8 +1727,8 @@ const UserGames = () => {
             days={groupedByDate}
             loading={isLoading}
             dayRefs={dayRefs}
-            formatHeading={fmtDayHeading}
-            formatTitle={isMobileView ? fmtDayTitleShort : undefined}
+            formatHeading={formatScheduleDayHeading}
+            formatTitle={isMobileView ? formatScheduleDayTitleShort : undefined}
             renderDayAction={(dateKey) => (
               <Button
                 type="button"
@@ -1754,8 +1737,8 @@ const UserGames = () => {
                 size="medium"
                 icon="edit"
                 iconHeight="field"
-                aria-label={`Edit games to watch for ${fmtDayHeading(dateKey)}`}
-                tooltip={`Edit games to watch for ${fmtDayHeading(dateKey)}`}
+                aria-label={`Edit games to watch for ${formatScheduleDayHeading(dateKey)}`}
+                tooltip={`Edit games to watch for ${formatScheduleDayHeading(dateKey)}`}
                 disabled={isLoading}
                 onClick={() => setAddGamesDateKey(dateKey)}
               />
@@ -1859,7 +1842,7 @@ const UserGames = () => {
         <AddDayGamesModal
           key={addGamesDateKey}
           dateKey={addGamesDateKey}
-          dateLabel={fmtDayHeading(addGamesDateKey)}
+          dateLabel={formatScheduleDayHeading(addGamesDateKey)}
           favoriteTeamIds={favoriteTeamIds}
           scheduledGames={addGamesScheduledGames}
           getGameActions={getWeekGameActions}

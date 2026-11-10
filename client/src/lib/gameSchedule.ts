@@ -48,6 +48,22 @@ export const dateKeyToDate = (dateKey: string): Date => {
   return new Date(year, month - 1, day);
 };
 
+/** A schedule day's heading: "Wednesday, November 11". */
+export const formatScheduleDayHeading = (dateKey: string): string =>
+  dateKeyToDate(dateKey).toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+
+/** A schedule day's shorter title on phones: "Wed, 11/11". */
+export const formatScheduleDayTitleShort = (dateKey: string): string =>
+  dateKeyToDate(dateKey).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: '2-digit',
+    day: '2-digit',
+  });
+
 const getEasternOffset = (dateKey: string): string => {
   const timeZoneName = new Intl.DateTimeFormat('en-US', {
     timeZone: EASTERN_TIME_ZONE,

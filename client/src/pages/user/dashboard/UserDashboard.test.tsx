@@ -342,7 +342,7 @@ describe('UserDashboard', () => {
     expect(screen.getByLabelText('0 watched games')).toBeInTheDocument();
     expect(screen.queryByText('Rangers')).not.toBeInTheDocument();
     expect(screen.queryByText(/Last watched/)).not.toBeInTheDocument();
-    expect(screen.getByText('Sunday, June 21, 2026')).toBeInTheDocument();
+    expect(screen.getByText('Sunday, June 21')).toBeInTheDocument();
     expect(
       screen.getByText(
         new Date('2026-06-21T19:00:00-04:00').toLocaleTimeString('en-US', {
@@ -467,7 +467,7 @@ describe('UserDashboard', () => {
     expect(screen.getByLabelText('Override the dashboard date for testing')).toHaveValue(
       '2026-06-22',
     );
-    expect(screen.getByText('Monday, June 22, 2026')).toBeInTheDocument();
+    expect(screen.getByText('Monday, June 22')).toBeInTheDocument();
     expect(screen.queryByText('Test date')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Reset dashboard date to today' }),
@@ -476,7 +476,7 @@ describe('UserDashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
 
     expect(localStorage.getItem('admin-dashboard-date-override')).toBeNull();
-    expect(screen.getByText('Sunday, June 21, 2026')).toBeInTheDocument();
+    expect(screen.getByText('Sunday, June 21')).toBeInTheDocument();
   });
 
   it('marks a dashboard game as watched', async () => {
@@ -687,6 +687,6 @@ describe('UserDashboard', () => {
     // Today's cards show team codes.
     expect(screen.getAllByText('OTT').length).toBeGreaterThan(0);
     expect(screen.queryByText('NY')).not.toBeInTheDocument();
-    expect(screen.queryByText('No games scheduled for today.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No games scheduled.')).not.toBeInTheDocument();
   });
 });
