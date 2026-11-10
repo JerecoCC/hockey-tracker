@@ -1437,7 +1437,6 @@ const UserGames = () => {
         canOpen
         useLeagueColors
         leagueColor={getLeagueCalendarColor(game)}
-        mobileActionsAside
         scorePlaceholder={!watched && game.status === 'final' ? '?' : undefined}
         onOpen={() => openGame(game)}
         actions={

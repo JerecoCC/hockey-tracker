@@ -122,11 +122,10 @@ describe('GameCard', () => {
     expect(screen.getByText('Under review')).toHaveClass('tag', 'solid', 'warning');
   });
 
-  it('renders actions as a trailing rail and opts into the mobile aside layout', () => {
+  it('renders actions as a trailing rail', () => {
     const { container } = render(
       <GameCard
         game={{ ...game, watched_by_user: true }}
-        mobileActionsAside
         actions={<button type="button">Action</button>}
       />,
     );
@@ -134,7 +133,6 @@ describe('GameCard', () => {
     const card = container.querySelector('[data-game-card-variant="card"]');
     const actions = container.querySelector('[data-game-card-actions]');
 
-    expect(card).toHaveAttribute('data-mobile-actions-layout', 'aside');
     expect(card).toHaveClass('withActions');
     expect(actions).toHaveClass('gameActions');
     expect(card?.lastElementChild).toBe(actions);

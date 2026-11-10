@@ -80,8 +80,6 @@ const LeagueSeasonsCard = (props: Props) => {
                   phase === 'in_progress' || phase === 'playoffs',
                   isMobileView,
                 )}
-                // Phones have no hover to reveal the edit and delete buttons.
-                actionDisplay={isMobileView ? 'static' : undefined}
                 rightContent={{ type: 'tag', ...phasePresentation }}
                 actions={
                   [
