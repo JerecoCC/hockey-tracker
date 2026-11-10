@@ -1,5 +1,6 @@
 import ListItem, { type ListItemAction } from '@jerecocc/tracker-ui/components/ListItem/ListItem';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
+import Tag from '@jerecocc/tracker-ui/components/Tag/Tag';
 import { useLeagueDetailsContext } from './leagueDetailsState';
 import useScreenSize from '@/hooks/useScreenSize';
 import EmptyMessage from '@/shared/EmptyMessage/EmptyMessage';
@@ -28,7 +29,7 @@ const parseLocal = (iso: string) => {
   return new Date(y, m - 1, d);
 };
 
-const formatSeasonSubtitle = (
+const formatSeasonDates = (
   start: string | null,
   end: string | null,
   isCurrent: boolean,
@@ -67,6 +68,13 @@ const LeagueSeasonsCard = (props: Props) => {
           {seasons.map((s) => {
             const phase = getSeasonTagPhase(s);
             const phasePresentation = seasonPhasePresentation(phase);
+            const dateRange = formatSeasonDates(
+              s.start_date,
+              s.end_date,
+              phase === 'in_progress' || phase === 'playoffs',
+              isMobileView,
+            );
+            // On phones the date range moves above the name and the status tag below it.
             return (
               <ListItem
                 key={s.id}
@@ -74,13 +82,9 @@ const LeagueSeasonsCard = (props: Props) => {
                 hideImage
                 name={s.name}
                 href={getSeasonHref(s)}
-                subtitle={formatSeasonSubtitle(
-                  s.start_date,
-                  s.end_date,
-                  phase === 'in_progress' || phase === 'playoffs',
-                  isMobileView,
-                )}
-                rightContent={{ type: 'tag', ...phasePresentation }}
+                eyebrow={isMobileView ? dateRange : undefined}
+                subtitle={isMobileView ? undefined : dateRange}
+                rightContent={isMobileView ? undefined : { type: 'tag', ...phasePresentation }}
                 actions={
                   [
                     {
@@ -99,7 +103,13 @@ const LeagueSeasonsCard = (props: Props) => {
                     },
                   ] satisfies ListItemAction[]
                 }
-              />
+              >
+                {isMobileView && (
+                  <span className={styles.seasonPhaseSubtitle}>
+                    <Tag {...phasePresentation} />
+                  </span>
+                )}
+              </ListItem>
             );
           })}
         </ResponsiveList>

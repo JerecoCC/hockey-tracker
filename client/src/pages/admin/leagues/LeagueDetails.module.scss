@@ -979,6 +979,12 @@ $league-tab-list-gap: $space-md;
   gap: $league-tab-list-gap;
 }
 
+// The season status tag, shown under the season name on phones.
+.seasonPhaseSubtitle {
+  display: flex;
+  margin-top: $space-xs;
+}
+
 // Applied only when seasons.length > 5 — caps height and enables scrolling
 .seasonListLimited {
   max-height: calc(5 * (#{$font-lg} + #{$space-sm * 2}) + 4 * #{$league-tab-list-gap});
