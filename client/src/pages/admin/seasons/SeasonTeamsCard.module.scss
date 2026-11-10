@@ -60,7 +60,7 @@
   gap: $space-md;
 
   @media (max-width: $screen-phone-max) {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -70,7 +70,7 @@
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: $space-md;
   }
 
@@ -88,7 +88,7 @@
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: $space-md;
   }
 
@@ -96,12 +96,12 @@
     padding: 0;
 
     > .groupList {
-      grid-template-columns: 1fr;
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 
   &SubgroupList {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   &Item {
