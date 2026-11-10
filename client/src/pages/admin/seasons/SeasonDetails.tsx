@@ -20,6 +20,7 @@ import useBackgroundModalAction from '@/hooks/useBackgroundModalAction';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagues, { type PlayoffFormatRule } from '@/hooks/useLeagues';
+import useScreenSize from '@/hooks/useScreenSize';
 import useSeasonDetails, {
   type SeasonGroupRecord,
   type SeasonTeam,
@@ -146,6 +147,7 @@ const standingsGroupTitle = (group: Pick<SeasonGroupRecord, 'name' | 'role'>): s
 };
 
 const SeasonDetailsPage = () => {
+  const isMobileView = useScreenSize() === 'mobile';
   const {
     leagueSlug: routeLeagueSlug,
     leagueId: legacyLeagueId,
@@ -952,48 +954,63 @@ const SeasonDetailsPage = () => {
       : []),
   ];
 
-  const seasonHeader = (
+  const seasonHeaderActions = (
+    <>
+      <Button
+        type="button"
+        variant="outlined"
+        intent="neutral"
+        icon="edit"
+        size="large"
+        iconHeight="button"
+        tooltip="Edit season"
+        aria-label="Edit season"
+        onClick={() => setShowEditModal(true)}
+      />
+      {seasonMoreItems.length > 0 && (
+        <MoreActionsMenu
+          items={seasonMoreItems}
+          size="large"
+          iconHeight="button"
+        />
+      )}
+    </>
+  );
+
+  const seasonHeaderProps = {
+    logo: season.league_logo,
+    name: season.name,
+    code: season.league_code,
+    subtitle: formatDateRange(
+      season.start_date,
+      season.end_date,
+      seasonPhase === 'in_progress' || seasonPhase === 'playoffs',
+    ),
+    primaryColor: '#334155',
+    textColor: '#ffffff',
+    nameAccessory: (
+      <Tag
+        label={phasePresentation.label}
+        intent={phasePresentation.intent}
+      />
+    ),
+  };
+
+  const seasonHeader = isMobileView ? (
+    // Phones: stacked and centered, with the actions in the header's top right corner.
+    <div className={styles.seasonInfoHeaderMobile}>
+      <EntityHeader
+        {...seasonHeaderProps}
+        stackOnMobile
+      />
+      <div className={styles.seasonInfoActionsMobile}>{seasonHeaderActions}</div>
+    </div>
+  ) : (
     <EntityHeader
+      {...seasonHeaderProps}
       className={styles.seasonInfoHeader}
       actionsClassName={styles.seasonInfoActions}
-      logo={season.league_logo}
-      name={season.name}
-      code={season.league_code}
-      subtitle={formatDateRange(
-        season.start_date,
-        season.end_date,
-        seasonPhase === 'in_progress' || seasonPhase === 'playoffs',
-      )}
-      primaryColor="#334155"
-      textColor="#ffffff"
-      nameAccessory={
-        <Tag
-          label={phasePresentation.label}
-          intent={phasePresentation.intent}
-        />
-      }
-      actions={
-        <>
-          <Button
-            type="button"
-            variant="outlined"
-            intent="neutral"
-            icon="edit"
-            size="large"
-            iconHeight="button"
-            tooltip="Edit season"
-            aria-label="Edit season"
-            onClick={() => setShowEditModal(true)}
-          />
-          {seasonMoreItems.length > 0 && (
-            <MoreActionsMenu
-              items={seasonMoreItems}
-              size="large"
-              iconHeight="button"
-            />
-          )}
-        </>
-      }
+      actions={seasonHeaderActions}
     />
   );
 

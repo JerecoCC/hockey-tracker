@@ -85,6 +85,19 @@
   align-items: flex-start;
 }
 
+// Phones: the actions sit in the header's top right corner, beside the centered logo.
+.seasonInfoHeaderMobile {
+  position: relative;
+}
+
+.seasonInfoActionsMobile {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: $space-sm;
+}
+
 .leagueInfoValue {
   display: inline-block;
   max-width: 100%;
