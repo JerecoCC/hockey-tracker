@@ -1388,7 +1388,7 @@ const SeasonGamesTab = ({
                   <div className={styles.dayActions}>
                     {canHideScores && (
                       <Toggle
-                        variant="toggle"
+                        variant={isMobileView ? 'button' : 'toggle'}
                         active={!scoresHidden}
                         onActiveChange={() => toggleDayScoresHidden(dateKey)}
                         activeIcon="visibility"
