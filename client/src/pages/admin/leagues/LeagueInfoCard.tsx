@@ -1,9 +1,12 @@
+import Button from '@jerecocc/tracker-ui/components/Button/Button';
 import Card from '@jerecocc/tracker-ui/components/Card/Card';
+import ColorSwatch from '@jerecocc/tracker-ui/components/ColorSwatch/ColorSwatch';
 import Divider from '@jerecocc/tracker-ui/components/Divider/Divider';
 import EntityHeader from '@jerecocc/tracker-ui/components/EntityHeader/EntityHeader';
 import InfoItem from '@jerecocc/tracker-ui/components/InfoItem/InfoItem';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
+import useScreenSize from '@/hooks/useScreenSize';
 import { getGoogleCalendarColor } from '@/lib/googleCalendarColors';
 import styles from './LeagueDetails.module.scss';
 
@@ -111,58 +114,99 @@ const CalendarColorValue = ({ colorId }: { colorId?: number | null }) => {
   );
 };
 
-const LeagueInfoCard = ({ league, onEdit, className }: Props) => (
-  <Card className={className}>
-    <EntityHeader
-      logo={league.logo}
-      name={league.name}
-      code={league.code}
-      primaryColor={league.primary_color}
-      textColor={league.text_color}
-      onEdit={onEdit}
-      swatches={[
-        { label: 'Primary', color: league.primary_color },
-        { label: 'Text', color: league.text_color },
-      ]}
-      editIconOnly
-      stackOnMobile
-      showDivider={false}
-    />
+const LeagueInfoCard = ({ league, onEdit, className }: Props) => {
+  const isMobileView = useScreenSize() === 'mobile';
+  const swatches = [
+    { label: 'Primary', color: league.primary_color },
+    { label: 'Text', color: league.text_color },
+  ];
+  return (
+    <Card className={className}>
+      {isMobileView ? (
+        // Phones: the edit button in the header's top right corner, and the colors spread
+        // across their own row below the centered logo and name.
+        <div className={styles.infoHeaderMobile}>
+          <EntityHeader
+            logo={league.logo}
+            name={league.name}
+            code={league.code}
+            primaryColor={league.primary_color}
+            textColor={league.text_color}
+            className={styles.infoEntityHeaderMobile}
+            stackOnMobile
+            showDivider={false}
+          />
+          <Button
+            variant="outlined"
+            intent="neutral"
+            icon="edit"
+            size="large"
+            iconHeight="button"
+            tooltip="Edit"
+            aria-label="Edit"
+            tooltipClassName={styles.infoEditMobile}
+            onClick={onEdit}
+          />
+          <div className={styles.infoSwatchesMobile}>
+            {swatches.map((swatch) => (
+              <ColorSwatch
+                key={swatch.label}
+                label={swatch.label}
+                color={swatch.color}
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <EntityHeader
+          logo={league.logo}
+          name={league.name}
+          code={league.code}
+          primaryColor={league.primary_color}
+          textColor={league.text_color}
+          onEdit={onEdit}
+          swatches={swatches}
+          editIconOnly
+          stackOnMobile
+          showDivider={false}
+        />
+      )}
 
-    <Divider />
+      <Divider />
 
-    <div className={cx(styles.infoGrid, styles.infoCardGrid)}>
-      <InfoItem
-        label="Playoff Series Format"
-        value={`Best of ${league.best_of_playoff}`}
-      />
-      <InfoItem
-        label="Shootout Rounds"
-        value={`${league.best_of_shootout} rounds`}
-      />
-      <InfoItem
-        label="Goalie Min TOI"
-        value={`${league.goalie_min_regular_minutes} min`}
-      />
-      <InfoItem
-        label="Scoring System"
-        value={league.scoring_system}
-      />
-      <InfoItem
-        type="custom"
-        label="Google Calendar Color"
-      >
-        <CalendarColorValue colorId={league.google_calendar_color_id} />
-      </InfoItem>
-      <InfoItem
-        type="html"
-        label="Description"
-        value={league.description}
-        muted="No description"
-        fullWidth
-      />
-    </div>
-  </Card>
-);
+      <div className={cx(styles.infoGrid, styles.infoCardGrid)}>
+        <InfoItem
+          label="Playoff Series Format"
+          value={`Best of ${league.best_of_playoff}`}
+        />
+        <InfoItem
+          label="Shootout Rounds"
+          value={`${league.best_of_shootout} rounds`}
+        />
+        <InfoItem
+          label="Goalie Min TOI"
+          value={`${league.goalie_min_regular_minutes} min`}
+        />
+        <InfoItem
+          label="Scoring System"
+          value={league.scoring_system}
+        />
+        <InfoItem
+          type="custom"
+          label="Google Calendar Color"
+        >
+          <CalendarColorValue colorId={league.google_calendar_color_id} />
+        </InfoItem>
+        <InfoItem
+          type="html"
+          label="Description"
+          value={league.description}
+          muted="No description"
+          fullWidth
+        />
+      </div>
+    </Card>
+  );
+};
 
 export default LeagueInfoCard;
