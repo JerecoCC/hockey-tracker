@@ -357,8 +357,11 @@
     min-width: 0;
   }
 
+  // The period picker, with the more actions menu beside it.
   .mobileToolbarRow {
     display: flex;
+    align-items: center;
+    gap: $space-sm;
     width: 100%;
     min-width: 0;
   }
@@ -372,6 +375,7 @@
   }
 
   .mobilePeriodPicker.mobilePeriodPicker {
+    flex: 1 1 auto;
     width: 100%;
     min-width: 0;
   }

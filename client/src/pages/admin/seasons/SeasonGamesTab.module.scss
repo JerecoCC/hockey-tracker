@@ -50,6 +50,29 @@
   --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 }
 
+// The filters stacked full width in the phone Filters sheet, without the inline divider.
+.sheetFilters.sheetFilters {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: $space-md;
+  max-height: none;
+  margin-top: 0;
+  overflow: visible;
+  opacity: 1;
+
+  > :first-child {
+    display: none;
+  }
+
+  > * {
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto !important;
+    align-self: stretch;
+  }
+}
+
 @media (max-width: $screen-mobile-max) {
   .mobileActions {
     flex-wrap: nowrap;

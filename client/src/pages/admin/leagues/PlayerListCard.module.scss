@@ -1,0 +1,120 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+// Mirrors the player details hero card, scaled down for a list.
+.card {
+  position: relative;
+  list-style: none;
+  overflow: hidden;
+  border: 1px solid var(--app-border, #{$border});
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover,
+  &:focus-within {
+    background: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  min-height: 48px;
+  padding: $space-xs $space-sm;
+  background: var(--app-surface-subtle, rgba(255, 255, 255, 0.03));
+  border-bottom: 1px solid var(--app-border, #{$border});
+}
+
+.jersey {
+  --chip-size: 28px;
+
+  flex-shrink: 0;
+}
+
+.teamCode {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-base;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--app-text, #{$text-body});
+  @include truncate;
+}
+
+// Above the card link, so the buttons get their own taps.
+.actions {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.body {
+  display: flex;
+  align-items: center;
+  gap: $space-lg;
+  padding: $space-sm $space-md;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.firstName {
+  max-width: 100%;
+  font-size: $font-base;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--app-text-strong, #{$text-bright});
+  @include truncate;
+}
+
+.lastName {
+  max-width: 100%;
+  font-size: $font-2xl;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--app-text-strong, #{$text-bright});
+  overflow-wrap: anywhere;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space-xs;
+  margin-top: $space-sm;
+}
+
+.positionTag.positionTag {
+  padding: 2px $space-sm;
+  font-size: $font-xs;
+  font-weight: 400;
+}
+
+.note {
+  margin-top: $space-xs;
+  font-size: $font-xs;
+  color: var(--app-text-muted, #{$text-dim});
+}
+
+.link {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+
+  &:focus-visible {
+    outline: 2px solid $accent-light;
+    outline-offset: -2px;
+  }
+}

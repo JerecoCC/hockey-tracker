@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { toast, type TypeOptions } from 'react-toastify';
 import Button from '@jerecocc/tracker-ui/components/Button/Button';
+import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import Toggle from '@jerecocc/tracker-ui/components/Toggle/Toggle';
 import Section from '@jerecocc/tracker-ui/components/Section/Section';
 import CalendarGameListItem from '@/shared/CalendarGameListItem/CalendarGameListItem';
@@ -60,7 +61,11 @@ import {
   isDayAutofillStatus,
   partitionAutofillingGames,
 } from './seasonGamesAutofillUtils';
-import { isGameOverdueForFinal } from '@/lib/gameSchedule';
+import {
+  formatScheduleDayHeading,
+  formatScheduleDayTitleShort,
+  isGameOverdueForFinal,
+} from '@/lib/gameSchedule';
 import styles from './SeasonGamesTab.module.scss';
 
 import { API, authHeaders, getAggregateErrorMessage as getErrorMessage } from '@/lib/apiClient';
@@ -267,15 +272,6 @@ const toMonthPickerValue = (d: Date) =>
 const fromMonthPickerValue = (value: string) => {
   const [year, month] = value.split('-').map(Number);
   return new Date(year, month - 1, 1);
-};
-
-const fmtDayHeading = (key: string) => {
-  const [y, mo, d] = key.split('-').map(Number);
-  return new Date(y, mo - 1, d).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
 };
 
 const fmtDaySummaryDate = (key: string) => {
@@ -549,6 +545,12 @@ const SeasonGamesTab = ({
       ? SEASON_WEEK_SUMMARY_STICKY_TOP_PX
       : SEASON_WEEK_SUMMARY_TABBED_HEADER_STICKY_TOP_PX;
   const [filtersVisible, setFiltersVisible] = useState(true);
+  // Phones keep the filters in a sheet instead, so they don't push the games down.
+  const [filtersSheetOpen, setFiltersSheetOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isMobileView) setFiltersSheetOpen(false);
+  }, [isMobileView]);
   const [formOpen, setFormOpen] = useState(false);
   const [formDate, setFormDate] = useState<string | null>(null);
   const [bulkDate, setBulkDate] = useState<string | null>(null);
@@ -761,7 +763,7 @@ const SeasonGamesTab = ({
     const failures: string[] = [];
     const manualMoveReportsForRun: GameAutofillManualMoveReport[] = [];
     let filled = 0;
-    const dayLabel = fmtDayHeading(dateKey);
+    const dayLabel = formatScheduleDayHeading(dateKey);
     const nhlCandidates = candidates.filter((game) => isNhlGame(game, leagueCode));
     const needsScheduleLoad = nhlCandidates.length > 0;
     const prefillProgressSteps = needsScheduleLoad ? 1 : 0;
@@ -1205,17 +1207,46 @@ const SeasonGamesTab = ({
     </>
   );
 
+  const filtersShown = isMobileView ? filtersSheetOpen : filtersVisible;
   const filterToggle = (
     <Toggle
       variant={isMobileView ? 'button' : 'toggle'}
-      active={filtersVisible}
-      onActiveChange={() => setFiltersVisible((v) => !v)}
+      active={filtersShown}
+      onActiveChange={() =>
+        isMobileView ? setFiltersSheetOpen((open) => !open) : setFiltersVisible((v) => !v)
+      }
       icon="filter_list"
       activeTooltip="Hide filters"
       inactiveTooltip="Show filters"
-      ariaLabel={filtersVisible ? 'Hide filters' : 'Show filters'}
+      ariaLabel={filtersShown ? 'Hide filters' : 'Show filters'}
       className={styles.filterVisibilitySwitch}
     />
+  );
+
+  const filterControls = (
+    <>
+      <Select
+        value={gameTypeFilter}
+        options={GAME_TYPE_OPTIONS}
+        onChange={setGameTypeFilter}
+      />
+      <Select
+        value={statusFilter}
+        options={STATUS_FILTER_OPTIONS}
+        onChange={setStatusFilter}
+      />
+      <ScheduleFilterSlot wide>
+        <MultiSelect
+          value={teamFilter}
+          options={teamFilterOptions}
+          placeholder="All Teams"
+          emptyMessage="No teams in this season"
+          selectionLayout="scroll"
+          onChange={setTeamFilter}
+          searchable
+        />
+      </ScheduleFilterSlot>
+    </>
   );
 
   return (
@@ -1245,30 +1276,26 @@ const SeasonGamesTab = ({
               </div>
             </div>
           )}
-          <ScheduleFilters visible={filtersVisible}>
-            <Select
-              value={gameTypeFilter}
-              options={GAME_TYPE_OPTIONS}
-              onChange={setGameTypeFilter}
-            />
-            <Select
-              value={statusFilter}
-              options={STATUS_FILTER_OPTIONS}
-              onChange={setStatusFilter}
-            />
-            <ScheduleFilterSlot wide>
-              <MultiSelect
-                value={teamFilter}
-                options={teamFilterOptions}
-                placeholder="All Teams"
-                emptyMessage="No teams in this season"
-                selectionLayout="scroll"
-                onChange={setTeamFilter}
-                searchable
-              />
-            </ScheduleFilterSlot>
-          </ScheduleFilters>
+          {!isMobileView && (
+            <ScheduleFilters visible={filtersVisible}>{filterControls}</ScheduleFilters>
+          )}
         </Section>
+
+        {isMobileView && (
+          <Modal
+            open={filtersSheetOpen}
+            title="Filters"
+            onClose={() => setFiltersSheetOpen(false)}
+            hideFooter
+          >
+            <ScheduleFilters
+              visible
+              className={styles.sheetFilters}
+            >
+              {filterControls}
+            </ScheduleFilters>
+          </Modal>
+        )}
 
         {/* ── Day cards ── */}
         {view === 'list' && (
@@ -1287,7 +1314,7 @@ const SeasonGamesTab = ({
               onSelectDate={scrollToDay}
               formatDate={fmtDaySummaryDate}
               formatWeekday={fmtDaySummaryWeekday}
-              formatHeading={fmtDayHeading}
+              formatHeading={formatScheduleDayHeading}
               summaryRef={weekSummaryCardRef}
               stickyTop={`${weekSummaryStickyTopPx}px`}
             />
@@ -1326,10 +1353,10 @@ const SeasonGamesTab = ({
                     href: dayGamesPath(dateKey),
                     ariaLabel:
                       gameCount > 0
-                        ? `View ${gameCount} ${gameCount === 1 ? 'game' : 'games'} on ${fmtDayHeading(
+                        ? `View ${gameCount} ${gameCount === 1 ? 'game' : 'games'} on ${formatScheduleDayHeading(
                             dateKey,
                           )}`
-                        : `View games on ${fmtDayHeading(dateKey)}`,
+                        : `View games on ${formatScheduleDayHeading(dateKey)}`,
                   };
                 }}
                 getDayHeaderRight={({ dateKey }) => {
@@ -1359,15 +1386,16 @@ const SeasonGamesTab = ({
               days={groupedByDate}
               loading={loading}
               dayRefs={dayRefs}
-              formatHeading={fmtDayHeading}
+              formatHeading={formatScheduleDayHeading}
+              formatTitle={isMobileView ? formatScheduleDayTitleShort : undefined}
               getDayTitleLink={(dateKey, dayGames) => ({
                 href: dayGamesPath(dateKey),
                 ariaLabel:
                   dayGames.length > 0
                     ? `View ${dayGames.length} ${
                         dayGames.length === 1 ? 'game' : 'games'
-                      } on ${fmtDayHeading(dateKey)}`
-                    : `View games on ${fmtDayHeading(dateKey)}`,
+                      } on ${formatScheduleDayHeading(dateKey)}`
+                    : `View games on ${formatScheduleDayHeading(dateKey)}`,
               })}
               renderDayAction={(dateKey, dayGames) => {
                 const canHideScores = hasFinalGame(dayGames);
@@ -1377,14 +1405,14 @@ const SeasonGamesTab = ({
                   <div className={styles.dayActions}>
                     {canHideScores && (
                       <Toggle
-                        variant="toggle"
+                        variant={isMobileView ? 'button' : 'toggle'}
                         active={!scoresHidden}
                         onActiveChange={() => toggleDayScoresHidden(dateKey)}
                         activeIcon="visibility"
                         inactiveIcon="visibility_off"
                         activeTooltip="Hide scores"
                         inactiveTooltip="Show scores"
-                        ariaLabel={`${scoresHidden ? 'Show' : 'Hide'} scores for ${fmtDayHeading(dateKey)}`}
+                        ariaLabel={`${scoresHidden ? 'Show' : 'Hide'} scores for ${formatScheduleDayHeading(dateKey)}`}
                       />
                     )}
                     {!isEnded && (

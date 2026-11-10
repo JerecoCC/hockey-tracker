@@ -910,21 +910,23 @@ describe('UserGames schedule views', () => {
       expect(viewControl).toHaveClass(styles.mobileViewSegmentedControl);
       expect(viewControl).toHaveAttribute('data-full-width', 'true');
       expect(weekViewButton).toHaveAttribute('data-icon-only', 'false');
-      expect(within(weekViewButton).getByText('Week view')).toBeInTheDocument();
-      expect(within(monthViewButton).getByText('Month view')).toBeInTheDocument();
+      expect(within(weekViewButton).getByText('Week')).toBeInTheDocument();
+      expect(within(monthViewButton).getByText('Month')).toBeInTheDocument();
 
+      // The more actions menu sits beside the period picker; the filters button beside the views.
       const moreActionsButton = screen.getByRole('button', { name: 'More actions' });
       expect(moreActionsButton).toHaveAttribute('data-icon-size', '1.35rem');
       expect(moreActionsButton.parentElement).toHaveClass(styles.mobileMoreActions);
-      const mobileActions = moreActionsButton.parentElement?.parentElement;
+      const pickerRow = moreActionsButton.parentElement?.parentElement;
+      expect(pickerRow).toHaveClass(styles.mobileToolbarRow);
+      expect(pickerRow?.firstElementChild).toBe(periodPicker);
+      expect(pickerRow?.lastElementChild).toBe(moreActionsButton.parentElement);
+      const mobileActions = filtersButton.parentElement;
       const viewRow = viewControl?.closest(`.${styles.mobileToolbarViewRow}`);
       expect(mobileActions).toHaveClass(styles.mobileToolbarActions);
       expect(viewRow).toContainElement(viewControl);
-      expect(viewRow).toContainElement(mobileActions as HTMLElement);
-      expect(filtersButton.parentElement).toBe(mobileActions);
-      expect(mobileActions?.firstElementChild).toBe(filtersButton);
-      expect(mobileActions?.lastElementChild).toBe(moreActionsButton.parentElement);
       expect(viewRow?.lastElementChild).toBe(mobileActions);
+      expect(mobileActions?.children).toHaveLength(1);
 
       await user.click(moreActionsButton);
       expect(screen.getByRole('button', { name: 'Google Calendar Sync' })).toBeInTheDocument();

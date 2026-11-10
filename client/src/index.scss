@@ -128,6 +128,20 @@ button {
   line-height: 1;
 }
 
+// Tracker UI grows field-height icon buttons from 42px to 48px on phones (up to 640px),
+// icon included. Keep them at their desktop size, except ones marked
+// .field-height-on-phones (or inside one), which sit beside a field or segmented
+// control and have to match its height.
+@media (max-width: 640px) {
+  button[data-icon-height='field']:not(.field-height-on-phones, .field-height-on-phones *) {
+    --app-field-control-height: 42px;
+
+    svg {
+      font-size: 1em;
+    }
+  }
+}
+
 // Keep Tracker UI's portaled date picker as a single, non-scrolling panel.
 body > [data-placement][class*='_dropdown_']:has(> [class*='_calHeader_']) {
   // Tracker UI applies overflow inline when space is tight.

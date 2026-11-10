@@ -298,6 +298,7 @@ const PoolEditor = ({ control, slotIndex, groups }: PoolEditorProps) => {
                 intent="danger"
                 icon="delete"
                 iconHeight="field"
+                className="field-height-on-phones"
                 tooltip="Remove position"
                 aria-label="Remove position"
                 onClick={() => remove(i)}

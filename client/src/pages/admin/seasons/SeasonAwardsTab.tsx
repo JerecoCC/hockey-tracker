@@ -2023,6 +2023,7 @@ const SeasonAwardsTab = ({
                       intent="danger"
                       icon="close"
                       iconHeight="field"
+                      className="field-height-on-phones"
                       tooltip="Remove nominee"
                       aria-label={`Remove nominee ${index + 1}`}
                       disabled={nomineesSaving || nomineeDrafts.length <= 1}

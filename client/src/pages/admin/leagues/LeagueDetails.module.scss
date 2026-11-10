@@ -969,6 +969,30 @@ $league-tab-list-gap: $space-md;
   margin: $space-md 0 $space-sm;
 }
 
+// ── League info header on phones ──────────────────────────────────────────
+// The edit button sits in the header's top right corner, beside the centered logo.
+.infoHeaderMobile {
+  position: relative;
+  padding-bottom: $space-2xl;
+}
+
+.infoEntityHeaderMobile.infoEntityHeaderMobile {
+  padding-bottom: $space-lg;
+}
+
+.infoEditMobile {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+// The colors spread across their own row.
+.infoSwatchesMobile {
+  display: flex;
+  justify-content: space-around;
+  gap: $space-lg;
+}
+
 // ── Seasons list ──────────────────────────────────────────────────────────
 .seasonList {
   list-style: none;
@@ -977,6 +1001,12 @@ $league-tab-list-gap: $space-md;
   display: flex;
   flex-direction: column;
   gap: $league-tab-list-gap;
+}
+
+// The season status tag, shown under the season name on phones.
+.seasonPhaseSubtitle {
+  display: flex;
+  margin-top: $space-xs;
 }
 
 // Applied only when seasons.length > 5 — caps height and enables scrolling

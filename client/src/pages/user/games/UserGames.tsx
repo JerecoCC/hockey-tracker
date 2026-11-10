@@ -55,6 +55,8 @@ import {
   DATE_ONLY_RE,
   dateKeyToDate,
   formatGameTime,
+  formatScheduleDayHeading,
+  formatScheduleDayTitleShort,
   getOriginalGameDateKey,
   getScheduledWatchDateKey,
   isInvalidWatchScheduleDate,
@@ -142,15 +144,6 @@ const toDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
 
 const MONTH_ONLY_RE = /^[0-9]{4}-[0-9]{2}$/;
-
-const fmtDayHeading = (key: string) => {
-  const [y, mo, d] = key.split('-').map(Number);
-  return new Date(y, mo - 1, d).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
-};
 
 const fmtDaySummaryDate = (key: string) => {
   const [, mo, d] = key.split('-').map(Number);
@@ -1561,7 +1554,7 @@ const UserGames = () => {
           label: isMobileView ? (
             <>
               <Icon name="view_list" />
-              <span>Week view</span>
+              <span>Week</span>
             </>
           ) : (
             <Icon name="view_list" />
@@ -1575,7 +1568,7 @@ const UserGames = () => {
           label: isMobileView ? (
             <>
               <Icon name="calendar_month" />
-              <span>Month view</span>
+              <span>Month</span>
             </>
           ) : (
             <Icon name="calendar_month" />
@@ -1595,7 +1588,9 @@ const UserGames = () => {
           size="medium"
           iconHeight="field"
           iconSize="1.35rem"
-          wrapperClassName={isMobileView ? styles.mobileMoreActions : undefined}
+          wrapperClassName={
+            isMobileView ? `${styles.mobileMoreActions} field-height-on-phones` : undefined
+          }
           items={[
             {
               label: 'Add Personal Game',
@@ -1668,12 +1663,14 @@ const UserGames = () => {
       >
         {isMobileView ? (
           <div className={styles.mobileToolbar}>
-            <div className={styles.mobileToolbarRow}>{periodPickerControl}</div>
+            <div className={styles.mobileToolbarRow}>
+              {periodPickerControl}
+              {moreActionsControl}
+            </div>
             <div className={styles.mobileToolbarViewRow}>
               {viewSegmentedControl}
               <div className={styles.mobileToolbarActions}>
                 {filterToggle}
-                {moreActionsControl}
               </div>
             </div>
           </div>
@@ -1719,7 +1716,7 @@ const UserGames = () => {
             onSelectDate={scrollToDay}
             formatDate={fmtDaySummaryDate}
             formatWeekday={fmtDaySummaryWeekday}
-            formatHeading={fmtDayHeading}
+            formatHeading={formatScheduleDayHeading}
             summaryRef={weekSummaryCardRef}
             stickyTop={USER_WEEK_SUMMARY_STICKY_TOP}
           />
@@ -1732,7 +1729,8 @@ const UserGames = () => {
             days={groupedByDate}
             loading={isLoading}
             dayRefs={dayRefs}
-            formatHeading={fmtDayHeading}
+            formatHeading={formatScheduleDayHeading}
+            formatTitle={isMobileView ? formatScheduleDayTitleShort : undefined}
             renderDayAction={(dateKey) => (
               <Button
                 type="button"
@@ -1741,8 +1739,8 @@ const UserGames = () => {
                 size="medium"
                 icon="edit"
                 iconHeight="field"
-                aria-label={`Edit games to watch for ${fmtDayHeading(dateKey)}`}
-                tooltip={`Edit games to watch for ${fmtDayHeading(dateKey)}`}
+                aria-label={`Edit games to watch for ${formatScheduleDayHeading(dateKey)}`}
+                tooltip={`Edit games to watch for ${formatScheduleDayHeading(dateKey)}`}
                 disabled={isLoading}
                 onClick={() => setAddGamesDateKey(dateKey)}
               />
@@ -1846,7 +1844,7 @@ const UserGames = () => {
         <AddDayGamesModal
           key={addGamesDateKey}
           dateKey={addGamesDateKey}
-          dateLabel={fmtDayHeading(addGamesDateKey)}
+          dateLabel={formatScheduleDayHeading(addGamesDateKey)}
           favoriteTeamIds={favoriteTeamIds}
           scheduledGames={addGamesScheduledGames}
           getGameActions={getWeekGameActions}
