@@ -113,6 +113,13 @@
     --accordion-border-color: var(--app-border, #{$border});
   }
 
+  // Doubled to win over the accordion's own padding variable.
+  &Accordion#{&}Accordion {
+    @media (max-width: $screen-mobile-max) {
+      --accordion-body-padding: #{$space-sm};
+    }
+  }
+
   &Header {
     box-sizing: border-box;
     gap: $space-md;
@@ -123,12 +130,29 @@
   }
 
   &Label {
-    display: flex;
-    align-items: center;
-    gap: $space-sm;
+    display: block;
     min-width: 0;
     overflow: hidden;
     white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  // Phones: a tighter toggle (the header's first child) and gaps, so the name and team
+  // count fit on one row.
+  &Header#{&}Header {
+    @media (max-width: $screen-mobile-max) {
+      gap: $space-sm;
+
+      > :first-child {
+        padding-inline: $space-xs;
+      }
+
+      // A name that still doesn't fit wraps instead of being cut off.
+      .groupLabel {
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+    }
   }
 
   &TeamCount {
