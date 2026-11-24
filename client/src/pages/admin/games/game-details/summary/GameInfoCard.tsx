@@ -5,6 +5,7 @@ import InfoItem from '@jerecocc/tracker-ui/components/InfoItem/InfoItem';
 import type { GameRecord, UpdateGameInfoData } from '@/hooks/useGames';
 import GameInfoEditModal from '../GameInfoEditModal';
 import { GAME_TYPE_LABEL } from '../constants';
+import { getPostponedWatchDateKey } from '@/lib/gameSchedule';
 import {
   DATE_FMT_SHORT,
   TIME_FMT,
@@ -41,10 +42,13 @@ const GameInfoCard = ({
     game.playoff_round != null
       ? (game.playoff_round_names?.[game.playoff_round] ?? `Round ${game.playoff_round}`)
       : null;
-  const scheduledWatchDate =
-    showScheduledWatchDate && game.scheduled_for
-      ? formatScheduledDateLocal(game.scheduled_for, null)
-      : null;
+  // Only a postponed watch has a date of its own; one on the game's day just adds it to watch.
+  const postponedWatchDateKey = showScheduledWatchDate
+    ? getPostponedWatchDateKey(game, useLocalTimezone ? 'local' : 'ET')
+    : null;
+  const scheduledWatchDate = postponedWatchDateKey
+    ? formatScheduledDateLocal(game.scheduled_for, null)
+    : null;
   const leagueGameNumber =
     !showScheduledWatchDate && game.league_game_number?.trim()
       ? game.league_game_number.trim()

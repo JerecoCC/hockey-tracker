@@ -58,8 +58,10 @@ import {
   formatScheduleDayHeading,
   formatScheduleDayTitleShort,
   getOriginalGameDateKey,
+  getPostponedWatchDateKey,
   getScheduledWatchDateKey,
   isInvalidWatchScheduleDate,
+  isPostponedWatch,
   sortUserDayGames,
   type GameTimezone,
 } from '@/lib/gameSchedule';
@@ -555,7 +557,7 @@ const CalendarGameCard = ({
       : home > away
         ? 'win'
         : 'lose';
-  const postponed = !!getScheduledWatchDateKey(game.scheduled_for);
+  const postponed = isPostponedWatch(game, tzPref);
   const playoffMetaLabel = getPlayoffGameMetaLabel(game);
   // Postponed games show their original date. Other unwatched games show their scheduled start
   // in the user's timezone, or say it's not set. Other watched games have no tooltip.
@@ -1323,7 +1325,8 @@ const UserGames = () => {
 
     const originalDateKey = getOriginalGameDateKey(draggedGame, tzPref);
     const normalizedScheduleDate = originalDateKey === dateKey ? null : dateKey;
-    if (getScheduledWatchDateKey(draggedGame.scheduled_for) === normalizedScheduleDate) return;
+    // Dropping a game added to watch on its own day back there leaves it as it is.
+    if (getPostponedWatchDateKey(draggedGame, tzPref) === normalizedScheduleDate) return;
 
     await saveScheduleForGame(draggedGame, normalizedScheduleDate, { optimistic: true });
   };

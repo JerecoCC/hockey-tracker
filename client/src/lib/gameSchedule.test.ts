@@ -1,9 +1,11 @@
 import {
   getEasternDateKey,
   getOriginalGameDateKey,
+  getPostponedWatchDateKey,
   getScheduledInstant,
   getScheduledWatchDateKey,
   isInvalidWatchScheduleDate,
+  isPostponedWatch,
   sortUserDayGames,
   toDateKeyInZone,
   isGameOverdueForFinal,
@@ -79,6 +81,36 @@ describe('game schedule time utilities', () => {
 
     expect([str, nhl, srg].sort(sortUserDayGames)).toEqual([srg, str, nhl]);
     expect([nhl, srg, str].sort(sortUserDayGames)).toEqual([srg, str, nhl]);
+  });
+
+  it('only counts a watch date on another day as postponed', () => {
+    const game = { scheduled_at: '2026-11-18', scheduled_time: null };
+
+    expect(getPostponedWatchDateKey({ ...game, scheduled_for: '2026-11-18' })).toBeNull();
+    expect(isPostponedWatch({ ...game, scheduled_for: '2026-11-18' })).toBe(false);
+    expect(getPostponedWatchDateKey({ ...game, scheduled_for: '2026-11-20' })).toBe('2026-11-20');
+    expect(isPostponedWatch({ ...game, scheduled_for: null })).toBe(false);
+  });
+
+  it('orders a game added to watch on its own day like any other game, after postponed ones', () => {
+    const dayGame = (id: string, away: string, scheduledFor: string | null) => ({
+      id,
+      league_code: 'NHL',
+      away_team: { code: away },
+      home_team: { code: 'MON' },
+      scheduled_at: '2026-11-18',
+      scheduled_time: null,
+      scheduled_for: scheduledFor,
+    });
+    const postponed = { ...dayGame('p', 'ZZZ', '2026-11-18'), scheduled_at: '2026-11-17' };
+    const plain = dayGame('a', 'AAA', null);
+    const addedOnItsDay = dayGame('b', 'BBB', '2026-11-18');
+
+    expect([addedOnItsDay, plain, postponed].sort(sortUserDayGames)).toEqual([
+      postponed,
+      plain,
+      addedOnItsDay,
+    ]);
   });
 
   it('only permits watch dates after the original game date', () => {

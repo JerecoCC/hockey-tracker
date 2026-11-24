@@ -13,6 +13,7 @@ import {
   formatGameTime,
   getOriginalGameDateKey,
   getScheduledWatchDateKey,
+  isPostponedWatch as isPostponedWatchGame,
   type GameTimezone,
 } from '@/lib/gameSchedule';
 import { GAME_STATUS_TAG_INTENT, getOvertimeSuffix } from '@/lib/gamePresentation';
@@ -138,13 +139,6 @@ const getStatusLabel = (game: GameRecord, revealResult = true) => {
   if (game.status === 'in_progress') return 'LIVE';
   if (game.status === 'final') return `FINAL${revealResult ? getOvertimeSuffix(game) : ''}`;
   return game.status.replace(/_/g, ' ').toUpperCase();
-};
-
-/** True when the viewer moved watching this game to a day other than its game day. */
-const isPostponedWatchGame = (game: GameRecord, tzPref: GameTimezone) => {
-  const watchDateKey = getScheduledWatchDateKey(game.scheduled_for);
-  const originalDateKey = getOriginalGameDateKey(game, tzPref);
-  return !!watchDateKey && !!originalDateKey && watchDateKey !== originalDateKey;
 };
 
 /**

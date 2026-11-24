@@ -18,6 +18,7 @@ import {
   getOriginalGameDateKey,
   getScheduledInstant,
   getScheduledWatchDateKey,
+  isPostponedWatch,
 } from '@/lib/gameSchedule';
 import styles from './AddDayGamesModal.module.scss';
 
@@ -26,12 +27,6 @@ const ORIGINAL_DATE_FMT = new Intl.DateTimeFormat('en-US', {
   day: '2-digit',
   year: 'numeric',
 });
-
-const isPostponedGame = (game: GameRecord) => {
-  const watchDate = getScheduledWatchDateKey(game.scheduled_for);
-  const originalDate = getOriginalGameDateKey(game, 'local');
-  return !!watchDate && !!originalDate && watchDate !== originalDate;
-};
 
 const getOriginalDateLabel = (game: GameRecord) => {
   const dateKey = getOriginalGameDateKey(game, 'local');
@@ -135,7 +130,7 @@ const AddDayGamesModal = ({
       (isWatching ? gamesToWatch : otherGames).push(game);
     }
     gamesToWatch.sort(
-      (a, b) => Number(isPostponedGame(b)) - Number(isPostponedGame(a)) || sortGamesByTime(a, b),
+      (a, b) => Number(isPostponedWatch(b)) - Number(isPostponedWatch(a)) || sortGamesByTime(a, b),
     );
     return [gamesToWatch, otherGames];
   }, [availableGames, favoriteTeamIds, locallyAddedIds, scheduledIds]);
@@ -246,7 +241,7 @@ const AddDayGamesModal = ({
                             </div>
                           </div>
                           <span className={styles.time}>
-                            {isPostponedGame(game)
+                            {isPostponedWatch(game)
                               ? getOriginalDateLabel(game)
                               : game.scheduled_time
                                 ? formatGameTime(game.scheduled_at, game.scheduled_time, 'local')
