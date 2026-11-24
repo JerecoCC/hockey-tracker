@@ -1208,6 +1208,40 @@ describe('UserGames schedule views', () => {
     expect(calendarGameItem).toHaveStyle('--game-league-primary: #039be5');
   });
 
+  it("opens a day edit modal from a Month view day with that day's games", async () => {
+    const user = userEvent.setup();
+    let availableGamesDateKey: string | undefined;
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+      if (queryKey[0] === 'user-dashboard-available-games') {
+        availableGamesDateKey = queryKey[1];
+        return { data: [], isLoading: false, isError: false };
+      }
+      if (queryKey[0] === 'user-games') return { data: games, isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+    const day = screen.getByLabelText(`Calendar day ${scheduledWatchDate}`);
+    await user.click(
+      within(day).getByRole('button', {
+        name: `Edit games to watch for ${formatHeading(scheduledWatchDate)}`,
+      }),
+    );
+
+    const modal = screen.getByRole('dialog', { name: 'Edit games to watch' });
+    expect(availableGamesDateKey).toBe(scheduledWatchDate);
+    const gamesToWatch = within(modal).getByRole('list', { name: 'Games to Watch' });
+    expect(
+      within(gamesToWatch).getByRole('listitem', { name: 'Away Team at Home Team' }),
+    ).toBeInTheDocument();
+  });
+
   it('opens a day edit modal in Week view and adds games to the current schedule cache', async () => {
     const user = userEvent.setup();
     const weekQueryKey = [
