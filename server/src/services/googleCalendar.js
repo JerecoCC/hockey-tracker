@@ -329,12 +329,25 @@ const normalizeCalendarTime = (value) => {
   return `${match[1]}:${match[2]}:${match[3] || '00'}`;
 };
 
+/**
+ * The watch date when it moves the game to another day, otherwise null. A watch date on the
+ * game's own day (its Eastern date, or its date in the calendar's time zone) only adds the game
+ * to the user's schedule, so it isn't treated as postponed.
+ */
+const postponedWatchDateForGame = (game, requestedTimeZone) => {
+  if (!game.scheduled_for) return null;
+  if (game.scheduled_for === game.game_date) return null;
+  if (game.scheduled_for === originalScheduleDateForGame(game, requestedTimeZone)) return null;
+  return game.scheduled_for;
+};
+
 const eventTimeForGame = (game, requestedTimeZone) => {
   const timeZone = normalizeGoogleCalendarTimeZone(requestedTimeZone);
-  if (game.scheduled_for) {
+  const postponedWatchDate = postponedWatchDateForGame(game, timeZone);
+  if (postponedWatchDate) {
     return {
-      start: { date: game.scheduled_for },
-      end: { date: addOneDay(game.scheduled_for) },
+      start: { date: postponedWatchDate },
+      end: { date: addOneDay(postponedWatchDate) },
     };
   }
 
@@ -416,7 +429,7 @@ const eventForGame = ({ userId, game, timeZone }) => {
   const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').trim().replace(/\/$/, '');
   const matchup = `${game.away_code || 'Away'} @ ${game.home_code || 'Home'}`;
   const eventTime = eventTimeForGame(game, timeZone);
-  const originalScheduleDate = game.scheduled_for
+  const originalScheduleDate = postponedWatchDateForGame(game, timeZone)
     ? originalScheduleDateForGame(game, timeZone)
     : null;
   const originalScheduleNote = originalScheduleDate

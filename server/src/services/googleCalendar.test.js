@@ -258,6 +258,27 @@ describe('Google Calendar service helpers', () => {
     expect(event.description).toContain('Original game date: January 1, 2027.');
   });
 
+  it.each([
+    ['its Eastern date', '2026-12-31'],
+    ['its date in the calendar time zone', '2027-01-01'],
+  ])('keeps the game time for a watch date on %s', (_label, scheduledFor) => {
+    const event = eventForGame({
+      userId: 'user-1',
+      timeZone: 'Asia/Manila',
+      game: {
+        id: 'game-1',
+        game_date: '2026-12-31',
+        calendar_date: scheduledFor,
+        scheduled_for: scheduledFor,
+        scheduled_time: '19:30',
+      },
+    });
+
+    expect(event.start).toEqual({ dateTime: '2027-01-01T08:30:00', timeZone: 'Asia/Manila' });
+    expect(event.end).toEqual({ dateTime: '2027-01-01T11:30:00', timeZone: 'Asia/Manila' });
+    expect(event.description).not.toContain('Original game date');
+  });
+
   it('rejects invalid IANA timezones', () => {
     expect(() => normalizeGoogleCalendarTimeZone('Mars/Olympus_Mons')).toThrow(
       'Invalid calendar time zone',
