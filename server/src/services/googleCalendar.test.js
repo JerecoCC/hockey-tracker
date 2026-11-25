@@ -16,6 +16,7 @@ const {
     calendarGameSelect,
     eventForGame,
     eventIdForGame,
+    eventMatches,
     googleRequest,
     gameIsAfterToday,
     gameIsInSyncWindow,
@@ -412,7 +413,7 @@ describe('Google Calendar service helpers', () => {
         now: new Date('2026-01-01T17:00:00Z'),
         writeIntervalMs: 0,
       }),
-    ).resolves.toEqual({ status: 'synced', synced: 1, removed: 1 });
+    ).resolves.toEqual({ status: 'synced', synced: 1, removed: 1, unchanged: 0 });
 
     expect(global.fetch).toHaveBeenCalledTimes(3);
     expect(global.fetch).toHaveBeenNthCalledWith(
@@ -470,13 +471,112 @@ describe('Google Calendar service helpers', () => {
         now: new Date('2026-01-01T17:00:00Z'),
         writeIntervalMs: 0,
       }),
-    ).resolves.toEqual({ status: 'synced', synced: 0, removed: 1 });
+    ).resolves.toEqual({ status: 'synced', synced: 0, removed: 1, unchanged: 0 });
 
     expect(global.fetch).toHaveBeenCalledTimes(2);
     expect(global.fetch).toHaveBeenLastCalledWith(
       expect.stringContaining(`/events/${eventIdForGame('user-1', 'skipped-game')}`),
       expect.objectContaining({ method: 'DELETE' }),
     );
+  });
+
+  describe('unchanged events', () => {
+    const timedGame = {
+      id: 'game-timed',
+      game_date: '2026-12-31',
+      calendar_date: '2026-12-31',
+      scheduled_time: '19:30',
+      away_code: 'AWY',
+      home_code: 'HOM',
+      league_code: 'NHL',
+      has_season: true,
+    };
+    const allDayGame = {
+      id: 'game-all-day',
+      game_date: '2026-12-30',
+      calendar_date: '2027-01-02',
+      scheduled_for: '2027-01-02',
+      scheduled_time: '19:00',
+      away_code: 'DAY',
+      home_code: 'ALL',
+      league_code: 'NHL',
+      has_season: true,
+    };
+    // The event as Google lists it back: timed starts and ends carry an offset.
+    const asListedByGoogle = (event) => {
+      const withOffset = (time) =>
+        time.dateTime ? { ...time, dateTime: `${time.dateTime}-05:00` } : time;
+      return { ...event, start: withOffset(event.start), end: withOffset(event.end) };
+    };
+
+    it('matches an event Google lists back unchanged, and not one that changed', () => {
+      const timed = eventForGame({ userId: 'user-1', game: timedGame });
+      const allDay = eventForGame({ userId: 'user-1', game: allDayGame });
+
+      expect(eventMatches(asListedByGoogle(timed), timed)).toBe(true);
+      expect(eventMatches(asListedByGoogle(allDay), allDay)).toBe(true);
+      expect(eventMatches(undefined, timed)).toBe(false);
+      expect(eventMatches({ ...asListedByGoogle(timed), summary: 'OLD @ HOM · NHL' }, timed)).toBe(
+        false,
+      );
+      expect(
+        eventMatches(
+          {
+            ...asListedByGoogle(timed),
+            start: { dateTime: '2026-12-31T20:00:00-05:00', timeZone: 'America/New_York' },
+          },
+          timed,
+        ),
+      ).toBe(false);
+      expect(
+        eventMatches({ ...asListedByGoogle(allDay), start: { date: '2027-01-03' } }, allDay),
+      ).toBe(false);
+    });
+
+    it('only writes the games whose event changed during a full sync', async () => {
+      const onProgress = jest.fn();
+      const changedGame = { ...timedGame, id: 'game-changed', away_code: 'NEW' };
+      sql.mockResolvedValueOnce([timedGame, allDayGame, changedGame]).mockResolvedValueOnce([]);
+      global.fetch = jest
+        .fn()
+        .mockResolvedValueOnce(
+          mockGoogleResponse(200, {
+            items: [
+              asListedByGoogle(eventForGame({ userId: 'user-1', game: timedGame })),
+              asListedByGoogle(eventForGame({ userId: 'user-1', game: allDayGame })),
+              asListedByGoogle(
+                eventForGame({ userId: 'user-1', game: { ...changedGame, away_code: 'OLD' } }),
+              ),
+            ],
+          }),
+        )
+        .mockResolvedValueOnce(mockGoogleResponse(200, { status: 'confirmed' }));
+
+      await expect(
+        syncAllScheduledGamesForUser('user-1', {
+          connection: { calendar_id: 'calendar-1', refresh_token_encrypted: 'unused' },
+          accessToken: 'access-token',
+          onProgress,
+          now: new Date('2026-12-01T17:00:00Z'),
+          writeIntervalMs: 0,
+        }),
+      ).resolves.toEqual({ status: 'synced', synced: 1, removed: 0, unchanged: 2 });
+
+      expect(global.fetch).toHaveBeenCalledTimes(2);
+      expect(global.fetch).toHaveBeenLastCalledWith(
+        expect.stringContaining(`/events/${eventIdForGame('user-1', 'game-changed')}`),
+        expect.objectContaining({
+          method: 'PUT',
+          body: expect.stringContaining('NEW @ HOM'),
+        }),
+      );
+      expect(onProgress).toHaveBeenCalledWith({
+        step: 'sync',
+        message: 'Syncing 1 calendar change...',
+        completed: 0,
+        total: 1,
+      });
+    });
   });
 
   describe('single game sync', () => {

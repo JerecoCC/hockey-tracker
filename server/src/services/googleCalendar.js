@@ -471,6 +471,36 @@ const calendarIsAccessible = async (accessToken, calendarId) => {
   }
 };
 
+// Google returns a timed event's dateTime with an offset ("...T19:00:00-05:00") while events are
+// written as wall-clock time in their timeZone, so timed starts and ends compare as instants.
+const eventTimeMatches = (existing, wanted) => {
+  if (!existing) return false;
+  if (wanted.date) return existing.date === wanted.date && !existing.dateTime;
+  if (!existing.dateTime || existing.date) return false;
+  if (existing.timeZone && existing.timeZone !== wanted.timeZone) return false;
+  const [dateKey, time] = wanted.dateTime.split('T');
+  return (
+    Date.parse(existing.dateTime) ===
+    zonedDateTimeToInstant(dateKey, time, wanted.timeZone).getTime()
+  );
+};
+
+/**
+ * Whether an event already on the calendar shows what this sync would write, so it can be left
+ * alone. Anything that differs (or that Google returns in an unexpected shape) is rewritten.
+ */
+const eventMatches = (existing, wanted) =>
+  Boolean(existing) &&
+  existing.status === wanted.status &&
+  existing.summary === wanted.summary &&
+  existing.description === wanted.description &&
+  (existing.transparency || 'opaque') === wanted.transparency &&
+  (existing.colorId || null) === (wanted.colorId || null) &&
+  existing.source?.title === wanted.source.title &&
+  existing.source?.url === wanted.source.url &&
+  eventTimeMatches(existing.start, wanted.start) &&
+  eventTimeMatches(existing.end, wanted.end);
+
 const upsertGameEvent = async ({
   accessToken,
   calendarId,
@@ -478,8 +508,8 @@ const upsertGameEvent = async ({
   game,
   timeZone,
   eventExists,
+  event = eventForGame({ userId, game, timeZone }),
 }) => {
-  const event = eventForGame({ userId, game, timeZone });
   const eventUrl = calendarUrl(calendarId, `/events/${encodeURIComponent(event.id)}`);
   const updateEvent = () => googleRequest(eventUrl, { accessToken, method: 'PUT', body: event });
   const insertEvent = () =>
@@ -823,7 +853,16 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
       accessToken,
       calendarId: connection.calendar_id,
     });
-    const existingEventIds = new Set(existingEvents.map((event) => event.id).filter(Boolean));
+    const existingEventsById = new Map(
+      existingEvents.filter((event) => event.id).map((event) => [event.id, event]),
+    );
+    // Only games whose event is missing or out of date are written, so a resync after a few
+    // changes makes a few requests rather than rewriting every game on the calendar.
+    const changedGames = games.flatMap((game) => {
+      const event = eventForGame({ userId, game, timeZone });
+      const existing = existingEventsById.get(event.id);
+      return eventMatches(existing, event) ? [] : [{ game, event, eventExists: !!existing }];
+    });
     const staleGameIds = [
       ...new Set(
         existingEvents
@@ -831,7 +870,7 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
           .filter((gameId) => gameId && !calendarGameIds.has(gameId)),
       ),
     ];
-    const operationCount = games.length + staleGameIds.length;
+    const operationCount = changedGames.length + staleGameIds.length;
     const progressTotal = Math.max(operationCount, 1);
     const writeIntervalMs = Number.isFinite(context.writeIntervalMs)
       ? Math.max(0, context.writeIntervalMs)
@@ -848,14 +887,15 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
       total: progressTotal,
     });
 
-    for (const game of games) {
+    for (const { game, event, eventExists } of changedGames) {
       await upsertGameEvent({
         accessToken,
         calendarId: connection.calendar_id,
         userId,
         game,
         timeZone,
-        eventExists: existingEventIds.has(eventIdForGame(userId, game.id)),
+        eventExists,
+        event,
       });
       completed += 1;
       reportProgress({
@@ -893,7 +933,12 @@ const syncAllScheduledGamesForUser = async (userId, context = {}) => {
       completed: progressTotal,
       total: progressTotal,
     });
-    return { status: 'synced', synced: games.length, removed };
+    return {
+      status: 'synced',
+      synced: changedGames.length,
+      removed,
+      unchanged: games.length - changedGames.length,
+    };
   } catch (err) {
     await markSyncError(userId, err);
     throw err;
@@ -1020,6 +1065,7 @@ module.exports = {
     encryptRefreshToken,
     eventForGame,
     eventIdForGame,
+    eventMatches,
     eventTimeForGame,
     gameIsAfterToday,
     gameIsInSyncWindow,

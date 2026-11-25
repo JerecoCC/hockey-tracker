@@ -97,7 +97,10 @@ const startSyncProgressToast = () => {
     },
     finish: (result: GoogleCalendarSyncResult) => {
       toast.update(toastId, {
-        render: `Google Calendar synced: ${result.synced} ${result.synced === 1 ? 'game' : 'games'}, ${result.removed} removed`,
+        render:
+          result.synced + result.removed === 0
+            ? 'Google Calendar is already up to date'
+            : `Google Calendar synced: ${result.synced} ${result.synced === 1 ? 'game' : 'games'} updated, ${result.removed} removed`,
         type: 'success',
         isLoading: false,
         autoClose: 4000,

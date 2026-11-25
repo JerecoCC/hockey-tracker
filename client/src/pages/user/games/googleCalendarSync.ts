@@ -1,7 +1,10 @@
 export interface GoogleCalendarSyncResult {
   status: 'synced';
+  /** Games whose event was added or updated. */
   synced: number;
   removed: number;
+  /** Games whose event was already up to date, so it wasn't rewritten. */
+  unchanged?: number;
 }
 
 export interface GoogleCalendarSyncProgress {

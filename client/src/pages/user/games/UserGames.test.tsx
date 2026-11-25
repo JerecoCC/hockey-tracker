@@ -1095,7 +1095,7 @@ describe('UserGames schedule views', () => {
     expect(toast.update).toHaveBeenCalledWith(
       'google-sync-toast',
       expect.objectContaining({
-        render: 'Google Calendar synced: 2 games, 0 removed',
+        render: 'Google Calendar synced: 2 games updated, 0 removed',
         type: 'success',
         progress: 1,
       }),
