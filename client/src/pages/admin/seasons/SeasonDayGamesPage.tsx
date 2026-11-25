@@ -108,7 +108,11 @@ const isDayAutofillCandidate = (
   hasGameStarted(game, now) &&
   (game.status === 'scheduled' ||
     game.status === 'in_progress' ||
-    (game.status === 'final' && (!game.time_start || !game.time_end)));
+    // NHL auto-fill also completes a final game missing its start or end time. PWHL auto-fill
+    // only records the result, so a final PWHL game has nothing left to fill.
+    (game.status === 'final' &&
+      getAutofillLeagueCode(game, leagueCode) === 'NHL' &&
+      (!game.time_start || !game.time_end)));
 
 const fetchNhlScheduleIndex = async (dateKey: string) => {
   const { data } = await axios.get<NhlScheduleResponse>(`${API}/admin/games/nhl-api`, {

@@ -16,9 +16,11 @@ import styles from './GameDetailsPage.module.scss';
 interface GameAutofillResult {
   summary: {
     gameId: string;
-    goalsCreated: number;
-    rosterPlayers: number;
+    goalsCreated?: number;
+    rosterPlayers?: number;
   };
+  /** What was filled, for the success toast; defaults to the goal and roster counts. */
+  message?: string;
   warnings: string[];
 }
 
@@ -163,7 +165,9 @@ const GameAutofillProviderModal = ({
       });
       await flushGameDetailRefresh();
       await queryClient.invalidateQueries({ queryKey: ['games'] });
-      const successMessage = `Filled ${provider.leagueLabel} game ${result.summary.gameId}: ${result.summary.goalsCreated} goals, ${result.summary.rosterPlayers} roster players.`;
+      const successMessage =
+        result.message ??
+        `Filled ${provider.leagueLabel} game ${result.summary.gameId}: ${result.summary.goalsCreated ?? 0} goals, ${result.summary.rosterPlayers ?? 0} roster players.`;
       progressToast.finish(
         result.warnings.length > 0 ? 'warning' : 'success',
         result.warnings.length > 0
