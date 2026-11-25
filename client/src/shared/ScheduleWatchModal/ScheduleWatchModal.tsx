@@ -6,6 +6,7 @@ import Modal from '@jerecocc/tracker-ui/components/Modal/Modal';
 import type { GameRecord } from '@/hooks/useGames';
 import {
   getOriginalGameDateKey,
+  getPostponedWatchDateKey,
   getScheduledWatchDateKey,
   isInvalidWatchScheduleDate,
 } from '@/lib/gameSchedule';
@@ -40,10 +41,9 @@ const ScheduleWatchModal = ({ open, game, value, busy, onChange, onClose, onSave
   const postponedTo = pickedDate && pickedDate !== gameDateKey ? pickedDate : '';
   // Save is offered once the date differs from the game's saved postponement. Comparing with the
   // save rather than the form's own start lets a modal reopened after a failed save (holding the
-  // unsaved date) be saved again straight away.
-  const changed = game
-    ? postponedTo !== (getScheduledWatchDateKey(game.scheduled_for) ?? '')
-    : false;
+  // unsaved date) be saved again straight away. A game added to watch on its own day isn't
+  // postponed.
+  const changed = game ? postponedTo !== (getPostponedWatchDateKey(game, 'local') ?? '') : false;
 
   // Initialise the form only when the modal opens (or the target game changes).
   // Depending on `value` here would reset the form on every date pick.

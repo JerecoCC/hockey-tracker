@@ -6,589 +6,226 @@ jest.mock('axios');
 
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
-type MockPostBody = {
-  players?: Array<Record<string, unknown>>;
-  team_id?: string;
-  [key: string]: unknown;
-};
-
 const game = {
   id: 'game-1',
   season_id: 'season-1',
   league_id: 'league-pwhl',
   league_code: 'PWHL',
-  league_name: 'PWHL',
-  season_name: '2025-26',
   game_type: 'regular',
   status: 'scheduled',
   scheduled_at: '2025-11-21T12:00:00Z',
   scheduled_time: '19:00',
-  venue: null,
-  time_start: null,
-  time_end: null,
-  home_team: {
-    id: 'min-team',
-    name: 'Minnesota Frost',
-    code: 'MIN',
-    logo: null,
-    primary_color: '#211c36',
-    secondary_color: '#6aa7c8',
-    text_color: '#ffffff',
-  },
-  away_team: {
-    id: 'tor-team',
-    name: 'Toronto Sceptres',
-    code: 'TOR',
-    logo: null,
-    primary_color: '#143c2c',
-    secondary_color: '#d6b36a',
-    text_color: '#ffffff',
-  },
+  home_team: { id: 'min-team', name: 'Minnesota Frost', code: 'MIN' },
+  away_team: { id: 'tor-team', name: 'Toronto Sceptres', code: 'TOR' },
   overtime_periods: null,
   shootout: false,
-  shootout_first_team_id: null,
   playoff_series_id: null,
   game_number_in_series: null,
   game_number: null,
   league_game_number: null,
-  playoff_round: null,
-  series_home_team_id: null,
-  series_away_team_id: null,
-  series_home_wins: null,
-  series_away_wins: null,
-  series_games_to_win: null,
-  notes: null,
-  created_at: '2025-11-01T00:00:00Z',
-  current_period: '1',
-  period_scores: [],
-  period_shots: [],
-  star_1_id: null,
-  star_2_id: null,
-  star_3_id: null,
-  best_of_shootout: 3,
 } as unknown as GameRecord;
 
-const player = (
-  id: number,
-  firstName: string,
-  lastName: string,
-  jerseyNumber: number,
-  position: string,
-  stats: Record<string, unknown> = {},
-  starting = 0,
+// PWHL's game summary, trimmed to what the auto-fill reads. Team `goals` is the final score,
+// a shootout win counting as one goal.
+const pwhlSummary = (
+  overrides: {
+    details?: Record<string, unknown>;
+    awayGoals?: number | null;
+    homeGoals?: number | null;
+    periods?: number;
+    hasShootout?: boolean;
+    awayCode?: string;
+  } = {},
 ) => ({
-  info: {
-    id,
-    firstName,
-    lastName,
-    jerseyNumber,
-    position,
-    birthDate: '',
-    playerImageURL: `https://assets.leaguestat.com/pwhl/120x160/${id}.jpg`,
-  },
-  stats,
-  starting,
-  status: '',
-});
-
-const summary = {
   details: {
     id: 210,
     date: 'Friday, November 21, 2025',
     gameNumber: '1',
-    venue: 'Grand Casino Arena | St. Paul',
-    startTime: '6:21 pm EST',
-    endTime: '8:38 pm EST',
     started: '1',
     final: '1',
     status: 'Final',
-    seasonId: '8',
     GameDateISO8601: '2025-11-21T19:00:00-05:00',
+    ...overrides.details,
   },
-  hasShootout: false,
+  hasShootout: overrides.hasShootout ?? false,
   visitingTeam: {
-    info: { id: 6, name: 'Toronto Sceptres', abbreviation: 'TOR' },
-    skaters: [player(317, 'Kiara', 'Zanon', 11, 'LW', { toi: '9:43' })],
-    goalies: [
-      player(211, 'Raygan', 'Kirk', 1, 'G', {
-        timeOnIce: '59:35',
-        shotsAgainst: 31,
-        goalsAgainst: 1,
-        saves: 30,
-      }, 1),
-    ],
-    goalieLog: [
-      {
-        info: player(211, 'Raygan', 'Kirk', 1, 'G').info,
-        stats: { timeOnIce: '59:35', shotsAgainst: 31, goalsAgainst: 1, saves: 30 },
-        periodStart: { id: '1' },
-        timeStart: '0:00',
-        periodEnd: { id: '3' },
-        timeEnd: '20:00',
-      },
-    ],
+    info: { id: 6, name: 'Toronto Sceptres', abbreviation: overrides.awayCode ?? 'TOR' },
+    stats: { goals: overrides.awayGoals === undefined ? 2 : overrides.awayGoals },
   },
   homeTeam: {
     info: { id: 2, name: 'Minnesota Frost', abbreviation: 'MIN' },
-    skaters: [
-      player(20, 'Kendall', 'Coyne Schofield', 26, 'LW', { shots: 2, toi: '17:03' }),
-      player(23, 'Kelly', 'Pannek', 12, 'C', { assists: 1, toi: '15:50' }),
-    ],
-    goalies: [
-      player(123, 'Maddie', 'Rooney', 35, 'G', {
-        timeOnIce: '58:48',
-        shotsAgainst: 19,
-        goalsAgainst: 2,
-        saves: 17,
-      }, 1),
-    ],
-    goalieLog: {
-      info: player(123, 'Maddie', 'Rooney', 35, 'G').info,
-      stats: { timeOnIce: '58:48', shotsAgainst: 19, goalsAgainst: 2, saves: 17 },
-      periodStart: { id: '1' },
-      timeStart: '0:00',
-      periodEnd: { id: '3' },
-      timeEnd: '18:48',
-    },
+    stats: { goals: overrides.homeGoals === undefined ? 1 : overrides.homeGoals },
   },
-  periods: [
-    {
-      info: { id: '1', shortName: '1', longName: '1st' },
-      stats: { homeGoals: '1', homeShots: '11', visitingGoals: '0', visitingShots: '6' },
-      goals: [
-        {
-          game_goal_id: '1058',
-          team: { id: 2, abbreviation: 'MIN' },
-          period: { id: '1' },
-          time: '4:00',
-          scoredBy: player(20, 'Kendall', 'Coyne Schofield', 26, 'LW').info,
-          assists: [player(23, 'Kelly', 'Pannek', 12, 'C').info],
-          properties: {
-            isPowerPlay: '0',
-            isShortHanded: '0',
-            isEmptyNet: '0',
-            isPenaltyShot: '0',
-          },
-        },
-      ],
-    },
-    {
-      info: { id: '2', shortName: '2', longName: '2nd' },
-      stats: { homeGoals: '0', homeShots: '8', visitingGoals: '0', visitingShots: '8' },
-      goals: [],
-    },
-    {
-      info: { id: '3', shortName: '3', longName: '3rd' },
-      stats: { homeGoals: '0', homeShots: '12', visitingGoals: '0', visitingShots: '5' },
-      goals: [],
-    },
-  ],
-  mostValuablePlayers: [
-    { player: { info: player(211, 'Raygan', 'Kirk', 1, 'G').info } },
-    { player: { info: player(20, 'Kendall', 'Coyne Schofield', 26, 'LW').info } },
-    { player: { info: player(317, 'Kiara', 'Zanon', 11, 'LW').info } },
-  ],
-};
+  periods: Array.from({ length: overrides.periods ?? 3 }, (_, index) => ({
+    info: { id: String(index + 1) },
+  })),
+});
 
 describe('autofillGameFromPwhlGamecenter', () => {
-  let extraPlayers: Array<Record<string, unknown>>;
-  let createdPlayerStore: Map<string, Record<string, unknown>>;
-  let leagueRosterPlayers: Array<Record<string, unknown>>;
-  let currentSummary: typeof summary;
-  let seasonGamesData: GameRecord[];
+  let summary: ReturnType<typeof pwhlSummary>;
+  let seasonGames: GameRecord[];
 
   beforeEach(() => {
     jest.clearAllMocks();
     localStorage.setItem('token', 'token');
-    extraPlayers = [];
-    createdPlayerStore = new Map();
-    leagueRosterPlayers = [];
-    currentSummary = summary;
-    seasonGamesData = [game];
+    summary = pwhlSummary();
+    seasonGames = [game];
 
     mockedAxios.get.mockImplementation((url, config) => {
       const u = String(url);
       if (u.endsWith('/admin/games/pwhl-api')) {
-        const targetUrl = String(config?.params?.url ?? '');
-        if (targetUrl.includes('view=gameSummary')) return Promise.resolve({ data: currentSummary });
-        if (targetUrl.includes('view=gameCenterPlayByPlay')) return Promise.resolve({ data: [] });
+        expect(String(config?.params?.url)).toContain('view=gameSummary');
+        return Promise.resolve({ data: summary });
       }
-      if (u.includes('/admin/games?season_id=')) return Promise.resolve({ data: seasonGamesData });
-      if (u.endsWith('/admin/games/game-1/goals')) return Promise.resolve({ data: [] });
-      if (u.endsWith('/admin/games/game-1/goalie-stints')) return Promise.resolve({ data: [] });
-      if (u.endsWith('/admin/games/game-1/roster')) return Promise.resolve({ data: [] });
-      if (u.endsWith('/admin/players')) {
-        if (config?.params?.league_id && !config?.params?.team_id) {
-          return Promise.resolve({ data: leagueRosterPlayers });
-        }
-        return Promise.resolve({
-          data: extraPlayers.filter((row) => row.team_id === config?.params?.team_id),
-        });
-      }
+      if (u.includes('/admin/games?season_id=')) return Promise.resolve({ data: seasonGames });
       return Promise.reject(new Error(`Unexpected GET ${url}`));
     });
+    mockedAxios.patch.mockResolvedValue({ data: {} });
+  });
 
-    mockedAxios.post.mockImplementation((url, body) => {
-      const u = String(url);
-      const postBody = (body ?? {}) as MockPostBody;
-      if (u.endsWith('/admin/players/bulk')) {
-        const created = (postBody.players ?? []).map((row) => {
-          const id = `auto-${row.league_player_number}`;
-          createdPlayerStore.set(id, row);
-          return { id };
-        });
-        return Promise.resolve({ data: { created } });
-      }
-      if (u.endsWith('/admin/player-teams/bulk')) {
-        for (const row of postBody.players ?? []) {
-          const playerId = String(row.player_id ?? '');
-          const playerRecord = createdPlayerStore.get(playerId) ?? {};
-          extraPlayers.push({
-            id: playerId,
-            team_id: postBody.team_id,
-            jersey_number: row.jersey_number,
-            league_player_number: playerRecord.league_player_number,
-            first_name: playerRecord.first_name,
-            last_name: playerRecord.last_name,
-            position: playerRecord.position,
-          });
-        }
-        return Promise.resolve({ data: { created: postBody.players ?? [], skipped: 0 } });
-      }
-      if (u.endsWith('/admin/player-teams/trade')) {
-        // Apply the move so the next roster read sees the player on the new team.
-        const player =
-          leagueRosterPlayers.find((leaguePlayer) => leaguePlayer.id === postBody.player_id) ?? {};
-        extraPlayers.push({
-          id: postBody.player_id,
-          team_id: postBody.to_team_id,
-          jersey_number: postBody.jersey_number,
-          league_player_number: player.league_player_number,
-          first_name: player.first_name,
-          last_name: player.last_name,
-          position: postBody.position,
-        });
-        leagueRosterPlayers = leagueRosterPlayers.map((leaguePlayer) =>
-          leaguePlayer.id === postBody.player_id
-            ? { ...leaguePlayer, team_id: postBody.to_team_id }
-            : leaguePlayer,
-        );
-        return Promise.resolve({ data: {} });
-      }
-      if (u.endsWith('/admin/games/game-1/roster')) return Promise.resolve({ data: [] });
-      if (u.endsWith('/admin/games/game-1/goals')) {
-        return Promise.resolve({ data: { id: 'goal-1', game_id: 'game-1', ...postBody } });
-      }
-      if (u.endsWith('/admin/games/game-1/goalie-stints')) return Promise.resolve({ data: [] });
-      if (/\/admin\/player-teams\/history\/[^/]+\/jerseys$/.test(u)) {
-        return Promise.resolve({ data: { changed: true } });
-      }
-      return Promise.reject(new Error(`Unexpected POST ${url}`));
+  const expectOnlyGamePatch = () => {
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+    expect(mockedAxios.put).not.toHaveBeenCalled();
+    expect(mockedAxios.delete).not.toHaveBeenCalled();
+    expect(mockedAxios.patch).toHaveBeenCalledTimes(1);
+    expect(mockedAxios.patch.mock.calls[0][0]).toMatch(/\/admin\/games\/game-1$/);
+    return mockedAxios.patch.mock.calls[0][1] as Record<string, unknown>;
+  };
+
+  it('saves the final score and schedule of a game decided in regulation, and nothing else', async () => {
+    const result = await autofillGameFromPwhlGamecenter(game, '210');
+
+    expect(expectOnlyGamePatch()).toEqual({
+      league_game_number: '210',
+      scheduled_at: '2025-11-21',
+      scheduled_time: '19:00',
+      status: 'final',
+      current_period: '3',
+      overtime_periods: 0,
+      shootout: false,
+      final_home_score: 1,
+      final_away_score: 2,
+    });
+    expect(result.summary).toEqual({
+      gameId: '210',
+      state: 'final',
+      finalScore: { away: 2, home: 1 },
+      decidedIn: 'regulation',
+    });
+    expect(result.message).toBe('Filled PWHL game 210: TOR 2, MIN 1.');
+    expect(result.warnings).toEqual([]);
+  });
+
+  it('records a game decided in overtime', async () => {
+    summary = pwhlSummary({ details: { status: 'Final OT2' }, periods: 5, homeGoals: 3 });
+
+    const result = await autofillGameFromPwhlGamecenter(game, '210');
+
+    expect(expectOnlyGamePatch()).toEqual(
+      expect.objectContaining({
+        status: 'final',
+        current_period: 'OT',
+        overtime_periods: 2,
+        shootout: false,
+        final_home_score: 3,
+        final_away_score: 2,
+      }),
+    );
+    expect(result.summary.decidedIn).toBe('overtime');
+    expect(result.message).toBe('Filled PWHL game 210: TOR 2, MIN 3 (OT).');
+  });
+
+  it('records a game decided in a shootout with the shootout win in the final score', async () => {
+    summary = pwhlSummary({
+      details: { status: 'Final SO' },
+      hasShootout: true,
+      periods: 4,
+      awayGoals: 2,
+      homeGoals: 1,
     });
 
-    mockedAxios.put.mockResolvedValue({ data: {} });
-    mockedAxios.patch.mockResolvedValue({ data: {} });
-    mockedAxios.delete.mockResolvedValue({ data: {} });
+    const result = await autofillGameFromPwhlGamecenter(game, '210');
+
+    expect(expectOnlyGamePatch()).toEqual(
+      expect.objectContaining({
+        status: 'final',
+        current_period: 'SO',
+        overtime_periods: 1,
+        shootout: true,
+        final_home_score: 1,
+        final_away_score: 2,
+      }),
+    );
+    expect(result.summary.decidedIn).toBe('shootout');
+    expect(result.message).toBe('Filled PWHL game 210: TOR 2, MIN 1 (SO).');
+  });
+
+  it('marks a game still being played as in progress without a final score', async () => {
+    summary = pwhlSummary({ details: { final: '0', status: '2nd Period' } });
+
+    const result = await autofillGameFromPwhlGamecenter(game, '210');
+
+    expect(expectOnlyGamePatch()).toEqual({
+      league_game_number: '210',
+      scheduled_at: '2025-11-21',
+      scheduled_time: '19:00',
+      status: 'in_progress',
+    });
+    expect(result.summary).toEqual(
+      expect.objectContaining({ state: 'in_progress', finalScore: null, decidedIn: null }),
+    );
+    expect(result.warnings).toEqual(["It isn't final yet, so no final score was saved."]);
+  });
+
+  it("only updates the schedule of a game that hasn't started", async () => {
+    summary = pwhlSummary({ details: { started: '0', final: '0', status: '7:00 pm EST' } });
+
+    const result = await autofillGameFromPwhlGamecenter(game, '210');
+
+    expect(expectOnlyGamePatch()).toEqual({
+      league_game_number: '210',
+      scheduled_at: '2025-11-21',
+      scheduled_time: '19:00',
+    });
+    expect(result.summary.state).toBe('scheduled');
+  });
+
+  it('rejects a PWHL game between different teams before writing', async () => {
+    summary = pwhlSummary({ awayCode: 'BOS' });
+
+    await expect(autofillGameFromPwhlGamecenter(game, '210')).rejects.toThrow(
+      'PWHL game is BOS @ MIN, but this page is TOR @ MIN.',
+    );
+    expect(mockedAxios.patch).not.toHaveBeenCalled();
   });
 
   it('rejects before writing when the local regular season game number is not the PWHL game number', async () => {
-    const numberedGame = {
-      ...game,
-      game_number: 2,
-    } as GameRecord;
-    seasonGamesData = [numberedGame];
+    const numberedGame = { ...game, game_number: 2 } as GameRecord;
+    seasonGames = [numberedGame];
 
     await expect(autofillGameFromPwhlGamecenter(numberedGame, '210')).rejects.toThrow(
       /PWHL game number 1 does not match local regular season game 2/i,
     );
-
-    expect(mockedAxios.post).not.toHaveBeenCalled();
     expect(mockedAxios.patch).not.toHaveBeenCalled();
-    expect(mockedAxios.put).not.toHaveBeenCalled();
-    expect(
-      mockedAxios.get.mock.calls.some(([url]) => String(url).endsWith('/admin/games/game-1/goals')),
-    ).toBe(false);
   });
 
-  it('fills a PWHL game and creates missing players with league player numbers', async () => {
-    const result = await autofillGameFromPwhlGamecenter(game, '210');
-
-    expect(result.summary).toEqual(
-      expect.objectContaining({
-        gameId: '210',
-        goalsCreated: 1,
-        rosterPlayers: 5,
-        goalieStints: 2,
-        startingGoaliesSet: 2,
-      }),
+  it('rejects a final game without a usable final score', async () => {
+    summary = pwhlSummary({ homeGoals: null });
+    await expect(autofillGameFromPwhlGamecenter(game, '210')).rejects.toThrow(
+      'PWHL game summary did not include the final score.',
     );
 
-    const createdPlayers = mockedAxios.post.mock.calls
-      .filter(([url]) => String(url).endsWith('/admin/players/bulk'))
-      .flatMap(([, body]) => ((body ?? {}) as MockPostBody).players ?? []);
-    expect(createdPlayers).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ first_name: 'Kiara', last_name: 'Zanon', league_player_number: '317' }),
-        expect.objectContaining({ first_name: 'Raygan', last_name: 'Kirk', league_player_number: '211' }),
-        expect.objectContaining({ first_name: 'Maddie', last_name: 'Rooney', league_player_number: '123' }),
-      ]),
-    );
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining('league player number 317'),
-        expect.stringContaining('league player number 20'),
-      ]),
-    );
-    expect(result.warnings.join(' ')).not.toContain('#11 Kiara Zanon');
-
-    expect(mockedAxios.patch).toHaveBeenCalledWith(
-      expect.stringContaining('/admin/games/game-1'),
-      expect.objectContaining({
-        league_game_number: '210',
-        status: 'in_progress',
-        scheduled_at: '2025-11-21',
-      }),
-      expect.anything(),
-    );
-    expect(mockedAxios.patch).toHaveBeenCalledWith(
-      expect.stringContaining('/admin/games/game-1'),
-      expect.objectContaining({
-        status: 'final',
-        star_1_id: 'auto-211',
-        star_2_id: 'auto-20',
-        star_3_id: 'auto-317',
-      }),
-      expect.anything(),
-    );
-
-    const goalieStints = mockedAxios.post.mock.calls
-      .filter(([url]) => String(url).endsWith('/admin/games/game-1/goalie-stints'))
-      .map(([, body]) => body);
-    expect(goalieStints).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          goalie_id: 'auto-211',
-          time_on_ice: 3575,
-          shots_against: 31,
-          exited_period: null,
-          exited_time: null,
-        }),
-        expect.objectContaining({
-          goalie_id: 'auto-123',
-          time_on_ice: 3528,
-          exited_period: null,
-          exited_time: null,
-        }),
-      ]),
-    );
+    summary = pwhlSummary({ homeGoals: 2, awayGoals: 2 });
+    await expect(autofillGameFromPwhlGamecenter(game, '210')).rejects.toThrow(/tied final score/);
+    expect(mockedAxios.patch).not.toHaveBeenCalled();
   });
 
-  it('records a jersey history change on the PWHL game date before saving the roster', async () => {
-    extraPlayers.push({
-      id: 'kiara-zanon',
-      team_id: 'tor-team',
-      jersey_number: 19,
-      league_player_number: '317',
-      first_name: 'Kiara',
-      last_name: 'Zanon',
-      position: 'LW',
-    });
-
-    await autofillGameFromPwhlGamecenter(game, '210');
-
-    const historyPost = mockedAxios.post.mock.calls.find(([url]) =>
-      String(url).endsWith('/admin/player-teams/history/kiara-zanon/jerseys'),
-    );
-    const rosterPostIndex = mockedAxios.post.mock.calls.findIndex(([url]) =>
-      String(url).endsWith('/admin/games/game-1/roster'),
+  it('reads the game id from a PWHL game-center URL', async () => {
+    await autofillGameFromPwhlGamecenter(
+      game,
+      'https://www.thepwhl.com/en/stats/game-center?game_id=210',
     );
 
-    expect(historyPost?.[1]).toEqual({
-      jersey_number: 11,
-      effective_date: '2025-11-21',
-    });
-    expect(mockedAxios.post.mock.calls.indexOf(historyPost!)).toBeLessThan(rosterPostIndex);
-  });
-
-  it('collapses split PWHL goalie log rows when a team did not switch goalies', async () => {
-    currentSummary = {
-      ...summary,
-      visitingTeam: {
-        ...summary.visitingTeam,
-        goalieLog: [
-          {
-            info: player(211, 'Raygan', 'Kirk', 1, 'G').info,
-            stats: { timeOnIce: '20:00', shotsAgainst: 9, goalsAgainst: 0, saves: 9 },
-            periodStart: { id: '1' },
-            timeStart: '0:00',
-            periodEnd: { id: '1' },
-            timeEnd: '20:00',
-          },
-          {
-            info: player(211, 'Raygan', 'Kirk', 1, 'G').info,
-            stats: { timeOnIce: '39:35', shotsAgainst: 22, goalsAgainst: 1, saves: 21 },
-            periodStart: { id: '2' },
-            timeStart: '0:00',
-            periodEnd: { id: '3' },
-            timeEnd: '19:35',
-          },
-        ],
-      },
-    };
-
-    const result = await autofillGameFromPwhlGamecenter(game, '210');
-
-    expect(result.summary.goalieStints).toBe(2);
-
-    const goalieStints = mockedAxios.post.mock.calls
-      .filter(([url]) => String(url).endsWith('/admin/games/game-1/goalie-stints'))
-      .map(([, body]) => body as Record<string, unknown>);
-    const awayStints = goalieStints.filter((stint) => stint.goalie_id === 'auto-211');
-
-    expect(awayStints).toHaveLength(1);
-    expect(awayStints[0]).toEqual(
-      expect.objectContaining({
-        time_on_ice: 3575,
-        shots_against: 31,
-        goals_against: 1,
-        entered_period: '1',
-        entered_time: null,
-        exited_period: null,
-        exited_time: null,
-      }),
-    );
-  });
-
-  it('keeps separate PWHL goalie log rows when a team switches goalies', async () => {
-    currentSummary = {
-      ...summary,
-      visitingTeam: {
-        ...summary.visitingTeam,
-        goalies: [
-          player(211, 'Raygan', 'Kirk', 1, 'G', {
-            timeOnIce: '29:35',
-            shotsAgainst: 17,
-            goalsAgainst: 1,
-            saves: 16,
-          }, 1),
-          player(212, 'Elaine', 'Chuli', 29, 'G', {
-            timeOnIce: '30:00',
-            shotsAgainst: 14,
-            goalsAgainst: 0,
-            saves: 14,
-          }),
-        ],
-        goalieLog: [
-          {
-            info: player(211, 'Raygan', 'Kirk', 1, 'G').info,
-            stats: { timeOnIce: '29:35', shotsAgainst: 17, goalsAgainst: 1, saves: 16 },
-            periodStart: { id: '1' },
-            timeStart: '0:00',
-            periodEnd: { id: '2' },
-            timeEnd: '9:35',
-          },
-          {
-            info: player(212, 'Elaine', 'Chuli', 29, 'G').info,
-            stats: { timeOnIce: '30:00', shotsAgainst: 14, goalsAgainst: 0, saves: 14 },
-            periodStart: { id: '2' },
-            timeStart: '9:35',
-            periodEnd: { id: '3' },
-            timeEnd: '20:00',
-          },
-        ],
-      },
-    };
-
-    const result = await autofillGameFromPwhlGamecenter(game, '210');
-
-    expect(result.summary.goalieStints).toBe(3);
-
-    const goalieStints = mockedAxios.post.mock.calls
-      .filter(([url]) => String(url).endsWith('/admin/games/game-1/goalie-stints'))
-      .map(([, body]) => body as Record<string, unknown>);
-
-    expect(goalieStints).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          goalie_id: 'auto-211',
-          entered_period: '1',
-          entered_time: null,
-          exited_period: '2',
-          exited_time: '9:35',
-          time_on_ice: 1775,
-        }),
-        expect.objectContaining({
-          goalie_id: 'auto-212',
-          entered_period: '2',
-          entered_time: '9:35',
-          exited_period: null,
-          exited_time: null,
-          time_on_ice: 1800,
-        }),
-      ]),
-    );
-  });
-
-  it('moves a PWHL player off the latest dated league-player row as of the game date', async () => {
-    leagueRosterPlayers = [
-      {
-        id: 'kendall-coyne-schofield',
-        league_player_number: '20',
-        first_name: 'Kendall',
-        last_name: 'Coyne Schofield',
-        team_id: 'ott-team',
-        team_code: 'OTT',
-        team_name: 'Ottawa Charge',
-        start_date: '2025-06-01',
-        end_date: '2025-12-01',
-      },
-      {
-        id: 'kendall-coyne-schofield',
-        league_player_number: '20',
-        first_name: 'Kendall',
-        last_name: 'Coyne Schofield',
-        team_id: 'bos-team',
-        team_code: 'BOS',
-        team_name: 'Boston Fleet',
-        start_date: '2024-10-01',
-        end_date: null,
-      },
-    ];
-
-    const result = await autofillGameFromPwhlGamecenter(game, '210');
-
-    // The latest dated row (OTT) is the one being left, not the older BOS one.
-    const trades = mockedAxios.post.mock.calls.filter(([url]) =>
-      String(url).endsWith('/admin/player-teams/trade'),
-    );
-    expect(trades).toHaveLength(1);
-    expect(trades[0][1]).toMatchObject({
-      player_id: 'kendall-coyne-schofield',
-      to_team_id: 'min-team',
-      trade_date: '2025-11-21',
-    });
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining('Auto-recorded 1 PWHL player movement')]),
-    );
-  });
-
-  it('flags the other holder of a number worn in the game instead of stopping', async () => {
-    extraPlayers.push({
-      id: 'wrong-player',
-      team_id: 'min-team',
-      league_player_number: '999',
-      first_name: 'Wrong',
-      last_name: 'Player',
-      jersey_number: 26,
-      position: 'F',
-    });
-
-    const result = await autofillGameFromPwhlGamecenter(game, '210');
-
-    // The name has to agree for a number-only match, so Wrong Player can never be
-    // mistaken for Coyne Schofield; the clash is only reported.
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining('#26 Wrong Player')]),
-    );
+    expect(String(mockedAxios.get.mock.calls[0][1]?.params?.url)).toContain('game_id=210');
   });
 });

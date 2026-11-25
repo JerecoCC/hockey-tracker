@@ -58,8 +58,10 @@ import {
   formatScheduleDayHeading,
   formatScheduleDayTitleShort,
   getOriginalGameDateKey,
+  getPostponedWatchDateKey,
   getScheduledWatchDateKey,
   isInvalidWatchScheduleDate,
+  isPostponedWatch,
   sortUserDayGames,
   type GameTimezone,
 } from '@/lib/gameSchedule';
@@ -555,7 +557,7 @@ const CalendarGameCard = ({
       : home > away
         ? 'win'
         : 'lose';
-  const postponed = !!getScheduledWatchDateKey(game.scheduled_for);
+  const postponed = isPostponedWatch(game, tzPref);
   const playoffMetaLabel = getPlayoffGameMetaLabel(game);
   // Postponed games show their original date. Other unwatched games show their scheduled start
   // in the user's timezone, or say it's not set. Other watched games have no tooltip.
@@ -907,10 +909,11 @@ const UserGames = () => {
     return map;
   }, [scheduledGames, tzPref]);
 
-  const addGamesScheduledGames = useMemo(() => {
-    if (!addGamesDateKey) return [];
-    return groupedByDate.find(([dateKey]) => dateKey === addGamesDateKey)?.[1] ?? [];
-  }, [addGamesDateKey, groupedByDate]);
+  // The week and month views both open the day's modal, so it reads the day's games from either.
+  const addGamesScheduledGames = useMemo(
+    () => (addGamesDateKey ? (gamesByCalendarDate.get(addGamesDateKey) ?? []) : []),
+    [addGamesDateKey, gamesByCalendarDate],
+  );
 
   const todayKey = dateToISO(toDay(new Date()));
   const initialSummaryDay = groupedByDate.some(([dateKey]) => dateKey === todayKey)
@@ -1323,7 +1326,8 @@ const UserGames = () => {
 
     const originalDateKey = getOriginalGameDateKey(draggedGame, tzPref);
     const normalizedScheduleDate = originalDateKey === dateKey ? null : dateKey;
-    if (getScheduledWatchDateKey(draggedGame.scheduled_for) === normalizedScheduleDate) return;
+    // Dropping a game added to watch on its own day back there leaves it as it is.
+    if (getPostponedWatchDateKey(draggedGame, tzPref) === normalizedScheduleDate) return;
 
     await saveScheduleForGame(draggedGame, normalizedScheduleDate, { optimistic: true });
   };
@@ -1778,15 +1782,34 @@ const UserGames = () => {
               loading={isLoading}
               getDayHeaderRight={({ dateKey }) => {
                 const gameCount = gamesByCalendarDate.get(dateKey)?.length ?? 0;
-                return gameCount > 0 ? (
-                  <MetricTag
-                    className={styles.calendarDayGameCount}
-                    value={gameCount}
-                    label={gameCount === 1 ? 'game' : 'games'}
-                    position="postfix"
-                    aria-label={`${gameCount} ${gameCount === 1 ? 'game' : 'games'}`}
-                  />
-                ) : undefined;
+                return (
+                  <span className={styles.calendarDayHeaderActions}>
+                    {gameCount > 0 && (
+                      <MetricTag
+                        className={styles.calendarDayGameCount}
+                        value={gameCount}
+                        label={gameCount === 1 ? 'game' : 'games'}
+                        position="postfix"
+                        aria-label={`${gameCount} ${gameCount === 1 ? 'game' : 'games'}`}
+                      />
+                    )}
+                    {/* Left out of the downloaded month image. */}
+                    {!calendarImageLayout && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        intent="neutral"
+                        size="small"
+                        icon="edit"
+                        className={styles.calendarDayEditButton}
+                        aria-label={`Edit games to watch for ${formatScheduleDayHeading(dateKey)}`}
+                        tooltip="Edit games to watch"
+                        disabled={isLoading}
+                        onClick={() => setAddGamesDateKey(dateKey)}
+                      />
+                    )}
+                  </span>
+                );
               }}
               getDayProps={({ dateKey }) => ({
                 'data-date-key': dateKey,

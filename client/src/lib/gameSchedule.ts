@@ -159,12 +159,29 @@ export const isInvalidWatchScheduleDate = (
   return !!gameDateKey && watchDateKey <= gameDateKey;
 };
 
+/**
+ * The day the viewer moved watching a game to, or null when it isn't postponed. A watch date on
+ * the game's own day (adding a game to watch on its day) isn't a postponement.
+ */
+export const getPostponedWatchDateKey = (
+  game: UserScheduledGame,
+  timezone: GameTimezone = 'local',
+): string | null => {
+  const watchDateKey = getScheduledWatchDateKey(game.scheduled_for);
+  const originalDateKey = getOriginalGameDateKey(game, timezone);
+  return watchDateKey && originalDateKey && watchDateKey !== originalDateKey ? watchDateKey : null;
+};
+
+/** True when the viewer moved watching this game to a day other than its game day. */
+export const isPostponedWatch = (game: UserScheduledGame, timezone: GameTimezone = 'local') =>
+  !!getPostponedWatchDateKey(game, timezone);
+
 const getUserDayGameSortRank = (game: UserScheduledGame) => {
-  const hasScheduledWatchDate = !!getScheduledWatchDateKey(game.scheduled_for);
-  if (game.watched_by_user && hasScheduledWatchDate) return 0;
+  const postponed = isPostponedWatch(game);
+  if (game.watched_by_user && postponed) return 0;
   if (game.watched_by_user) return 1;
   if (game.skipped_by_user) return 4;
-  if (hasScheduledWatchDate) return 2;
+  if (postponed) return 2;
   return 3;
 };
 
@@ -219,6 +236,24 @@ export const formatGameTime = (
 };
 
 const OVERDUE_FINAL_MS = 3 * 60 * 60 * 1000;
+
+/**
+ * Whether a game has started: it's live or final, or its scheduled start has passed. Without a
+ * start time it's only known to have started once its Eastern game day is over.
+ */
+export const hasGameStarted = (
+  game: ScheduledGame & { status: string },
+  now: Date = new Date(),
+): boolean => {
+  if (game.status === 'in_progress' || game.status === 'final') return true;
+  if (!game.scheduled_time) {
+    const gameDateKey = getOriginalGameDateKey(game, 'ET');
+    const todayKey = toDateKeyInZone(now, EASTERN_TIME_ZONE);
+    return !!gameDateKey && !!todayKey && gameDateKey < todayKey;
+  }
+  const start = getScheduledInstant(game.scheduled_at, game.scheduled_time);
+  return !!start && start.getTime() <= now.getTime();
+};
 
 /**
  * True when a game should have finished but isn't final: more than three hours have passed

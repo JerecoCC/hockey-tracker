@@ -135,6 +135,20 @@
   }
 }
 
+// The day's game count, then its edit games to watch button.
+.calendarDayHeaderActions {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+// As tall as the game count, so the day header keeps its height.
+.calendarDayEditButton.calendarDayEditButton {
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+}
+
 .calendarGameUnwatched.calendarGameUnwatched,
 .calendarGameSkipped.calendarGameSkipped {
   border-style: dashed;

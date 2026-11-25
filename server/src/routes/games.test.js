@@ -514,6 +514,46 @@ describe('PATCH /api/admin/games/:id', () => {
     expect(sql.mock.calls[1].slice(1)).toContain('2026-01-18T02:42:00.000Z');
   });
 
+  it('stores a final score sent with the update', async () => {
+    sql
+      .mockResolvedValueOnce([{
+        id: 'game-1',
+        season_id: 'season-1',
+        home_team_id: 'team-1',
+        away_team_id: 'team-2',
+        scheduled_at: null,
+        playoff_series_id: null,
+      }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([GAME]);
+
+    const res = await request(app).patch('/api/admin/games/game-1').send({
+      final_home_score: 3,
+      final_away_score: 0,
+    });
+
+    expect(res.status).toBe(200);
+    const [strings, ...values] = sql.mock.calls[1];
+    const query = strings.join(' ');
+    expect(query).toContain('final_home_score');
+    expect(query).toContain('final_away_score');
+    // Each column takes its "sent" flag, then its value.
+    expect(values.slice(-3, -1)).toEqual([true, 0]);
+    expect(values.slice(-5, -3)).toEqual([true, 3]);
+  });
+
+  it('rejects a final score that is not a whole number from 0 to 99', async () => {
+    for (const score of [-1, 2.5, '3', 100]) {
+      sql.mockClear();
+      const res = await request(app).patch('/api/admin/games/game-1').send({
+        final_home_score: score,
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/final scores must be whole numbers/i);
+      expect(sql).not.toHaveBeenCalled();
+    }
+  });
+
   it('updates playoff round and game number in series when provided', async () => {
     sql
       .mockResolvedValueOnce([{ id: 'game-1', playoff_series_id: 'series-1' }])

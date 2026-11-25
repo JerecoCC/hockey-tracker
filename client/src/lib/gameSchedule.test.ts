@@ -1,9 +1,12 @@
 import {
   getEasternDateKey,
   getOriginalGameDateKey,
+  getPostponedWatchDateKey,
   getScheduledInstant,
   getScheduledWatchDateKey,
+  hasGameStarted,
   isInvalidWatchScheduleDate,
+  isPostponedWatch,
   sortUserDayGames,
   toDateKeyInZone,
   isGameOverdueForFinal,
@@ -81,12 +84,69 @@ describe('game schedule time utilities', () => {
     expect([nhl, srg, str].sort(sortUserDayGames)).toEqual([srg, str, nhl]);
   });
 
+  it('only counts a watch date on another day as postponed', () => {
+    const game = { scheduled_at: '2026-11-18', scheduled_time: null };
+
+    expect(getPostponedWatchDateKey({ ...game, scheduled_for: '2026-11-18' })).toBeNull();
+    expect(isPostponedWatch({ ...game, scheduled_for: '2026-11-18' })).toBe(false);
+    expect(getPostponedWatchDateKey({ ...game, scheduled_for: '2026-11-20' })).toBe('2026-11-20');
+    expect(isPostponedWatch({ ...game, scheduled_for: null })).toBe(false);
+  });
+
+  it('orders a game added to watch on its own day like any other game, after postponed ones', () => {
+    const dayGame = (id: string, away: string, scheduledFor: string | null) => ({
+      id,
+      league_code: 'NHL',
+      away_team: { code: away },
+      home_team: { code: 'MON' },
+      scheduled_at: '2026-11-18',
+      scheduled_time: null,
+      scheduled_for: scheduledFor,
+    });
+    const postponed = { ...dayGame('p', 'ZZZ', '2026-11-18'), scheduled_at: '2026-11-17' };
+    const plain = dayGame('a', 'AAA', null);
+    const addedOnItsDay = dayGame('b', 'BBB', '2026-11-18');
+
+    expect([addedOnItsDay, plain, postponed].sort(sortUserDayGames)).toEqual([
+      postponed,
+      plain,
+      addedOnItsDay,
+    ]);
+  });
+
   it('only permits watch dates after the original game date', () => {
     const game = { scheduled_at: '2026-07-18', scheduled_time: null };
 
     expect(isInvalidWatchScheduleDate(game, '2026-07-18', 'ET')).toBe(true);
     expect(isInvalidWatchScheduleDate(game, '2026-07-19', 'ET')).toBe(false);
     expect(isInvalidWatchScheduleDate(game, null, 'ET')).toBe(false);
+  });
+});
+
+describe('hasGameStarted', () => {
+  // 7:00 PM ET on Oct 10, 2026 is 23:00 UTC.
+  const game = {
+    scheduled_at: '2026-10-10T00:00:00.000Z',
+    scheduled_time: '19:00',
+    status: 'scheduled',
+  };
+
+  it('waits for a scheduled game to reach its start time', () => {
+    expect(hasGameStarted(game, new Date('2026-10-10T22:59:00Z'))).toBe(false);
+    expect(hasGameStarted(game, new Date('2026-10-10T23:00:00Z'))).toBe(true);
+  });
+
+  it('counts live and final games as started', () => {
+    const early = new Date('2026-10-10T12:00:00Z');
+    expect(hasGameStarted({ ...game, status: 'in_progress' }, early)).toBe(true);
+    expect(hasGameStarted({ ...game, status: 'final' }, early)).toBe(true);
+  });
+
+  it('only counts a game without a start time once its Eastern game day is over', () => {
+    const untimed = { scheduled_at: '2026-10-10', scheduled_time: null, status: 'scheduled' };
+    // 11:30 PM ET on Oct 10, then 12:30 AM ET on Oct 11.
+    expect(hasGameStarted(untimed, new Date('2026-10-11T03:30:00Z'))).toBe(false);
+    expect(hasGameStarted(untimed, new Date('2026-10-11T04:30:00Z'))).toBe(true);
   });
 });
 
