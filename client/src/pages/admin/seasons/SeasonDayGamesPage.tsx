@@ -15,6 +15,8 @@ import useDocumentIcon from '@/hooks/useDocumentIcon';
 import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagues from '@/hooks/useLeagues';
+import useNow from '@/hooks/useNow';
+import { hasGameStarted } from '@/lib/gameSchedule';
 import useSeasonDetails from '@/hooks/useSeasonDetails';
 import {
   buildGameDetailsPath,
@@ -95,9 +97,15 @@ const getAutofillLeagueCode = (
   return code === 'NHL' || code === 'PWHL' ? code : null;
 };
 
-const isDayAutofillCandidate = (game: GameRecord, leagueCode: string | null | undefined) =>
+// Only games that have started are filled: one that hasn't has nothing to fill yet.
+const isDayAutofillCandidate = (
+  game: GameRecord,
+  leagueCode: string | null | undefined,
+  now: Date,
+) =>
   !!getAutofillLeagueCode(game, leagueCode) &&
   !!game.scheduled_at &&
+  hasGameStarted(game, now) &&
   (game.status === 'scheduled' ||
     game.status === 'in_progress' ||
     (game.status === 'final' && (!game.time_start || !game.time_end)));
@@ -263,6 +271,8 @@ const SeasonDayGamesPage = () => {
   const [bulkCreateOpen, setBulkCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<GameRecord | null>(null);
   const [autofilling, setAutofilling] = useState(false);
+  // Re-checks each minute, so the auto-fill action appears once a game's start time passes.
+  const now = useNow();
   const [manualMoveReports, setManualMoveReports] = useState<GameAutofillManualMoveReport[]>([]);
 
   const leagueCode = season?.league_code ?? league?.code ?? routeLeague?.code ?? leagueSlug;
@@ -331,8 +341,8 @@ const SeasonDayGamesPage = () => {
   }, [dateKey, games, seasonId]);
 
   const autofillCandidates = useMemo(
-    () => visibleGames.filter((game) => isDayAutofillCandidate(game, leagueCode)),
-    [leagueCode, visibleGames],
+    () => visibleGames.filter((game) => isDayAutofillCandidate(game, leagueCode, now)),
+    [leagueCode, now, visibleGames],
   );
   const autofillLeagueLabel = dayAutofillLeagueLabel(autofillCandidates, leagueCode);
 
@@ -369,11 +379,14 @@ const SeasonDayGamesPage = () => {
   };
 
   const handleAutofillDay = async () => {
-    const candidates = autofillCandidates;
+    const startedAt = new Date();
+    const candidates = visibleGames.filter((game) =>
+      isDayAutofillCandidate(game, leagueCode, startedAt),
+    );
     const dayLabel = dayTitle;
 
     if (candidates.length === 0) {
-      toast.info('No scheduled NHL or PWHL games to auto-fill for this day.');
+      toast.info('No started NHL or PWHL games to auto-fill for this day.');
       return;
     }
 

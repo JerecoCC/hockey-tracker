@@ -29,6 +29,7 @@ import { useScheduleWeekSummaryStuck } from '@/shared/ScheduleGamesLayout/useSch
 import SegmentedControl from '@jerecocc/tracker-ui/components/SegmentedControl/SegmentedControl';
 import Skeleton from '@jerecocc/tracker-ui/components/Skeleton/Skeleton';
 import useGames, { type GameRecord, type GameStatus, type GameType } from '@/hooks/useGames';
+import useNow from '@/hooks/useNow';
 import useScreenSize from '@/hooks/useScreenSize';
 import GameCard from '@/shared/GameCard/GameCard';
 import Select from '@jerecocc/tracker-ui/components/Select/Select';
@@ -64,6 +65,7 @@ import {
 import {
   formatScheduleDayHeading,
   formatScheduleDayTitleShort,
+  hasGameStarted,
   isGameOverdueForFinal,
 } from '@/lib/gameSchedule';
 import styles from './SeasonGamesTab.module.scss';
@@ -174,10 +176,16 @@ const getAutofillLeagueCode = (
   return code === 'NHL' || code === 'PWHL' ? code : null;
 };
 
-const isDayAutofillCandidate = (game: GameRecord, leagueCode: string | null | undefined) =>
+// Only games that have started are filled: one that hasn't has nothing to fill yet.
+const isDayAutofillCandidate = (
+  game: GameRecord,
+  leagueCode: string | null | undefined,
+  now: Date,
+) =>
   !!getAutofillLeagueCode(game, leagueCode) &&
   !!game.scheduled_at &&
-  isDayAutofillStatus(game.status);
+  isDayAutofillStatus(game.status) &&
+  hasGameStarted(game, now);
 
 const fetchNhlScheduleIndex = async (dateKey: string) => {
   const { data } = await axios.get<NhlScheduleResponse>(`${API}/admin/games/nhl-api`, {
@@ -540,6 +548,8 @@ const SeasonGamesTab = ({
 
   const screenSize = useScreenSize();
   const isMobileView = screenSize === 'mobile';
+  // Re-checks each minute, so a day's auto-fill action appears once a game's start time passes.
+  const now = useNow();
   const weekSummaryStickyTopPx =
     screenSize === 'desktop'
       ? SEASON_WEEK_SUMMARY_STICKY_TOP_PX
@@ -724,8 +734,8 @@ const SeasonGamesTab = ({
       dateKey,
     });
 
-  const getDayAutofillCandidates = (dayGames: GameRecord[]) =>
-    dayGames.filter((game) => isDayAutofillCandidate(game, leagueCode));
+  const getDayAutofillCandidates = (dayGames: GameRecord[], at: Date = new Date()) =>
+    dayGames.filter((game) => isDayAutofillCandidate(game, leagueCode, at));
 
   const describeGame = (game: GameRecord) => `${game.away_team.code} @ ${game.home_team.code}`;
 
@@ -748,7 +758,7 @@ const SeasonGamesTab = ({
     const candidates = getDayAutofillCandidates(dayGames);
     const autofillLeagueLabel = dayAutofillLeagueLabel(candidates, leagueCode);
     if (candidates.length === 0) {
-      toast.info('No scheduled NHL or PWHL games to auto-fill for this day.');
+      toast.info('No started NHL or PWHL games to auto-fill for this day.');
       return;
     }
 
@@ -943,7 +953,7 @@ const SeasonGamesTab = ({
   };
 
   const buildDayActions = (dateKey: string, dayGames: GameRecord[]) => {
-    const candidates = getDayAutofillCandidates(dayGames);
+    const candidates = getDayAutofillCandidates(dayGames, now);
     const showAutofill = candidates.length > 0;
     const autofillLeagueLabel = dayAutofillLeagueLabel(candidates, leagueCode);
 
