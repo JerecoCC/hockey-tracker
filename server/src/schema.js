@@ -568,6 +568,10 @@ const games = pgTable("games", {
   status: text("status").notNull().default("scheduled"),
   overtimePeriods: smallint("overtime_periods"),
   shootout: boolean("shootout").notNull().default(false),
+  // A final score recorded without goal-by-goal data. When set it overrides the score
+  // worked out from the goals table; a shootout win counts as one goal.
+  finalHomeScore: smallint("final_home_score"),
+  finalAwayScore: smallint("final_away_score"),
   shootoutFirstTeamId: uuid("shootout_first_team_id").references(
     () => teams.id,
     { onDelete: "set null" },

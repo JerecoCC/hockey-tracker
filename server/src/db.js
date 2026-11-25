@@ -1659,6 +1659,11 @@ async function runSchemaSetup() {
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS home_score_reg`;
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS away_score_reg`;
 
+  // Migration: a final score stored on the game, for games filled without goal-by-goal data
+  // (e.g. the PWHL auto-fill). When set it overrides the score derived from the goals table.
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS final_home_score SMALLINT`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS final_away_score SMALLINT`;
+
   // Migration: drop redundant period-by-period goal columns (scores are now derived from the goals table)
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS p1_home_goals`;
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS p1_away_goals`;

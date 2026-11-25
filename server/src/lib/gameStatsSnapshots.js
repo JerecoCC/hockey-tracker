@@ -36,6 +36,8 @@ async function insertGameTeamStats(sql, gameId) {
         away_team_id,
         overtime_periods,
         shootout,
+        final_home_score,
+        final_away_score,
         period_shots
       FROM games
       WHERE id = ${gameId}
@@ -79,8 +81,19 @@ async function insertGameTeamStats(sql, gameId) {
     game_result AS (
       SELECT
         g.id AS game_id,
-        COALESCE(hg.goals, 0)::int AS home_goals,
-        COALESCE(ag.goals, 0)::int AS away_goals,
+        -- A stored final score counts a shootout win as a goal; goals here leave it out.
+        COALESCE(
+          g.final_home_score
+            - CASE WHEN g.shootout AND g.final_home_score > g.final_away_score THEN 1 ELSE 0 END,
+          hg.goals,
+          0
+        )::int AS home_goals,
+        COALESCE(
+          g.final_away_score
+            - CASE WHEN g.shootout AND g.final_away_score > g.final_home_score THEN 1 ELSE 0 END,
+          ag.goals,
+          0
+        )::int AS away_goals,
         COALESCE(hg.so_goals, 0)::int AS home_so_goals,
         COALESCE(ag.so_goals, 0)::int AS away_so_goals,
         COALESCE(hs.shootout_goals, 0)::int AS home_so_attempt_goals,
@@ -102,6 +115,11 @@ async function insertGameTeamStats(sql, gameId) {
           OR COALESCE(hg.so_goals, 0) > 0
           OR COALESCE(ag.so_goals, 0) > 0
         ) AS is_shootout,
+        COALESCE(
+        CASE
+          WHEN g.final_home_score > g.final_away_score THEN g.home_team_id
+          WHEN g.final_away_score > g.final_home_score THEN g.away_team_id
+        END,
         CASE
           WHEN g.shootout OR COALESCE(hs.shootout_goals, 0) > 0 OR COALESCE(asg.shootout_goals, 0) > 0
             OR COALESCE(hg.so_goals, 0) > 0 OR COALESCE(ag.so_goals, 0) > 0 THEN
@@ -117,7 +135,7 @@ async function insertGameTeamStats(sql, gameId) {
           WHEN COALESCE(hg.goals, 0) > COALESCE(ag.goals, 0) THEN g.home_team_id
           WHEN COALESCE(ag.goals, 0) > COALESCE(hg.goals, 0) THEN g.away_team_id
           ELSE NULL
-        END AS winner_team_id
+        END) AS winner_team_id
       FROM game_row g
       LEFT JOIN goal_totals hg ON hg.team_id = g.home_team_id
       LEFT JOIN goal_totals ag ON ag.team_id = g.away_team_id

@@ -183,7 +183,7 @@ const scoreColumn = (columnName) => ormSql`
     FROM (
       SELECT
         resolved.winner_team_id,
-        totals.home_goals
+        COALESCE(${gamesTable.finalHomeScore}, totals.home_goals
           + CASE
               WHEN ${gamesTable.status} = 'final'
                 AND (
@@ -196,8 +196,8 @@ const scoreColumn = (columnName) => ormSql`
                 AND totals.home_goals = totals.away_goals
                 AND resolved.winner_team_id = ${gamesTable.homeTeamId}
               THEN 1 ELSE 0
-            END AS home_score,
-        totals.away_goals
+            END) AS home_score,
+        COALESCE(${gamesTable.finalAwayScore}, totals.away_goals
           + CASE
               WHEN ${gamesTable.status} = 'final'
                 AND (
@@ -210,7 +210,7 @@ const scoreColumn = (columnName) => ormSql`
                 AND totals.home_goals = totals.away_goals
                 AND resolved.winner_team_id = ${gamesTable.awayTeamId}
               THEN 1 ELSE 0
-            END AS away_score
+            END) AS away_score
       FROM (
         SELECT
           COUNT(*) FILTER (WHERE go.team_id = ${gamesTable.homeTeamId} AND go.period <> 'SO')::int AS home_goals,
@@ -223,7 +223,7 @@ const scoreColumn = (columnName) => ormSql`
       ) totals
       LEFT JOIN LATERAL (
         SELECT
-          CASE
+          COALESCE(CASE WHEN ${gamesTable.finalHomeScore} > ${gamesTable.finalAwayScore} THEN ${gamesTable.homeTeamId} WHEN ${gamesTable.finalAwayScore} > ${gamesTable.finalHomeScore} THEN ${gamesTable.awayTeamId} END, CASE
             WHEN ${gamesTable.shootout} OR totals.so_home_goals > 0 OR totals.so_away_goals > 0 THEN
               CASE
                 WHEN so.home_goals > so.away_goals THEN ${gamesTable.homeTeamId}
@@ -237,7 +237,7 @@ const scoreColumn = (columnName) => ormSql`
             WHEN totals.home_goals > totals.away_goals THEN ${gamesTable.homeTeamId}
             WHEN totals.away_goals > totals.home_goals THEN ${gamesTable.awayTeamId}
             ELSE NULL
-          END AS winner_team_id
+          END) AS winner_team_id
         FROM (
           SELECT
             COUNT(*) FILTER (WHERE team_id = ${gamesTable.homeTeamId} AND scored)::int AS home_goals,
@@ -1108,7 +1108,7 @@ router.get('/:id', async (req, res) => {
       LEFT JOIN LATERAL (
         SELECT
           resolved.winner_team_id,
-          totals.home_goals
+          COALESCE(g.final_home_score, totals.home_goals
             + CASE
                 WHEN g.status = 'final'
                   AND (
@@ -1121,8 +1121,8 @@ router.get('/:id', async (req, res) => {
                   AND totals.home_goals = totals.away_goals
                   AND resolved.winner_team_id = g.home_team_id
                 THEN 1 ELSE 0
-              END AS home_score,
-          totals.away_goals
+              END) AS home_score,
+          COALESCE(g.final_away_score, totals.away_goals
             + CASE
                 WHEN g.status = 'final'
                   AND (
@@ -1135,7 +1135,7 @@ router.get('/:id', async (req, res) => {
                   AND totals.home_goals = totals.away_goals
                   AND resolved.winner_team_id = g.away_team_id
                 THEN 1 ELSE 0
-              END AS away_score
+              END) AS away_score
         FROM (
           SELECT
             COUNT(*) FILTER (WHERE go.team_id = g.home_team_id AND go.period <> 'SO')::int AS home_goals,
@@ -1148,7 +1148,7 @@ router.get('/:id', async (req, res) => {
         ) totals
         LEFT JOIN LATERAL (
           SELECT
-            CASE
+            COALESCE(CASE WHEN g.final_home_score > g.final_away_score THEN g.home_team_id WHEN g.final_away_score > g.final_home_score THEN g.away_team_id END, CASE
               WHEN g.shootout OR totals.so_home_goals > 0 OR totals.so_away_goals > 0 THEN
                 CASE
                   WHEN so.home_goals > so.away_goals THEN g.home_team_id
@@ -1162,7 +1162,7 @@ router.get('/:id', async (req, res) => {
               WHEN totals.home_goals > totals.away_goals THEN g.home_team_id
               WHEN totals.away_goals > totals.home_goals THEN g.away_team_id
               ELSE NULL
-            END AS winner_team_id
+            END) AS winner_team_id
           FROM (
             SELECT
               COUNT(*) FILTER (WHERE team_id = g.home_team_id AND scored)::int AS home_goals,
@@ -1207,9 +1207,9 @@ router.get('/:id', async (req, res) => {
           SELECT
             g2.id, g2.scheduled_at, g2.created_at, g2.overtime_periods, g2.shootout,
             g2.home_team_id, g2.away_team_id,
-            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_goals,
-            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_goals,
-            CASE WHEN g2.shootout THEN (
+            COALESCE(g2.final_home_score - CASE WHEN g2.shootout AND g2.final_home_score > g2.final_away_score THEN 1 ELSE 0 END, (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int) AS home_goals,
+            COALESCE(g2.final_away_score - CASE WHEN g2.shootout AND g2.final_away_score > g2.final_home_score THEN 1 ELSE 0 END, (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int) AS away_goals,
+            CASE WHEN g2.shootout THEN COALESCE(CASE WHEN g2.final_home_score > g2.final_away_score THEN g2.home_team_id WHEN g2.final_away_score > g2.final_home_score THEN g2.away_team_id END, (
               SELECT CASE
                 WHEN COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored) >
                      COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored)
@@ -1220,7 +1220,7 @@ router.get('/:id', async (req, res) => {
                 ELSE NULL
               END
               FROM shootout_attempts WHERE game_id = g2.id
-            ) END AS so_winner_team_id
+            )) END AS so_winner_team_id
           FROM games g2
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
@@ -1273,9 +1273,9 @@ router.get('/:id', async (req, res) => {
           SELECT
             g2.id, g2.scheduled_at, g2.created_at, g2.overtime_periods, g2.shootout,
             g2.home_team_id, g2.away_team_id,
-            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_goals,
-            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_goals,
-            CASE WHEN g2.shootout THEN (
+            COALESCE(g2.final_home_score - CASE WHEN g2.shootout AND g2.final_home_score > g2.final_away_score THEN 1 ELSE 0 END, (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int) AS home_goals,
+            COALESCE(g2.final_away_score - CASE WHEN g2.shootout AND g2.final_away_score > g2.final_home_score THEN 1 ELSE 0 END, (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int) AS away_goals,
+            CASE WHEN g2.shootout THEN COALESCE(CASE WHEN g2.final_home_score > g2.final_away_score THEN g2.home_team_id WHEN g2.final_away_score > g2.final_home_score THEN g2.away_team_id END, (
               SELECT CASE
                 WHEN COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored) >
                      COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored)
@@ -1286,7 +1286,7 @@ router.get('/:id', async (req, res) => {
                 ELSE NULL
               END
               FROM shootout_attempts WHERE game_id = g2.id
-            ) END AS so_winner_team_id
+            )) END AS so_winner_team_id
           FROM games g2
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
@@ -1342,9 +1342,9 @@ router.get('/:id', async (req, res) => {
           SELECT
             g2.id, g2.scheduled_at, g2.created_at, g2.status, g2.overtime_periods, g2.shootout,
             g2.home_team_id, g2.away_team_id,
-            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_goals,
-            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_goals,
-            CASE WHEN g2.shootout THEN (
+            COALESCE(g2.final_home_score - CASE WHEN g2.shootout AND g2.final_home_score > g2.final_away_score THEN 1 ELSE 0 END, (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int) AS home_goals,
+            COALESCE(g2.final_away_score - CASE WHEN g2.shootout AND g2.final_away_score > g2.final_home_score THEN 1 ELSE 0 END, (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int) AS away_goals,
+            CASE WHEN g2.shootout THEN COALESCE(CASE WHEN g2.final_home_score > g2.final_away_score THEN g2.home_team_id WHEN g2.final_away_score > g2.final_home_score THEN g2.away_team_id END, (
               SELECT CASE
                 WHEN COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored) >
                      COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored)
@@ -1355,7 +1355,7 @@ router.get('/:id', async (req, res) => {
                 ELSE NULL
               END
               FROM shootout_attempts WHERE game_id = g2.id
-            ) END AS so_winner_team_id
+            )) END AS so_winner_team_id
           FROM games g2
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
@@ -1515,7 +1515,7 @@ router.post('/', async (req, res) => {
       LEFT JOIN LATERAL (
         SELECT
           resolved.winner_team_id,
-          totals.home_goals
+          COALESCE(g.final_home_score, totals.home_goals
             + CASE
                 WHEN g.status = 'final'
                   AND (
@@ -1528,8 +1528,8 @@ router.post('/', async (req, res) => {
                   AND totals.home_goals = totals.away_goals
                   AND resolved.winner_team_id = g.home_team_id
                 THEN 1 ELSE 0
-              END AS home_score,
-          totals.away_goals
+              END) AS home_score,
+          COALESCE(g.final_away_score, totals.away_goals
             + CASE
                 WHEN g.status = 'final'
                   AND (
@@ -1542,7 +1542,7 @@ router.post('/', async (req, res) => {
                   AND totals.home_goals = totals.away_goals
                   AND resolved.winner_team_id = g.away_team_id
                 THEN 1 ELSE 0
-              END AS away_score
+              END) AS away_score
         FROM (
           SELECT
             COUNT(*) FILTER (WHERE go.team_id = g.home_team_id AND go.period <> 'SO')::int AS home_goals,
@@ -1555,7 +1555,7 @@ router.post('/', async (req, res) => {
         ) totals
         LEFT JOIN LATERAL (
           SELECT
-            CASE
+            COALESCE(CASE WHEN g.final_home_score > g.final_away_score THEN g.home_team_id WHEN g.final_away_score > g.final_home_score THEN g.away_team_id END, CASE
               WHEN g.shootout OR totals.so_home_goals > 0 OR totals.so_away_goals > 0 THEN
                 CASE
                   WHEN so.home_goals > so.away_goals THEN g.home_team_id
@@ -1569,7 +1569,7 @@ router.post('/', async (req, res) => {
               WHEN totals.home_goals > totals.away_goals THEN g.home_team_id
               WHEN totals.away_goals > totals.home_goals THEN g.away_team_id
               ELSE NULL
-            END AS winner_team_id
+            END) AS winner_team_id
           FROM (
             SELECT
               COUNT(*) FILTER (WHERE team_id = g.home_team_id AND scored)::int AS home_goals,
@@ -1666,6 +1666,17 @@ router.patch('/:id', async (req, res) => {
     ? undefined
     : normalizeGameEasternTimestamp(time_end);
   const leagueGameNumberInBody = 'league_game_number' in req.body;
+  // A stored final score is set (or cleared with null) only when the body includes it.
+  const finalHomeScoreInBody = 'final_home_score' in req.body;
+  const finalAwayScoreInBody = 'final_away_score' in req.body;
+  const isFinalScoreValue = (value) =>
+    value === null || (Number.isInteger(value) && value >= 0 && value <= 99);
+  if (
+    (finalHomeScoreInBody && !isFinalScoreValue(req.body.final_home_score)) ||
+    (finalAwayScoreInBody && !isFinalScoreValue(req.body.final_away_score))
+  ) {
+    return res.status(400).json({ error: 'Final scores must be whole numbers from 0 to 99.' });
+  }
   const normalizedLeagueGameNumber = normalizeLeagueNumber(league_game_number);
   // Stars are optional; blank ids count as "not provided" so they never overwrite existing picks.
   const normalizeStarId = (value) => (value != null && String(value).trim() !== '' ? value : null);
@@ -1742,7 +1753,9 @@ router.patch('/:id', async (req, res) => {
         star_3_id             = COALESCE(${normalizeStarId(star_3_id)}, star_3_id),
         time_start               = COALESCE(${normalizedTimeStart      ?? null}, time_start),
         time_end                 = COALESCE(${normalizedTimeEnd        ?? null}, time_end),
-        shootout_first_team_id   = COALESCE(${shootout_first_team_id   ?? null}, shootout_first_team_id)
+        shootout_first_team_id   = COALESCE(${shootout_first_team_id   ?? null}, shootout_first_team_id),
+        final_home_score         = CASE WHEN ${finalHomeScoreInBody} THEN ${finalHomeScoreInBody ? req.body.final_home_score : null}::smallint ELSE final_home_score END,
+        final_away_score         = CASE WHEN ${finalAwayScoreInBody} THEN ${finalAwayScoreInBody ? req.body.final_away_score : null}::smallint ELSE final_away_score END
       WHERE id = ${id}
     `;
 
@@ -1771,18 +1784,25 @@ router.patch('/:id', async (req, res) => {
         `;
         const series = seriesRows[0];
         if (series) {
-          // Count goals per team for every final game in this series
+          // Count goals per team for every final game in this series (or its stored final
+          // score, for games filled without goal-by-goal data)
           const winRows = await sql`
             SELECT
               g.home_team_id,
               g.away_team_id,
-              COUNT(*) FILTER (WHERE go.team_id = g.home_team_id) AS home_goals,
-              COUNT(*) FILTER (WHERE go.team_id = g.away_team_id) AS away_goals
+              COALESCE(
+                g.final_home_score,
+                COUNT(*) FILTER (WHERE go.team_id = g.home_team_id)
+              ) AS home_goals,
+              COALESCE(
+                g.final_away_score,
+                COUNT(*) FILTER (WHERE go.team_id = g.away_team_id)
+              ) AS away_goals
             FROM games g
             LEFT JOIN goals go ON go.game_id = g.id
             WHERE g.playoff_series_id = ${series.id}
               AND g.status = 'final'
-            GROUP BY g.id, g.home_team_id, g.away_team_id
+            GROUP BY g.id, g.home_team_id, g.away_team_id, g.final_home_score, g.final_away_score
           `;
 
           let homeWins = 0;
@@ -2045,7 +2065,7 @@ router.patch('/:id', async (req, res) => {
       LEFT JOIN LATERAL (
         SELECT
           resolved.winner_team_id,
-          totals.home_goals
+          COALESCE(g.final_home_score, totals.home_goals
             + CASE
                 WHEN g.status = 'final'
                   AND (
@@ -2058,8 +2078,8 @@ router.patch('/:id', async (req, res) => {
                   AND totals.home_goals = totals.away_goals
                   AND resolved.winner_team_id = g.home_team_id
                 THEN 1 ELSE 0
-              END AS home_score,
-          totals.away_goals
+              END) AS home_score,
+          COALESCE(g.final_away_score, totals.away_goals
             + CASE
                 WHEN g.status = 'final'
                   AND (
@@ -2072,7 +2092,7 @@ router.patch('/:id', async (req, res) => {
                   AND totals.home_goals = totals.away_goals
                   AND resolved.winner_team_id = g.away_team_id
                 THEN 1 ELSE 0
-              END AS away_score
+              END) AS away_score
         FROM (
           SELECT
             COUNT(*) FILTER (WHERE go.team_id = g.home_team_id AND go.period <> 'SO')::int AS home_goals,
@@ -2085,7 +2105,7 @@ router.patch('/:id', async (req, res) => {
         ) totals
         LEFT JOIN LATERAL (
           SELECT
-            CASE
+            COALESCE(CASE WHEN g.final_home_score > g.final_away_score THEN g.home_team_id WHEN g.final_away_score > g.final_home_score THEN g.away_team_id END, CASE
               WHEN g.shootout OR totals.so_home_goals > 0 OR totals.so_away_goals > 0 THEN
                 CASE
                   WHEN so.home_goals > so.away_goals THEN g.home_team_id
@@ -2099,7 +2119,7 @@ router.patch('/:id', async (req, res) => {
               WHEN totals.home_goals > totals.away_goals THEN g.home_team_id
               WHEN totals.away_goals > totals.home_goals THEN g.away_team_id
               ELSE NULL
-            END AS winner_team_id
+            END) AS winner_team_id
           FROM (
             SELECT
               COUNT(*) FILTER (WHERE team_id = g.home_team_id AND scored)::int AS home_goals,
